@@ -4091,31 +4091,9 @@ function openSubject(
     modalLink.href =
         element.dataset.link;
 
-    /*
-       Меняем название кнопки
-       в зависимости от сервиса.
-    */
-
-    const link =
-        element.dataset.link;
-
-    if (link.includes("meet.google.com")) {
-
-        modalLink.textContent =
-            "🎥 Відкрити Google Meet";
-
-    } else if (link.includes("zoom.us")) {
-
-        modalLink.textContent =
-            "🎥 Відкрити Zoom";
-
-    } else {
-
-        modalLink.textContent =
-            "🔗 Відкрити посилання";
-
-    }
-
+      modalLink.textContent =
+         "🔗 Відкрити посилання";
+   
     document
         .getElementById(
             "subjectModal"
