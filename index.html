@@ -6,6 +6,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+
 <title>Розклад П-811-21</title>
 
 <style>
@@ -43,6 +45,10 @@
     cursor: pointer;
 }
 
+.cell-clickable {
+    cursor: pointer;
+}
+   
 .today-item-subgroups {
     display: flex;
     gap: 8px;
@@ -4270,7 +4276,44 @@ function loadTheme() {
     }
 }
 
+/* =========================================================
+   КЛІКАБЕЛЬНІ КОМІРКИ
+========================================================= */
 
+function attachCellClickHandlers() {
+
+    document
+        .querySelectorAll("td.subject")
+        .forEach(cell => {
+
+            // пропускаємо комірки з підгрупами (іноземна мова)
+            if (cell.querySelector(".subgroup-row")) {
+                return;
+            }
+
+            const link =
+                cell.querySelector(".subject-link");
+
+            if (!link) {
+                return;
+            }
+
+            cell.classList.add("cell-clickable");
+
+            cell.addEventListener("click", event => {
+
+                // якщо клікнули прямо по посиланню — не дублюємо виклик
+                if (event.target.closest(".subject-link")) {
+                    return;
+                }
+
+                openSubject(event, link);
+
+            });
+
+        });
+
+}
 /* =========================================================
    START
 ========================================================= */
@@ -4280,6 +4323,8 @@ loadTheme();
 updateClock();
 
 setAutomaticWeek();
+
+attachCellClickHandlers();
 
 
 /*
