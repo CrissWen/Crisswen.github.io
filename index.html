@@ -14,6 +14,36 @@
    ОСНОВНЫЕ НАСТРОЙКИ
 ========================================================= */
 
+.subject-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.subgroup-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+}
+
+.subgroup-btn {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: rgba(71,124,255,.12);
+    border: 1px solid rgba(71,124,255,.3);
+    color: var(--blue-light);
+    text-decoration: none;
+    font-size: 10px;
+    font-weight: 700;
+    transition: .3s ease;
+}
+
+.subgroup-btn:hover {
+    background: rgba(71,124,255,.25);
+    transform: translateY(-1px);
+}
+   
 * {
     margin: 0;
     padding: 0;
@@ -2256,7 +2286,7 @@ footer {
     data-teacher="Майдан А.В."
     data-day="Четвер"
     data-time="09:50 — 11:25"
-    data-link="https://us04web.zoom.us/j/4424345889?pwd=yPqeiASgYJmdadhgqgEBbkVmhS4b2i.1&omn=79018831484"
+    data-link="https://us04web.zoom.us/j/9725123788?pwd=R001Z3BpcFNhZ0tKL2xvNHJSWFdoQT09&omn=77180326621"
     onclick="openSubject(event,this)"
 >
     Основи програмування
@@ -2270,24 +2300,29 @@ footer {
 
 
 <td class="subject">
+    <div class="subject-title">Іноземна мова</div>
 
-<a
-    href="#"
-    class="subject-link"
-    data-subject="Іноземна мова"
-    data-teacher="Крещанова С.Л./Чепур О.О."
-    data-day="П’ятниця"
-    data-time="09:50 — 11:25"
-    data-link="https://meet.google.com/eji-wxua-evf?authuser=0&hs=179 / https://meet.google.com/eji-wxua-evf?authuser=0&hs=179"
-    onclick="openSubject(event,this)"
->
-    Іноземна мова
-</a>
+    <div class="subgroup-row">
+        <a href="#" class="subgroup-btn"
+           data-subject="Іноземна мова (підгрупа 1)"
+           data-teacher="Крещанова С.Л."
+           data-day="П’ятниця"
+           data-time="09:50 — 11:25"
+           data-link="ПОСИЛАННЯ_1"
+           onclick="openSubject(event,this)">
+            Крещанова С.Л.
+        </a>
 
-<span class="teacher">
-    Крещанова С.Л./Чепур О.О.
-</span>
-
+        <a href="#" class="subgroup-btn"
+           data-subject="Іноземна мова (підгрупа 2)"
+           data-teacher="Чепур О.О."
+           data-day="П’ятниця"
+           data-time="09:50 — 11:25"
+           data-link="ПОСИЛАННЯ_2"
+           onclick="openSubject(event,this)">
+            Чепур О.О.
+        </a>
+    </div>
 </td>
 
 <td class="time">
