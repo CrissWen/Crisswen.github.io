@@ -3760,26 +3760,51 @@ function getTodayLessons() {
                 return;
             }
 
+            const titleEl =
+    cell.querySelector(
+        ".subject-title"
+    );
+
             const link =
                 cell.querySelector(
-                    ".subject-link"
+                    ".subject-link, .subgroup-btn"
                 );
-
+            
             if (!link) {
                 return;
             }
-
+            
+            let subject;
+            let teacher;
+            
+            if (titleEl) {
+            
+                subject =
+                    titleEl.textContent.trim();
+            
+                teacher =
+                    Array.from(
+                        cell.querySelectorAll(
+                            ".subgroup-btn"
+                        )
+                    )
+                    .map(a => a.dataset.teacher)
+                    .join(" / ");
+            
+            } else {
+            
+                subject =
+                    link.dataset.subject;
+            
+                teacher =
+                    link.dataset.teacher;
+            
+            }
+            
             result.push({
-
-                subject:
-                    link.dataset.subject,
-
-                teacher:
-                    link.dataset.teacher,
-
-                time:
-                    lessonTimes[index]
-
+                subject,
+                teacher,
+                time: lessonTimes[index]
             });
 
         }
