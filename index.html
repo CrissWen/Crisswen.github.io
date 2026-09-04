@@ -39,6 +39,35 @@
     transition: .3s ease;
 }
 
+.today-item.clickable {
+    cursor: pointer;
+}
+
+.today-item-subgroups {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.today-item-subgroup-btn {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: rgba(71,124,255,.12);
+    border: 1px solid rgba(71,124,255,.3);
+    color: var(--blue-light);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .3s ease;
+}
+
+.today-item-subgroup-btn:hover {
+    background: rgba(71,124,255,.25);
+    transform: translateY(-1px);
+}
+
 .subgroup-btn:hover {
     background: rgba(71,124,255,.25);
     transform: translateY(-1px);
@@ -3332,7 +3361,53 @@ const lessonTimes = [
     }
 
 ];
+/* =========================================================
+   ПЕРЕНЕСЕНІ СУБОТИ
+========================================================= */
 
+const SATURDAY_OVERRIDES = {
+    "2026-09-12": { weekday: 1, week: 1 },
+    "2026-09-19": { weekday: 2, week: 1 },
+    "2026-09-26": { weekday: 3, week: 1 },
+    "2026-10-03": { weekday: 4, week: 1 },
+    "2026-10-10": { weekday: 5, week: 1 },
+    "2026-10-17": { weekday: 1, week: 2 },
+    "2026-10-24": { weekday: 2, week: 2 },
+    "2026-10-31": { weekday: 3, week: 2 },
+    "2026-11-07": { weekday: 4, week: 2 },
+    "2026-11-14": { weekday: 5, week: 2 },
+    "2026-11-21": { weekday: 1, week: 1 }
+    // якщо в наказі список продовжується далі (текст обрізався
+    // на скріні) — додай ще рядки за тим самим шаблоном:
+    // "YYYY-MM-DD": { weekday: N, week: 1|2 }
+};
+
+function formatDateKey(date) {
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function getSaturdayOverride() {
+
+    const now = new Date();
+
+    if (now.getDay() !== 6) {
+        return null;
+    }
+
+    return SATURDAY_OVERRIDES[formatDateKey(now)] || null;
+}
+
+function getEffectiveDay() {
+
+    const override = getSaturdayOverride();
+
+    return override ? override.weekday : new Date().getDay();
+}
 
 /* =========================================================
    CLOCK
@@ -3393,15 +3468,15 @@ function updateClock() {
 
 function updateTodayName() {
 
-    const now =
-        new Date();
+    const override = getSaturdayOverride();
+    const nameEl = document.getElementById("todayName");
 
-    document
-        .getElementById("todayName")
-        .textContent =
-        days[now.getDay()];
+    if (override) {
+        nameEl.textContent = `СУБОТА (${days[override.weekday]})`;
+    } else {
+        nameEl.textContent = days[new Date().getDay()];
+    }
 }
-
 
 /* =========================================================
    WEEK CALCULATION
@@ -3445,13 +3520,10 @@ function getCurrentWeek() {
 
 function setAutomaticWeek() {
 
-    const week =
-        getCurrentWeek();
+    const override = getSaturdayOverride();
+    const week = override ? override.week : getCurrentWeek();
 
-    showWeek(
-        week,
-        false
-    );
+    showWeek(week, false);
 }
 
 
@@ -3532,9 +3604,8 @@ function showWeek(
 
 function highlightToday() {
 
-    const today =
-        new Date()
-        .getDay();
+    const today = 
+       getEffectiveDay();
 
     document
         .querySelectorAll("thead th")
@@ -3596,8 +3667,8 @@ function highlightCurrentLesson() {
     const now =
         new Date();
 
-    const day =
-        now.getDay();
+    const day = 
+       getEffectiveDay();
 
     document
         .querySelectorAll("tbody tr")
@@ -3713,102 +3784,66 @@ function highlightCurrentLesson() {
 
 function getTodayLessons() {
 
-    const now =
-        new Date();
+    const day = getEffectiveDay();
 
-    const day =
-        now.getDay();
-
-    if (
-        day < 1 ||
-        day > 5
-    ) {
-
+    if (day < 1 || day > 5) {
         return [];
-
     }
 
     const activeWeek =
-        document.querySelector(
-            ".week.active"
-        );
+        document.querySelector(".week.active");
 
     const rows =
-        activeWeek
-            .querySelectorAll(
-                "tbody tr"
-            );
+        activeWeek.querySelectorAll("tbody tr");
 
     const result = [];
 
-    rows.forEach(
-        (row,index) => {
+    rows.forEach((row, index) => {
 
-            const cells =
-                row.querySelectorAll(
-                    "td"
-                );
+        const cells = row.querySelectorAll("td");
+        const cell = cells[day];
 
-            const cell =
-                cells[day];
-
-            if (
-                !cell ||
-                cell.classList
-                    .contains("empty-cell")
-            ) {
-                return;
-            }
-
-            const titleEl =
-    cell.querySelector(
-        ".subject-title"
-    );
-
-            const link =
-                cell.querySelector(
-                    ".subject-link, .subgroup-btn"
-                );
-            
-            if (!link) {
-                return;
-            }
-            
-            let subject;
-            let teacher;
-            
-            if (titleEl) {
-            
-                subject =
-                    titleEl.textContent.trim();
-            
-                teacher =
-                    Array.from(
-                        cell.querySelectorAll(
-                            ".subgroup-btn"
-                        )
-                    )
-                    .map(a => a.dataset.teacher)
-                    .join(" / ");
-            
-            } else {
-            
-                subject =
-                    link.dataset.subject;
-            
-                teacher =
-                    link.dataset.teacher;
-            
-            }
-            
-            result.push({
-                subject,
-                teacher,
-                time: lessonTimes[index]
-            });
-
+        if (!cell || cell.classList.contains("empty-cell")) {
+            return;
         }
-    );
+
+        const titleEl =
+            cell.querySelector(".subject-title");
+
+        const links =
+            Array.from(
+                cell.querySelectorAll(".subject-link, .subgroup-btn")
+            );
+
+        if (!links.length) {
+            return;
+        }
+
+        const subjectTitle =
+            titleEl
+                ? titleEl.textContent.trim()
+                : links[0].dataset.subject;
+
+        const teacherDisplay =
+            links.map(a => a.dataset.teacher).join(" / ");
+
+        const entries =
+            links.map(a => ({
+                subject: a.dataset.subject,
+                teacher: a.dataset.teacher,
+                day: a.dataset.day,
+                time: a.dataset.time,
+                link: a.dataset.link
+            }));
+
+        result.push({
+            subjectTitle,
+            teacherDisplay,
+            time: lessonTimes[index],
+            entries
+        });
+
+    });
 
     return result;
 }
@@ -3821,66 +3856,81 @@ function getTodayLessons() {
 function updateTodaySchedule() {
 
     const container =
-        document.getElementById(
-            "todaySchedule"
-        );
+        document.getElementById("todaySchedule");
 
     const list =
-        document.getElementById(
-            "todayList"
-        );
+        document.getElementById("todayList");
 
-    const lessons =
-        getTodayLessons();
+    const lessons = getTodayLessons();
 
     list.innerHTML = "";
 
     if (!lessons.length) {
-
-        container.classList
-            .remove("show");
-
+        container.classList.remove("show");
         return;
     }
 
-    container.classList
-        .add("show");
+    container.classList.add("show");
 
-    lessons.forEach(
-        lesson => {
+    lessons.forEach(lesson => {
 
-            const item =
-                document.createElement(
-                    "div"
-                );
+        const item = document.createElement("div");
+        item.className = "today-item";
 
-            item.className =
-                "today-item";
+        const timeBox = document.createElement("div");
+        timeBox.className = "today-item-time";
+        timeBox.innerHTML =
+            `${lesson.time.start}<br>${lesson.time.end}`;
 
-            item.innerHTML = `
+        const infoBox = document.createElement("div");
 
-                <div class="today-item-time">
-                    ${lesson.time.start}<br>
-                    ${lesson.time.end}
-                </div>
+        const nameEl = document.createElement("div");
+        nameEl.className = "today-item-name";
+        nameEl.textContent = lesson.subjectTitle;
+        infoBox.appendChild(nameEl);
 
-                <div>
+        if (lesson.entries.length === 1) {
 
-                    <div class="today-item-name">
-                        ${lesson.subject}
-                    </div>
+            const entry = lesson.entries[0];
 
-                    <div class="today-item-teacher">
-                        ${lesson.teacher}
-                    </div>
+            const teacherEl = document.createElement("div");
+            teacherEl.className = "today-item-teacher";
+            teacherEl.textContent = lesson.teacherDisplay;
+            infoBox.appendChild(teacherEl);
 
-                </div>
-            `;
+            item.classList.add("clickable");
+            item.addEventListener("click", () => showLessonModal(entry));
 
-            list.appendChild(item);
+        } else {
+
+            const row = document.createElement("div");
+            row.className = "today-item-subgroups";
+
+            lesson.entries.forEach(entry => {
+
+                const btn = document.createElement("span");
+                btn.className = "today-item-subgroup-btn";
+                btn.textContent = entry.teacher;
+
+                btn.addEventListener("click", event => {
+                    event.stopPropagation();
+                    showLessonModal(entry);
+                });
+
+                row.appendChild(btn);
+
+            });
+
+            infoBox.appendChild(row);
 
         }
-    );
+
+        item.appendChild(timeBox);
+        item.appendChild(infoBox);
+
+        list.appendChild(item);
+
+    });
 }
 
 
@@ -3893,8 +3943,8 @@ function updateNextLesson() {
     const now =
         new Date();
 
-    const day =
-        now.getDay();
+    const day = 
+       getEffectiveDay();
 
     const name =
         document.getElementById(
@@ -4072,62 +4122,39 @@ function searchSchedule() {
    SUBJECT MODAL
 ========================================================= */
 
-function openSubject(
-    event,
-    element
-) {
+function showLessonModal(data) {
+
+    document.getElementById("modalSubject").textContent =
+        data.subject;
+
+    document.getElementById("modalTeacher").textContent =
+        "👨‍🏫 " + data.teacher;
+
+    document.getElementById("modalDay").textContent =
+        data.day;
+
+    document.getElementById("modalTime").textContent =
+        data.time;
+
+    const modalLink = document.getElementById("modalLink");
+    modalLink.href = data.link || "#";
+    modalLink.textContent = "🔗 Відкрити посилання";
+
+    document.getElementById("subjectModal").classList.add("show");
+    document.body.style.overflow = "hidden";
+}
+
+function openSubject(event, element) {
 
     event.preventDefault();
 
-    document
-        .getElementById(
-            "modalSubject"
-        )
-        .textContent =
-        element.dataset.subject;
-
-    document
-        .getElementById(
-            "modalTeacher"
-        )
-        .textContent =
-        "👨‍🏫 " +
-        element.dataset.teacher;
-
-    document
-        .getElementById(
-            "modalDay"
-        )
-        .textContent =
-        element.dataset.day;
-
-    document
-        .getElementById(
-            "modalTime"
-        )
-        .textContent =
-        element.dataset.time;
-
-    const modalLink =
-        document.getElementById(
-            "modalLink"
-        );
-
-    modalLink.href =
-        element.dataset.link;
-
-      modalLink.textContent =
-         "🔗 Відкрити посилання";
-   
-    document
-        .getElementById(
-            "subjectModal"
-        )
-        .classList
-        .add("show");
-
-    document.body.style.overflow =
-        "hidden";
+    showLessonModal({
+        subject: element.dataset.subject,
+        teacher: element.dataset.teacher,
+        day: element.dataset.day,
+        time: element.dataset.time,
+        link: element.dataset.link
+    });
 }
 
 
