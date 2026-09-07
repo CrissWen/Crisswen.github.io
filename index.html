@@ -936,11 +936,31 @@ h1 span {
     transition:.3s ease;
 }
 
-.today-item:hover {
-    transform:translateX(5px);
+.today-item {
+    display:flex;
+
+    align-items:center;
+
+    gap:15px;
+
+    padding:13px 16px;
+
+    border-radius:14px;
 
     background:
+        rgba(255,255,255,.04);
+
+    border:1px solid var(--border);
+    border-left: 3px solid transparent;
+
+    transition:.3s ease;
+}
+
+.today-item:hover {
+    background:
         rgba(71,124,255,.10);
+
+    border-left-color: var(--blue);
 }
 
 .today-item-time {
