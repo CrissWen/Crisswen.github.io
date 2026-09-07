@@ -3911,6 +3911,8 @@ function getTodayLessons() {
    TODAY SCHEDULE
 ========================================================= */
 
+let lastTodayScheduleSignature = null;
+
 function updateTodaySchedule() {
 
     const container =
@@ -3921,14 +3923,31 @@ function updateTodaySchedule() {
 
     const lessons = getTodayLessons();
 
-    list.innerHTML = "";
-
     if (!lessons.length) {
         container.classList.remove("show");
+        lastTodayScheduleSignature = null;
         return;
     }
 
+    const signature =
+        JSON.stringify(
+            lessons.map(l => ({
+                s: l.subjectTitle,
+                links: l.entries.map(e => e.link)
+            }))
+        );
+
     container.classList.add("show");
+
+    if (signature === lastTodayScheduleSignature) {
+        // нічого не змінилось — не чіпаємо DOM,
+        // щоб не збивати :hover
+        return;
+    }
+
+    lastTodayScheduleSignature = signature;
+
+    list.innerHTML = "";
 
     lessons.forEach(lesson => {
 
