@@ -23,14 +23,13 @@ export function playerCharacteristics(data) {
 
   const ownerName = data.ownerName || "Гравець";
 
-  const renderItem = (c, i, extraClass) => `
-      <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-idx="${i}" data-label="${c.label}">
+const renderItem = (c, i, extraClass) => `
+      <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-label="${c.label}" data-path="${c.dbPath}">
         <div class="char-text">
           <span class="char-label">${c.label}</span>
           <span class="char-value">${c.value}</span>
         </div>
-        <button type="button" class="char-lock" aria-label="Показати або приховати характеристику для інших гравців">
-          <!-- ЗАГЛУШКА: тут будуть SVG lock-closed.svg / lock-open.svg -->
+        <button type="button" class="char-lock" aria-label="Показати або приховати характеристику">
           <span class="lock-icon lock-closed" aria-hidden="true">🔒</span>
           <span class="lock-icon lock-open" aria-hidden="true">🔓</span>
         </button>
@@ -64,21 +63,13 @@ document.addEventListener("click", function (e) {
   if (!lockBtn) return;
 
   const item = lockBtn.closest(".char-item");
-  const list = lockBtn.closest(".char-list");
-  const section = lockBtn.closest("#block-player-characteristics");
-  const isOpen = item.classList.toggle("open");
-  const label = item.dataset.label;
-  const valueEl = item.querySelector(".char-value");
-  const group = list.dataset.group; // "characteristics" | "abilities"
-
-  document.dispatchEvent(
+  
+  // Надсилаємо запит на зміну стану (без мутації DOM)
+document.dispatchEvent(
     new CustomEvent("bunker:toggle-characteristic", {
       detail: {
-        owner: section.dataset.owner,
-        group: group,
-        label: label,
-        value: valueEl.textContent,
-        open: isOpen
+        label: item.dataset.label,
+        dbPath: item.dataset.path // Передаємо шлях для бази даних
       }
     })
   );

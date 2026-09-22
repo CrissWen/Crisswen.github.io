@@ -1,6 +1,6 @@
 import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby, initLobby } from './pages/lobby.js';
-import { renderGame } from './pages/game.js';
+import { renderGame, initGame } from './pages/game.js';
 
 const appContainer = document.getElementById("app");
 
@@ -8,17 +8,18 @@ const appContainer = document.getElementById("app");
 const routes = {
   '#/login': { render: renderAuth, init: initAuth },
   '#/lobby': { render: renderLobby, init: initLobby },
-  '#/game':  { render: renderGame, init: null },
+  '#/game':  { render: renderGame, init: initGame },
 };
 
 function router() {
-  const hash = window.location.hash || '#/login';
-  const route = routes[hash] || routes['#/login'];
+  const fullHash = window.location.hash || '#/login';
   
-  // 1. Відмальовуємо інтерфейс
+  const path = fullHash.split('?')[0]; 
+  
+  const route = routes[path] || routes['#/login'];
+  
   appContainer.innerHTML = route.render();
 
-  // 2. Якщо є логіка (слухачі подій), запускаємо її
   if (route.init) {
     route.init();
   }
