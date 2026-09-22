@@ -11,19 +11,20 @@
 <body>
   <div class="wrap">
     
-    <!-- Тимчасова навігація для тестування роутера -->
+    <!-- Temp navigation -->
     <nav style="margin-bottom: 20px; display: flex; gap: 10px;">
       <a href="#/login" style="color: var(--ok);">Авторизація</a>
       <a href="#/lobby" style="color: var(--accent);">Лобі</a>
       <a href="#/game" style="color: var(--hazard);">Гра</a>
     </nav>
 
-    <main id="app"><!-- сюди роутер вставлятиме сторінки --></main>
+    <main id="app"><!-- place where router insert pages --></main>
 
     <footer class="note">БУНКЕР · демо-версія v0.1</footer>
   </div>
-
-  <!-- Тепер точка входу — наш роутер -->
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Router -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

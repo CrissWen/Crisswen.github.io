@@ -1,32 +1,28 @@
-import { renderAuth } from './pages/auth.js';
+import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby } from './pages/lobby.js';
 import { renderGame } from './pages/game.js';
 
 const appContainer = document.getElementById("app");
 
-// Словник маршрутів: зіставляє хеш з функцією відмальовування
+// Тепер кожен маршрут має функцію для HTML і функцію для логіки
 const routes = {
-  '': renderAuth,
-  '#/': renderAuth,
-  '#/login': renderAuth,
-  '#/lobby': renderLobby,
-  '#/game': renderGame,
+  '#/login': { render: renderAuth, init: initAuth },
+  '#/lobby': { render: renderLobby, init: null },
+  '#/game':  { render: renderGame, init: null },
 };
 
 function router() {
-  // Отримуємо поточний хеш з URL
-  const hash = window.location.hash;
+  const hash = window.location.hash || '#/login';
+  const route = routes[hash] || routes['#/login'];
   
-  // Знаходимо відповідну функцію, або використовуємо авторизацію як fallback
-  const renderFunction = routes[hash] || routes['#/login'];
-  
-  // Відмальовуємо інтерфейс у контейнер
-  appContainer.innerHTML = renderFunction();
+  // 1. Відмальовуємо інтерфейс
+  appContainer.innerHTML = route.render();
 
-  // Тут у майбутньому можна буде прив'язувати обробники подій (onClick для кнопок)
-  // залежно від того, на якій ми зараз сторінці.
+  // 2. Якщо є логіка (слухачі подій), запускаємо її
+  if (route.init) {
+    route.init();
+  }
 }
 
-// Запускаємо роутер при зміні хешу та при першому завантаженні сторінки
 window.addEventListener('hashchange', router);
 window.addEventListener('DOMContentLoaded', router);
