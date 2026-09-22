@@ -90,7 +90,16 @@ body{
 }
 
 /* ===== Player characteristics (list + lock toggle) ===== */
-.char-list{display:flex;flex-direction:column;gap:10px;}
+.char-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.abilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .char-item{
   display:flex;align-items:center;justify-content:space-between;gap:14px;
   border:1px solid var(--metal);background:var(--panel-2);
@@ -141,43 +150,56 @@ body{
 .ability-item.open .char-lock{border-color:var(--hazard);}
 
 /* ===== Tables ===== */
-.table-scroll{
-  overflow-x:auto;overflow-y:hidden;
-  border:1px solid var(--metal);border-radius:var(--radius-sm);
-}
-table.bunker-table{
-  width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:560px;
-}
-table.bunker-table th,table.bunker-table td{
-  border-bottom:1px solid var(--metal);border-right:1px solid var(--metal);
-  padding:10px 12px;text-align:left;vertical-align:middle;
-  transition:all .3s ease;
-}
-table.bunker-table th:last-child,table.bunker-table td:last-child{border-right:none;}
-table.bunker-table tbody tr:last-child td{border-bottom:none;}
-table.bunker-table thead th{
-  font-family:var(--body);font-size:12.5px;
-  color:var(--text-mute);background:var(--panel-2);font-weight:600;
-}
-table.bunker-table td.player-cell{font-family:var(--head);font-size:15px;white-space:nowrap;}
-table.bunker-table td.player-cell .avatar{
-  display:inline-flex;width:22px;height:22px;border:1px solid var(--metal-lt);
-  align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;
-  margin-right:8px;color:var(--text-mute);vertical-align:middle;border-radius:50%;
-}
-.cell-empty{display:inline-block;min-width:1px;}
-.cell-value{
-  animation:reveal .5s ease;
-}
-@keyframes reveal{
-  from{opacity:0;transform:translateY(4px);}
-  to{opacity:1;transform:translateY(0);}
+.table-scroll {
+  /* Забираємо скрол, дозволяємо таблиці розтягуватися */
+  overflow: hidden; 
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
 }
 
-footer.note{
-  text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-mute);
-  margin-top:26px;
+table.bunker-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px; /* Трохи зменшили шрифт для місткості */
+  /* Прибрали min-width: 560px */
+  table-layout: fixed; /* Змушує колонки рівномірно ділити простір екрана */
 }
-@media (prefers-reduced-motion: reduce){
-  .char-item,.char-lock,.char-value,.cell-value,table.bunker-table td{animation:none!important;transition:none!important;}
+
+table.bunker-table th, table.bunker-table td {
+  border-bottom: 1px solid var(--metal);
+  border-right: 1px solid var(--metal);
+  padding: 8px 6px; /* Зменшили внутрішні відступи */
+  text-align: left;
+  vertical-align: middle;
+  word-wrap: break-word;     /* Перенесення довгих слів */
+  overflow-wrap: break-word; /* Перенесення довгих слів */
+  white-space: normal;       /* Дозволяємо тексту падати на новий рядок */
+  transition: all .3s ease;
+}
+
+table.bunker-table th:last-child, table.bunker-table td:last-child {
+  border-right: none;
+}
+table.bunker-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+table.bunker-table thead th {
+  font-family: var(--body);
+  font-size: 12px;
+  color: var(--text-mute);
+  background: var(--panel-2);
+  font-weight: 600;
+}
+
+table.bunker-table td.player-cell {
+  font-family: var(--head);
+  font-size: 14px;
+}
+
+table.bunker-table td.player-cell .avatar {
+  display: inline-flex; width: 22px; height: 22px; border: 1px solid var(--metal-lt);
+  align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px;
+  margin-right: 6px; color: var(--text-mute); vertical-align: middle; border-radius: 50%;
 }

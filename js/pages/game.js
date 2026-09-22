@@ -34,12 +34,7 @@ export async function initGame() {
     if (authError || !user) throw new Error("Ви не авторизовані");
     currentUserId = user.id;
 
-    const { data: room, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('room_code', currentRoomCode)
-      .single();
-
+    const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
     if (error || !room) throw new Error("Кімнату не знайдено");
 
     updateGameBoard(room, boardEl);
@@ -55,53 +50,68 @@ export async function initGame() {
   }
 }
 
-// Конвертує складний JSON гравця у плаский список для UI
+// Парсер, що форматує дані для UI (з'єднує масиви через кому)
 function mapPlayerState(rawPlayer) {
   const chars = [];
-  const abilities = [];
   
-  const add = (label, val, rev, path) => chars.push({ label, value: val, open: rev, dbPath: path });
+  const add = (key, label, formatFunc) => {
+    if (!rawPlayer[key]) return;
+    const data = rawPlayer[key];
+    let val, rev;
+    
+    if (Array.isArray(data)) {
+      if (data.length === 0) return;
+      val = data.map(formatFunc).join(", "); 
+      rev = data[0].is_revealed; 
+    } else {
+      val = formatFunc(data);
+      rev = data.is_revealed;
+    }
+    chars.push({ label, value: val, open: rev, dbKey: key });
+  };
 
-  if (rawPlayer.gender) add("Стать", rawPlayer.gender.value, rawPlayer.gender.is_revealed, 'gender.is_revealed');
-  if (rawPlayer.age) add("Вік", rawPlayer.age.value + ' р.', rawPlayer.age.is_revealed, 'age.is_revealed');
-  if (rawPlayer.childfree) add("Чайлдфрі", rawPlayer.childfree.value ? "Так" : "Ні", rawPlayer.childfree.is_revealed, 'childfree.is_revealed');
-  
-  if (rawPlayer.body) {
-    add("Тілобудова", `${rawPlayer.body.type}, ${rawPlayer.body.height_cm} см`, rawPlayer.body.is_revealed, 'body.is_revealed');
-  }
-
-  if (rawPlayer.professions) {
-    rawPlayer.professions.forEach((p, i) => add(`Професія ${i+1}`, `${p.title} (${p.stage})`, p.is_revealed, `professions.${i}.is_revealed`));
-  }
-  if (rawPlayer.health) {
-    rawPlayer.health.forEach((h, i) => add(`Здоров'я ${i+1}`, `${h.disease} (${h.severity})`, h.is_revealed, `health.${i}.is_revealed`));
-  }
-  if (rawPlayer.hobbies) {
-    rawPlayer.hobbies.forEach((h, i) => add(`Хобі ${i+1}`, `${h.title} (${h.stage})`, h.is_revealed, `hobbies.${i}.is_revealed`));
-  }
-  if (rawPlayer.traits) {
-    rawPlayer.traits.forEach((t, i) => add(`Риса ${i+1}`, t.value, t.is_revealed, `traits.${i}.is_revealed`));
-  }
-  if (rawPlayer.phobias) {
-    rawPlayer.phobias.forEach((p, i) => add(`Фобія ${i+1}`, p.value, p.is_revealed, `phobias.${i}.is_revealed`));
-  }
-  if (rawPlayer.backpack) {
-    rawPlayer.backpack.forEach((b, i) => add(`Багаж ${i+1}`, b.item, b.is_revealed, `backpack.${i}.is_revealed`));
-  }
-  
-  if (rawPlayer.special_abilities) {
-    rawPlayer.special_abilities.forEach((a, i) => {
-      abilities.push({ label: `Спец можливість №${i+1}`, value: a.text, open: a.is_revealed, dbPath: `special_abilities.${i}.is_revealed` });
+  // 1. Обробка нового комплексного об'єкта біології
+  if (rawPlayer.gender_info) {
+    const g = rawPlayer.gender_info;
+    const childStr = g.is_childfree ? " | Чайлдфрі" : "";
+    chars.push({
+      label: "Стать",
+      value: `${g.gender}, ${g.age} р.${childStr}`,
+      open: g.is_revealed,
+      dbKey: 'gender_info'
     });
+  }
+
+  // 2. Обробка решти характеристик
+  add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
+  add('professions', 'Професія', d => `${d.title} (${d.stage})`);
+  add('health', "Здоров'я", d => `${d.disease} (${d.severity})`);
+  add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
+  add('traits', 'Риса характеру', d => d.value);
+  add('phobias', 'Фобія', d => d.value);
+  add('backpack', 'Рюкзак', d => d.item);
+  add('large_inventory', 'Крупний інвентар', d => d.item);
+  add('extra_info', 'Дод. відомості', d => d.value);
+
+  // Спец можливостей ЗАВЖДИ рівно 2
+  const abilities = [];
+  const sa = rawPlayer.special_abilities || [];
+  for (let i = 0; i < 2; i++) {
+    const a = sa[i];
+    if (a) {
+      abilities.push({ label: `Спец можливість №${i+1}`, value: a.text, open: a.is_revealed, dbKey: 'special_abilities', index: i });
+    } else {
+      abilities.push({ label: `Спец можливість №${i+1}`, value: "Немає", open: false });
+    }
   }
 
   return { name: rawPlayer.name, characteristics: chars, abilities: abilities };
 }
-
 function updateGameBoard(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
+  // Мапимо бункер
   const bunkerData = bState.capacity ? {
     description: `${bState.history}. ${bState.rooms_description}. Розташування: ${bState.location}`,
     size: bState.size,
@@ -111,10 +121,11 @@ function updateGameBoard(roomData, container) {
     features: bState.items || []
   } : null;
 
+  // Мапимо катаклізм (використовуємо description, ігноруємо timer_minutes)
   const cataclysmData = bState.cataclysm ? {
     icon: "☢",
     title: bState.cataclysm.text,
-    desc: `Час до удару: ${bState.cataclysm.timer_minutes} хв.`
+    desc: bState.cataclysm.description
   } : null;
 
   const parsedPlayers = [];
@@ -164,4 +175,59 @@ function subscribeToRoomUpdates(container) {
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `room_code=eq.${currentRoomCode}` }, (payload) => {
       updateGameBoard(payload.new, container);
     }).subscribe();
+}
+
+// ЄДИНИЙ глобальний слухач кліків для всієї сторінки гри
+function setupActionListeners() {
+  document.removeEventListener("click", handleGlobalClick);
+  document.addEventListener("click", handleGlobalClick);
+}
+
+// Пряме оновлення бази даних та інтерфейсу при кліку на замок
+async function handleGlobalClick(e) {
+  const lockBtn = e.target.closest(".char-lock");
+  if (!lockBtn) return;
+
+  const item = lockBtn.closest(".char-item");
+  if (!item) return;
+
+  const dbKey = item.dataset.dbkey;
+  const idxStr = item.dataset.idx;
+  if (!dbKey) return;
+
+  try {
+    // 1. Беремо актуальний стан із бази
+    const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
+    if (error || !room || !room.players_state[currentUserId]) return;
+
+    const state = room.players_state;
+    const targetRef = state[currentUserId][dbKey];
+
+    // 2. Змінюємо стан is_revealed локально
+    if (Array.isArray(targetRef)) {
+      if (idxStr !== "" && idxStr !== undefined) {
+        // Конкретний елемент (напр. спецможливість №1)
+        const i = parseInt(idxStr);
+        targetRef[i].is_revealed = !targetRef[i].is_revealed;
+      } else {
+        // Масив цілком (напр. дві професії відкриваються разом)
+        const newState = !targetRef[0].is_revealed;
+        targetRef.forEach(x => x.is_revealed = newState);
+      }
+    } else {
+      // Простий об'єкт (напр. gender_info)
+      targetRef.is_revealed = !targetRef.is_revealed;
+    }
+
+    // 3. МИТТЄВЕ ОНОВЛЕННЯ ІНТЕРФЕЙСУ (до запиту на сервер)
+    // Оновлюємо об'єкт кімнати і одразу перемальовуємо все (замки + всі таблиці)
+    room.players_state = state;
+    updateGameBoard(room, document.getElementById('game-board'));
+
+    // 4. Зберігаємо змінений стан у базу (у фоні)
+    await supabase.from('rooms').update({ players_state: state }).eq('room_code', currentRoomCode);
+    
+  } catch (err) {
+    console.error("Помилка оновлення:", err);
+  }
 }

@@ -1,10 +1,19 @@
 export function catastrophe(data) {
-  data = data || {
-    icon: "☢",
-    title: "Ядерна війна",
-    desc: "Обмін ядерними ударами між кількома державами. Поверхня забруднена радіацією, рівень якої спаде не раніше ніж за 40 років. Вижити на поверхні неможливо."
-  };
+  // Якщо катаклізм ще не згенеровано
+  if (!data) {
+    return `
+      <section class="block" id="block-catastrophe">
+        <div class="block-head">
+          <h2>Катаклізм</h2>
+        </div>
+        <div class="block-body">
+          <p class="cata-desc" style="text-align: center; color: var(--text-mute);">Очікування генерації катаклізму...</p>
+        </div>
+      </section>
+    `;
+  }
 
+  // Якщо дані є — малюємо їх
   return `
     <section class="block" id="block-catastrophe">
       <div class="block-head">
@@ -12,7 +21,7 @@ export function catastrophe(data) {
       </div>
       <div class="block-body">
         <div class="cata-row">
-          <div class="cata-icon">${data.icon}</div>
+          <div class="cata-icon">${data.icon || "☢"}</div>
           <div>
             <p class="cata-title">${data.title}</p>
             <p class="cata-desc">${data.desc}</p>
@@ -21,4 +30,4 @@ export function catastrophe(data) {
       </div>
     </section>
   `;
-};
+}
