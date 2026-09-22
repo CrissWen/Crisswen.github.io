@@ -6,18 +6,24 @@
   <title>БУНКЕР — інтерфейс гри</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  
-  <!-- Оновлений шлях до стилів згідно з вашою структурою -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="wrap">
-    <main id="app"><!-- блоки монтуються сюди через main.js --></main>
+    
+    <!-- Тимчасова навігація для тестування роутера -->
+    <nav style="margin-bottom: 20px; display: flex; gap: 10px;">
+      <a href="#/login" style="color: var(--ok);">Авторизація</a>
+      <a href="#/lobby" style="color: var(--accent);">Лобі</a>
+      <a href="#/game" style="color: var(--hazard);">Гра</a>
+    </nav>
 
-    <footer class="note">БУНКЕР · демо-версія v0.1 — готовий візуал, ігрова логіка ще в розробці</footer>
+    <main id="app"><!-- сюди роутер вставлятиме сторінки --></main>
+
+    <footer class="note">БУНКЕР · демо-версія v0.1</footer>
   </div>
 
-  <!-- Підключаємо єдиний головний скрипт як модуль -->
-  <script type="module" src="js/game-moduls/main.js"></script>
+  <!-- Тепер точка входу — наш роутер -->
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
