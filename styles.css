@@ -1,0 +1,173 @@
+/* ===== BUNKER TERMINAL — design tokens ===== */
+:root{
+  --bg:        #14171a;
+  --panel:     #1b1f22;
+  --panel-2:   #202528;
+  --metal:     #3a4044;
+  --metal-lt:  #565d61;
+  --hazard:    #e8a23d;
+  --danger:    #c0392b;
+  --ok:        #4f9d8f;
+  --text:      #e8e6e1;
+  --text-mute: #868c90;
+  --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --head: 'Oswald', 'Arial Narrow', sans-serif;
+  --body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(ellipse at top, #1a1e21 0%, var(--bg) 55%);
+  color:var(--text);
+  font-family:var(--body);
+  line-height:1.5;
+  min-height:100vh;
+  padding: 28px 16px 80px;
+}
+
+.wrap{max-width:900px;margin:0 auto;}
+
+/* -- panel / block shell -- */
+.block{
+  border:1px solid var(--metal);
+  background:var(--panel);
+  margin-bottom:22px;
+  position:relative;
+}
+.block-head{
+  padding:14px 18px 12px;
+  border-bottom:1px solid var(--metal);
+}
+.block-head h2{
+  font-family:var(--head);
+  font-weight:600;
+  font-size:22px;
+  letter-spacing:.02em;
+  margin:0;
+  color:var(--text);
+}
+.block-body{padding:18px;}
+
+/* corner rivets, thematic industrial accent */
+.block::before,.block::after{
+  content:"";position:absolute;width:6px;height:6px;background:var(--metal-lt);
+  top:6px;left:6px;
+}
+.block::after{left:auto;right:6px;}
+
+/* ===== Catastrophe block ===== */
+.cata-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;}
+.cata-icon{
+  font-size:44px;line-height:1;
+  width:76px;height:76px;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);border:1px solid var(--danger);
+}
+.cata-title{font-family:var(--head);font-size:26px;color:var(--danger);margin:0 0 6px;letter-spacing:.01em;}
+.cata-desc{color:var(--text-mute);max-width:60ch;margin:0;font-size:14.5px;}
+
+/* ===== Bunker info block ===== */
+.block-desc{
+  color:var(--text-mute);max-width:65ch;margin:0 0 18px;font-size:14.5px;
+}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+.info-stat .k{font-family:var(--body);font-size:12.5px;color:var(--text-mute);}
+.info-stat .v{font-family:var(--head);font-size:20px;margin-top:2px;}
+
+.equipment-title{
+  font-family:var(--body);font-weight:600;font-size:13px;
+  color:var(--text-mute);margin:0 0 10px;
+}
+.equipment-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.equipment-list li{
+  font-family:var(--body);font-size:14.5px;color:var(--text);
+  padding:8px 12px;border-left:2px solid var(--ok);
+  background:var(--panel-2);
+}
+
+/* ===== Player characteristics (list + lock toggle) ===== */
+.char-list{display:flex;flex-direction:column;gap:10px;}
+.char-item{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  border:1px solid var(--metal);background:var(--panel-2);
+  padding:12px 14px;
+  transition:border-color .3s ease, background .3s ease;
+}
+.char-item.open{border-color:var(--ok);}
+.char-text{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.char-label{
+  font-family:var(--body);font-size:12.5px;
+  color:var(--text-mute);
+}
+.char-value{
+  font-family:var(--head);font-size:16px;color:var(--text);
+  transition:color .3s ease;
+}
+.char-item:not(.open) .char-value{color:var(--metal-lt);letter-spacing:.12em;}
+
+.char-lock{
+  flex:none;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;
+  border:1px solid var(--metal-lt);background:var(--panel);
+  cursor:pointer;
+  transition:border-color .3s ease, background .3s ease;
+}
+.char-lock:hover{border-color:var(--hazard);}
+.char-item.open .char-lock{border-color:var(--ok);}
+
+/* Іконки-заглушки: у майбутньому замінюються на lock-closed.svg / lock-open.svg */
+.char-lock .lock-icon{font-size:16px;line-height:1;}
+.char-lock .lock-open{display:none;}
+.char-item.open .char-lock .lock-closed{display:none;}
+.char-item.open .char-lock .lock-open{display:inline;}
+
+.char-hint{font-family:var(--body);font-size:12.5px;color:var(--text-mute);margin-top:12px;}
+
+/* ===== Special abilities sub-block (inside block 3) ===== */
+.abilities-block{margin-top:22px;padding-top:18px;border-top:1px dashed var(--metal);}
+.abilities-title{
+  font-family:var(--body);font-weight:600;font-size:13px;
+  color:var(--hazard);margin:0 0 10px;
+}
+.ability-item{border-color:var(--metal-lt);}
+.ability-item.open{border-color:var(--hazard);}
+.ability-item.open .char-lock{border-color:var(--hazard);}
+
+/* ===== Tables ===== */
+.table-scroll{overflow-x:auto;}
+table.bunker-table{
+  width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px;
+}
+table.bunker-table th,table.bunker-table td{
+  border:1px solid var(--metal);padding:10px 12px;text-align:left;vertical-align:middle;
+  transition:all .3s ease;
+}
+table.bunker-table thead th{
+  font-family:var(--body);font-size:12.5px;
+  color:var(--text-mute);background:var(--panel-2);font-weight:600;
+}
+table.bunker-table td.player-cell{font-family:var(--head);font-size:15px;white-space:nowrap;}
+table.bunker-table td.player-cell .avatar{
+  display:inline-flex;width:22px;height:22px;border:1px solid var(--metal-lt);
+  align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;
+  margin-right:8px;color:var(--text-mute);vertical-align:middle;
+}
+.cell-empty{display:inline-block;min-width:1px;}
+.cell-value{
+  animation:reveal .5s ease;
+}
+@keyframes reveal{
+  from{opacity:0;transform:translateY(4px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+footer.note{
+  text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-mute);
+  margin-top:26px;
+}
+@media (prefers-reduced-motion: reduce){
+  .char-item,.char-lock,.char-value,.cell-value,table.bunker-table td{animation:none!important;transition:none!important;}
+}
