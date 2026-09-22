@@ -168,15 +168,25 @@ function updateGameBoard(roomData, container) {
   container.innerHTML = order.join("");
 }
 
-function subscribeToRoomUpdates(container) {
+function subscribeToRoomUpdates() {
   if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
+  
   realtimeSubscription = supabase
     .channel(`room-${currentRoomCode}`)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `room_code=eq.${currentRoomCode}` }, (payload) => {
-      updateGameBoard(payload.new, container);
+    .on('postgres_changes', { 
+      event: 'UPDATE', 
+      schema: 'public', 
+      table: 'rooms', 
+      filter: `room_code=eq.${currentRoomCode}` 
+    }, (payload) => {
+      console.log("Отримано оновлення від іншого гравця!", payload.new);
+      // Завжди беремо свіжий елемент зі сторінки, щоб уникнути втрати контексту
+      const boardEl = document.getElementById('game-board');
+      if (boardEl) {
+        updateGameBoard(payload.new, boardEl);
+      }
     }).subscribe();
 }
-
 // ЄДИНИЙ глобальний слухач кліків для всієї сторінки гри
 function setupActionListeners() {
   document.removeEventListener("click", handleGlobalClick);
