@@ -1,8 +1,6 @@
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.
-window.BunkerBlocks = window.BunkerBlocks || {};
-
-window.BunkerBlocks.specialAbilitiesTable = function (players) {
+export function specialAbilitiesTable (players) {
   players = players || [
     { name: "Олена",  ability1: "Подвійний голос на голосуванні", ability2: null },
     { name: "Максим", ability1: null, ability2: null },

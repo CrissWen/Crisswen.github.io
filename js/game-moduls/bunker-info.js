@@ -1,7 +1,4 @@
-// БЛОК 2 — ІНФОРМАЦІЯ ПРО БУНКЕР
-window.BunkerBlocks = window.BunkerBlocks || {};
-
-window.BunkerBlocks.bunkerInfo = function (data) {
+export function bunkerInfo (data) {
   data = data || {
     description: "Бункер збудований близько 20 років тому й відтоді жодного разу не проходив повного капремонту. Основні системи справні, але повітряні фільтри застаріли і потребують заміни — під час тривалого перебування це буде проблемою.",
     size: "180 м²",

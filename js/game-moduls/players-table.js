@@ -1,8 +1,6 @@
 // БЛОК 4 — ТАБЛИЦЯ ГРАВЦІВ (перша колонка — ім'я, далі — характеристики)
 // Якщо характеристика ще не відкрита гравцем — комірка просто порожня.
-window.BunkerBlocks = window.BunkerBlocks || {};
-
-window.BunkerBlocks.playersTable = function (columns, players) {
+export function playersTable (columns, players) {
   columns = columns || ["Професія", "Здоров'я", "Хобі / навик", "Фобія", "Багаж"];
   players = players || [
     { name: "Олена",  cells: ["Хірург", null, "Гра на гітарі", null, null] },

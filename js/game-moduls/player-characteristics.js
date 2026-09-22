@@ -4,9 +4,8 @@
 // (і, відповідно, чи з'явиться значення в таблиці "Гравці" / "Спец можливості").
 // Спец можливості показані окремим підблоком нижче основних характеристик,
 // їх завжди рівно 2.
-window.BunkerBlocks = window.BunkerBlocks || {};
 
-window.BunkerBlocks.playerCharacteristics = function (data) {
+export function playerCharacteristics(data) {
   data = data || {
     ownerName: "Олена",
     characteristics: [

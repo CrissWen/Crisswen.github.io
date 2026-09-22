@@ -1,7 +1,4 @@
-// БЛОК 1 — КАТАКЛІЗМ
-window.BunkerBlocks = window.BunkerBlocks || {};
-
-window.BunkerBlocks.catastrophe = function (data) {
+export function catastrophe(data) {
   data = data || {
     icon: "☢",
     title: "Ядерна війна",
