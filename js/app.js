@@ -4,7 +4,6 @@ import { renderGame, initGame } from './pages/game.js';
 
 const appContainer = document.getElementById("app");
 
-// Тепер кожен маршрут має функцію для HTML і функцію для логіки
 const routes = {
   '#/login': { render: renderAuth, init: initAuth },
   '#/lobby': { render: renderLobby, init: initLobby },
