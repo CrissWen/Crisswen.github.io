@@ -52,11 +52,20 @@ export async function initGame() {
   }
 }
 
+export function cleanupGame() {
+  if (realtimeSubscription) {
+    supabase.removeChannel(realtimeSubscription);
+    realtimeSubscription = null;
+    console.log("З'єднання з кімнатою закрито.");
+  }
+  
+  document.removeEventListener("click", handleGlobalClick);
+}
+
 function updateGameBoard(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
-  // Мапимо бункер
   const bunkerData = bState.capacity ? {
     description: `${bState.history}. ${bState.rooms_description}. Розташування: ${bState.location}`,
     size: bState.size,
@@ -66,7 +75,6 @@ function updateGameBoard(roomData, container) {
     features: bState.items || []
   } : null;
 
-  // Мапимо катаклізм (використовуємо description, ігноруємо timer_minutes)
   const cataclysmData = bState.cataclysm ? {
     icon: "☢",
     title: bState.cataclysm.text,

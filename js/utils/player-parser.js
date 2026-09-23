@@ -31,10 +31,10 @@ export function mapPlayerState(rawPlayer) {
   }
 
   add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
+  add('traits', 'Риса характеру', d => d.value);
   add('professions', 'Професія', d => `${d.title} (${d.stage})`);
   add('health', "Здоров'я", d => `${d.disease} (${d.severity})`);
   add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
-  add('traits', 'Риса характеру', d => d.value);
   add('phobias', 'Фобія', d => d.value);
   add('backpack', 'Рюкзак', d => d.item);
   add('large_inventory', 'Крупний інвентар', d => d.item);
