@@ -4,12 +4,14 @@ import { bunkerInfo } from '../game-moduls/bunker-info.js';
 import { playerCharacteristics } from '../game-moduls/player-characteristics.js';
 import { playersTable } from '../game-moduls/players-table.js';
 import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js';
-
 import { mapPlayerState } from '../utils/player-parser.js';
+import { waitingRoom } from '../game-moduls/waiting-room.js';
+import { generateGameState } from '../utils/game-generator.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
 let currentUserId = null;
+let currentUserName = null;
 
 export function renderGame() {
   return `
@@ -35,15 +37,36 @@ export async function initGame() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Ви не авторизовані");
     currentUserId = user.id;
+    currentUserName = user.user_metadata?.username || "Гравець";
 
     const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
     if (error || !room) throw new Error("Кімнату не знайдено");
+
+    const isGameStarted = Object.keys(room.bunker_state || {}).length > 0;
+    const isPlayerInRoom = room.players_state && room.players_state[currentUserId];
+
+    
+    if (isGameStarted && !isPlayerInRoom) {
+      statusEl.textContent = "Гра вже почалася. Приєднання нових гравців закрито.";
+      statusEl.style.color = 'var(--danger)';
+      return;
+    }
+
+    
+    if (!isGameStarted && !isPlayerInRoom) {
+      const updatedPlayersState = room.players_state || {};
+      
+      updatedPlayersState[currentUserId] = { name: currentUserName };
+      
+      await supabase.from('rooms').update({ players_state: updatedPlayersState }).eq('room_code', currentRoomCode);
+      room.players_state = updatedPlayersState;
+    }
 
     updateGameBoard(room, boardEl);
     statusEl.style.display = 'none';
     boardEl.style.display = 'block';
 
-    subscribeToRoomUpdates(boardEl);
+    subscribeToRoomUpdates();
     setupActionListeners();
 
   } catch (err) {
@@ -52,22 +75,66 @@ export async function initGame() {
   }
 }
 
-export function cleanupGame() {
-  if (realtimeSubscription) {
-    supabase.removeChannel(realtimeSubscription);
-    realtimeSubscription = null;
-    console.log("З'єднання з кімнатою закрито.");
+function updateGameBoard(roomData, container) {
+  const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
+  const isHost = roomData.host_id === currentUserId;
+
+  if (!isGameStarted) {
+    container.innerHTML = waitingRoom({
+      roomCode: currentRoomCode,
+      playersState: roomData.players_state,
+      isHost: isHost
+    });
+    
+    if (isHost) {
+      document.getElementById('start-game-btn')?.addEventListener('click', handleStartGame);
+    }
+  } else {
+    renderActiveGame(roomData, container);
   }
-  
-  document.removeEventListener("click", handleGlobalClick);
 }
 
-function updateGameBoard(roomData, container) {
+async function handleStartGame(e) {
+  const btn = e.target;
+  btn.disabled = true;
+  btn.textContent = "Генерація...";
+
+  try {
+    const { data: room } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
+    const pState = room.players_state || {};
+    const playersList = Object.entries(pState).map(([id, p]) => ({ id, name: p.name }));
+
+    const mockConfig = {
+      age_range: { min: 16, max: 85 },
+      height_range: { min: 150, max: 210 },
+      allow_childfree: true,
+      default_stages: {
+        profession: ["Новачок", "Стажер", "Любитель", "Досвідчений", "Професіонал", "Експерт"],
+        hobby: ["Новачок", "Любитель", "Досвідчений", "Просунутий", "Майстер"],
+        health: ["Легка", "Середня", "Тяжка", "Критична"]
+      }
+    };
+    
+    const mockBunkerState = { capacity: 3, cataclysm: { text: "Тестовий старт" } };
+    
+    await supabase.from('rooms').update({ 
+      bunker_state: mockBunkerState,
+    }).eq('room_code', currentRoomCode);
+
+  } catch (err) {
+    console.error("Помилка старту:", err);
+    btn.disabled = false;
+    btn.textContent = "Почати гру (Роздати карти)";
+  }
+}
+
+
+function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
   const bunkerData = bState.capacity ? {
-    description: `${bState.history}. ${bState.rooms_description}. Розташування: ${bState.location}`,
+    description: `${bState.history || ''}. ${bState.rooms_description || ''}. Розташування: ${bState.location || ''}`,
     size: bState.size,
     yearsInBunker: bState.stay_time,
     foodSupply: bState.food_and_water,
@@ -86,6 +153,9 @@ function updateGameBoard(roomData, container) {
   const allCharLabels = new Set();
 
   for (const [id, rawPlayer] of Object.entries(pState)) {
+    
+    if (!rawPlayer.gender) continue; 
+
     const flatPlayer = mapPlayerState(rawPlayer);
     flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
     
@@ -108,7 +178,9 @@ function updateGameBoard(roomData, container) {
     return { name: p.name, cells: cells };
   });
 
-  const myData = pState[currentUserId] ? mapPlayerState(pState[currentUserId]) : { name: "Глядач", characteristics: [], abilities: [] };
+  const myData = (pState[currentUserId] && pState[currentUserId].gender) 
+    ? mapPlayerState(pState[currentUserId]) 
+    : { name: pState[currentUserId]?.name || "Глядач", characteristics: [], abilities: [] };
 
   const order = [
     catastrophe(cataclysmData), 
@@ -132,21 +204,18 @@ function subscribeToRoomUpdates() {
       table: 'rooms', 
       filter: `room_code=eq.${currentRoomCode}` 
     }, (payload) => {
-      console.log("Отримано оновлення від іншого гравця!", payload.new);
-      // Завжди беремо свіжий елемент зі сторінки, щоб уникнути втрати контексту
       const boardEl = document.getElementById('game-board');
       if (boardEl) {
         updateGameBoard(payload.new, boardEl);
       }
     }).subscribe();
 }
-// ЄДИНИЙ глобальний слухач кліків для всієї сторінки гри
+
 function setupActionListeners() {
   document.removeEventListener("click", handleGlobalClick);
   document.addEventListener("click", handleGlobalClick);
 }
 
-// Пряме оновлення бази даних та інтерфейсу при кліку на замок
 async function handleGlobalClick(e) {
   const lockBtn = e.target.closest(".char-lock");
   if (!lockBtn) return;
@@ -174,10 +243,8 @@ async function handleGlobalClick(e) {
         targetRef.forEach(x => x.is_revealed = newState);
       }
     } else {
-      // Перемикаємо простий об'єкт
       targetRef.is_revealed = !targetRef.is_revealed;
       
-      // Синхронізація віку та чайлдфрі зі статтю
       if (dbKey === 'gender') {
         const newState = targetRef.is_revealed;
         if (state[currentUserId].age) state[currentUserId].age.is_revealed = newState;
@@ -194,4 +261,12 @@ async function handleGlobalClick(e) {
   } catch (err) {
     console.error("Помилка оновлення:", err);
   }
+}
+
+export function cleanupGame() {
+  if (realtimeSubscription) {
+    supabase.removeChannel(realtimeSubscription);
+    realtimeSubscription = null;
+  }
+  document.removeEventListener("click", handleGlobalClick);
 }
