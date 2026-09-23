@@ -100,29 +100,59 @@ async function handleStartGame(e) {
   btn.textContent = "Генерація...";
 
   try {
+    
     const { data: room } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
     const pState = room.players_state || {};
     const playersList = Object.entries(pState).map(([id, p]) => ({ id, name: p.name }));
 
-    const mockConfig = {
-      age_range: { min: 16, max: 85 },
-      height_range: { min: 150, max: 210 },
-      allow_childfree: true,
-      default_stages: {
-        profession: ["Новачок", "Стажер", "Любитель", "Досвідчений", "Професіонал", "Експерт"],
-        hobby: ["Новачок", "Любитель", "Досвідчений", "Просунутий", "Майстер"],
-        health: ["Легка", "Середня", "Тяжка", "Критична"]
-      }
-    };
     
-    const mockBunkerState = { capacity: 3, cataclysm: { text: "Тестовий старт" } };
+    const { data: pack, error: packError } = await supabase
+      .from('packs')
+      .select('id, config')
+      .eq('title', 'default')
+      .single();
+
+    if (packError || !pack) throw new Error("Не вдалося завантажити конфігурацію пака з бази");
+
+    const { data: cardsRows, error: cardsError } = await supabase
+      .from('pack_cards')
+      .select('pool_type, category, value, meta')
+      .eq('pack_id', pack.id); 
+
+    if (cardsError || !cardsRows || cardsRows.length === 0) {
+      throw new Error("Не знайдено жодної картки для цього пака");
+    }
+
+    
+    const cardsData = {
+      bunker: {},
+      character: {}
+    };
+
+    cardsRows.forEach(row => {
+      const pool = row.pool_type; 
+      const cat = row.category;   
+      
+      if (!cardsData[pool][cat]) {
+        cardsData[pool][cat] = [];
+      }
+      
+      cardsData[pool][cat].push({
+        value: row.value,
+        meta: row.meta || {}
+      });
+    });
+
+    const { bunkerState, playersState } = generateGameState(playersList, cardsData, pack.config);
     
     await supabase.from('rooms').update({ 
-      bunker_state: mockBunkerState,
+      bunker_state: bunkerState,
+      players_state: playersState 
     }).eq('room_code', currentRoomCode);
 
   } catch (err) {
     console.error("Помилка старту:", err);
+    alert(err.message);
     btn.disabled = false;
     btn.textContent = "Почати гру (Роздати карти)";
   }

@@ -1,9 +1,14 @@
-
 const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const getRandomItem = (arr) => arr[getRandomInt(0, arr.length - 1)];
 
+const getRandomItem = (arr, fallback = "Немає даних") => {
+  if (!arr || !Array.isArray(arr) || arr.length === 0) {
+    return { value: fallback, meta: {} };
+  }
+  return arr[getRandomInt(0, arr.length - 1)];
+};
 
 const shuffle = (array) => {
+  if (!array || !Array.isArray(array)) return [];
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -12,33 +17,30 @@ const shuffle = (array) => {
   return arr;
 };
 
-
 const pickStage = (item, defaultStages) => {
   if (item.meta && item.meta.stages && item.meta.stages.length > 0) {
-    return getRandomItem(item.meta.stages);
+    return getRandomItem(item.meta.stages, "Невідома стадія");
   }
-  return getRandomItem(defaultStages)
+  return getRandomItem(defaultStages, "Невідома стадія");
 };
 
 export function generateGameState(playersList, pack, config) {
-  
-  const b = pack.bunker;
+  const b = pack.bunker || {};
   const capacity = Math.max(1, Math.floor(playersList.length / 2));
   
-  const cataclysm = getRandomItem(b.cataclysm);
-  
+  const cataclysm = getRandomItem(b.cataclysm, "Невідомий катаклізм");
   
   const shuffledItems = shuffle(b.items);
   const bunkerItems = shuffledItems.slice(0, getRandomInt(3, 4)).map(i => i.value);
 
   const bunkerState = {
     capacity: capacity,
-    size: getRandomItem(b.size).value,
-    stay_time: getRandomItem(b.stay_time).value,
-    food_and_water: getRandomItem(b.food_supply).value,
-    location: getRandomItem(b.location).value,
-    history: getRandomItem(b.history).value,
-    rooms_description: getRandomItem(b.rooms_description).value,
+    size: getRandomItem(b.size, "Розмір невідомий").value,
+    stay_time: getRandomItem(b.stay_time, "Час невідомий").value,
+    food_and_water: getRandomItem(b.food_supply, "Запаси невідомі").value,
+    location: getRandomItem(b.location, "Локація невідома").value,
+    history: getRandomItem(b.history, "Історія невідома").value,
+    rooms_description: getRandomItem(b.rooms_description, "Кімнати невідомі").value,
     items: bunkerItems,
     cataclysm: {
       text: cataclysm.value,
@@ -47,11 +49,9 @@ export function generateGameState(playersList, pack, config) {
     }
   };
 
-  
-  const c = pack.character;
+  const c = pack.character || {};
   const playersState = {};
 
-  
   const decks = {
     professions: shuffle(c.profession),
     hobbies: shuffle(c.hobby),
@@ -63,38 +63,31 @@ export function generateGameState(playersList, pack, config) {
     abilities: shuffle(c.special_ability)
   };
 
-  
   const drawCard = (deckName, fallbackArray) => {
-    if (decks[deckName].length > 0) return decks[deckName].pop();
-    return getRandomItem(fallbackArray); 
+    if (decks[deckName] && decks[deckName].length > 0) return decks[deckName].pop();
+    return getRandomItem(fallbackArray, "Немає даних"); 
   };
 
   playersList.forEach(player => {
-    
-    const genderItem = getRandomItem(c.gender);
+    const genderItem = getRandomItem(c.gender, "Стать невідома");
     let ageVal = getRandomInt(config.age_range.min, config.age_range.max);
     if (genderItem.meta && genderItem.meta.custom_age) {
-      ageVal = genderItem.meta.custom_age; 
+      ageVal = genderItem.meta.custom_age;
     }
-    const isChildfree = config.allow_childfree ? (Math.random() > 0.7) : false; 
+    const isChildfree = config.allow_childfree ? (Math.random() > 0.7) : false;
 
-    
-    const bodyItem = getRandomItem(c.body_type);
+    const bodyItem = getRandomItem(c.body_type, "Тілобудова невідома");
     const heightVal = getRandomInt(config.height_range.min, config.height_range.max);
 
-    
-    const healthItem = getRandomItem(c.health);
+    const healthItem = getRandomItem(c.health, "Хвороба невідома");
     const healthStage = pickStage(healthItem, config.default_stages.health);
 
-    
     const profItem = drawCard('professions', c.profession);
     const hobbyItem = drawCard('hobbies', c.hobby);
-    
     
     const ability1 = drawCard('abilities', c.special_ability);
     const ability2 = drawCard('abilities', c.special_ability);
 
-    
     playersState[player.id] = {
       name: player.name,
       is_alive: true,
