@@ -163,12 +163,20 @@ function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
-  const problemText = bState.problem && bState.problem !== "Відсутня" 
-    ? ` ${bState.problem}` 
-    : "";
+const descriptionParts = [
+    bState.history,
+    bState.rooms_description,
+    bState.location,
+    (bState.problem && bState.problem !== "Відсутня") ? bState.problem : null
+  ]
+  .filter(Boolean)
+  .map(text => {
+    const trimmed = text.trim();
+    return trimmed.match(/[.!?]$/) ? trimmed : trimmed + ".";
+  });
 
   const bunkerData = bState.capacity ? {
-    description: `${bState.history || ''}. ${bState.rooms_description || ''}. ${bState.location || ''} ${problemText}.`,
+    description: descriptionParts.join(" "),
     size: bState.size,
     yearsInBunker: bState.stay_time,
     foodSupply: bState.food_and_water,
@@ -250,7 +258,11 @@ function setupActionListeners() {
   document.addEventListener("click", handleGlobalClick);
 }
 
+let isUpdatingLock = false;
+
 async function handleGlobalClick(e) {
+  if (isUpdatingLock) return;
+
   const lockBtn = e.target.closest(".char-lock");
   if (!lockBtn) return;
 
@@ -261,8 +273,10 @@ async function handleGlobalClick(e) {
   const idxStr = item.dataset.idx;
   if (!dbKey) return;
 
+  isUpdatingLock = true;
+
   try {
-    const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
+    const { data: room, error } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
     if (error || !room || !room.players_state[currentUserId]) return;
 
     const state = room.players_state;
@@ -290,10 +304,16 @@ async function handleGlobalClick(e) {
     room.players_state = state;
     updateGameBoard(room, document.getElementById('game-board'));
 
-    await supabase.from('rooms').update({ players_state: state }).eq('room_code', currentRoomCode);
+    await supabase.rpc('update_single_player_state', {
+      room_code_val: currentRoomCode,
+      user_id_val: currentUserId,
+      player_data: state[currentUserId]
+    });
     
   } catch (err) {
     console.error("Помилка оновлення:", err);
+  } finally {
+    isUpdatingLock = false; 
   }
 }
 
