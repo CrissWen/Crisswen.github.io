@@ -75,7 +75,9 @@ export function generateGameState(playersList, pack, config) {
   
   const foodMonths = calculateFoodMonths(stayTimeMonths);
   let foodAndWater = `${formatStayTime(foodMonths)}`;
+  let foodAndWater = `${formatStayTime(foodMonths)}`;
 
+  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.25) {
   if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.25) {
     const specialFood = getRandomItem(b.food_supply).value;
     foodAndWater += ` (${specialFood})`;
@@ -185,6 +187,7 @@ export function generateGameState(playersList, pack, config) {
       ],
       
       health: [
+        { disease: healthDisease, severity: healthStage, is_revealed: false }
         { disease: healthDisease, severity: healthStage, is_revealed: false }
       ],
       
