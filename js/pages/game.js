@@ -12,6 +12,7 @@ let currentRoomCode = null;
 let realtimeSubscription = null;
 let currentUserId = null;
 let currentUserName = null;
+let localRoomState = null;
 
 export function renderGame() {
   return `
@@ -42,6 +43,8 @@ export async function initGame() {
     const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
     if (error || !room) throw new Error("Кімнату не знайдено");
 
+    localRoomState = room;
+
     const isGameStarted = Object.keys(room.bunker_state || {}).length > 0;
     const isPlayerInRoom = room.players_state && room.players_state[currentUserId];
 
@@ -62,7 +65,7 @@ export async function initGame() {
       room.players_state = updatedPlayersState;
     }
 
-    updateGameBoard(room, boardEl);
+    updateGameBoard(localRoomState, boardEl);
     statusEl.style.display = 'none';
     boardEl.style.display = 'block';
 
@@ -246,9 +249,11 @@ function subscribeToRoomUpdates() {
       table: 'rooms', 
       filter: `room_code=eq.${currentRoomCode}` 
     }, (payload) => {
+      localRoomState = payload.new; 
+      
       const boardEl = document.getElementById('game-board');
       if (boardEl) {
-        updateGameBoard(payload.new, boardEl);
+        updateGameBoard(localRoomState, boardEl);
       }
     }).subscribe();
 }
@@ -276,10 +281,9 @@ async function handleGlobalClick(e) {
   isUpdatingLock = true;
 
   try {
-    const { data: room, error } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
-    if (error || !room || !room.players_state[currentUserId]) return;
-
-    const state = room.players_state;
+    if (!localRoomState || !localRoomState.players_state[currentUserId]) return;
+    
+    const state = localRoomState.players_state;
     const targetRef = state[currentUserId][dbKey];
 
     if (Array.isArray(targetRef)) {
@@ -301,8 +305,7 @@ async function handleGlobalClick(e) {
       }
     }
 
-    room.players_state = state;
-    updateGameBoard(room, document.getElementById('game-board'));
+    updateGameBoard(localRoomState, document.getElementById('game-board'));
 
     await supabase.rpc('update_single_player_state', {
       room_code_val: currentRoomCode,
