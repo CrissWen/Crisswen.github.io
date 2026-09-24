@@ -1,3 +1,12 @@
+function getAgeCategory(age) {
+  const num = Number(age);
+  if (isNaN(num)) return "";
+  if (num >= 16 && num <= 34) return " (Молодий)";
+  if (num >= 35 && num <= 59) return " (Дорослий)";
+  if (num >= 60) return " (Похилий)";
+  return "";
+}
+
 export function mapPlayerState(rawPlayer) {
   const chars = [];
   
@@ -18,10 +27,18 @@ export function mapPlayerState(rawPlayer) {
   };
 
   if (rawPlayer.gender) {
-    const ageStr = rawPlayer.age ? `, ${rawPlayer.age.value} р.` : "";
+    
+    let ageStr = "";
+    
+    if (rawPlayer.age && rawPlayer.age.value !== undefined) {
+      const val = rawPlayer.age.value;
+      const cat = getAgeCategory(val);
+      ageStr = isNaN(Number(val)) ? `, ${val}` : `, ${val} р.${cat}`;
+    }
+    
     const childfreeData = rawPlayer.is_childfree || rawPlayer.childfree;
     const childStr = (childfreeData && childfreeData.value) ? " | Чайлдфрі" : "";
-    
+
     chars.push({
       label: "Стать",
       value: `${rawPlayer.gender.value}${ageStr}${childStr}`,
@@ -33,7 +50,7 @@ export function mapPlayerState(rawPlayer) {
   add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
   add('traits', 'Риса характеру', d => d.value);
   add('professions', 'Професія', d => `${d.title} (${d.stage})`);
-  add('health', "Здоров'я", d => `${d.disease} (${d.severity})`);
+  add('health', "Здоров'я", d => d.disease === "Ідеально здоровий" ? d.disease : `${d.disease} (${d.severity})`);
   add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
   add('phobias', 'Фобія', d => d.value);
   add('backpack', 'Рюкзак', d => d.item);

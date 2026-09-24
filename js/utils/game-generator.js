@@ -74,9 +74,9 @@ export function generateGameState(playersList, pack, config) {
   const formattedStayTime = formatStayTime(stayTimeMonths);
   
   const foodMonths = calculateFoodMonths(stayTimeMonths);
-  let foodAndWater = `Провізія на ${formatStayTime(foodMonths)}`;
+  let foodAndWater = `${formatStayTime(foodMonths)}`;
 
-  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.4) {
+  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.25) {
     const specialFood = getRandomItem(b.food_supply).value;
     foodAndWater += ` (${specialFood})`;
   }
@@ -143,8 +143,17 @@ export function generateGameState(playersList, pack, config) {
     
     const heightVal = getRandomInt(config.height_range.min, config.height_range.max);
 
-    const healthItem = getRandomItem(c.health, "Хвороба невідома");
-    const healthStage = pickStage(healthItem, config.default_stages.health);
+    let healthDisease = "Хвороба невідома";
+    let healthStage = "Невідома стадія";
+
+    if (Math.random() < 0.95) {
+      healthDisease = "Ідеально здоровий";
+      healthStage = null;
+    } else {
+      const healthItem = getRandomItem(c.health, "Хвороба невідома");
+      healthDisease = healthItem.value;
+      healthStage = pickStage(healthItem, config.default_stages.health);
+    }
 
     const profItem = drawCard('professions', c.profession);
     const hobbyItem = drawCard('hobbies', c.hobby);
@@ -172,7 +181,7 @@ export function generateGameState(playersList, pack, config) {
       ],
       
       health: [
-        { disease: healthItem.value, severity: healthStage, is_revealed: false }
+        { disease: healthDisease, severity: healthStage, is_revealed: false }
       ],
       
       hobbies: [
