@@ -163,6 +163,10 @@ function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
+const problemText = bState.problem && bState.problem !== "Відсутня" 
+    ? ` ${bState.problem}.` 
+    : "";
+
 const bunkerData = bState.capacity ? {
     description: `${bState.history || ''}. ${bState.rooms_description || ''}. ${bState.location || ''} ${bState.problem || ''}`,
     size: bState.size,

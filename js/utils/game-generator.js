@@ -85,7 +85,11 @@ export function generateGameState(playersList, pack, config) {
   const bunkerSize = `${getSkewedRandomInt(25, 350, 4)} м²`; 
   
   const shuffledItems = shuffle(b.items);
-  const bunkerItems = shuffledItems.slice(0, getRandomInt(3, 4)).map(i => i.value);
+  const bunkerItems = shuffledItems.slice(0, getRandomInt(1, 5)).map(i => i.value);
+
+  if (Math.random() < 0.65) {
+    bunkerProblem = getRandomItem(b.problems, "Відсутня").value;
+  }
 
   const bunkerState = {
     capacity: capacity,
@@ -146,7 +150,7 @@ export function generateGameState(playersList, pack, config) {
     let healthDisease = "Хвороба невідома";
     let healthStage = "Невідома стадія";
 
-    if (Math.random() < 0.95) {
+    if (Math.random() < 0.20) {
       healthDisease = "Ідеально здоровий";
       healthStage = null;
     } else {
