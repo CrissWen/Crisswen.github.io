@@ -7,18 +7,48 @@ function getAgeCategory(age) {
   return "";
 }
 
+// Текст для порожньої характеристики (за замовчуванням "Пусто")
+const EMPTY_TEXT = { professions: "Без професії" };
+
+// Порожньо, якщо: null, [] (або масив лише з маркерів isEmpty), або об'єкт з isEmpty: true
+function isEmptyValue(data) {
+  if (data === null) return true;
+  if (Array.isArray(data)) return data.filter(x => x && !x.isEmpty).length === 0;
+  return data.isEmpty === true;
+}
+
+// Дістає is_revealed та текст із маркера-заглушки порожнечі (якщо він є — напр. після крадіжки).
+// Якщо маркера немає (напр. deleteInventory залишив просто []) — лишаємо стару поведінку: відкрито всім.
+function emptyMeta(data, key) {
+  const marker = Array.isArray(data) ? data.find(x => x && x.isEmpty) : (data && data.isEmpty ? data : null);
+  return {
+    revealed: marker ? !!marker.is_revealed : true,
+    text: (marker && marker.value) || EMPTY_TEXT[key] || "Пусто"
+  };
+}
+
 export function mapPlayerState(rawPlayer) {
   const chars = [];
   
   const add = (key, label, formatFunc) => {
-    if (!rawPlayer[key]) return;
     const data = rawPlayer[key];
+    if (data === undefined) return; // поле ніколи не генерувалось — колонку не показуємо
+
+    if (isEmptyValue(data)) {
+      // Порожня характеристика: видима іншим лише, якщо вона була відкрита до того, як стала порожньою
+      // (маркер зберігає wasRevealed з крадіжки); без маркера (просто []) — відкрито всім, як раніше
+      const { revealed, text } = emptyMeta(data, key);
+      chars.push({ label, value: text, open: revealed, dbKey: key, isEmpty: true });
+      return;
+    }
+
     let val, rev;
     
     if (Array.isArray(data)) {
-      if (data.length === 0) return;
-      val = data.map(formatFunc).join(", "); 
-      rev = data[0].is_revealed; 
+      // Кілька елементів (декілька професій/рюкзаків) — виводимо через кому
+      const items = data.filter(x => x && !x.isEmpty);
+      val = items.map(formatFunc).join(", ");
+      rev = items[0].is_revealed;
     } else {
       val = formatFunc(data);
       rev = data.is_revealed;
@@ -49,8 +79,8 @@ export function mapPlayerState(rawPlayer) {
 
   add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
   add('traits', 'Риса характеру', d => d.value);
-  add('professions', 'Професія', d => `${d.title} (${d.stage})`);
-  add('health', "Здоров'я", d => d.disease === "Ідеально здоровий" ? d.disease : `${d.disease} (${d.severity})`);
+  add('professions', 'Професія', d => d.stage ? `${d.title} (${d.stage})` : d.title);
+  add('health', "Здоров'я", d => (d.disease === "Ідеально здоровий" || !d.severity) ? d.disease : `${d.disease} (${d.severity})`);
   add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
   add('phobias', 'Фобія', d => d.value);
   add('backpack', 'Рюкзак', d => d.item);

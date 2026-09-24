@@ -1,0 +1,576 @@
+import { supabase } from '../services/supabase.js';
+
+// ===== Довідники характеристик (спільні для host-panel.js та host-actions.js) =====
+
+export const CHARACTERISTIC_TYPES = [
+  { key: 'professions',       label: 'Професія',            category: 'profession',      isArray: true,  stagesKey: 'profession' },
+  { key: 'hobbies',           label: 'Хобі',                 category: 'hobby',           isArray: true,  stagesKey: 'hobby' },
+  { key: 'health',            label: "Здоров'я",             category: 'health',          isArray: true,  stagesKey: 'health' },
+  { key: 'traits',            label: 'Риса характеру',       category: 'trait',           isArray: true },
+  { key: 'phobias',           label: 'Фобія',                category: 'phobia',          isArray: true },
+  { key: 'backpack',          label: 'Рюкзак',               category: 'backpack',        isArray: true },
+  { key: 'large_inventory',   label: 'Крупний інвентар',     category: 'large_inventory', isArray: true },
+  { key: 'extra_info',        label: 'Дод. відомості',       category: 'extra_info',      isArray: true },
+  { key: 'special_abilities', label: 'Спец. можливість',     category: 'special_ability', isArray: true,  noExtra: true },
+  { key: 'body',              label: 'Статура',              category: 'body_type',       isArray: false },
+  { key: 'gender',            label: 'Стать',                category: 'gender',          isArray: false }
+];
+
+export const ARRAY_CHARACTERISTIC_TYPES = CHARACTERISTIC_TYPES.filter(c => c.isArray);
+// Що можна "додати" гравцю як додаткову картку (спец. можливості не додаємо — UI показує лише 2)
+export const EXTRA_CHARACTERISTIC_TYPES = CHARACTERISTIC_TYPES.filter(c => c.isArray && !c.noExtra);
+
+// Поля бункера, які ведучий може перевизначити власним текстом
+export const BUNKER_FIELDS = [
+  { key: 'history',           label: 'Як і де був побудований' },
+  { key: 'rooms_description', label: 'Опис кімнат' },
+  { key: 'location',          label: 'Локація' },
+  { key: 'size',              label: 'Площа' },
+  { key: 'stay_time',         label: 'Час перебування' },
+  { key: 'food_and_water',    label: 'Запаси їжі/води' },
+  { key: 'problem',           label: 'Проблема бункера' }
+];
+
+export const HEAL_PERFECT = 'perfect';
+
+const CHAR_TYPE_MAP = Object.fromEntries(CHARACTERISTIC_TYPES.map(c => [c.key, c]));
+
+// ===== Внутрішній стан модуля (кеш пулу карток + знімок для undo) =====
+
+let poolCache = null;
+let lastSnapshot = null; // { room_code, players_state, bunker_state, host_id }
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pickFromStrings(arr, fallback) {
+  if (!arr || !Array.isArray(arr) || arr.length === 0) return fallback;
+  return arr[randInt(0, arr.length - 1)];
+}
+
+function pickCard(arr, fallback = 'Немає даних') {
+  if (!arr || !Array.isArray(arr) || arr.length === 0) return { value: fallback, meta: {} };
+  return arr[randInt(0, arr.length - 1)];
+}
+
+function pickStage(card, defaultStages) {
+  if (card.meta && card.meta.stages && card.meta.stages.length) {
+    return pickFromStrings(card.meta.stages, 'Невідома стадія');
+  }
+  return pickFromStrings(defaultStages, 'Невідома стадія');
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function getRoom(roomCode) {
+  const { data, error } = await supabase.from('rooms').select('*').eq('room_code', roomCode).single();
+  if (error || !data) throw new Error(error?.message || 'Кімнату не знайдено');
+  return data;
+}
+
+// Єдина точка запису: UPDATE у БД, а WebSocket (postgres_changes) розішле зміни всім.
+// Помилки (наприклад, RLS) більше не ковтаються, а піднімаються до UI.
+async function saveRoom(roomCode, patch) {
+  const { error } = await supabase.from('rooms').update(patch).eq('room_code', roomCode);
+  if (error) throw new Error(error.message || 'Не вдалося зберегти зміни');
+}
+
+function snapshot(room) {
+  lastSnapshot = {
+    room_code: room.room_code,
+    players_state: JSON.parse(JSON.stringify(room.players_state || {})),
+    bunker_state: JSON.parse(JSON.stringify(room.bunker_state || {})),
+    host_id: room.host_id
+  };
+}
+
+export function canUndo() {
+  return !!lastSnapshot;
+}
+
+export async function undoLastAction(roomCode) {
+  if (!lastSnapshot || lastSnapshot.room_code !== roomCode) {
+    throw new Error('Немає дії для скасування');
+  }
+  const { players_state, bunker_state, host_id } = lastSnapshot;
+  await saveRoom(roomCode, { players_state, bunker_state, host_id });
+  lastSnapshot = null;
+}
+
+async function loadPools() {
+  if (poolCache) return poolCache;
+
+  const { data: pack, error: packError } = await supabase
+    .from('packs').select('id, config').eq('title', 'default').single();
+  if (packError || !pack) throw new Error('Не вдалося завантажити конфігурацію пака');
+
+  const { data: rows, error: rowsError } = await supabase
+    .from('pack_cards').select('pool_type, category, value, meta').eq('pack_id', pack.id);
+  if (rowsError || !rows) throw new Error('Не вдалося завантажити картки пака');
+
+  const pools = { bunker: {}, character: {}, config: pack.config || {} };
+  rows.forEach(row => {
+    const bucket = pools[row.pool_type];
+    if (!bucket) return;
+    if (!bucket[row.category]) bucket[row.category] = [];
+    bucket[row.category].push({ value: row.value, meta: row.meta || {} });
+  });
+
+  poolCache = pools;
+  return pools;
+}
+
+// Стадії (стаж професії, ступінь хвороби, рівень хобі) для випадаючих списків панелі
+export async function getStageOptions() {
+  const pools = await loadPools();
+  const stages = pools.config?.default_stages || {};
+  return {
+    profession: stages.profession || [],
+    hobby: stages.hobby || [],
+    health: stages.health || []
+  };
+}
+
+function drawCharacteristic(charType, pools) {
+  const meta = CHAR_TYPE_MAP[charType];
+  if (!meta) throw new Error('Невідомий тип характеристики: ' + charType);
+
+  const card = pickCard(pools.character[meta.category]);
+  const defaultStages = pools.config?.default_stages?.[meta.stagesKey];
+
+  switch (charType) {
+    case 'gender':
+      return { value: card.value, is_revealed: false };
+    case 'body': {
+      const range = pools.config?.height_range;
+      return {
+        type: card.value,
+        height_cm: range ? randInt(range.min, range.max) : 170,
+        is_revealed: false
+      };
+    }
+    case 'professions':
+      return [{ title: card.value, ability: card.meta?.ability || '', stage: pickStage(card, defaultStages), is_revealed: false }];
+    case 'hobbies':
+      return [{ title: card.value, stage: pickStage(card, defaultStages), is_revealed: false }];
+    case 'health':
+      return [{ disease: card.value, severity: pickStage(card, defaultStages), is_revealed: false }];
+    case 'traits':
+    case 'phobias':
+    case 'extra_info':
+      return [{ value: card.value, is_revealed: false }];
+    case 'backpack':
+    case 'large_inventory':
+      return [{ item: card.value, is_revealed: false }];
+    case 'special_abilities': {
+      // У грі завжди 2 спец. можливості, тому при заміні тягнемо дві
+      const second = pickCard(pools.character[meta.category]);
+      return [
+        { text: card.value,   is_used: false, is_revealed: false },
+        { text: second.value, is_used: false, is_revealed: false }
+      ];
+    }
+    default:
+      throw new Error('Невідомий тип характеристики: ' + charType);
+  }
+}
+
+// Нова характеристика успадковує стан "відкрито/закрито" старої,
+// щоб заміна не розкривала і не ховала інформацію без відома гравця.
+function withReveal(oldVal, newVal) {
+  const wasRevealed = Array.isArray(oldVal) ? !!oldVal[0]?.is_revealed : !!oldVal?.is_revealed;
+  if (Array.isArray(newVal)) return newVal.map(x => ({ ...x, is_revealed: wasRevealed }));
+  return { ...newVal, is_revealed: wasRevealed };
+}
+
+// Вік для нової статі: якщо в meta статі є custom_age (напр. "Без віку" у Кіборга) — беремо його,
+// інакше випадкове число в межах config.age_range пака.
+function generateAge(genderCard, config) {
+  const custom = genderCard?.meta?.custom_age;
+  if (custom) return custom;
+  const range = config?.age_range;
+  return range ? randInt(range.min, range.max) : randInt(18, 60);
+}
+
+// Нова стать і новий вік одним махом. Обидва поля успадковують стан "відкрито/закрито" старої статі
+// (game.js також розкриває/ховає age разом із gender). excludeCurrent — не випадати тій самій статі.
+function rerollGenderAndAge(player, pools, excludeCurrent = false) {
+  const all = pools.character.gender || [];
+  const others = excludeCurrent ? all.filter(c => c.value !== player.gender?.value) : all;
+  const card = pickCard(others.length ? others : all, 'Стать невідома');
+  const wasRevealed = !!player.gender?.is_revealed;
+
+  player.gender = { value: card.value, is_revealed: wasRevealed };
+  player.age = { value: generateAge(card, pools.config), is_revealed: wasRevealed };
+}
+
+function resolveIds(pState, targetId) {
+  return targetId === 'all' ? Object.keys(pState) : [targetId];
+}
+
+// ===== Дії з характеристиками гравців =====
+
+export async function changeCharacteristic(roomCode, targetId, charType) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pools = await loadPools();
+  const pState = room.players_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    if (!pState[id]) return;
+    if (charType === 'gender') {
+      // Стать і вік генеруються разом, інакше вік лишається від старої статі (напр. у Кіборга)
+      rerollGenderAndAge(pState[id], pools);
+      return;
+    }
+    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools));
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function changeExperience(roomCode, targetId, newExpLevel) {
+  if (!newExpLevel) throw new Error('Оберіть рівень стажу');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    if (pState[id]?.professions?.[0]) pState[id].professions[0].stage = newExpLevel;
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
+  if (!severityLevel) throw new Error('Оберіть ступінь хвороби');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    const h = pState[id]?.health?.[0];
+    if (!h || h.disease === 'Ідеально здоровий') return; // у здорової людини немає ступеня
+    h.severity = severityLevel;
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function invertGender(roomCode, targetId) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pools = await loadPools();
+  const pState = room.players_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    const p = pState[id];
+    if (!p?.gender) return;
+    rerollGenderAndAge(p, pools, true);
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function swapCharacteristics(roomCode, charType, targetId = 'all') {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+  const allIds = Object.keys(pState);
+  if (allIds.length < 2) throw new Error('Замало гравців для обміну');
+
+  if (targetId === 'all') {
+    const values = allIds.map(id => pState[id][charType]);
+    const shuffled = shuffleArray(values);
+    allIds.forEach((id, idx) => { pState[id][charType] = shuffled[idx]; });
+  } else {
+    if (!pState[targetId]) throw new Error('Гравця не знайдено');
+    const others = allIds.filter(id => id !== targetId);
+    const partner = others[randInt(0, others.length - 1)];
+    const tmp = pState[targetId][charType];
+    pState[targetId][charType] = pState[partner][charType];
+    pState[partner][charType] = tmp;
+  }
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+// ===== "Вкрасти характеристику" =====
+// Гілка 1: жертва отримує нову випадкову картку, злодій ЗАМІЩУЄ свою вкраденою.
+const STEAL_REPLACE_KEYS = ['gender', 'body', 'traits', 'health', 'phobias'];
+// Гілка 2: жертва лишається "Пусто", злодій отримує картку ДОДАТКОВО до своєї.
+const STEAL_APPEND_KEYS = ['professions', 'hobbies', 'large_inventory', 'backpack', 'extra_info'];
+
+// Порожньо: відсутнє, null, [] (або лише маркери isEmpty), об'єкт із isEmpty: true
+function isEmptyChar(val) {
+  if (val === undefined || val === null) return true;
+  if (Array.isArray(val)) return val.filter(x => x && !x.isEmpty).length === 0;
+  return val.isEmpty === true;
+}
+
+// Текст маркера-заглушки для жертви крадіжки (Гілка 2). Для професії — окремий напис.
+const STEAL_EMPTY_TEXT = { professions: 'Без професії' };
+
+// Маркер-заглушка: зберігає, чи характеристика була відкрита ДО крадіжки,
+// щоб UI (player-parser/players-table) знав, показувати «Пусто» одразу чи ховати під замочком.
+function emptyMarker(charType, wasRevealed) {
+  return [{ isEmpty: true, value: STEAL_EMPTY_TEXT[charType] || 'Пусто', is_revealed: wasRevealed }];
+}
+
+// Реальні картки поля (завжди масив, без маркерів порожнечі)
+function realCards(val) {
+  if (isEmptyChar(val)) return [];
+  return Array.isArray(val) ? val.filter(x => x && !x.isEmpty) : [val];
+}
+
+// Статус відкриття НАЛЕЖИТЬ СЛОТУ гравця, а не конкретній картці в ньому. Порожній слот
+// (нічого немає або лише маркер порожнечі) вважаємо закритим.
+function slotRevealed(val) {
+  const cards = realCards(val);
+  return cards.length ? !!cards[0].is_revealed : false;
+}
+
+// Жорстко проставляє переданий статус відкриття (слота) на всі картки значення, ігноруючи
+// той is_revealed, який був у самих карток (статус належить слоту, а не картці).
+function forceReveal(val, revealed) {
+  if (Array.isArray(val)) return val.map(x => ({ ...x, is_revealed: revealed }));
+  return { ...val, is_revealed: revealed };
+}
+
+export async function stealCharacteristic(roomCode, thiefId, victimId, charType) {
+  if (!thiefId || !victimId) throw new Error('Оберіть гравців');
+  if (thiefId === victimId) throw new Error('Оберіть різних гравців');
+
+  const replaceMode = STEAL_REPLACE_KEYS.includes(charType);
+  const appendMode = STEAL_APPEND_KEYS.includes(charType);
+  if (!replaceMode && !appendMode) throw new Error('Цю характеристику не можна вкрасти');
+
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  const thief = pState[thiefId];
+  const victim = pState[victimId];
+  if (!thief || !victim) throw new Error('Гравця не знайдено');
+
+  // Перевірка ДО snapshot, щоб невдала спроба не затирала попередню точку скасування
+  if (isEmptyChar(victim[charType])) throw new Error('Характеристика вже пуста');
+
+  // Статус відкриття належить СЛОТУ гравця, а не картці в ньому — фіксуємо його одразу, до будь-яких
+  // мутацій, і далі жорстко застосовуємо його до того, що ляже в кожен слот.
+  const thiefWasRevealed = slotRevealed(thief[charType]);   // порожній слот злодія — вважаємо закритим
+  const victimWasRevealed = slotRevealed(victim[charType]);
+
+  const pools = replaceMode ? await loadPools() : null;
+  snapshot(room);
+
+  if (replaceMode) {
+    if (charType === 'gender') {
+      // Вік прив'язаний до статі: злодій забирає обидва під СВОЇМ статусом,
+      // жертва отримує нову стать/вік під СВОЇМ попереднім статусом (не від нового випадкового картки).
+      thief.gender = { ...victim.gender, is_revealed: thiefWasRevealed };
+      if (victim.age) thief.age = { ...victim.age, is_revealed: thiefWasRevealed };
+      rerollGenderAndAge(victim, pools, true);
+      victim.gender.is_revealed = victimWasRevealed;
+      if (victim.age) victim.age.is_revealed = victimWasRevealed;
+    } else {
+      const stolen = victim[charType];
+      thief[charType] = forceReveal(stolen, thiefWasRevealed);
+      victim[charType] = forceReveal(drawCharacteristic(charType, pools), victimWasRevealed);
+    }
+  } else {
+    // Поле злодія стає масивом (якщо ще не був) і отримує вкрадені картки поруч з власними;
+    // весь результуючий слот приводиться до одного статусу — того, що був у злодія ДО крадіжки.
+    const stolen = realCards(victim[charType]);
+    const existing = realCards(thief[charType]);
+    thief[charType] = [...existing, ...stolen].map(c => ({ ...c, is_revealed: thiefWasRevealed }));
+    // Жертва: замість порожнього [] записуємо маркер-заглушку, що жорстко тримає
+    // попередній статус відкриття СЛОТА жертви (незалежно від того, що вона там мала).
+    victim[charType] = emptyMarker(charType, victimWasRevealed);
+  }
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function healPlayer(roomCode, targetId, healAction) {
+  if (!healAction) throw new Error('Оберіть тип лікування');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    const p = pState[id];
+    if (!p?.health?.[0]) return;
+    const wasRevealed = p.health[0].is_revealed;
+    if (healAction === HEAL_PERFECT) {
+      p.health = [{ disease: 'Ідеально здоровий', severity: null, is_revealed: wasRevealed }];
+    } else if (p.health[0].disease !== 'Ідеально здоровий') {
+      p.health[0].severity = healAction;
+    }
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+// Картка з тексту, який ведучий ввів вручну: { value, meta: {}, is_revealed: false }.
+// Додатково дублюємо текст у поле, яке читає player-parser (title / disease / item),
+// щоб картка коректно відобразилась. До БД не звертаємось: стадії залишаємо порожніми.
+function buildCustomCard(charCategory, text) {
+  const card = { value: text, meta: {}, is_revealed: false };
+  switch (charCategory) {
+    case 'professions':     return { ...card, title: text, ability: '', stage: '' };
+    case 'hobbies':         return { ...card, title: text, stage: '' };
+    case 'health':          return { ...card, disease: text, severity: '' };
+    case 'backpack':
+    case 'large_inventory': return { ...card, item: text };
+    default:                return card; // traits, phobias, extra_info читають value
+  }
+}
+
+// customText (необов'язково): якщо не порожній — БД не чіпаємо, додається саме цей текст.
+// Нова картка завжди додається ПОРУЧ з існуючими (поле стає масивом).
+export async function addExtraCharacteristic(roomCode, targetId, charCategory, customText = '') {
+  const meta = CHAR_TYPE_MAP[charCategory];
+  if (!meta || !meta.isArray || meta.noExtra) throw new Error('Цей тип не можна додати');
+  const custom = String(customText || '').trim();
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pools = custom ? null : await loadPools();
+  const pState = room.players_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    const p = pState[id];
+    if (!p) return;
+    // Поточні значення поля -> масив без маркерів порожнечі
+    const existing = realCards(p[charCategory]);
+    // Нова картка успадковує стан відкриття групи, щоб не "випадати" з відображення
+    const revealed = existing.length ? !!existing[0].is_revealed : false;
+    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools);
+    p[charCategory] = [...existing, ...fresh.map(x => ({ ...x, is_revealed: revealed }))];
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function deleteInventory(roomCode, targetId, actionType) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+  const key = actionType === 'backpack' ? 'backpack' : 'large_inventory';
+
+  resolveIds(pState, targetId).forEach(id => {
+    if (pState[id]) pState[id][key] = [];
+  });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+export async function shiftAnnulCharacteristics(roomCode, charType, direction = 'cw') {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+  const ids = Object.keys(pState);
+  if (ids.length < 2) throw new Error('Замало гравців для зсуву');
+
+  const values = ids.map(id => pState[id][charType]);
+  const shifted = direction === 'ccw'
+    ? [...values.slice(1), values[0]]
+    : [values[values.length - 1], ...values.slice(0, -1)];
+
+  ids.forEach((id, idx) => { pState[id][charType] = shifted[idx]; });
+
+  await saveRoom(roomCode, { players_state: pState });
+}
+
+// ===== Дії з бункером / кімнатою =====
+
+export async function changeBunker(roomCode, field, customValue) {
+  const value = (customValue || '').trim();
+  if (!field) throw new Error('Оберіть параметр бункера');
+  if (!value) throw new Error('Введіть власне значення');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  bState[field] = value;
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+export async function changeCataclysm(roomCode) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pools = await loadPools();
+  const bState = room.bunker_state || {};
+  const card = pickCard(pools.bunker.cataclysm, 'Невідомий катаклізм');
+  bState.cataclysm = {
+    text: card.value,
+    description: card.meta?.description || '',
+    timer_minutes: card.meta?.timer_minutes || 0
+  };
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+export async function setGlobalTimer(roomCode, seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error('Некоректний час таймера');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  bState.global_timer_seconds = seconds;
+  bState.global_timer_end = Date.now() + seconds * 1000;
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+export async function startVoting(roomCode) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  bState.voting_active = true;
+  bState.voting_started_at = Date.now();
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+export async function changeBunkerCapacity(roomCode, delta) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  const current = Number(bState.capacity) || 1;
+  bState.capacity = Math.max(1, current + delta);
+  await saveRoom(roomCode, { bunker_state: bState });
+  return bState.capacity;
+}
+
+export function rollDice(sides) {
+  return randInt(1, sides);
+}
+
+export async function changeHost(roomCode, newHostId) {
+  const room = await getRoom(roomCode);
+  if (!newHostId || !(room.players_state || {})[newHostId]) throw new Error('Гравця не знайдено в кімнаті');
+  if (newHostId === room.host_id) throw new Error('Цей гравець уже ведучий');
+  snapshot(room);
+  await saveRoom(roomCode, { host_id: newHostId });
+}
+
+export async function restartGame(roomCode) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+  const resetPlayers = {};
+  Object.entries(pState).forEach(([id, p]) => { resetPlayers[id] = { name: p.name }; });
+  await saveRoom(roomCode, { players_state: resetPlayers, bunker_state: {} });
+}
+
+export async function closeRoom(roomCode) {
+  // Спершу шлемо всім гравцям сигнал через UPDATE (DELETE-події з фільтром Realtime не підтримує),
+  // потім із невеликою паузою видаляємо кімнату.
+  await saveRoom(roomCode, { bunker_state: { room_closed: true } });
+  await new Promise(resolve => setTimeout(resolve, 700));
+  const { error } = await supabase.from('rooms').delete().eq('room_code', roomCode);
+  if (error) throw new Error(error.message || 'Не вдалося закрити кімнату');
+  lastSnapshot = null;
+}

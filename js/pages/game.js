@@ -6,7 +6,19 @@ import { playersTable } from '../game-moduls/players-table.js';
 import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js';
 import { mapPlayerState } from '../utils/player-parser.js';
 import { waitingRoom } from '../game-moduls/waiting-room.js';
+import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
 import { generateGameState } from '../utils/game-generator.js';
+import * as HostActions from '../utils/host-actions.js';
+import {
+  renderHostPanel,
+  refreshHostPanel,
+  fillStageOptions,
+  getHostPanelRoot,
+  removeHostPanel,
+  setHostPanelOpen,
+  showHostToast,
+  setHostDiceResult
+} from '../game-moduls/host-panel.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
@@ -71,6 +83,7 @@ export async function initGame() {
 
     subscribeToRoomUpdates();
     setupActionListeners();
+    mountGameTimer(() => localRoomState?.bunker_state);
 
   } catch (err) {
     statusEl.textContent = "Помилка: " + err.message;
@@ -81,6 +94,7 @@ export async function initGame() {
 function updateGameBoard(roomData, container) {
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
   const isHost = roomData.host_id === currentUserId;
+  syncHostPanel(roomData);
 
   if (!isGameStarted) {
     container.innerHTML = waitingRoom({
@@ -201,16 +215,21 @@ const descriptionParts = [
     
     if (!rawPlayer.gender) continue; 
 
-    const flatPlayer = mapPlayerState(rawPlayer);
-    flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
-    
-    parsedAbilities.push({
-      name: flatPlayer.name,
-      ability1: flatPlayer.abilities[0]?.open ? flatPlayer.abilities[0].value : null,
-      ability2: flatPlayer.abilities[1]?.open ? flatPlayer.abilities[1].value : null
-    });
-    
-    parsedPlayers.push(flatPlayer);
+    // Помилка парсингу одного гравця не повинна ламати весь стіл
+    try {
+      const flatPlayer = mapPlayerState(rawPlayer);
+      flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
+
+      parsedAbilities.push({
+        name: flatPlayer.name,
+        ability1: flatPlayer.abilities[0]?.open ? flatPlayer.abilities[0].value : null,
+        ability2: flatPlayer.abilities[1]?.open ? flatPlayer.abilities[1].value : null
+      });
+
+      parsedPlayers.push(flatPlayer);
+    } catch (err) {
+      console.error(`Не вдалося розібрати стан гравця ${id}:`, err);
+    }
   }
 
   const columns = Array.from(allCharLabels);
@@ -223,16 +242,31 @@ const descriptionParts = [
     return { name: p.name, cells: cells };
   });
 
-  const myData = (pState[currentUserId] && pState[currentUserId].gender) 
-    ? mapPlayerState(pState[currentUserId]) 
-    : { name: pState[currentUserId]?.name || "Глядач", characteristics: [], abilities: [] };
+  let myData = { name: pState[currentUserId]?.name || "Глядач", characteristics: [], abilities: [] };
+  try {
+    if (pState[currentUserId] && pState[currentUserId].gender) {
+      myData = mapPlayerState(pState[currentUserId]);
+    }
+  } catch (err) {
+    console.error('Не вдалося розібрати власні характеристики:', err);
+  }
+
+  // Кожен блок рендериться окремо: помилка в одному не ламає решту столу
+  const safe = (title, fn) => {
+    try {
+      return fn();
+    } catch (err) {
+      console.error(`Помилка рендеру блоку «${title}»:`, err);
+      return `<div style="padding:12px;color:var(--text-mute);">Не вдалося відобразити блок «${title}»</div>`;
+    }
+  };
 
   const order = [
-    catastrophe(cataclysmData), 
-    bunkerInfo(bunkerData),
-    playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities }),
-    playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows),
-    specialAbilitiesTable(parsedAbilities)
+    safe('Катаклізм', () => catastrophe(cataclysmData)),
+    safe('Бункер', () => bunkerInfo(bunkerData)),
+    safe('Мої характеристики', () => playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities })),
+    safe('Гравці', () => playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows)),
+    safe('Спец. можливості', () => specialAbilitiesTable(parsedAbilities))
   ];
 
   container.innerHTML = order.join("");
@@ -249,7 +283,17 @@ function subscribeToRoomUpdates() {
       table: 'rooms', 
       filter: `room_code=eq.${currentRoomCode}` 
     }, (payload) => {
-      localRoomState = payload.new; 
+      // Supabase Realtime у payload.new НЕ передає великі (TOAST) jsonb-колонки, які не змінювались
+      // в цьому UPDATE. Тому таймер/голосування (міняють лише bunker_state) приходили без players_state,
+      // і характеристики зникали. Зливаємо зміни поверх попереднього стану замість повної заміни.
+      localRoomState = { ...localRoomState, ...payload.new };
+
+      // Ведучий закрив кімнату: повертаємо всіх у лобі
+      if (localRoomState.bunker_state?.room_closed) {
+        if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
+        window.location.hash = '#/lobby';
+        return;
+      } 
       
       const boardEl = document.getElementById('game-board');
       if (boardEl) {
@@ -286,6 +330,11 @@ async function handleGlobalClick(e) {
     const state = localRoomState.players_state;
     const targetRef = state[currentUserId][dbKey];
 
+    // Порожню характеристику ("Пусто") ховати/відкривати нема сенсу — і немає чого перемикати
+    // Немає чого перемикати, лише якщо поле взагалі відсутнє або порожній масив без маркера (напр. після deleteInventory).
+    // Маркер isEmpty (напр. після крадіжки) має свій is_revealed і перемикається як звичайна характеристика.
+    if (!targetRef || (Array.isArray(targetRef) && targetRef.length === 0)) return;
+
     if (Array.isArray(targetRef)) {
       if (idxStr !== "" && idxStr !== undefined) {
         const i = parseInt(idxStr);
@@ -320,7 +369,149 @@ async function handleGlobalClick(e) {
   }
 }
 
+// ===== Панель ведучого: монтування, події, виклик дій =====
+
+function getPlayersList(playersState) {
+  return Object.entries(playersState || {}).map(([id, p]) => ({ id, name: p.name || 'Гравець' }));
+}
+
+function hostPanelData(roomData) {
+  return {
+    players: getPlayersList(roomData.players_state),
+    currentUserId,
+    capacity: roomData.bunker_state?.capacity,
+    canUndo: HostActions.canUndo()
+  };
+}
+
+// Панель живе поза #game-board, тож перемальовування дошки її не зачіпає.
+// Показуємо лише ведучому і лише після старту гри (до роздачі карт дії не мають сенсу).
+function syncHostPanel(roomData) {
+  const isHost = roomData.host_id === currentUserId;
+  const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
+  let root = getHostPanelRoot();
+
+  if (!isHost || !isGameStarted) {
+    if (root) removeHostPanel();
+    return;
+  }
+
+  if (!root) {
+    document.body.insertAdjacentHTML('beforeend', renderHostPanel({
+      capacity: roomData.bunker_state.capacity,
+      canUndo: HostActions.canUndo()
+    }));
+    root = getHostPanelRoot();
+    bindHostEvents(root);
+    HostActions.getStageOptions()
+      .then(stages => fillStageOptions(getHostPanelRoot(), stages))
+      .catch(err => console.error('Не вдалося завантажити стадії:', err));
+  }
+
+  refreshHostPanel(root, hostPanelData(roomData));
+}
+
+const HOST_ACTIONS = {
+  timer:     { run: (f, arg) => HostActions.setGlobalTimer(currentRoomCode, Number(arg)), ok: (r, f, arg) => `Таймер на ${arg} с запущено` },
+  cataclysm: { run: () => HostActions.changeCataclysm(currentRoomCode), ok: 'Катаклізм змінено' },
+  voting:    { run: () => HostActions.startVoting(currentRoomCode), ok: 'Голосування розпочато' },
+  capacity:  {
+    run: (f, arg) => HostActions.changeBunkerCapacity(currentRoomCode, Number(arg)),
+    ok: (r) => `Місць у бункері: ${r}`,
+    after: (root, r) => { const el = root.querySelector('[data-hp-capacity]'); if (el) el.textContent = r; }
+  },
+
+  changeCharacteristic: { run: f => HostActions.changeCharacteristic(currentRoomCode, f.target, f.charType), ok: 'Характеристику змінено' },
+  changeExperience:     { run: f => HostActions.changeExperience(currentRoomCode, f.target, f.level), ok: 'Стаж змінено' },
+  changeDiseaseSeverity:{ run: f => HostActions.changeDiseaseSeverity(currentRoomCode, f.target, f.level), ok: 'Ступінь хвороби змінено' },
+  invertGender:        { run: f => HostActions.invertGender(currentRoomCode, f.target), ok: 'Стать змінено' },
+  swapCharacteristics: { run: f => HostActions.swapCharacteristics(currentRoomCode, f.charType, f.target), ok: 'Обмін виконано' },
+  stealCharacteristic: { run: f => HostActions.stealCharacteristic(currentRoomCode, f.thief, f.victim, f.charType), ok: 'Характеристику викрадено' },
+  healPlayer:          { run: f => HostActions.healPlayer(currentRoomCode, f.target, f.heal), ok: 'Лікування застосовано' },
+  addExtraCharacteristic: {
+    // Якщо текстове поле не порожнє — передаємо його як кастомне значення, інакше береться випадкова картка
+    run: f => HostActions.addExtraCharacteristic(currentRoomCode, f.target, f.category, (f.customExtra || '').trim()),
+    ok: 'Картку додано',
+    after: root => { const el = root.querySelector('[data-field="customExtra"]'); if (el) el.value = ''; }
+  },
+  deleteInventory:     { run: (f, arg) => HostActions.deleteInventory(currentRoomCode, f.target, arg), ok: 'Інвентар видалено' },
+  shift:               { run: (f, arg) => HostActions.shiftAnnulCharacteristics(currentRoomCode, f.charType, arg), ok: 'Характеристики зсунуто' },
+  changeBunker: {
+    run: f => HostActions.changeBunker(currentRoomCode, f.bunkerField, f.customValue),
+    ok: 'Параметр бункера змінено',
+    after: root => { const el = root.querySelector('[data-field="customValue"]'); if (el) el.value = ''; }
+  },
+
+  dice: {
+    run: (f, arg) => HostActions.rollDice(Number(arg)),
+    ok: (r, f, arg) => `Кубик D${arg}: ${r}`,
+    after: (root, r) => setHostDiceResult(root, r)
+  },
+
+  changeHost: {
+    confirm: 'Передати права ведучого обраному гравцю? Ви втратите доступ до цієї панелі.',
+    run: f => HostActions.changeHost(currentRoomCode, f.newHost),
+    ok: 'Права ведучого передано'
+  },
+  undo:    { run: () => HostActions.undoLastAction(currentRoomCode), ok: 'Дію скасовано' },
+  restart: {
+    confirm: 'Почати гру наново? Усі картки буде скинуто, гравці повернуться до кімнати очікування.',
+    run: () => HostActions.restartGame(currentRoomCode),
+    ok: 'Гру скинуто'
+  },
+  closeRoom: {
+    confirm: 'Закрити кімнату? Усіх гравців буде відключено, дію не можна скасувати.',
+    run: () => HostActions.closeRoom(currentRoomCode),
+    ok: 'Кімнату закрито',
+    after: () => { window.location.hash = '#/lobby'; }
+  }
+};
+
+// Збирає значення всіх [data-field] всередині того ж акордеона, що й натиснута кнопка
+function readHostFields(btn) {
+  const scope = btn.closest('.hp-acc-body');
+  const fields = {};
+  scope?.querySelectorAll('[data-field]').forEach(el => { fields[el.dataset.field] = el.value; });
+  return fields;
+}
+
+async function runHostAction(root, btn) {
+  const def = HOST_ACTIONS[btn.dataset.action];
+  if (!def) return;
+  if (def.confirm && !window.confirm(def.confirm)) return;
+
+  const arg = btn.dataset.arg;
+  btn.disabled = true;
+  try {
+    const result = await def.run(readHostFields(btn), arg);
+    const msg = typeof def.ok === 'function' ? def.ok(result, null, arg) : def.ok;
+    showHostToast(root, msg);
+    def.after?.(root, result);
+  } catch (err) {
+    console.error('Помилка дії ведучого:', err);
+    showHostToast(root, err.message || 'Не вдалося виконати дію', true);
+  } finally {
+    btn.disabled = false;
+    // Оновлюємо лише стан кнопки undo; решту панелі перемалює подія з WebSocket
+    const undoBtn = root.querySelector('[data-action="undo"]');
+    if (undoBtn) undoBtn.disabled = !HostActions.canUndo();
+  }
+}
+
+function bindHostEvents(root) {
+  root.addEventListener('click', (e) => {
+    if (e.target.closest('[data-hp-toggle]')) {
+      setHostPanelOpen(root, !root.classList.contains('hp-open'));
+      return;
+    }
+    const btn = e.target.closest('[data-action]');
+    if (btn && !btn.disabled) runHostAction(root, btn);
+  });
+}
+
 export function cleanupGame() {
+  removeHostPanel();
+  unmountGameTimer();
   if (realtimeSubscription) {
     supabase.removeChannel(realtimeSubscription);
     realtimeSubscription = null;
