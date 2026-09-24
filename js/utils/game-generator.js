@@ -76,21 +76,20 @@ export function generateGameState(playersList, pack, config) {
   const foodMonths = calculateFoodMonths(stayTimeMonths);
   let foodAndWater = `${formatStayTime(foodMonths)}`;
 
-  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.25) {
-  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.25) {
+  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.4) {
     const specialFood = getRandomItem(b.food_supply).value;
     foodAndWater += ` (${specialFood})`;
   }
 
-  
   const bunkerSize = `${getSkewedRandomInt(25, 350, 4)} м²`; 
   
-  const shuffledItems = shuffle(b.items);
-  const bunkerItems = shuffledItems.slice(0, getRandomInt(1, 5)).map(i => i.value);
-
+  let bunkerProblem = "Відсутня";
   if (Math.random() < 0.65) {
     bunkerProblem = getRandomItem(b.problems, "Відсутня").value;
   }
+
+  const shuffledItems = shuffle(b.items);
+  const bunkerItems = shuffledItems.slice(0, getRandomInt(1, 5)).map(i => i.value);
 
   const bunkerState = {
     capacity: capacity,
@@ -100,7 +99,7 @@ export function generateGameState(playersList, pack, config) {
     location: getRandomItem(b.location, "Локація невідома").value,
     history: getRandomItem(b.history, "Історія невідома").value,
     rooms_description: getRandomItem(b.rooms_description, "Кімнати невідомі").value,
-    problem: getRandomItem(b.problems, "Немає видимих проблем").value, 
+    problem: bunkerProblem, 
     items: bunkerItems,
     cataclysm: {
       text: cataclysm.value,
@@ -137,15 +136,12 @@ export function generateGameState(playersList, pack, config) {
     }
     const isChildfree = config.allow_childfree ? (Math.random() > 0.7) : false;
 
-    
     let bodyTypeVal = "Тілобудова невідома";
     if (c.body_type && c.body_type.length > 0) {
       bodyTypeVal = getRandomItem(c.body_type).value;
     } else if (config.default_stages && config.default_stages.body_type) {
-      
       bodyTypeVal = getRandomItem(config.default_stages.body_type);
     }
-    
     const heightVal = getRandomInt(config.height_range.min, config.height_range.max);
 
     let healthDisease = "Хвороба невідома";
@@ -153,7 +149,7 @@ export function generateGameState(playersList, pack, config) {
 
     if (Math.random() < 0.20) {
       healthDisease = "Ідеально здоровий";
-      healthStage = null;
+      healthStage = null; 
     } else {
       const healthItem = getRandomItem(c.health, "Хвороба невідома");
       healthDisease = healthItem.value;
@@ -162,7 +158,6 @@ export function generateGameState(playersList, pack, config) {
 
     const profItem = drawCard('professions', c.profession);
     const hobbyItem = drawCard('hobbies', c.hobby);
-    
     const ability1 = drawCard('abilities', c.special_ability);
     const ability2 = drawCard('abilities', c.special_ability);
 
@@ -221,5 +216,4 @@ export function generateGameState(playersList, pack, config) {
   });
 
   return { bunkerState, playersState };
-  }
 }
