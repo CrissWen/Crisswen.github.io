@@ -154,7 +154,7 @@ async function handleStartGame(e) {
     console.error("Помилка старту:", err);
     alert(err.message);
     btn.disabled = false;
-    btn.textContent = "Почати гру (Роздати карти)";
+    btn.textContent = "Почати гру";
   }
 }
 
@@ -163,8 +163,8 @@ function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
-  const bunkerData = bState.capacity ? {
-    description: `${bState.history || ''}. ${bState.rooms_description || ''}. Розташування: ${bState.location || ''}`,
+const bunkerData = bState.capacity ? {
+    description: `${bState.history || ''}. ${bState.rooms_description || ''}. ${bState.location || ''} ${bState.problem || ''}`,
     size: bState.size,
     yearsInBunker: bState.stay_time,
     foodSupply: bState.food_and_water,
