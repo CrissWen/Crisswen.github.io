@@ -34,20 +34,22 @@ body{
 html,
 body,
 .hp-panel,
-.hp-scroll{
+.hp-scroll,
+.table-scroll{
   scrollbar-width: none;       /* Firefox */
   -ms-overflow-style: none;    /* IE/Edge (legacy) */
 }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 .hp-panel::-webkit-scrollbar,
-.hp-scroll::-webkit-scrollbar{
+.hp-scroll::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar{
   display: none;               /* Chrome/Safari/Opera */
   width: 0;
   height: 0;
 }
 
-.wrap{max-width:900px;margin:0 auto;}
+.wrap{max-width:1600px;width:95%;margin:0 auto;}
 
 /* -- panel / block shell -- */
 .block{
@@ -166,27 +168,36 @@ body::-webkit-scrollbar,
 .ability-item.open{border-color:var(--hazard);}
 .ability-item.open .char-lock{border-color:var(--hazard);}
 
-/* ===== Tables ===== */
+/* ===== Tables =====
+   .table-scroll — обгортка таблиці (роль "table-responsive"): горизонтальний скрол свайпом на вузьких екранах,
+   аби колонки не налізали один на одний, коли table.bunker-table ширша за екран (див. min-width нижче). */
 .table-scroll {
-  /* Забираємо скрол, дозволяємо таблиці розтягуватися */
-  overflow: hidden; 
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  -webkit-overflow-scrolling: touch; /* інерційний свайп-скрол на iOS */
   border: 1px solid var(--metal);
   border-radius: var(--radius-sm);
 }
 
 table.bunker-table {
   width: 100%;
+  min-width: 800px; /* на вузьких екранах таблиця не стискається менше цього — з'являється горизонтальний скрол у .table-scroll замість здавлених колонок */
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13px; /* Трохи зменшили шрифт для місткості */
-  /* Прибрали min-width: 560px */
-  table-layout: fixed; /* Змушує колонки рівномірно ділити простір екрана */
+  /* Фіксований font-size прибрано — тепер масштаб задається через clamp() у th/td нижче */
+  /* Прибрали min-width: 560px (тепер 800px вище) */
+  table-layout: fixed; /* Змушує колонки рівномірно ділити 800піксельну/ширшу базу */
 }
 
 table.bunker-table th, table.bunker-table td {
   border-bottom: 1px solid var(--metal);
   border-right: 1px solid var(--metal);
-  padding: 8px 6px; /* Зменшили внутрішні відступи */
+  /* Fluid typography & spacing: плавне збільшення тексту/відступів за шириною екрана замість фіксованих 14px і padding: 8px 6px */
+  font-size: clamp(14px, 1.2vw, 18px);
+  padding: clamp(8px, 1vw, 16px);
+  line-height: 1.5;                    /* вищі рядки разом із збільшеним padding */
+  min-height: clamp(36px, 4vw, 56px);  /* підстраховка висоти рядка, якщо padding+line-height раптом замало */
   text-align: left;
   vertical-align: middle;
   word-wrap: break-word;     /* Перенесення довгих слів */
@@ -204,7 +215,7 @@ table.bunker-table tbody tr:last-child td {
 
 table.bunker-table thead th {
   font-family: var(--body);
-  font-size: 12px;
+  font-size: clamp(11px, 1vw, 14px); /* трохи дрібніший, але також fluid заголовок, щоб не вибивався з масштабу тіла таблиці */
   color: var(--text-mute);
   background: var(--panel-2);
   font-weight: 600;
@@ -212,7 +223,22 @@ table.bunker-table thead th {
 
 table.bunker-table td.player-cell {
   font-family: var(--head);
-  font-size: 14px;
+  /* font-size тепер успадковується від базового clamp() вище, щоб бути в тон з рештою таблиці */
+}
+
+/* Липка перша колонка (імена гравців): при горизонтальному свайпі в .table-scroll (Див. вище) залишається зліва,
+   поки характеристики прокручуються під нею — щоб гравець не загубив чию характеристику він дивиться. */
+table.bunker-table th:first-child,
+table.bunker-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+table.bunker-table thead th:first-child {
+  background-color: var(--panel-2); /* той же фон, що й у решти заголовків — без цього був би прозорим став під скролом */
+}
+table.bunker-table tbody td:first-child {
+  background-color: var(--panel); /* фон блоку, щоб непрозоро перекривати колонки, що проїжджають під низом */
 }
 
 table.bunker-table td.player-cell .avatar {
