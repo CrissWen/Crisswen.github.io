@@ -1,3 +1,4 @@
+import { supabase } from './services/supabase.js';
 import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby, initLobby } from './pages/lobby.js';
 import { renderGame, initGame, cleanupGame } from './pages/game.js';
@@ -12,23 +13,37 @@ const routes = {
 
 let currentRouteObj = null;
 
-function router() {
-  const fullHash = window.location.hash || '#/login';
-  const path = fullHash.split('?')[0]; 
-  const route = routes[path] || routes['#/login'];
-  
+async function router() {
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (currentRouteObj && currentRouteObj.cleanup) {
-    currentRouteObj.cleanup();
-  }
-  
-  currentRouteObj = route;
-  
-  appContainer.innerHTML = route.render();
+  const fullHash = window.location.hash || '#/login';
+  const path = fullHash.split('?')[0];
 
-  if (route.init) {
-    route.init();
-  }
+  // Є сесія, але користувач на сторінці входу (або на корені сайту) -> в лобі
+  if (session && (path === '#/login' || !window.location.hash)) {
+    window.location.hash = '#/lobby';
+    return;
+  }
+
+  // Немає сесії, але користувач намагається зайти в захищений розділ -> на вхід
+  if (!session && (path === '#/lobby' || path === '#/game')) {
+    window.location.hash = '#/login';
+    return;
+  }
+
+  const route = routes[path] || routes['#/login'];
+
+  if (currentRouteObj && currentRouteObj.cleanup) {
+    currentRouteObj.cleanup();
+  }
+
+  currentRouteObj = route;
+
+  appContainer.innerHTML = route.render();
+
+  if (route.init) {
+    route.init();
+  }
 }
 
 window.addEventListener('hashchange', router);
