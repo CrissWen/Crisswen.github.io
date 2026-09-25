@@ -30,9 +30,25 @@ function tick(getBunkerState) {
   const root = document.getElementById(TIMER_ID);
   if (!root) return;
 
-  const end = Number(getBunkerState()?.global_timer_end);
-  if (!end) {
+  const bState = getBunkerState() || {};
+  const end = Number(bState.global_timer_end) || 0;
+  const hasPause = bState.timer_paused_left !== null && bState.timer_paused_left !== undefined;
+
+  // Обидва порожні — таймер ніколи не запускали або його зупинили кнопкою "Стоп"
+  if (!end && !hasPause) {
     root.hidden = true;
+    return;
+  }
+
+  root.classList.remove('game-timer--paused');
+
+  // На паузі: показуємо заморожений залишок (без відліку), доки ведучий не відновить таймер
+  if (hasPause && !end) {
+    const pausedSeconds = Math.ceil(Number(bState.timer_paused_left) / 1000);
+    root.hidden = false;
+    root.classList.remove('game-timer--done', 'game-timer--warn');
+    root.classList.add('game-timer--paused');
+    root.querySelector('[data-timer-time]').textContent = formatTime(pausedSeconds);
     return;
   }
 

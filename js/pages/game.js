@@ -7,6 +7,7 @@ import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js
 import { mapPlayerState } from '../utils/player-parser.js';
 import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
+import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer } from '../game-moduls/cataclysm-timer.js';
 import { generateGameState } from '../utils/game-generator.js';
 import * as HostActions from '../utils/host-actions.js';
 import {
@@ -19,12 +20,69 @@ import {
   showHostToast,
   setHostDiceResult
 } from '../game-moduls/host-panel.js';
+import { showCustomConfirm } from '../game-moduls/confirm-dialog.js';
+import { showGlobalToast } from '../game-moduls/global-toast.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
 let currentUserId = null;
 let currentUserName = null;
 let localRoomState = null;
+let hasSeenCataclysmEnd = false; // флаг в пам'яті вкладки: щоб модалка "Час сплив" не вискакала повторно
+let trackedCataclysmTimerEnd = null; // останнє відоме cataclysm_timer_end (для скидання флага при НОВОМУ катаклізмі)
+
+// Синхронізує віджет-таймер катаклізму і скидає флаг модалки "Час сплив", коли ведучий ставить
+// новий катаклізм (інше значення cataclysm_timer_end) — щоб модалка могла показатись знову для наступного відліку.
+function syncCataclysm(bunkerState) {
+  const end = bunkerState?.cataclysm_timer_end ?? null;
+  if (end !== trackedCataclysmTimerEnd) {
+    trackedCataclysmTimerEnd = end;
+    hasSeenCataclysmEnd = false;
+  }
+  syncCataclysmTimer(bunkerState);
+}
+
+// Захист від спаму: відлік досягає нуля рівно один раз (цей колбек викликає модуль
+// cataclysm-timer.js рівно один раз на кожне окреме end), але додатково перевіряємо флаг
+// так, як це описано в ТЗ (без нього модалка вискочила б при кожному рендері сторінки).
+function onCataclysmTimerExpired() {
+  if (hasSeenCataclysmEnd) return;
+  hasSeenCataclysmEnd = true;
+  showCataclysmEndModal();
+}
+
+function showCataclysmEndModal() {
+  if (document.getElementById('cataclysm-end-modal')) return; // вже показана — другої не створюємо
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="cataclysm-end-modal" class="cataclysm-end-modal" role="alertdialog" aria-modal="true">
+      <div class="cataclysm-end-modal__card">
+        <div class="cataclysm-end-modal__icon" aria-hidden="true">☠</div>
+        <p class="cataclysm-end-modal__text">Час сплив. Ви не потрапили у бункер :(</p>
+        <button type="button" class="cataclysm-end-modal__btn" data-cata-modal-close>Закрити</button>
+      </div>
+    </div>
+  `);
+
+  const root = document.getElementById('cataclysm-end-modal');
+  requestAnimationFrame(() => root.classList.add('is-open'));
+
+  const close = () => {
+    root.classList.remove('is-open');
+    setTimeout(() => root.remove(), 200);
+    root.removeEventListener('click', onRootClick);
+    document.removeEventListener('keydown', onKeydown);
+  };
+  function onRootClick(e) {
+    // Закрити кнопкою або кліком по підкладці за межами картки — гра при цьому не блокується, це лише DOM-оверлей
+    if (e.target === root || e.target.closest('[data-cata-modal-close]')) close();
+  }
+  function onKeydown(e) {
+    if (e.key === 'Escape') close();
+  }
+
+  root.addEventListener('click', onRootClick);
+  document.addEventListener('keydown', onKeydown);
+}
 
 export function renderGame() {
   return `
@@ -84,6 +142,8 @@ export async function initGame() {
     subscribeToRoomUpdates();
     setupActionListeners();
     mountGameTimer(() => localRoomState?.bunker_state);
+    mountCataclysmTimer(onCataclysmTimerExpired);
+    syncCataclysm(localRoomState.bunker_state);
 
   } catch (err) {
     statusEl.textContent = "Помилка: " + err.message;
@@ -95,6 +155,7 @@ function updateGameBoard(roomData, container) {
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
   const isHost = roomData.host_id === currentUserId;
   syncHostPanel(roomData);
+  syncCataclysm(roomData.bunker_state);
 
   if (!isGameStarted) {
     container.innerHTML = waitingRoom({
@@ -283,6 +344,9 @@ function subscribeToRoomUpdates() {
       table: 'rooms', 
       filter: `room_code=eq.${currentRoomCode}` 
     }, (payload) => {
+      // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
+      const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
+
       // Supabase Realtime у payload.new НЕ передає великі (TOAST) jsonb-колонки, які не змінювались
       // в цьому UPDATE. Тому таймер/голосування (міняють лише bunker_state) приходили без players_state,
       // і характеристики зникали. Зливаємо зміни поверх попереднього стану замість повної заміни.
@@ -294,7 +358,13 @@ function subscribeToRoomUpdates() {
         window.location.hash = '#/lobby';
         return;
       } 
-      
+
+      // Нова подія від ведучого (крадіжка, зміна характеристики тощо) — показуємо всім гравцям тост по-центру екрана.
+      const hostEvent = localRoomState.bunker_state?.latest_host_event;
+      if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
+        showGlobalToast(hostEvent.text);
+      }
+
       const boardEl = document.getElementById('game-board');
       if (boardEl) {
         updateGameBoard(localRoomState, boardEl);
@@ -380,7 +450,11 @@ function hostPanelData(roomData) {
     players: getPlayersList(roomData.players_state),
     currentUserId,
     capacity: roomData.bunker_state?.capacity,
-    canUndo: HostActions.canUndo()
+    canUndo: HostActions.canUndo(),
+    timer: {
+      end: roomData.bunker_state?.global_timer_end,
+      pausedLeft: roomData.bunker_state?.timer_paused_left
+    }
   };
 }
 
@@ -399,7 +473,11 @@ function syncHostPanel(roomData) {
   if (!root) {
     document.body.insertAdjacentHTML('beforeend', renderHostPanel({
       capacity: roomData.bunker_state.capacity,
-      canUndo: HostActions.canUndo()
+      canUndo: HostActions.canUndo(),
+      timer: {
+        end: roomData.bunker_state.global_timer_end,
+        pausedLeft: roomData.bunker_state.timer_paused_left
+      }
     }));
     root = getHostPanelRoot();
     bindHostEvents(root);
@@ -413,6 +491,11 @@ function syncHostPanel(roomData) {
 
 const HOST_ACTIONS = {
   timer:     { run: (f, arg) => HostActions.setGlobalTimer(currentRoomCode, Number(arg)), ok: (r, f, arg) => `Таймер на ${arg} с запущено` },
+  pauseTimer: {
+    run: () => HostActions.pauseGlobalTimer(currentRoomCode),
+    ok: (r) => r === 'paused' ? 'Таймер на паузі' : 'Таймер відновлено'
+  },
+  stopTimer: { run: () => HostActions.stopGlobalTimer(currentRoomCode), ok: 'Таймер зупинено' },
   cataclysm: { run: () => HostActions.changeCataclysm(currentRoomCode), ok: 'Катаклізм змінено' },
   voting:    { run: () => HostActions.startVoting(currentRoomCode), ok: 'Голосування розпочато' },
   capacity:  {
@@ -443,29 +526,40 @@ const HOST_ACTIONS = {
   },
 
   dice: {
-    run: (f, arg) => HostActions.rollDice(Number(arg)),
+    run: (f, arg) => HostActions.rollDice(currentRoomCode, Number(arg)),
     ok: (r, f, arg) => `Кубик D${arg}: ${r}`,
     after: (root, r) => setHostDiceResult(root, r)
   },
 
   changeHost: {
-    confirm: 'Передати права ведучого обраному гравцю? Ви втратите доступ до цієї панелі.',
     run: f => HostActions.changeHost(currentRoomCode, f.newHost),
     ok: 'Права ведучого передано'
   },
   undo:    { run: () => HostActions.undoLastAction(currentRoomCode), ok: 'Дію скасовано' },
   restart: {
-    confirm: 'Почати гру наново? Усі картки буде скинуто, гравці повернуться до кімнати очікування.',
     run: () => HostActions.restartGame(currentRoomCode),
     ok: 'Гру скинуто'
   },
   closeRoom: {
-    confirm: 'Закрити кімнату? Усіх гравців буде відключено, дію не можна скасувати.',
     run: () => HostActions.closeRoom(currentRoomCode),
     ok: 'Кімнату закрито',
     after: () => { window.location.hash = '#/lobby'; }
   }
 };
+
+// ===== Глобальний перехоплювач підтвердження: єдина точка для всіх кнопок панелі, окрім таймера. =====
+
+// Кнопки таймера (15/30/60, пауза, стоп) та швидкі дії без реального ризику (кубики, +/- місткість)
+// діють миттєво, без підтвердження
+const NO_CONFIRM_ACTIONS = new Set(['timer', 'pauseTimer', 'stopTimer', 'dice', 'capacity']);
+
+// Текст підтвердження для конкретних дій; все, чого немає тут, отримує DEFAULT_CONFIRM_TEXT
+const CONFIRM_TEXTS = {
+  closeRoom: 'Точно закрити кімнату? Усіх гравців буде відключено, дію не можна скасувати.',
+  restart:   'Почати гру заново? Усі картки буде скинуто, гравці повернуться до кімнати очікування.',
+  changeHost:'Передати права ведучого обраному гравцю? Ви втратите доступ до цієї панелі.'
+};
+const DEFAULT_CONFIRM_TEXT = 'Виконати цю дію з характеристикою?';
 
 // Збирає значення всіх [data-field] всередині того ж акордеона, що й натиснута кнопка
 function readHostFields(btn) {
@@ -478,10 +572,21 @@ function readHostFields(btn) {
 async function runHostAction(root, btn) {
   const def = HOST_ACTIONS[btn.dataset.action];
   if (!def) return;
-  if (def.confirm && !window.confirm(def.confirm)) return;
+
+  // Блокуємо кнопку ще до підтвердження, щоб швидкий повторний клік під час очікування відповіді не відкрив другий діалог
+  btn.disabled = true;
+
+  // Єдина точка підтвердження: всі кнопки, крім таймера, чекають на відповідь в кастомному вікні
+  if (!NO_CONFIRM_ACTIONS.has(btn.dataset.action)) {
+    const message = CONFIRM_TEXTS[btn.dataset.action] || DEFAULT_CONFIRM_TEXT;
+    const confirmed = await showCustomConfirm(message, btn);
+    if (!confirmed) {
+      btn.disabled = false;
+      return;
+    }
+  }
 
   const arg = btn.dataset.arg;
-  btn.disabled = true;
   try {
     const result = await def.run(readHostFields(btn), arg);
     const msg = typeof def.ok === 'function' ? def.ok(result, null, arg) : def.ok;
@@ -512,6 +617,7 @@ function bindHostEvents(root) {
 export function cleanupGame() {
   removeHostPanel();
   unmountGameTimer();
+  unmountCataclysmTimer();
   if (realtimeSubscription) {
     supabase.removeChannel(realtimeSubscription);
     realtimeSubscription = null;

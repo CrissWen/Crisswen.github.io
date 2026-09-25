@@ -61,7 +61,30 @@ const playersSelect = (mode, fieldName = 'target') =>
 const actionBtn = (label, action, extra = '') =>
   `<button type="button" class="hp-btn" data-action="${action}" ${extra}>${label}</button>`;
 
-export function renderHostPanel({ capacity = 1, canUndo = false } = {}) {
+// Кнопки Пауза/Стоп виводяться лише, коли таймер дійсно запущено (йде або на паузі) —
+// аби не мозолити очі, коли його ще ніхто не запускав. Кнопка Пауза/Старт завжди має один
+// data-action="pauseTimer" — міняється лише візуал, pauseGlobalTimer в host-actions.js сам розбирається з напрямом.
+// timer = { end: bunker_state.global_timer_end, pausedLeft: bunker_state.timer_paused_left }
+function timerControlsHtml(timer = {}) {
+  // Строга перевірка (а не просте !!), бо pausedLeft === 0 (пауза точно на нулі) — валідний активний стан,
+  // а !!0 хибно вважав би таймер незапущеним. Узгоджено з game-timer.js.
+  const isPaused = timer.pausedLeft !== null && timer.pausedLeft !== undefined;
+  const isActive = !!timer.end || isPaused;
+  if (!isActive) return '';
+
+  const pauseLabel = isPaused
+    ? '<span class="hp-icon-play" aria-hidden="true"></span> Старт'
+    : '<span class="hp-icon-pause" aria-hidden="true"></span> Пауза';
+
+  return `
+    <div class="hp-row">
+      ${actionBtn(pauseLabel, 'pauseTimer')}
+      ${actionBtn('<span class="hp-icon-stop" aria-hidden="true"></span> Стоп', 'stopTimer')}
+    </div>
+  `;
+}
+
+export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = {}) {
   return `
     <div id="${HOST_PANEL_ID}" class="hp-root">
       <button type="button" class="hp-fab" data-hp-toggle aria-label="Панель ведучого">
@@ -92,6 +115,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false } = {}) {
             <div class="hp-row">
               ${[15, 30, 60].map(s => actionBtn(`${s} с`, 'timer', `data-arg="${s}"`)).join('')}
             </div>
+            <div data-hp-timer-controls>${timerControlsHtml(timer)}</div>
             <div class="hp-row hp-row-stack">
               ${actionBtn('Змінити катаклізм', 'cataclysm')}
               ${actionBtn('Почати голосування', 'voting')}
@@ -221,9 +245,9 @@ export function removeHostPanel() {
   getHostPanelRoot()?.remove();
 }
 
-// Оновлює лише списки гравців, лічильник і кнопку undo — сама панель не перемальовується,
+// Оновлює лише списки гравців, лічильник, кнопку undo та блок керування таймером — сама панель не перемальовується,
 // тож відкриті акордеони та введений текст не губляться.
-export function refreshHostPanel(root, { players, currentUserId, capacity, canUndo }) {
+export function refreshHostPanel(root, { players, currentUserId, capacity, canUndo, timer }) {
   if (!root) return;
 
   // Списки перебудовуємо, лише якщо склад гравців змінився (щоб не закривати відкритий dropdown)
@@ -246,6 +270,11 @@ export function refreshHostPanel(root, { players, currentUserId, capacity, canUn
 
   const undoBtn = root.querySelector('[data-action="undo"]');
   if (undoBtn) undoBtn.disabled = !canUndo;
+
+  // Блок Пауза/Стоп перемальовуємо ціликом при кожному оновленні кімнати — він сам статичний
+  // (текст/іконка кнопки Pause/Start і сама наявність рядка), тож перезапис його HTML не шкодить UX.
+  const timerSlot = root.querySelector('[data-hp-timer-controls]');
+  if (timerSlot) timerSlot.innerHTML = timerControlsHtml(timer || {});
 }
 
 // stages = { profession: [...], health: [...], hobby: [...] } з getStageOptions()

@@ -216,6 +216,21 @@ function resolveIds(pState, targetId) {
   return targetId === 'all' ? Object.keys(pState) : [targetId];
 }
 
+// ===== Глобальні сповіщення від ведучого (Toast для всіх гравців) =====
+// Записується в bunker_state разом з іншими змінами в тій же UPDATE, щоб postgres_changes
+// розіслав його всім гравцям разом із фактичною зміною. id — Date.now(), щоб game.js міг відрізнити нову подію від вже показаної.
+function setHostEvent(bState, text) {
+  bState.latest_host_event = { id: Date.now(), text };
+}
+
+function nameOf(pState, id) {
+  return pState?.[id]?.name || 'Гравець';
+}
+
+function labelOf(charType) {
+  return CHAR_TYPE_MAP[charType]?.label || charType;
+}
+
 // ===== Дії з характеристиками гравців =====
 
 export async function changeCharacteristic(roomCode, targetId, charType) {
@@ -223,6 +238,7 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
   snapshot(room);
   const pools = await loadPools();
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     if (!pState[id]) return;
@@ -234,7 +250,10 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
     pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools));
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усім гравцям' : `гравцю ${nameOf(pState, targetId)}`;
+  setHostEvent(bState, `Ведучий змінив характеристику «${labelOf(charType)}» ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function changeExperience(roomCode, targetId, newExpLevel) {
@@ -242,12 +261,16 @@ export async function changeExperience(roomCode, targetId, newExpLevel) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     if (pState[id]?.professions?.[0]) pState[id].professions[0].stage = newExpLevel;
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усім гравцям' : `гравцю ${nameOf(pState, targetId)}`;
+  setHostEvent(bState, `Ведучий встановив стаж «${newExpLevel}» ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
@@ -255,6 +278,7 @@ export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     const h = pState[id]?.health?.[0];
@@ -262,7 +286,10 @@ export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
     h.severity = severityLevel;
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усім гравцям' : `гравцю ${nameOf(pState, targetId)}`;
+  setHostEvent(bState, `Ведучий встановив ступінь хвороби «${severityLevel}» ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function invertGender(roomCode, targetId) {
@@ -270,6 +297,7 @@ export async function invertGender(roomCode, targetId) {
   snapshot(room);
   const pools = await loadPools();
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
@@ -277,20 +305,26 @@ export async function invertGender(roomCode, targetId) {
     rerollGenderAndAge(p, pools, true);
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усім гравцям' : `гравцю ${nameOf(pState, targetId)}`;
+  setHostEvent(bState, `Ведучий змінив стать ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function swapCharacteristics(roomCode, charType, targetId = 'all') {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
   const allIds = Object.keys(pState);
   if (allIds.length < 2) throw new Error('Замало гравців для обміну');
 
+  let eventText;
   if (targetId === 'all') {
     const values = allIds.map(id => pState[id][charType]);
     const shuffled = shuffleArray(values);
     allIds.forEach((id, idx) => { pState[id][charType] = shuffled[idx]; });
+    eventText = `Ведучий обміняв характеристику «${labelOf(charType)}» між усіма гравцями`;
   } else {
     if (!pState[targetId]) throw new Error('Гравця не знайдено');
     const others = allIds.filter(id => id !== targetId);
@@ -298,9 +332,11 @@ export async function swapCharacteristics(roomCode, charType, targetId = 'all') 
     const tmp = pState[targetId][charType];
     pState[targetId][charType] = pState[partner][charType];
     pState[partner][charType] = tmp;
+    eventText = `Ведучий обміняв характеристику «${labelOf(charType)}» між ${nameOf(pState, targetId)} та ${nameOf(pState, partner)}`;
   }
 
-  await saveRoom(roomCode, { players_state: pState });
+  setHostEvent(bState, eventText);
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 // ===== "Вкрасти характеристику" =====
@@ -369,6 +405,7 @@ export async function stealCharacteristic(roomCode, thiefId, victimId, charType)
 
   const pools = replaceMode ? await loadPools() : null;
   snapshot(room);
+  const bState = room.bunker_state || {};
 
   if (replaceMode) {
     if (charType === 'gender') {
@@ -395,7 +432,9 @@ export async function stealCharacteristic(roomCode, thiefId, victimId, charType)
     victim[charType] = emptyMarker(charType, victimWasRevealed);
   }
 
-  await saveRoom(roomCode, { players_state: pState });
+  setHostEvent(bState, `Ведучий: ${nameOf(pState, thiefId)} вкрав(ла) характеристику «${labelOf(charType)}» у ${nameOf(pState, victimId)}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function healPlayer(roomCode, targetId, healAction) {
@@ -403,6 +442,7 @@ export async function healPlayer(roomCode, targetId, healAction) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
@@ -415,7 +455,10 @@ export async function healPlayer(roomCode, targetId, healAction) {
     }
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усіх гравців' : `гравця ${nameOf(pState, targetId)}`;
+  setHostEvent(bState, `Ведучий вилікував ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 // Картка з тексту, який ведучий ввів вручну: { value, meta: {}, is_revealed: false }.
@@ -443,6 +486,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
   snapshot(room);
   const pools = custom ? null : await loadPools();
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
@@ -455,26 +499,35 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
     p[charCategory] = [...existing, ...fresh.map(x => ({ ...x, is_revealed: revealed }))];
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усім гравцям' : `гравцю ${nameOf(pState, targetId)}`;
+  setHostEvent(bState, `Ведучий додав додаткову характеристику «${labelOf(charCategory)}» ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function deleteInventory(roomCode, targetId, actionType) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
   const key = actionType === 'backpack' ? 'backpack' : 'large_inventory';
 
   resolveIds(pState, targetId).forEach(id => {
     if (pState[id]) pState[id][key] = [];
   });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const targetText = targetId === 'all' ? 'усіх гравців' : `гравця ${nameOf(pState, targetId)}`;
+  const itemText = key === 'backpack' ? 'рюкзак' : 'крупний інвентар';
+  setHostEvent(bState, `Ведучий видалив ${itemText} у ${targetText}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 export async function shiftAnnulCharacteristics(roomCode, charType, direction = 'cw') {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
   const ids = Object.keys(pState);
   if (ids.length < 2) throw new Error('Замало гравців для зсуву');
 
@@ -485,7 +538,10 @@ export async function shiftAnnulCharacteristics(roomCode, charType, direction = 
 
   ids.forEach((id, idx) => { pState[id][charType] = shifted[idx]; });
 
-  await saveRoom(roomCode, { players_state: pState });
+  const dirText = direction === 'ccw' ? 'проти годинникової' : 'за годинниковою';
+  setHostEvent(bState, `Ведучий зсунув характеристику «${labelOf(charType)}» між гравцями (${dirText})`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
 // ===== Дії з бункером / кімнатою =====
@@ -498,6 +554,8 @@ export async function changeBunker(roomCode, field, customValue) {
   snapshot(room);
   const bState = room.bunker_state || {};
   bState[field] = value;
+  const fieldLabel = BUNKER_FIELDS.find(f => f.key === field)?.label || field;
+  setHostEvent(bState, `Ведучий змінив параметр бункера «${fieldLabel}»`);
   await saveRoom(roomCode, { bunker_state: bState });
 }
 
@@ -507,11 +565,17 @@ export async function changeCataclysm(roomCode) {
   const pools = await loadPools();
   const bState = room.bunker_state || {};
   const card = pickCard(pools.bunker.cataclysm, 'Невідомий катаклізм');
+  // Скільки хвилин відведено новому катаклізму на відлік (0/відсутнє — без таймера)
+  const timerMinutes = Number(card.meta?.timer_minutes) || 0;
   bState.cataclysm = {
     text: card.value,
     description: card.meta?.description || '',
-    timer_minutes: card.meta?.timer_minutes || 0
+    timer_minutes: timerMinutes
   };
+  // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
+  // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.
+  bState.cataclysm_timer_end = timerMinutes > 0 ? Date.now() + timerMinutes * 60 * 1000 : null;
+  setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
   await saveRoom(roomCode, { bunker_state: bState });
 }
 
@@ -522,7 +586,45 @@ export async function setGlobalTimer(roomCode, seconds) {
   const bState = room.bunker_state || {};
   bState.global_timer_seconds = seconds;
   bState.global_timer_end = Date.now() + seconds * 1000;
+  bState.timer_paused_left = null; // новий запуск скасовує попередню паузу, якщо вона була
   await saveRoom(roomCode, { bunker_state: bState });
+}
+
+// Повністю зупиняє таймер (ховає віджет): і активний відлік, і збережену паузу.
+// Увага: кнопки таймера НІКОЛИ не пишуть latest_host_event — він працює автономно і не повинен спамити Toast'ами.
+export async function stopGlobalTimer(roomCode) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  bState.global_timer_end = null;
+  bState.timer_paused_left = null;
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+// Перемикач паузи: якщо таймер іде — заморожує залишок у timer_paused_left;
+// якщо вже на паузі — відновлює відлік від збереженого залишку.
+// Повертає 'paused' або 'resumed', щоб UI показав відповідний тост.
+export async function pauseGlobalTimer(roomCode) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+
+  if (bState.global_timer_end) {
+    const left = Math.max(0, bState.global_timer_end - Date.now());
+    bState.timer_paused_left = left;
+    bState.global_timer_end = null;
+    await saveRoom(roomCode, { bunker_state: bState });
+    return 'paused';
+  }
+
+  if (bState.timer_paused_left != null) {
+    bState.global_timer_end = Date.now() + bState.timer_paused_left;
+    bState.timer_paused_left = null;
+    await saveRoom(roomCode, { bunker_state: bState });
+    return 'resumed';
+  }
+
+  throw new Error('Таймер не запущено');
 }
 
 export async function startVoting(roomCode) {
@@ -531,6 +633,7 @@ export async function startVoting(roomCode) {
   const bState = room.bunker_state || {};
   bState.voting_active = true;
   bState.voting_started_at = Date.now();
+  setHostEvent(bState, 'Ведучий запустив голосування');
   await saveRoom(roomCode, { bunker_state: bState });
 }
 
@@ -540,20 +643,31 @@ export async function changeBunkerCapacity(roomCode, delta) {
   const bState = room.bunker_state || {};
   const current = Number(bState.capacity) || 1;
   bState.capacity = Math.max(1, current + delta);
+  setHostEvent(bState, `Ведучий змінив кількість місць у бункері: ${bState.capacity}`);
   await saveRoom(roomCode, { bunker_state: bState });
   return bState.capacity;
 }
 
-export function rollDice(sides) {
-  return randInt(1, sides);
+// Записує результат у bunker_state.latest_host_event, щоб його бачили всі гравці (Toast), а не лише ведучий
+export async function rollDice(roomCode, sides) {
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  const result = randInt(1, sides);
+  setHostEvent(bState, `Ведучий кинув кубик d${sides}. Випало: ${result}`);
+  await saveRoom(roomCode, { bunker_state: bState });
+  return result;
 }
 
 export async function changeHost(roomCode, newHostId) {
   const room = await getRoom(roomCode);
-  if (!newHostId || !(room.players_state || {})[newHostId]) throw new Error('Гравця не знайдено в кімнаті');
+  const pState = room.players_state || {};
+  if (!newHostId || !pState[newHostId]) throw new Error('Гравця не знайдено в кімнаті');
   if (newHostId === room.host_id) throw new Error('Цей гравець уже ведучий');
   snapshot(room);
-  await saveRoom(roomCode, { host_id: newHostId });
+  const bState = room.bunker_state || {};
+  setHostEvent(bState, `Ведучий передав права ведучого гравцю ${nameOf(pState, newHostId)}`);
+  await saveRoom(roomCode, { host_id: newHostId, bunker_state: bState });
 }
 
 export async function restartGame(roomCode) {
