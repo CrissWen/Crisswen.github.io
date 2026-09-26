@@ -86,10 +86,12 @@ function showCataclysmEndModal() {
 
 export function renderGame() {
   return `
-    <div id="game-status" style="text-align: center; padding: 20px; color: var(--text-mute);">
-      Завантаження кімнати...
+    <div class="layout-large-centered">
+      <div id="game-status" style="text-align: center; padding: 20px; color: var(--text-mute);">
+        Завантаження кімнати...
+      </div>
+      <div id="game-board" style="display: none;"></div>
     </div>
-    <div id="game-board" style="display: none;"></div>
   `;
 }
 

@@ -6,7 +6,7 @@ export function waitingRoom({ roomCode, playersState, isHost }) {
     .join('');
 
   return `
-    <section class="block" id="block-waiting-room">
+    <section class="block layout-small-centered" id="block-waiting-room">
       <div class="block-head" style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Кімната очікування: <span style="color: var(--accent);">${roomCode}</span></h2>
         <span style="font-size: 13px; color: var(--text-mute);">Гравців: ${Object.keys(pState).length}</span>

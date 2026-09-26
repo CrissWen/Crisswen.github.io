@@ -1,7 +1,8 @@
 import { supabase } from '../services/supabase.js';
+
 export function renderLobby() {
   return `
-    <section class="block">
+    <section class="block layout-small-centered">
       <div class="block-head" style="display: flex; align-items: center; justify-content: space-between;">
         <h2>Лобі</h2>
         <button id="logout-btn" style="padding: 8px 14px; border-radius: 6px; background: transparent; color: var(--text); font-weight: bold; cursor: pointer; border: 1px solid var(--metal);">Вийти з акаунта</button>

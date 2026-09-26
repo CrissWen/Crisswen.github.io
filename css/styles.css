@@ -111,8 +111,13 @@ body::-webkit-scrollbar,
 /* ===== Player characteristics (list + lock toggle) ===== */
 .char-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+@media (max-width: 600px) {
+  .char-list {
+    grid-template-columns: 1fr; 
+  }
 }
 .abilities-list {
   display: flex;
@@ -132,11 +137,12 @@ body::-webkit-scrollbar,
   font-family:var(--body);font-size:12.5px;
   color:var(--text-mute);
 }
-.char-value{
-  font-family:var(--head);font-size:16px;color:var(--text);
-  transition:color .3s ease;
+.char-value {
+  font-family: var(--head); 
+  font-size: 16px;
+  color: #ffffff;
+  letter-spacing: .12em;
 }
-.char-item:not(.open) .char-value{color:var(--metal-lt);letter-spacing:.12em;}
 
 .char-lock{
   flex:none;
@@ -193,16 +199,17 @@ table.bunker-table {
 table.bunker-table th, table.bunker-table td {
   border-bottom: 1px solid var(--metal);
   border-right: 1px solid var(--metal);
-  /* Fluid typography & spacing: плавне збільшення тексту/відступів за шириною екрана замість фіксованих 14px і padding: 8px 6px */
-  font-size: clamp(14px, 1.2vw, 18px);
-  padding: clamp(8px, 1vw, 16px);
-  line-height: 1.5;                    /* вищі рядки разом із збільшеним padding */
-  min-height: clamp(36px, 4vw, 56px);  /* підстраховка висоти рядка, якщо padding+line-height раптом замало */
+  
+  font-size: 13px; 
+  padding: 8px 10px;
+  line-height: 1.4;
+  min-height: 36px;
+  
   text-align: left;
   vertical-align: middle;
-  word-wrap: break-word;     /* Перенесення довгих слів */
-  overflow-wrap: break-word; /* Перенесення довгих слів */
-  white-space: normal;       /* Дозволяємо тексту падати на новий рядок */
+  word-wrap: break-word;     
+  overflow-wrap: break-word; 
+  white-space: normal;       
   transition: all .3s ease;
 }
 
@@ -215,7 +222,7 @@ table.bunker-table tbody tr:last-child td {
 
 table.bunker-table thead th {
   font-family: var(--body);
-  font-size: clamp(11px, 1vw, 14px); /* трохи дрібніший, але також fluid заголовок, щоб не вибивався з масштабу тіла таблиці */
+  font-size: 12px;
   color: var(--text-mute);
   background: var(--panel-2);
   font-weight: 600;
@@ -233,6 +240,7 @@ table.bunker-table td:first-child {
   position: sticky;
   left: 0;
   z-index: 2;
+  width: 15%;
 }
 table.bunker-table thead th:first-child {
   background-color: var(--panel-2); /* той же фон, що й у решти заголовків — без цього був би прозорим став під скролом */
@@ -632,3 +640,25 @@ table.bunker-table td.player-cell .avatar {
 }
 .cataclysm-end-modal__btn:hover { filter: brightness(1.1); }
 
+/* ===== Layout Helpers (Класи для позиціонування) ===== */
+
+/* Для сторінок авторизації та лобі (маленьке вікно по центру) */
+.layout-small-centered {
+  max-width: 400px;  /* Максимальна ширина вікна */
+  width: 100%;       /* Гнучкість: на малих екранах займатиме всю ширину */
+  margin: 15vh auto; /* 15vh - відступ зверху, auto - автоматично центрує по горизонталі */
+}
+
+/* Для вікна гри (60-70% екрану по центру) */
+.layout-large-centered {
+  width: 70%;        /* Змінили з 70% на 60% */
+  max-width: 1700px; /* Жорстке обмеження (60% від 1920px) */
+  margin: 5vh auto;  
+}
+
+/* Медіа-запит: Правило для планшетів та смартфонів */
+@media (max-width: 768px) {
+  .layout-large-centered {
+    width: 98%;
+  }
+}

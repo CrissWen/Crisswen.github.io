@@ -14,7 +14,7 @@ const BUTTON_TEXT = {
 
 export function renderAuth() {
   return `
-    <section class="block">
+    <section class="block layout-small-centered">
       <div class="block-head">
         <h2>Авторизація</h2>
       </div>
