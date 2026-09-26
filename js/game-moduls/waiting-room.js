@@ -19,7 +19,7 @@ export function waitingRoom({ roomCode, playersState, isHost }) {
           <button id="start-game-btn" style="width: 100%; padding: 12px; border-radius: 6px; background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none; font-size: 15px;">
             Почати гру (Роздати карти)
           </button>
-        ` : `
+        ` : ` 
           <p style="text-align: center; color: var(--text-mute); font-size: 14px; margin: 0;">Очікуємо, поки хост запустить гру...</p>
         `}
       </div>

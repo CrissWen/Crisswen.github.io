@@ -662,3 +662,74 @@ table.bunker-table td.player-cell .avatar {
     width: 98%;
   }
 }
+
+/* ===== Глобальний Тултип (Малюється поверх таблиці) ===== */
+.global-info-popup {
+  position: fixed; /* Прикріплюємо жорстко до вікна браузера, а не до таблиці */
+  transform: translate(-50%, -100%); /* Центруємо і піднімаємо рівно над іконкою */
+  width: max-content;
+  background: #edeff5;
+  color: #10121a;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 10000; /* Максимальний пріоритет малювання (Z-Order) */
+}
+
+.global-info-popup.is-visible {
+  opacity: 1;
+}
+
+/* Стрілочка вниз, що вказує на іконку */
+.global-info-popup::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #edeff5 transparent transparent transparent;
+}
+
+/* Сама іконка "i" в заголовку таблиці */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--metal-lt);
+  color: var(--panel);
+  font-size: 10px;
+  font-weight: bold;
+  font-family: var(--mono);
+  transition: background 0.2s ease;
+  cursor: help;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.info-icon:hover {
+  background: var(--ok);
+}
+
+.player-info-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-num {
+  color: var(--text-mute);
+  font-size: 12.5px;
+  font-weight: bold;
+  min-width: 14px;
+}
