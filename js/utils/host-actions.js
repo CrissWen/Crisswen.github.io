@@ -627,13 +627,34 @@ export async function pauseGlobalTimer(roomCode) {
   throw new Error('Таймер не запущено');
 }
 
+// bunker_state.voting — джерело правди для голосування, спільне для всіх гравців:
+//   isActive: boolean — чи триває зараз збір голосів
+//   votes:    { "ID_виборця": "ID_кандидата" } — словник відданих голосів
+// Стопер-захист: повторний запуск, поки попереднє голосування ще триває, кидає помилку і не чіпає votes.
+// Перевірка ДО snapshot(), щоб невдала спроба не затирала точку скасування попередньої дії.
 export async function startVoting(roomCode) {
   const room = await getRoom(roomCode);
-  snapshot(room);
   const bState = room.bunker_state || {};
-  bState.voting_active = true;
-  bState.voting_started_at = Date.now();
+
+  if (bState.voting?.isActive === true) {
+    throw new Error('Голосування вже почате!');
+  }
+
+  snapshot(room);
+  bState.voting = { isActive: true, votes: {} };
   setHostEvent(bState, 'Ведучий запустив голосування');
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+// Автозавершення голосування: викликається клієнтом ведучого (game.js -> maybeAutoFinishVoting), коли проголосували всі живі.
+// Ідемпотентна: якщо голосування вже неактивне — мовчазний но-оп. Свідомо НЕ викликаємо snapshot() —
+// це автоматичний системний крок, він не має затирати точку скасування останньої ручної дії ведучого.
+// Не пише і latest_host_event — автозавершення по кількості голосів вже видно всім із таблиці результатів, тост тут зайвий.
+export async function finishVoting(roomCode) {
+  const room = await getRoom(roomCode);
+  const bState = room.bunker_state || {};
+  if (!bState.voting?.isActive) return;
+  bState.voting = { ...bState.voting, isActive: false };
   await saveRoom(roomCode, { bunker_state: bState });
 }
 
@@ -670,6 +691,25 @@ export async function changeHost(roomCode, newHostId) {
   await saveRoom(roomCode, { host_id: newHostId, bunker_state: bState });
 }
 
+// Вигнати / повернути гравця. Просто інвертує players_state[id].is_kicked — рядок гравця
+// лишається в БД (характеристики не губляться), UI лише "сіріє" його (players-table.js / styles.css).
+export async function toggleKickPlayer(roomCode, playerId) {
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  if (!playerId || !pState[playerId]) throw new Error('Гравця не знайдено в кімнаті');
+  snapshot(room);
+  const bState = room.bunker_state || {};
+
+  const wasKicked = !!pState[playerId].is_kicked;
+  pState[playerId].is_kicked = !wasKicked;
+
+  setHostEvent(bState, wasKicked
+    ? `Ведучий повернув гравця ${nameOf(pState, playerId)}`
+    : `Ведучий вигнав гравця ${nameOf(pState, playerId)}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+}
+
 export async function restartGame(roomCode) {
   const room = await getRoom(roomCode);
   snapshot(room);
@@ -680,11 +720,11 @@ export async function restartGame(roomCode) {
 }
 
 export async function closeRoom(roomCode) {
-  // Спершу шлемо всім гравцям сигнал через UPDATE (DELETE-події з фільтром Realtime не підтримує),
-  // потім із невеликою паузою видаляємо кімнату.
-  await saveRoom(roomCode, { bunker_state: { room_closed: true } });
-  await new Promise(resolve => setTimeout(resolve, 700));
-  const { error } = await supabase.from('rooms').delete().eq('room_code', roomCode);
-  if (error) throw new Error(error.message || 'Не вдалося закрити кімнату');
+  // Одним атомарним запитом: bunker_state.room_closed сигналізує гравцям у кімнаті (game.js) негайно вийти в лобі,
+  // а status: 'closed' — щоб панель перепідключення (lobby.js) назавжди відфільтрувала цю кімнату,
+  // навіть якщо сам рядок ніколи не буде видалено з БД. (Раніше тут був окремий .delete() з затримкою —
+  // якщо він фактично не відпрацьовував (RLS/мережа), рядок залишався з room_closed:true, але без актуального
+  // status — саме це були “кімнати-привиди” RT4A/BHVI в лобі.)
+  await saveRoom(roomCode, { bunker_state: { room_closed: true }, status: 'closed' });
   lastSnapshot = null;
 }

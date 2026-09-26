@@ -12,14 +12,15 @@ export function specialAbilitiesTable (players) {
     val ? `<span class="cell-value">${val}</span>` : `<span class="cell-empty"></span>`;
 
   const rows = players
-    .map(
-      (p) => `
-        <tr data-player="${p.name}">
+    .map((p) => {
+      const rowClass = p.isKicked ? 'kicked-player' : '';
+      return `
+        <tr data-player="${p.name}" class="${rowClass}">
           <td class="player-cell"><span class="avatar">${p.name[0]}</span>${p.name}</td>
           <td data-col-label="Спец можливість №1">${cellHtml(p.ability1)}</td>
           <td data-col-label="Спец можливість №2">${cellHtml(p.ability2)}</td>
-        </tr>`
-    )
+        </tr>`;
+    })
     .join("");
 
   return `

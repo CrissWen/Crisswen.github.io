@@ -18,6 +18,14 @@
       <a href="#/game" style="color: var(--hazard);">Гра</a>
     </nav>
 
+    <!-- Глобальний хедер: доступний з лобі й далі, навіть якщо гравець уже залогінений —
+         роутер (js/app.js) більше не редиректить із голого #/login у лобі, тож посилання відкриє форму входу як є. -->
+    <header style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
+      <a href="#/login" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--metal); color: var(--text); text-decoration: none; font-size: 13.5px; font-weight: 600;">
+        👤 Профіль
+      </a>
+    </header>
+
     <main id="app"><!-- place where router insert pages --></main>
 
     <footer class="note">БУНКЕР · демо-версія v0.1</footer>

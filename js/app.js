@@ -18,16 +18,32 @@ async function router() {
 
   const fullHash = window.location.hash || '#/login';
   const path = fullHash.split('?')[0];
+  // Витягуємо код запрошення з усієї після '?' (напр. #/lobby?join=ABCD) — щоб зберегти його при редиректі на логін
+  const queryString = fullHash.split('?')[1] || '';
+  const joinCode = new URLSearchParams(queryString).get('join');
 
-  // Є сесія, але користувач на сторінці входу (або на корені сайту) -> в лобі
-  if (session && (path === '#/login' || !window.location.hash)) {
+  // Є сесія, і користувач відкрив просто порожній сайт (без хеша) -> в лобі
+  if (session && !window.location.hash) {
     window.location.hash = '#/lobby';
     return;
   }
 
-  // Немає сесії, але користувач намагається зайти в захищений розділ -> на вхід
+  // Є сесія, і гравець прийшов на #/login за посиланням-запрошенням (напр. вже був залогінений,
+  // а хтось скинув йому #/login?join=КОД) — це не спроба зайти в акаунт, а запрошення в кімнату,
+  // тож усе одно ведемо в лобі з тим самим кодом, а не показуємо форму входу.
+  if (session && path === '#/login' && joinCode) {
+    window.location.hash = `#/lobby?join=${joinCode}`;
+    return;
+  }
+
+  // Є сесія, але гравець ЦІЛЕСПРЯМОВАНО перейшов на голий #/login (наприклад, через кнопку
+  // "Профіль" у хедері) — більше НЕ редиректимо в лобі: дозволяємо роутеру нижче
+  // зрендерити сторінку авторизації як є (auth.js не перевіряє сесію сам).
+
+  // Немає сесії, але користувач намагається зайти в захищений розділ -> на вхід,
+  // зберігаючи код запрошення в хвості хеша (auth.js поверне гравця саме в потрібну кімнату після логіну)
   if (!session && (path === '#/lobby' || path === '#/game')) {
-    window.location.hash = '#/login';
+    window.location.hash = joinCode ? `#/login?join=${joinCode}` : '#/login';
     return;
   }
 

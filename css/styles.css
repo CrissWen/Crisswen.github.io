@@ -174,6 +174,30 @@ body::-webkit-scrollbar,
 .ability-item.open{border-color:var(--hazard);}
 .ability-item.open .char-lock{border-color:var(--hazard);}
 
+/* ===== Вигнаний гравець ("сірий" рядок) ===== */
+.kicked-player {
+    opacity: 0.5; /* Робить весь рядок напівпрозорим */
+    filter: grayscale(100%); /* Перетворює всі кольори/аватарки на чорно-білі */
+    pointer-events: none; /* Забороняє клікати по картках характеристик цього гравця */
+}
+/* Повертаємо можливість клікати ТІЛЬКИ по кнопці "Повернути" (щоб хост міг це зробити) */
+.kicked-player .kick-action-btn {
+    pointer-events: auto;
+}
+
+/* Примусово заливаємо сірим фоном усі комірки рядка — перебиває зебру, sticky-колонку (td:first-child
+   має власний background-color) і будь-який локальний фон карток характеристик. */
+.kicked-player td,
+.kicked-player th {
+    background-color: #151720 !important; /* темний, майже чорний з синім/металевим відтінком */
+    border-color: var(--metal-lt) !important; /* повертає видиму сітку-розділювачі таблиці */
+}
+
+/* Фон і рамки внутрішніх карток (.trait-card, .cell-value тощо) свідомо НЕ чіпаємо: рядок і так має
+   100% grayscale + 50% opacity (правило вище), тож власні кольори/рамки карток самі стають приглушеними
+   сіро-білими — і при цьому лишаються візуально відокремленими від темного фону комірки (#151720). */
+
+
 /* ===== Tables =====
    .table-scroll — обгортка таблиці (роль "table-responsive"): горизонтальний скрол свайпом на вузьких екранах,
    аби колонки не налізали один на одний, коли table.bunker-table ширша за екран (див. min-width нижче). */
@@ -525,6 +549,74 @@ table.bunker-table td.player-cell .avatar {
   transform: translate(-50%, -50%) scale(1);
 }
 
+/* ===== Голосування (voting.js) ===== */
+.voting-block{
+  margin:16px 0; padding:16px;
+  background:var(--panel); border:1px solid var(--metal); border-radius:var(--radius);
+}
+.voting-block__title{
+  margin:0 0 12px; font-family:var(--head); font-size:17px; color:var(--text);
+}
+.voting-block__empty{ color:var(--text-mute); margin:0; }
+
+.vote-grid{
+  display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;
+}
+
+.vote-tile{
+  position:relative; cursor:pointer;
+  padding:10px 16px; border-radius:var(--radius-sm);
+  border:1px solid var(--metal-lt); background:var(--panel-2); color:var(--text);
+  font-family:var(--body); font-size:14px; user-select:none;
+  transition:border-color .15s ease, background .15s ease;
+}
+.vote-tile__input{
+  position:absolute; opacity:0; width:0; height:0; pointer-events:none;
+}
+.vote-tile:has(.vote-tile__input:checked){
+  border-color:var(--accent); background:rgba(143,143,240,.18);
+}
+.vote-tile:has(.vote-tile__input:focus-visible){
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+
+.vote-submit-btn{
+  padding:10px 18px; border-radius:var(--radius-sm);
+  border:1px solid var(--ok); background:var(--ok); color:#10121a; font-weight:600;
+  font-family:var(--body); font-size:14px; cursor:pointer;
+}
+.vote-submit-btn:disabled{
+  opacity:.45; cursor:not-allowed; background:var(--panel-2); color:var(--text-mute); border-color:var(--metal-lt);
+}
+
+.vote-success-panel{
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; border-radius:var(--radius-sm);
+  background:rgba(74,222,128,.12); border:1px solid var(--ok); color:var(--ok);
+}
+.vote-success-panel__icon{
+  display:flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:50%;
+  background:var(--ok); color:#10121a; font-weight:700; font-size:14px; flex:none;
+}
+.vote-success-panel p{ margin:0; color:var(--text); }
+
+.vote-results-wrap{ overflow-x:auto; }
+.vote-results-table{
+  width:100%; border-collapse:collapse; font-family:var(--body); font-size:14px;
+}
+.vote-results-table th,
+.vote-results-table td{
+  padding:10px 12px; text-align:left; border-bottom:1px solid var(--metal);
+  white-space:nowrap;
+}
+.vote-results-table td:nth-child(2){ white-space:normal; color:var(--text-mute); }
+.vote-results-table th{
+  color:var(--text-mute); font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em;
+}
+.vote-results-table tbody tr:last-child td{ border-bottom:none; }
+.vote-results-table td:last-child{ font-weight:700; color:var(--accent); }
+
 
 
 /* ===== Таймер катаклізму (cataclysm-timer.js) =====
@@ -733,3 +825,150 @@ table.bunker-table td.player-cell .avatar {
   font-weight: bold;
   min-width: 14px;
 }
+
+/* Нік і кнопка "Вигнати/Повернути" — одна колонка, кнопка чітко під ніком */
+.player-name-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.kick-action-btn {
+  font-size: 0.85em;
+  cursor: pointer;
+  text-decoration: underline;
+  color: var(--danger); /* "Вигнати" — червоний */
+}
+
+.kick-action-btn.is-return {
+  color: var(--ok); /* "Повернути" — зелений */
+}
+
+/* ===== Лобі: одноколонковий (вертикальний) лейаут (lobby.js) =====
+   Зверху — основні дії (створити/приєднатися), під ним — панель перепідключення (.reconnect-panel)
+   до активних кімнат гравця. Обидва блоки однакової ширини, тож вирівнюються рівно по центру один під одним
+   на всіх екранах — від ПК до телефона, без окремого ламання на flex-direction в медіа-запиті. */
+.lobby-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  max-width: 760px;
+  width: 100%;
+  margin: 15vh auto 0;
+}
+.lobby-main {
+  width: 400px;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+.reconnect-panel {
+  width: 400px;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .lobby-layout {
+    margin: 6vh auto 0;
+  }
+  .lobby-main,
+  .reconnect-panel {
+    width: 100%;
+  }
+}
+
+/* Стос карток активних кімнат — одна під одною, якщо гравець одночасно в кількох активних іграх */
+.reconnect-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reconnect-card {
+  border: 1px solid var(--metal);
+  background: var(--panel);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.reconnect-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.reconnect-card__code {
+  font-family: var(--head);
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: .04em;
+}
+.reconnect-card__status {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--text-mute);
+}
+.reconnect-card__btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 6px;
+  background: var(--hazard);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  font-size: 13.5px;
+  transition: filter .2s ease;
+}
+.reconnect-card__btn:hover { filter: brightness(1.08); }
+
+/* Пульсуючий індикатор статусу гри: зелений = "гра йде", бурштиновий = "очікування в лобі" */
+.reconnect-card__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  animation: reconnect-dot-pulse 1.6s ease-in-out infinite;
+}
+.reconnect-card__dot.is-playing { background: var(--ok); }
+.reconnect-card__dot.is-waiting { background: var(--hazard); }
+@keyframes reconnect-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+.reconnect-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-mute);
+}
+
+/* ===== Кімната очікування: розділювач і заголовок списку гравців (waiting-room.js) =====
+   Розділювач відділяє блок "Запросіть друзів" від списку гравців; лічильник переїхав сюди
+   з .block-head (де раніше стояв поруч із назвою кімнати) — тепер він живе поруч із "Гравці:". */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--metal);
+  margin: 16px 0;
+}
+
+.players-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.players-list-head strong {
+  font-family: var(--head);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+.players-list-head span {
+  font-size: 13px;
+  color: var(--text-mute);
+}
+

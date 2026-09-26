@@ -1,5 +1,8 @@
 // БЛОК 4 — ТАБЛИЦЯ ГРАВЦІВ (перша колонка — ім'я, далі — характеристики)
-export function playersTable(columns, players) {
+// aliveCount / totalCount — лічильник "Живі / Всі" у заголовку (#bunker-candidates-count).
+// Якщо не передано, лічильник рахується по масиву players (старa поведінка).
+// isHost — лише ведучий бачить кнопку "Вигнати" / "Повернути" (players[i].id, players[i].isKicked).
+export function playersTable(columns, players, aliveCount, totalCount, isHost) {
   columns = columns || ["Стать", "Статура", "Риса характеру", "Професія", "Здоров'я", "Хобі / Захоплення", "Фобія / Страх", "Великий багаж", "Рюкзак", "Додаткові відомості"];
   players = players || [
     { name: "Олена", cells: ["Жіноча", "Струнка", "Емпатія", "Хірург", "Астма (легка)", "Гра на гітарі", "Клаустрофобія", "Намет", "Аптечка", "Має карту"] }
@@ -25,18 +28,30 @@ export function playersTable(columns, players) {
 
   const head = columns.map((c) => `<th>${c} ${getTooltip(c)}</th>`).join("");
 
+  // Кнопка рендериться лише для хоста; клас is-return лише перефарбовує колір (зелений/сірий) для "Повернути"
+  const kickToggle = (p) => {
+    if (!isHost || !p.id) return "";
+    const label = p.isKicked ? "Повернути" : "Вигнати";
+    const stateClass = p.isKicked ? " is-return" : "";
+    return `<div class="kick-action-btn${stateClass}" data-kick-id="${p.id}">${label}</div>`;
+  };
+
   const rows = players
     .map((p, index) => {
       const cells = p.cells
         .map((val, ci) => `<td data-col-label="${columns[ci]}">${cellHtml(val)}</td>`)
         .join("");
+      const rowClass = p.isKicked ? 'kicked-player' : '';
       return `
-        <tr data-player="${p.name}">
+        <tr data-player="${p.name}" class="${rowClass}">
           <td class="player-cell">
             <div class="player-info-wrapper">
               <span class="player-num">${index + 1}</span>
               <span class="avatar">${p.name[0]}</span>
-              <span class="player-name">${p.name}</span>
+              <div class="player-name-wrapper">
+                <div class="player-nickname">${p.name}</div>
+                ${kickToggle(p)}
+              </div>
             </div>
           </td>
           ${cells}
@@ -44,10 +59,13 @@ export function playersTable(columns, players) {
     })
     .join("");
 
+  const alive = aliveCount ?? players.length;
+  const total = totalCount ?? players.length;
+
   return `
     <section class="block" id="block-players-table">
       <div class="block-head" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="margin: 0;">Охочі потрапити в бункер: <span style="color: var(--text-mute); font-size: 18px;">${players.length}</span></h2>
+        <h2 style="margin: 0;">Охочі потрапити в бункер <span id="bunker-candidates-count" style="color: var(--text-mute); font-size: 18px;">${alive} / ${total}</span></h2>
       </div>
       <div class="block-body">
         <div class="table-scroll">

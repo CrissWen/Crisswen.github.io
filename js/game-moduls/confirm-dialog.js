@@ -17,8 +17,8 @@ function dialogHtml(message) {
     <div id="${CONFIRM_ID}" class="confirm-dialog" role="alertdialog" aria-modal="true">
       <p class="confirm-dialog__text">${esc(message)}</p>
       <div class="confirm-dialog__row">
-        <button type="button" class="confirm-dialog__btn confirm-dialog__btn--no" data-confirm="no">Нет</button>
-        <button type="button" class="confirm-dialog__btn confirm-dialog__btn--yes" data-confirm="yes">Да</button>
+        <button type="button" class="confirm-dialog__btn confirm-dialog__btn--no" data-confirm="no">Ні</button>
+        <button type="button" class="confirm-dialog__btn confirm-dialog__btn--yes" data-confirm="yes">Так</button>
       </div>
     </div>
   `;
@@ -49,7 +49,7 @@ function positionDialog(root, anchorEl) {
 
 // showCustomConfirm(messageText, anchorEl) -> Promise<boolean>
 // anchorEl — кнопка, біля якої показати вікно (обов'язковий параметр).
-// resolve(true) при натисканні "Да", resolve(false) при "Нет" або Escape.
+// resolve(true) при натисканні "Так", resolve(false) при "Ні" або Escape.
 export function showCustomConfirm(messageText, anchorEl) {
   return new Promise(resolve => {
     // Якщо десь лишилось попереднє вікно (наприклад, дуже швидкий подвійний клік) — прибираємо його без результату
@@ -75,6 +75,7 @@ export function showCustomConfirm(messageText, anchorEl) {
       settled = true;
       root.removeEventListener('click', onClick);
       document.removeEventListener('keydown', onKeydown);
+      document.removeEventListener('click', onOutsideClick);
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
       root.classList.remove('is-open');
@@ -92,7 +93,22 @@ export function showCustomConfirm(messageText, anchorEl) {
       if (e.key === 'Escape') finish(false);
     }
 
+    // Клік будь-де поза самим віконцем = та сама дія, що й кнопка "Ні" (тут немає окремого
+    // затемненого "фону-оверлея" на весь екран — вікно компактне й прив'язане до кнопки,
+    // тож "поза межами" перевіряємо через root.contains, а не порівнянням з overlay-елементом).
+    function onOutsideClick(e) {
+      if (root.contains(e.target)) return;
+      finish(false);
+    }
+
     root.addEventListener('click', onClick);
     document.addEventListener('keydown', onKeydown);
+
+    // Реєструємо клік-поза-вікном окремим макротаском: клік, яким саме відкрили це вікно
+    // (наприклад, кнопка дії в панелі ведучого), у цей момент ще НЕ долетів по бульбашці до document —
+    // якщо додати слухач синхронно, він спрацює на той самий клік і миттєво закриє щойно відкрите вікно.
+    setTimeout(() => {
+      if (!settled) document.addEventListener('click', onOutsideClick);
+    }, 0);
   });
 }

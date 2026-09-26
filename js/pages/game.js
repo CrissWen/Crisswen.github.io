@@ -4,6 +4,7 @@ import { bunkerInfo } from '../game-moduls/bunker-info.js';
 import { playerCharacteristics } from '../game-moduls/player-characteristics.js';
 import { playersTable } from '../game-moduls/players-table.js';
 import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js';
+import { votingSection } from '../game-moduls/voting.js';
 import { mapPlayerState } from '../utils/player-parser.js';
 import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
@@ -30,6 +31,8 @@ let currentUserName = null;
 let localRoomState = null;
 let hasSeenCataclysmEnd = false; // флаг в пам'яті вкладки: щоб модалка "Час сплив" не вискакала повторно
 let trackedCataclysmTimerEnd = null; // останнє відоме cataclysm_timer_end (для скидання флага при НОВОМУ катаклізмі)
+let wasVotingActive = false; // щоб автоскрол до #voting-section спрацював рівно один раз на кожне запускання голосування, а не при кожному рендері
+let votingFinishInFlight = false; // щоб декілька швидких postgres_changes підряд не відправили кілька паралельних finishVoting
 
 // Синхронізує віджет-таймер катаклізму і скидає флаг модалки "Час сплив", коли ведучий ставить
 // новий катаклізм (інше значення cataclysm_timer_end) — щоб модалка могла показатись знову для наступного відліку.
@@ -242,6 +245,7 @@ async function handleStartGame(e) {
 function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
+  const isHost = roomData.host_id === currentUserId;
   
 const descriptionParts = [
     bState.history,
@@ -286,23 +290,28 @@ const descriptionParts = [
       parsedAbilities.push({
         name: flatPlayer.name,
         ability1: flatPlayer.abilities[0]?.open ? flatPlayer.abilities[0].value : null,
-        ability2: flatPlayer.abilities[1]?.open ? flatPlayer.abilities[1].value : null
+        ability2: flatPlayer.abilities[1]?.open ? flatPlayer.abilities[1].value : null,
+        isKicked: !!rawPlayer.is_kicked
       });
 
-      parsedPlayers.push(flatPlayer);
+      parsedPlayers.push({ ...flatPlayer, id });
     } catch (err) {
       console.error(`Не вдалося розібрати стан гравця ${id}:`, err);
     }
   }
 
   const columns = Array.from(allCharLabels);
-  
+
+  // Лічильник "Охочі потрапити в бункер": усі зареєстровані в кімнаті vs ще не вигнані (is_kicked).
+  const totalPlayers = Object.keys(pState).length;
+  const alivePlayers = Object.values(pState).filter(player => !player.is_kicked).length;
+
   const tableRows = parsedPlayers.map(p => {
     const cells = columns.map(colName => {
       const char = p.characteristics.find(c => c.label === colName);
       return (char && char.open) ? char.value : null; 
     });
-    return { name: p.name, cells: cells };
+    return { name: p.name, id: p.id, isKicked: !!pState[p.id]?.is_kicked, cells: cells };
   });
 
   let myData = { name: pState[currentUserId]?.name || "Глядач", characteristics: [], abilities: [] };
@@ -328,11 +337,120 @@ const descriptionParts = [
     safe('Катаклізм', () => catastrophe(cataclysmData)),
     safe('Бункер', () => bunkerInfo(bunkerData)),
     safe('Мої характеристики', () => playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities })),
-    safe('Гравці', () => playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows)),
-    safe('Спец. можливості', () => specialAbilitiesTable(parsedAbilities))
+    safe('Гравці', () => playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows, alivePlayers, totalPlayers, isHost)),
+    safe('Спец. можливості', () => specialAbilitiesTable(parsedAbilities)), // isKicked уже в кожному елементі
+    safe('Голосування', () => votingSection({
+      voting: bState.voting,
+      players: Object.entries(pState).map(([id, p]) => ({ id, name: p.name || 'Гравець', alive: p.is_alive !== false })),
+      myId: currentUserId,
+      amAlive: pState[currentUserId]?.is_alive !== false
+    }))
   ];
 
   container.innerHTML = order.join("");
+
+  // Автоматичний скрол до блоку голосування рівно один раз на кожне його запускання (див. syncVotingScroll)
+  syncVotingScroll(pState, bState);
+
+  // Лише клієнт ведучого фіксує фінал голосування (див. maybeAutoFinishVoting) — щоб кілька клієнтів одночасно не гнали UPDATE
+  maybeAutoFinishVoting(roomData);
+}
+
+// Скролить до #voting-section рівно один раз на кожне "запускання" голосування (перехід isActive false→true) для
+// живого гравця, який ще не проголосував — а не на кожен renderActiveGame() (він перевиконується на
+// КОЖНе оновлення кімнати, навіть не пов'язане з голосуванням, інакше екран смикавсяб би при кожній дії ведучого).
+function syncVotingScroll(pState, bState) {
+  const isActive = !!bState?.voting?.isActive;
+  const amAlive = pState?.[currentUserId]?.is_alive !== false;
+  const myVote = bState?.voting?.votes?.[currentUserId];
+
+  if (isActive && !wasVotingActive && amAlive && !myVote) {
+    requestAnimationFrame(() => {
+      document.getElementById('voting-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+  wasVotingActive = isActive;
+}
+
+// Живий клієнт ведучого ("майстер-клієнт") на кожне оновлення кімнати перевіряє, чи проголосували всі живі, і,
+// якщо так — сам пише voting.isActive = false в БД. Лише ведучий (а не кожен гравець), щоб не було
+// гонки кількох одночасних UPDATE від різних клієнтів у момент, коли останній голос щойно прийшов по WebSocket.
+function maybeAutoFinishVoting(roomData) {
+  if (roomData.host_id !== currentUserId) return;
+
+  const voting = roomData.bunker_state?.voting;
+  if (!voting?.isActive) return;
+
+  const aliveCount = Object.values(roomData.players_state || {}).filter(p => p.is_alive !== false).length;
+  const votedCount = Object.keys(voting.votes || {}).length;
+  if (aliveCount === 0 || votedCount !== aliveCount) return;
+
+  if (votingFinishInFlight) return;
+  votingFinishInFlight = true;
+  HostActions.finishVoting(currentRoomCode)
+    .catch(err => console.error('Не вдалося автозавершити голосування:', err))
+    .finally(() => { votingFinishInFlight = false; });
+}
+
+// Клік по радіо-плитці кандидата — розблоковує кнопку "Проголосувати" в тому ж блоці #voting-section.
+function handleVoteRadioChange(e) {
+  if (e.target.name !== 'vote') return;
+  const btn = e.target.closest('#voting-section')?.querySelector('[data-vote-submit]');
+  if (btn) btn.disabled = false;
+}
+
+// Запис голосу — звичайний UPDATE кімнати (як і решта механік гри), без RPC. Голосує рядовий гравець,
+// а не ведучий, тож прямий запис у bunker_state має працювати незалежно від того, чи застосовано
+// host-rls.sql (там UPDATE дозволений лише host_id = auth.uid()) — окрема RLS-політика на голосування
+// має дозволяти будь-якому гравцю кімнати оновлювати лише bunker_state.voting.votes.
+async function handleVoteSubmit(btn) {
+  const section = btn.closest('#voting-section');
+  const checked = section?.querySelector('input[name="vote"]:checked');
+  if (!checked) return;
+
+  const candidateId = checked.value;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Голосуємо...';
+
+  try {
+    // Читаємо свіжий bunker_state прямо перед записом, щоб не затерти голос когось,
+    // хто проголосував між останнім Realtime-оновленням локального стейту і цим кліком.
+    const { data: room, error: fetchError } = await supabase
+      .from('rooms')
+      .select('bunker_state')
+      .eq('room_code', currentRoomCode)
+      .single();
+    if (fetchError || !room) throw new Error(fetchError?.message || 'Кімнату не знайдено');
+
+    const bunker_state = room.bunker_state || {};
+    if (!bunker_state.voting?.isActive) throw new Error('Голосування вже завершено');
+
+    bunker_state.voting.votes = { ...bunker_state.voting.votes, [currentUserId]: candidateId };
+
+    const { data, error } = await supabase
+      .from('rooms')
+      .update({ bunker_state: bunker_state })
+      .eq('room_code', currentRoomCode);
+
+    if (error) {
+      console.error('Помилка:', error);
+      throw new Error(error.message);
+    }
+
+    // Локально відразу відмічаємо свій голос: не чекаємо round-trip через WebSocket, а перемальовуємо
+    // дошку зараз — voting.js сам сховає сітку кандидатів і покаже зелену панель "Ви проголосували..."
+    // (стан визначається наявністю bunker_state.voting.votes[currentUserId]).
+    if (localRoomState) {
+      localRoomState.bunker_state = bunker_state;
+      updateGameBoard(localRoomState, document.getElementById('game-board'));
+    }
+  } catch (err) {
+    console.error('Не вдалося проголосувати:', err);
+    alert(err.message || 'Не вдалося проголосувати');
+    btn.disabled = false;
+    btn.textContent = original;
+  }
 }
 
 function subscribeToRoomUpdates() {
@@ -377,11 +495,78 @@ function subscribeToRoomUpdates() {
 function setupActionListeners() {
   document.removeEventListener("click", handleGlobalClick);
   document.addEventListener("click", handleGlobalClick);
+  document.removeEventListener("change", handleVoteRadioChange);
+  document.addEventListener("change", handleVoteRadioChange);
 }
 
 let isUpdatingLock = false;
 
+// Копіювання коду/посилання-запрошення з кімнати очікування (waiting-room.js). Відповідне вхідне поле шукається через
+// data-copy-source, оскільки кімната очікування на екрані завжди одна — document.querySelector безпечний.
+async function handleInviteCopy(btn) {
+  const input = document.querySelector(`[data-copy-source="${btn.dataset.copyTarget}"]`);
+  const text = input?.value;
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error('Не вдалося скопіювати:', err);
+    return;
+  }
+
+  const original = btn.textContent;
+  btn.textContent = 'Скопійовано!';
+  btn.disabled = true; // дизейблена кнопка не генерує click, тож повторний клік під час анімації не запустить другий таймер
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.disabled = false;
+  }, 2000);
+}
+
+let isKickInFlight = false;
+
+// Клік по "Вигнати" / "Повернути" в таблиці гравців (лише ведучий бачить кнопку, але серверний RLS
+// все одно захищає запис). Кнопка живе всередині .kicked-player, тому pointer-events на ній
+// повернуто в CSS окремим правилом — інакше по ній не можна було б клікнути, щоб повернути гравця.
+async function handleKickToggle(btn) {
+  if (isKickInFlight) return;
+  const playerId = btn.dataset.kickId;
+  if (!playerId) return;
+
+  isKickInFlight = true;
+  btn.style.pointerEvents = 'none';
+  try {
+    await HostActions.toggleKickPlayer(currentRoomCode, playerId);
+    // Подальший перемальовок прийде через Realtime-підписку (subscribeToRoomUpdates)
+  } catch (err) {
+    console.error('Не вдалося змінити статус гравця:', err);
+    showGlobalToast(err.message || 'Не вдалося виконати дію');
+  } finally {
+    isKickInFlight = false;
+    btn.style.pointerEvents = '';
+  }
+}
+
 async function handleGlobalClick(e) {
+  const copyBtn = e.target.closest('[data-copy-target]');
+  if (copyBtn) {
+    await handleInviteCopy(copyBtn);
+    return;
+  }
+
+  const voteBtn = e.target.closest('[data-vote-submit]');
+  if (voteBtn && !voteBtn.disabled) {
+    await handleVoteSubmit(voteBtn);
+    return;
+  }
+
+  const kickBtn = e.target.closest('[data-kick-id]');
+  if (kickBtn) {
+    await handleKickToggle(kickBtn);
+    return;
+  }
+
   if (isUpdatingLock) return;
 
   const lockBtn = e.target.closest(".char-lock");
@@ -625,4 +810,7 @@ export function cleanupGame() {
     realtimeSubscription = null;
   }
   document.removeEventListener("click", handleGlobalClick);
+  document.removeEventListener("change", handleVoteRadioChange);
+  wasVotingActive = false;
+  votingFinishInFlight = false;
 }
