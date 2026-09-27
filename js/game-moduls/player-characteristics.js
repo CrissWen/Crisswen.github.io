@@ -30,8 +30,9 @@ const renderItem = (c, i, extraClass) => `
           <span class="char-value">${c.value}</span>
         </div>
         <button type="button" class="char-lock" aria-label="Показати або приховати">
-          <span class="lock-icon lock-closed" aria-hidden="true">🔒</span>
-          <span class="lock-icon lock-open" aria-hidden="true">🔓</span>
+          <!-- Вказуємо шлях до папки з іконками -->
+          <img src="./icons/Locked-lock.svg" alt="Закрито" class="lock-icon lock-closed">
+          <img src="./icons/Unlocked-lock.svg" alt="Відкрито" class="lock-icon lock-open">
         </button>
       </div>`;
 
@@ -45,7 +46,6 @@ const renderItem = (c, i, extraClass) => `
       </div>
       <div class="block-body">
         <div class="char-list" data-group="characteristics">${charItems}</div>
-        <p class="char-hint">Ти завжди бачиш свої характеристики. Замочок відкриває їх іншим гравцям у таблиці</p>
 
         <div class="abilities-block">
           <h3 class="abilities-title">Спец можливості</h3>
