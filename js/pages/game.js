@@ -579,6 +579,14 @@ async function handleGlobalClick(e) {
   const idxStr = item.dataset.idx;
   if (!dbKey) return;
 
+  const isOpen = item.classList.contains('open');
+  const confirmMsg = isOpen 
+    ? 'Приховати цю характеристику від інших?' 
+    : 'Відкрити цю характеристику всім гравцям?';
+  
+  const confirmed = await showCustomConfirm(confirmMsg, lockBtn);
+  if (!confirmed) return;
+
   isUpdatingLock = true;
 
   try {

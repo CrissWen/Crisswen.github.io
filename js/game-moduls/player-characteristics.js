@@ -55,22 +55,3 @@ const renderItem = (c, i, extraClass) => `
     </section>
   `;
 };
-
-// делегований обробник кліку — перемикає видимість ДЛЯ ІНШИХ і сповіщає
-// відповідну таблицю (Блок 4 для characteristics, Блок 5 для abilities)
-document.addEventListener("click", function (e) {
-  const lockBtn = e.target.closest("#block-player-characteristics .char-lock");
-  if (!lockBtn) return;
-
-  const item = lockBtn.closest(".char-item");
-  
-  // Надсилаємо запит на зміну стану (без мутації DOM)
-document.dispatchEvent(
-    new CustomEvent("bunker:toggle-characteristic", {
-      detail: {
-        label: item.dataset.label,
-        dbPath: item.dataset.path // Передаємо шлях для бази даних
-      }
-    })
-  );
-});
