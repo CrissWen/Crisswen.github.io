@@ -28,7 +28,8 @@ export const BUNKER_FIELDS = [
   { key: 'size',              label: 'Площа' },
   { key: 'stay_time',         label: 'Час перебування' },
   { key: 'food_and_water',    label: 'Запаси їжі/води' },
-  { key: 'problem',           label: 'Проблема бункера' }
+  { key: 'problem',           label: 'Проблема бункера' },
+  { key: 'items',             label: 'Предмети (Що є в бункері)' }
 ];
 
 export const HEAL_PERFECT = 'perfect';
@@ -547,6 +548,9 @@ export async function shiftAnnulCharacteristics(roomCode, charType, direction = 
 // ===== Дії з бункером / кімнатою =====
 
 export async function changeBunker(roomCode, field, customValue) {
+  // "items" — масив, а не текстовий параметр; для нього окремий UI-флоу (модалка вибору) і
+  // окрема функція saveBunkerItems(). Сюди цей кейс не повинен долітати, але захищаємось на випадок помилки виклику.
+  if (field === 'items') throw new Error('Предмети змінюються через окреме вікно вибору');
   const value = (customValue || '').trim();
   if (!field) throw new Error('Оберіть параметр бункера');
   if (!value) throw new Error('Введіть власне значення');
@@ -576,6 +580,29 @@ export async function changeCataclysm(roomCode) {
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.
   bState.cataclysm_timer_end = timerMinutes > 0 ? Date.now() + timerMinutes * 60 * 1000 : null;
   setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
+  await saveRoom(roomCode, { bunker_state: bState });
+}
+
+// Дані для модалки ручного вибору предметів бункера (Панель ведучого -> "Змінити параметр бункера" -> items):
+// поточний набір (стільки select-слотів, скільки зараз предметів) + повний пул назв без дублікатів.
+export async function getItemsPickerData(roomCode) {
+  const room = await getRoom(roomCode);
+  const pools = await loadPools();
+  const currentItems = Array.isArray(room.bunker_state?.items) ? room.bunker_state.items : [];
+  const pool = [...new Set((pools.bunker.items || []).map(i => i.value))];
+  return { currentItems, pool };
+}
+
+// Зберігає предмети, обрані вручну хостом у модалці вибору (кожен select — один слот бункера).
+// Скасування — через загальний snapshot()/undoLastAction(), як і решта дій ведучого; окремого
+// bunker_state.history для цього не заводимо, щоб не дублювати вже наявний механізм "Скасувати дію".
+export async function saveBunkerItems(roomCode, newItems) {
+  if (!Array.isArray(newItems) || newItems.length === 0) throw new Error('Оберіть хоча б один предмет');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const bState = room.bunker_state || {};
+  bState.items = newItems;
+  setHostEvent(bState, 'Ведучий оновив предмети в бункері');
   await saveRoom(roomCode, { bunker_state: bState });
 }
 

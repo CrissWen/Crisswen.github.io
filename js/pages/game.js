@@ -22,6 +22,7 @@ import {
   setHostDiceResult
 } from '../game-moduls/host-panel.js';
 import { showCustomConfirm } from '../game-moduls/confirm-dialog.js';
+import { showItemsPickerModal } from '../game-moduls/items-picker-modal.js';
 import { showGlobalToast } from '../game-moduls/global-toast.js';
 
 let currentRoomCode = null;
@@ -756,12 +757,38 @@ function readHostFields(btn) {
   return fields;
 }
 
+// "Змінити параметр бункера" з обраним параметром "items" — особливий випадок: замість звичайного
+// тексту/confirm-флоу відкриває окрему модалку з select-слотами (items-picker-modal.js), яка сама
+// є формою підтвердження (Зберегти/Скасувати), тож showCustomConfirm тут не викликається.
+async function handleItemsPickerAction(root, btn) {
+  try {
+    const { currentItems, pool } = await HostActions.getItemsPickerData(currentRoomCode);
+    const chosen = await showItemsPickerModal(currentItems, pool);
+    if (!chosen) return; // хост натиснув "Скасувати", клікнув по фону або Escape
+
+    await HostActions.saveBunkerItems(currentRoomCode, chosen);
+    showHostToast(root, 'Предмети бункера оновлено');
+  } catch (err) {
+    console.error('Не вдалося оновити предмети:', err);
+    showHostToast(root, err.message || 'Не вдалося виконати дію', true);
+  } finally {
+    btn.disabled = false;
+    const undoBtn = root.querySelector('[data-action="undo"]');
+    if (undoBtn) undoBtn.disabled = !HostActions.canUndo();
+  }
+}
+
 async function runHostAction(root, btn) {
   const def = HOST_ACTIONS[btn.dataset.action];
   if (!def) return;
 
   // Блокуємо кнопку ще до підтвердження, щоб швидкий повторний клік під час очікування відповіді не відкрив другий діалог
   btn.disabled = true;
+
+  if (btn.dataset.action === 'changeBunker' && readHostFields(btn).bunkerField === 'items') {
+    await handleItemsPickerAction(root, btn);
+    return;
+  }
 
   // Єдина точка підтвердження: всі кнопки, крім таймера, чекають на відповідь в кастомному вікні
   if (!NO_CONFIRM_ACTIONS.has(btn.dataset.action)) {
