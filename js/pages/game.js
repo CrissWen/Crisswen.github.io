@@ -22,7 +22,6 @@ import {
   setHostDiceResult
 } from '../game-moduls/host-panel.js';
 import { showCustomConfirm } from '../game-moduls/confirm-dialog.js';
-import { showItemsPickerModal } from '../game-moduls/items-picker-modal.js';
 import { showGlobalToast } from '../game-moduls/global-toast.js';
 
 let currentRoomCode = null;
@@ -716,9 +715,16 @@ const HOST_ACTIONS = {
   deleteInventory:     { run: (f, arg) => HostActions.deleteInventory(currentRoomCode, f.target, arg), ok: 'Інвентар видалено' },
   shift:               { run: (f, arg) => HostActions.shiftAnnulCharacteristics(currentRoomCode, f.charType, arg), ok: 'Характеристики зсунуто' },
   changeBunker: {
-    run: f => HostActions.changeBunker(currentRoomCode, f.bunkerField, f.customValue),
-    ok: 'Параметр бункера змінено',
-    after: root => { const el = root.querySelector('[data-field="customValue"]'); if (el) el.value = ''; }
+    run: f => f.bunkerField === 'items'
+      ? HostActions.changeBunkerItems(currentRoomCode, f.itemAction, f.itemAction === 'remove' ? f.itemRemove : f.itemAddText)
+      : HostActions.changeBunker(currentRoomCode, f.bunkerField, f.customValue),
+    ok: r => Array.isArray(r) ? 'Предмети бункера оновлено' : 'Параметр бункера змінено',
+    after: (root, result) => {
+      const el = root.querySelector('[data-field="customValue"]');
+      if (el) el.value = '';
+      // Після дії з предметами чистимо поле додавання і перебудовуємо список для видалення за свіжим масивом
+      if (Array.isArray(result)) applyBunkerItemActionUI(root, result);
+    }
   },
 
   dice: {
@@ -765,38 +771,12 @@ function readHostFields(btn) {
   return fields;
 }
 
-// "Змінити параметр бункера" з обраним параметром "items" — особливий випадок: замість звичайного
-// тексту/confirm-флоу відкриває окрему модалку з select-слотами (items-picker-modal.js), яка сама
-// є формою підтвердження (Зберегти/Скасувати), тож showCustomConfirm тут не викликається.
-async function handleItemsPickerAction(root, btn) {
-  try {
-    const { currentItems, pool } = await HostActions.getItemsPickerData(currentRoomCode);
-    const chosen = await showItemsPickerModal(currentItems, pool);
-    if (!chosen) return; // хост натиснув "Скасувати", клікнув по фону або Escape
-
-    await HostActions.saveBunkerItems(currentRoomCode, chosen);
-    showHostToast(root, 'Предмети бункера оновлено');
-  } catch (err) {
-    console.error('Не вдалося оновити предмети:', err);
-    showHostToast(root, err.message || 'Не вдалося виконати дію', true);
-  } finally {
-    btn.disabled = false;
-    const undoBtn = root.querySelector('[data-action="undo"]');
-    if (undoBtn) undoBtn.disabled = !HostActions.canUndo();
-  }
-}
-
 async function runHostAction(root, btn) {
   const def = HOST_ACTIONS[btn.dataset.action];
   if (!def) return;
 
   // Блокуємо кнопку ще до підтвердження, щоб швидкий повторний клік під час очікування відповіді не відкрив другий діалог
   btn.disabled = true;
-
-  if (btn.dataset.action === 'changeBunker' && readHostFields(btn).bunkerField === 'items') {
-    await handleItemsPickerAction(root, btn);
-    return;
-  }
 
   // Єдина точка підтвердження: всі кнопки, крім таймера, чекають на відповідь в кастомному вікні
   if (!NO_CONFIRM_ACTIONS.has(btn.dataset.action)) {
@@ -834,6 +814,59 @@ function bindHostEvents(root) {
     const btn = e.target.closest('[data-action]');
     if (btn && !btn.disabled) runHostAction(root, btn);
   });
+
+  // "Змінити параметр бункера": інтерфейс залежить від обраного параметра та дії (див. applyBunkerParamUI)
+  root.addEventListener('change', (e) => {
+    if (e.target.closest('#bunker-item-action')) applyBunkerItemActionUI(root);
+    else if (e.target.closest('[data-field="bunkerField"]')) applyBunkerParamUI(root);
+  });
+}
+
+const setShown = (el, shown) => { if (el) el.style.display = shown ? '' : 'none'; };
+
+// Вибір параметра бункера: "items" ховає стандартне поле і відкриває керування предметами
+// (дія за замовчуванням — "Додати"); будь-який інший параметр повертає стандартний вигляд.
+function applyBunkerParamUI(root) {
+  const isItems = root.querySelector('[data-field="bunkerField"]')?.value === 'items';
+  setShown(root.querySelector('[data-field="customValue"]')?.closest('.hp-field'), !isItems);
+  setShown(root.querySelector('#bunker-item-action'), isItems);
+  if (isItems) {
+    root.querySelector('#bunker-item-action').value = 'add';
+    applyBunkerItemActionUI(root);
+  } else {
+    setShown(root.querySelector('#bunker-item-add-input'), false);
+    setShown(root.querySelector('#bunker-item-remove-select'), false);
+    const btn = root.querySelector('#bunker-submit-btn');
+    if (btn) btn.textContent = 'Змінити';
+  }
+}
+
+// Дія над предметами: "Додати" — текстове поле; "Видалити" — список («Видалити все» + поточні предмети).
+// items можна передати явно (після збереження, коли localRoomState ще не оновився через Realtime).
+function applyBunkerItemActionUI(root, items) {
+  const action = root.querySelector('#bunker-item-action')?.value || 'add';
+  const addInput = root.querySelector('#bunker-item-add-input');
+  const removeSelect = root.querySelector('#bunker-item-remove-select');
+  const btn = root.querySelector('#bunker-submit-btn');
+  if (!addInput || !removeSelect) return;
+
+  if (action === 'add') {
+    addInput.value = '';
+    setShown(addInput, true);
+    setShown(removeSelect, false);
+    if (btn) btn.textContent = 'Додати';
+    return;
+  }
+
+  const current = Array.isArray(items) ? items
+    : (Array.isArray(localRoomState?.bunker_state?.items) ? localRoomState.bunker_state.items : []);
+  removeSelect.replaceChildren();
+  const allOpt = new Option('Видалити все', 'all');
+  removeSelect.add(allOpt);
+  current.forEach(item => removeSelect.add(new Option(item, item))); // Option ставить текст без HTML-інтерпретації
+  setShown(addInput, false);
+  setShown(removeSelect, true);
+  if (btn) btn.textContent = 'Видалити';
 }
 
 export function cleanupGame() {

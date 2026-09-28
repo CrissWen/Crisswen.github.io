@@ -90,7 +90,8 @@ export function renderLobby() {
           <button id="create-room-btn" style="padding: 10px; border-radius: 6px; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none;">Створити кімнату</button>
           <hr style="width: 100%; border-color: var(--metal-lt);">
           <input type="text" id="room-code" placeholder="Код кімнати (напр. ABCD)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--metal); background: var(--panel-2); color: var(--text); text-transform: uppercase;">
-          <button id="join-room-btn" style="padding: 10px; border-radius: 6px; background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none;">Приєднатися</button>
+          <button id="join-room-btn" disabled style="padding: 10px; border-radius: 6px; background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none;">Приєднатися</button>
+          <div id="join-error-msg" class="error-text" role="alert" aria-live="polite"></div>
         </div>
       </section>
 
@@ -172,19 +173,61 @@ export function initLobby() {
     }
   });
 
-  // Логіка ПРИЄДНАННЯ до кімнати — винесена в окрему функцію, щоб її можна було викликати й програмно (авто-приєднання за посиланням нижче), а не тільки кліком кнопки
-  function joinRoom(code) {
-    const trimmed = (code || '').trim().toUpperCase();
-    if (trimmed.length === 0) {
-      alert("Введіть код кімнати!");
-      return;
+  // Кнопка "Приєднатися" активна лише коли в полі є код; текст помилки прибираємо, щойно гравець править код
+  const joinErrorEl = document.getElementById('join-error-msg');
+  const JOIN_BTN_LABEL = 'Приєднатися';
+  function syncJoinBtn() {
+    joinBtn.disabled = codeInput.value.trim().length === 0;
+  }
+  codeInput.addEventListener('input', () => {
+    syncJoinBtn();
+    if (joinErrorEl) joinErrorEl.textContent = '';
+  });
+  syncJoinBtn();
+
+  // Логіка ПРИЄДНАННЯ до кімнати — окрема функція, щоб її можна було викликати й програмно (авто-приєднання за посиланням нижче), а не тільки кліком.
+  // Спершу перевіряємо в БД, чи існує кімната; якщо ні — показуємо помилку тут же в лобі замість редиректу.
+  async function joinRoom(code) {
+    const roomCode = (code || '').trim().toUpperCase();
+    if (!roomCode) return; // Додатковий захист: кнопка й так заблокована для порожнього поля
+
+    if (joinErrorEl) joinErrorEl.textContent = '';
+    joinBtn.textContent = 'Перевірка...';
+    joinBtn.disabled = true;
+
+    const resetJoinBtn = () => {
+      joinBtn.textContent = JOIN_BTN_LABEL;
+      syncJoinBtn(); // розблокує кнопку для нової спроби, якщо код у полі ще є
+    };
+
+    try {
+      // maybeSingle(): "нуль рядків" — це не помилка (на відміну від single(), що кидає PGRST116),
+      // тож справжні збої мережі/доступу відрізняємо від "кімнати немає"
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('room_code')
+        .eq('room_code', roomCode)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        if (joinErrorEl) joinErrorEl.textContent = 'Кімнату не знайдено';
+        resetJoinBtn();
+        return;
+      }
+
+      // Кімната знайдена — переходимо на сторінку гри з цим кодом (роутинг у проєкті через hash, а не game.html)
+      window.location.hash = `#/game?room=${roomCode}`;
+    } catch (err) {
+      console.error('Не вдалося перевірити кімнату:', err);
+      if (joinErrorEl) joinErrorEl.textContent = 'Не вдалося перевірити кімнату. Спробуйте ще раз';
+      resetJoinBtn();
     }
-    // Просто переходимо на сторінку гри з цим кодом. 
-    // Сама перевірка існування кімнати буде відбуватися вже на сторінці гри.
-    window.location.hash = `#/game?room=${trimmed}`;
   }
 
   joinBtn.addEventListener('click', () => joinRoom(codeInput.value));
+
 
   // Клік по кнопці "Повернутися" на картці активної кімнати — делегування на #reconnect-panel, бо картки перемальовуються динамічно після fetchUserActiveRooms
   const reconnectPanel = document.getElementById('reconnect-panel');
@@ -200,6 +243,7 @@ export function initLobby() {
   const joinCode = new URLSearchParams(joinQuery).get('join');
   if (joinCode) {
     codeInput.value = joinCode;
+    syncJoinBtn();
 
     // Прибираємо ?join=КОД з адресного рядка ДО навігації в кімнату, без перезавантаження сторінки,
     // щоб повторний F5 на #/lobby не намагався приєднати гравця вдруге

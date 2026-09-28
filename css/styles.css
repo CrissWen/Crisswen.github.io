@@ -859,80 +859,6 @@ table.bunker-table td.player-cell .avatar {
 }
 .cataclysm-end-modal__btn:hover { filter: brightness(1.1); }
 
-/* ===== Модалка ручного вибору предметів бункера (панель ведучого) ===== */
-.items-picker-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 10001;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease, background .2s ease;
-}
-.items-picker-modal.is-open {
-  opacity: 1;
-  background: rgba(0, 0, 0, .6);
-  pointer-events: auto;
-}
-.items-picker-modal__card {
-  width: min(360px, 100%);
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--metal-lt);
-  border-radius: var(--radius);
-  padding: 20px 20px 18px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
-  transform: translateY(10px) scale(.96);
-  transition: transform .2s ease;
-}
-.items-picker-modal.is-open .items-picker-modal__card {
-  transform: translateY(0) scale(1);
-}
-.items-picker-modal__title {
-  margin: 0 0 14px;
-  font-family: var(--head);
-  font-size: 17px;
-  color: var(--text);
-}
-.items-picker-modal__slots {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-.items-picker__slot {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.items-picker__slot > span {
-  font-size: 12px;
-  color: var(--text-mute);
-}
-.items-picker-modal__actions {
-  display: flex;
-  gap: 8px;
-}
-.items-picker-modal__btn {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  font-family: var(--body);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter .2s ease;
-}
-.items-picker-modal__btn:hover { filter: brightness(1.1); }
-.items-picker-modal__btn--cancel { background: var(--danger); color: #1a0806; }
-.items-picker-modal__btn--save { background: var(--ok); color: #06110d; }
-
 /* ===== Layout Helpers (Класи для позиціонування) ===== */
 
 /* Для сторінок авторизації та лобі (маленьке вікно по центру) */
@@ -1183,4 +1109,20 @@ table.bunker-table td.player-cell .avatar {
   font-weight: 500;
   line-height: 1.35;
   letter-spacing: normal;
+}
+
+/* ===== Лобі: кнопка "Приєднатися" та текст помилки ===== */
+/* Стиль для заблокованої кнопки. cursor з !important, бо кнопка має inline cursor:pointer (а inline перебиває звичайний CSS) */
+#join-room-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    filter: grayscale(50%);
+}
+
+/* Стиль для тексту помилки */
+.error-text {
+    color: #ff4d4d; /* Червоний колір */
+    font-size: 0.9em;
+    margin-top: 8px;
+    min-height: 20px; /* Щоб інтерфейс не стрибав при появі тексту */
 }
