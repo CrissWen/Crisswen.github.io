@@ -86,13 +86,64 @@ body::-webkit-scrollbar,
 .cata-desc{color:var(--text-mute);max-width:60ch;margin:0;font-size:14.5px;}
 
 /* ===== Bunker info block ===== */
-.block-desc{
-  color:var(--text-mute);max-width:65ch;margin:0 0 18px;font-size:14.5px;
+.block-desc {
+  color: var(--text-mute);
+  margin: 0 0 18px;
+  font-size: 15px;      /* Трохи більший шрифт для великого екрану */
+  line-height: 1.6;     /* Більше простору між рядками */
 }
-.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
-.info-stat{
-  background:var(--panel-2);border:1px solid var(--metal);border-radius:var(--radius-sm);
-  padding:10px 14px;
+/* Жорстка сітка 2х2 для характеристик бункера */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px; 
+  margin-bottom: 0;
+  margin-top: 30px; 
+  
+  align-items: stretch; 
+  flex: 1; 
+}
+
+/* Компонування блоку Бункер */
+.bunker-details-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 64px; /* Збільшили простір між колонкою інвентарю та колонкою характеристик */
+}
+
+/* Ліва колонка (Інвентар) тепер фіксована по контенту */
+.bunker-equip-col {
+  flex: none;
+  min-width: 250px; 
+}
+
+/* Права колонка (Характеристики) розтягується на весь вільний простір */
+.bunker-stats-col {
+  flex: 1; 
+}
+
+/* Мобільна адаптивність */
+@media (max-width: 768px) {
+  .bunker-details-row {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .bunker-equip-col {
+    width: 100%;
+  }
+  .info-grid {
+    grid-template-columns: 1fr; /* На телефонах характеристики стануть в 1 стовпець */
+  }
+}
+.info-stat {
+  background: var(--panel-2);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px; 
+  
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Тепер заголовки завжди будуть рівно зверху на одній лінії */
 }
 .info-stat .k{font-family:var(--body);font-size:12.5px;color:var(--text-mute);}
 .info-stat .v{font-family:var(--head);font-size:20px;margin-top:2px;}
@@ -101,18 +152,65 @@ body::-webkit-scrollbar,
   font-family:var(--body);font-weight:600;font-size:13px;
   color:var(--text-mute);margin:0 0 10px;
 }
-.equipment-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
-.equipment-list li{
-  font-family:var(--body);font-size:14.5px;color:var(--text);
-  padding:8px 12px;border-left:3px solid var(--ok);
-  background:var(--panel-2);border-radius:var(--radius-sm);
+.equipment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  
+  /* Контейнер стискається до ширини найдовшого дочірнього елемента */
+  width: max-content; 
+  max-width: 100%; /* Захист, щоб довгий текст не виліз за межі на телефонах */
+}
+
+.equipment-list li {
+  font-family: var(--body);
+  font-size: 14.5px;
+  color: var(--text);
+  /* Відступи: верх(8) право(24) низ(8) ліво(12). Збільшений правий відступ додає акуратне вільне місце */
+  padding: 8px 24px 8px 12px; 
+  border-left: 3px solid var(--ok);
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+}
+/* ===== Компонування блоку Бункер ===== */
+/* Компонування блоку Бункер */
+.bunker-details-row {
+  display: flex;
+  align-items: stretch; 
+  gap: 64px; 
+}
+
+.bunker-stats-col {
+  flex: 1; 
+  display: flex;
+  flex-direction: column;
+}
+
+.bunker-equip-col {
+  flex: none; /* Займає рівно стільки місця, скільки потрібно для тексту */
+  min-width: 250px; /* Мінімальна ширина, щоб список не був занадто вузьким */
+}
+
+/* Адаптивність: на мобільних екранах колонки знову стануть одна під одною */
+@media (max-width: 768px) {
+  .bunker-details-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .bunker-equip-col {
+    width: 100%;
+  }
 }
 
 /* ===== Player characteristics (list + lock toggle) ===== */
 .char-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  
+  gap: 12px clamp(16px, 3vw, 48px); 
 }
 @media (max-width: 600px) {
   .char-list {
@@ -138,31 +236,47 @@ body::-webkit-scrollbar,
   color:var(--text-mute);
 }
 .char-value {
-  font-family: var(--head); 
-  font-size: 16px;
-  color: #ffffff;
-  letter-spacing: .12em;
+  font-family: var(--body); 
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: normal; 
 }
 
-.char-lock{
-  flex:none;
-  display:inline-flex;align-items:center;justify-content:center;
-  width:38px;height:38px;
-  border:1px solid var(--metal-lt);background:var(--panel);
-  border-radius:var(--radius-sm);
-  cursor:pointer;
-  transition:border-color .3s ease, background .3s ease;
+/* Робимо кнопку прозорою і без рамок */
+.char-lock {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;  /* Трохи збільшили розмір самої кнопки */
+  height: 40px;
+  border: none;
+  background: transparent;
+  padding: 6px; /* Внутрішній відступ ("безпечна зона" від країв) */
+  overflow: visible; /* Гарантуємо, що браузер не обріже краї */
+  cursor: pointer;
 }
-.char-lock:hover{border-color:var(--hazard);}
-.char-item.open .char-lock{border-color:var(--ok);}
 
-/* Іконки-заглушки: у майбутньому замінюються на lock-closed.svg / lock-open.svg */
-.char-lock .lock-icon{font-size:16px;line-height:1;}
-.char-lock .lock-open{display:none;}
-.char-item.open .char-lock .lock-closed{display:none;}
-.char-item.open .char-lock .lock-open{display:inline;}
+/* Оскільки рамок більше немає, при наведенні трохи збільшуємо іконку */
+.char-lock:hover .lock-icon {
+  transform: scale(1.2); /* Збільшуємо на 20% */
+  filter: brightness(1.15);
+}
 
-.char-hint{font-family:var(--body);font-size:12.5px;color:var(--text-mute);margin-top:12px;}
+/* Налаштування самої картинки */
+.char-lock .lock-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; 
+  /* Анімацію переносимо сюди, на саму картинку */
+  transition: transform 0.2s ease, filter 0.2s ease; 
+}
+
+/* Логіка перемикання (відкрита/закрита) */
+.char-lock .lock-open { display: none; }
+.char-item.open .char-lock .lock-closed { display: none; }
+.char-item.open .char-lock .lock-open { display: block; }
 
 /* ===== Special abilities sub-block (inside block 3) ===== */
 .abilities-block{margin-top:22px;padding-top:18px;border-top:1px dashed var(--metal);}
@@ -223,12 +337,8 @@ table.bunker-table {
 table.bunker-table th, table.bunker-table td {
   border-bottom: 1px solid var(--metal);
   border-right: 1px solid var(--metal);
-  
-  font-size: 13px; 
-  padding: 8px 10px;
+  font-size: 13px;
   line-height: 1.4;
-  min-height: 36px;
-  
   text-align: left;
   vertical-align: middle;
   word-wrap: break-word;     
@@ -244,12 +354,29 @@ table.bunker-table tbody tr:last-child td {
   border-bottom: none;
 }
 
+table.bunker-table th:last-child, table.bunker-table td:last-child {
+  border-right: none;
+}
+table.bunker-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 2. УНІКАЛЬНА ВИСОТА ДЛЯ ЗАГОЛОВКІВ (Шапка таблиці) */
 table.bunker-table thead th {
   font-family: var(--body);
   font-size: 12px;
   color: var(--text-mute);
   background: var(--panel-2);
   font-weight: 600;
+  
+  padding: 10px; /* Компактні відступи для шапки */
+  height: 44px;  /* Жорстка висота рядка заголовків */
+}
+
+/* 3. УНІКАЛЬНА ВИСОТА ДЛЯ РЯДКІВ З ГРАВЦЯМИ (Дані) */
+table.bunker-table tbody td {
+  padding: 25px 10px; /* Збільшені відступи зверху та знизу */
+  height: 70px;       /* Базова висота для рядків з гравцями */
 }
 
 table.bunker-table td.player-cell {
@@ -817,8 +944,8 @@ table.bunker-table td.player-cell .avatar {
 
 /* Для вікна гри (60-70% екрану по центру) */
 .layout-large-centered {
-  width: 70%;        /* Змінили з 70% на 60% */
-  max-width: 1700px; /* Жорстке обмеження (60% від 1920px) */
+  width: 75%;        /* Змінили з 70% на 60% */
+  max-width: 1800px; /* Жорстке обмеження (60% від 1920px) */
   margin: 5vh auto;  
 }
 
@@ -1046,3 +1173,14 @@ table.bunker-table td.player-cell .avatar {
   color: var(--text-mute);
 }
 
+/* Унікальна здібність професії */
+.prof-ability {
+  display: block; /* Примусово переносить текст на новий рядок */
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--accent); /* Фіолетовий акцентний колір (можеш змінити на var(--ok) для зеленого) */
+  font-family: var(--body); /* Повертаємо звичайний шрифт для читабельності */
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: normal;
+}

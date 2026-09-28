@@ -7,18 +7,14 @@ function getAgeCategory(age) {
   return "";
 }
 
-// Текст для порожньої характеристики (за замовчуванням "Пусто")
 const EMPTY_TEXT = { professions: "Без професії" };
 
-// Порожньо, якщо: null, [] (або масив лише з маркерів isEmpty), або об'єкт з isEmpty: true
 function isEmptyValue(data) {
   if (data === null) return true;
   if (Array.isArray(data)) return data.filter(x => x && !x.isEmpty).length === 0;
   return data.isEmpty === true;
 }
 
-// Дістає is_revealed та текст із маркера-заглушки порожнечі (якщо він є — напр. після крадіжки).
-// Якщо маркера немає (напр. deleteInventory залишив просто []) — лишаємо стару поведінку: відкрито всім.
 function emptyMeta(data, key) {
   const marker = Array.isArray(data) ? data.find(x => x && x.isEmpty) : (data && data.isEmpty ? data : null);
   return {
@@ -32,11 +28,9 @@ export function mapPlayerState(rawPlayer) {
   
   const add = (key, label, formatFunc) => {
     const data = rawPlayer[key];
-    if (data === undefined) return; // поле ніколи не генерувалось — колонку не показуємо
+    if (data === undefined) return;
 
     if (isEmptyValue(data)) {
-      // Порожня характеристика: видима іншим лише, якщо вона була відкрита до того, як стала порожньою
-      // (маркер зберігає wasRevealed з крадіжки); без маркера (просто []) — відкрито всім, як раніше
       const { revealed, text } = emptyMeta(data, key);
       chars.push({ label, value: text, open: revealed, dbKey: key, isEmpty: true });
       return;
@@ -45,7 +39,6 @@ export function mapPlayerState(rawPlayer) {
     let val, rev;
     
     if (Array.isArray(data)) {
-      // Кілька елементів (декілька професій/рюкзаків) — виводимо через кому
       const items = data.filter(x => x && !x.isEmpty);
       val = items.map(formatFunc).join(", ");
       rev = items[0].is_revealed;
@@ -79,7 +72,18 @@ export function mapPlayerState(rawPlayer) {
 
   add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
   add('traits', 'Риса характеру', d => d.value);
-  add('professions', 'Професія', d => d.stage ? `${d.title} (${d.stage})` : d.title);
+  
+add('professions', 'Професія', d => {
+    const title = d.title || "Невідома професія"; 
+    let profText = d.stage ? `${title} (${d.stage})` : title;
+    
+    if (d.ability && d.ability !== "") {
+      const safeAbilityText = d.ability.replace(/"/g, '&quot;');
+      profText += ` <span class="info-icon" data-tooltip="<b>Унікальна здібність:</b><br>${safeAbilityText}">i</span>`;
+    }
+    
+    return profText;
+  });
   add('health', "Здоров'я", d => (d.disease === "Ідеально здоровий" || !d.severity) ? d.disease : `${d.disease} (${d.severity})`);
   add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
   add('phobias', 'Фобія', d => d.value);
