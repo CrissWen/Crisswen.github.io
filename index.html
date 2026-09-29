@@ -31,6 +31,12 @@
     <footer class="note">БУНКЕР · демо-версія v0.1</footer>
   </div>
   
+  <!-- Бейдж глядача: прихований за замовчуванням, game.js прибирає .is-hidden, якщо користувач — глядач -->
+  <div id="spectator-badge" class="spectator-badge is-hidden" role="status">
+    <img src="./icons/eye.svg" alt="" class="spectator-badge__icon">
+    <span class="spectator-badge__text">Ви слідкуєте за грою</span>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Router -->
   <script type="module" src="js/app.js"></script>

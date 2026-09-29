@@ -28,6 +28,7 @@ let currentRoomCode = null;
 let realtimeSubscription = null;
 let currentUserId = null;
 let currentUserName = null;
+let isSpectator = false; // глядач: гра вже йде, а гравця немає в players_state (виводиться в updateGameBoard на кожне оновлення)
 let localRoomState = null;
 let hasSeenCataclysmEnd = false; // флаг в пам'яті вкладки: щоб модалка "Час сплив" не вискакала повторно
 let trackedCataclysmTimerEnd = null; // останнє відоме cataclysm_timer_end (для скидання флага при НОВОМУ катаклізмі)
@@ -124,11 +125,7 @@ export async function initGame() {
     const isPlayerInRoom = room.players_state && room.players_state[currentUserId];
 
     
-    if (isGameStarted && !isPlayerInRoom) {
-      statusEl.textContent = "Гра вже почалася. Приєднання нових гравців закрито.";
-      statusEl.style.color = 'var(--danger)';
-      return;
-    }
+    // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
 
     
     if (!isGameStarted && !isPlayerInRoom) {
@@ -159,6 +156,8 @@ export async function initGame() {
 function updateGameBoard(roomData, container) {
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
   const isHost = roomData.host_id === currentUserId;
+  isSpectator = isGameStarted && !roomData.players_state?.[currentUserId];
+  document.getElementById('spectator-badge')?.classList.toggle('is-hidden', !isSpectator);
   syncHostPanel(roomData);
   syncCataclysm(roomData.bunker_state);
 
@@ -336,14 +335,14 @@ const descriptionParts = [
   const order = [
     safe('Катаклізм', () => catastrophe(cataclysmData)),
     safe('Бункер', () => bunkerInfo(bunkerData)),
-    safe('Мої характеристики', () => playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities })),
+    isSpectator ? '' : safe('Мої характеристики', () => playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities })),
     safe('Гравці', () => playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows, alivePlayers, totalPlayers, isHost)),
     safe('Спец. можливості', () => specialAbilitiesTable(parsedAbilities)), // isKicked уже в кожному елементі
     safe('Голосування', () => votingSection({
       voting: bState.voting,
       players: Object.entries(pState).map(([id, p]) => ({ id, name: p.name || 'Гравець', alive: p.is_alive !== false })),
       myId: currentUserId,
-      amAlive: pState[currentUserId]?.is_alive !== false
+      amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false
     }))
   ];
 
@@ -361,7 +360,7 @@ const descriptionParts = [
 // КОЖНе оновлення кімнати, навіть не пов'язане з голосуванням, інакше екран смикавсяб би при кожній дії ведучого).
 function syncVotingScroll(pState, bState) {
   const isActive = !!bState?.voting?.isActive;
-  const amAlive = pState?.[currentUserId]?.is_alive !== false;
+  const amAlive = !isSpectator && pState?.[currentUserId]?.is_alive !== false;
   const myVote = bState?.voting?.votes?.[currentUserId];
 
   if (isActive && !wasVotingActive && amAlive && !myVote) {
@@ -404,6 +403,7 @@ function handleVoteRadioChange(e) {
 // host-rls.sql (там UPDATE дозволений лише host_id = auth.uid()) — окрема RLS-політика на голосування
 // має дозволяти будь-якому гравцю кімнати оновлювати лише bunker_state.voting.votes.
 async function handleVoteSubmit(btn) {
+  if (isSpectator) return; // глядач не голосує
   const section = btn.closest('#voting-section');
   const checked = section?.querySelector('input[name="vote"]:checked');
   if (!checked) return;
@@ -870,6 +870,8 @@ function applyBunkerItemActionUI(root, items) {
 }
 
 export function cleanupGame() {
+  isSpectator = false;
+  document.getElementById('spectator-badge')?.classList.add('is-hidden');
   removeHostPanel();
   unmountGameTimer();
   unmountCataclysmTimer();
