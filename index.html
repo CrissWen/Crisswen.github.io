@@ -40,6 +40,7 @@
   <!-- Оверлей кидка кубика: один універсальний слот. js/game-moduls/dice-overlay.js прибирає .is-hidden, ставить на .dice
        модифікатор форми (.dice--d20 / .dice--d6) і після зупинки анімації вписує число в <span> рівно по центру. -->
   <div id="dice-overlay" class="dice-overlay is-hidden" role="status" aria-live="polite">
+    <div class="confetti-container" data-confetti aria-hidden="true"></div>
     <div class="dice-stage">
       <div class="dice" data-dice><span data-dice-value></span></div>
     </div>

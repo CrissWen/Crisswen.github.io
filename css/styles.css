@@ -1281,3 +1281,44 @@ table.bunker-table td.player-cell .avatar {
   from { background: rgba(0, 0, 0, 0); }
   to   { background: rgba(0, 0, 0, .72); }
 }
+
+/* ===== Конфеті при розкритті результату (shootConfetti у dice-overlay.js) =====
+   Контейнер на весь екран, але ПІД кубиком (z-index 0 < 1), тому конфеті вилітає “з-за” кубика.
+   Кожна частинка отримує випадкові CSS-змінні: --dx/--dy (викид), --fall (гравітація),
+   --rx/--ry/--rz (обертання), --size, --color, --dur. */
+.confetti-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.dice-stage { position: relative; z-index: 1; }
+
+.confetti-piece {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--size, 10px);
+  height: calc(var(--size, 10px) * 0.55);
+  margin: calc(var(--size, 10px) * -0.275) 0 0 calc(var(--size, 10px) * -0.5);
+  background: var(--color, #f0a868);
+  border-radius: 2px;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: confetti-burst var(--dur, 1.8s) both;
+}
+.confetti-piece.is-round { height: var(--size, 10px); border-radius: 50%; margin-top: calc(var(--size, 10px) * -0.5); }
+
+/* Старт з scale(0) → різкий викид (0–28%, ease-out) → падіння вниз з прискоренням (ease-in) і згасання */
+@keyframes confetti-burst {
+  0%   { opacity: 1; transform: translate(0, 0) scale(0) rotate3d(1, 1, 1, 0deg);
+         animation-timing-function: cubic-bezier(.1, .8, .3, 1); }
+  28%  { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1) rotate3d(var(--rx), var(--ry), var(--rz), 360deg);
+         animation-timing-function: cubic-bezier(.4, 0, 1, .8); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + var(--fall))) scale(.8) rotate3d(var(--rx), var(--ry), var(--rz), 1080deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-container { display: none; }
+}
