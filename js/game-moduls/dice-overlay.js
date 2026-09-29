@@ -5,7 +5,7 @@
 const OVERLAY_ID = 'dice-overlay';
 const DICE_TYPES = ['d20', 'd6'];
 // Тривалість польоту/скачків кубика (має збігатися з dice-throw у styles.css). До цього моменту число ПРИХОВАНЕ.
-const ROLL_MS = 1500;
+export const ROLL_MS = 1500;
 // Скільки результат лишається на екрані після зупинки, перш ніж оверлей закриється
 const HOLD_AFTER_REVEAL_MS = 3000;
 let revealTimeout = null;

@@ -23,7 +23,10 @@ import {
 } from '../game-moduls/host-panel.js';
 import { showCustomConfirm } from '../game-moduls/confirm-dialog.js';
 import { showGlobalToast } from '../game-moduls/global-toast.js';
-import { showDiceRoll } from '../game-moduls/dice-overlay.js';
+import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-moduls/dice-overlay.js';
+import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-moduls/event-log.js';
+import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-moduls/personal-notes.js';
+import { addLog } from '../utils/event-log.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
@@ -35,6 +38,8 @@ let hasSeenCataclysmEnd = false; // флаг в пам'яті вкладки: щ
 let trackedCataclysmTimerEnd = null; // останнє відоме cataclysm_timer_end (для скидання флага при НОВОМУ катаклізмі)
 let wasVotingActive = false; // щоб автоскрол до #voting-section спрацював рівно один раз на кожне запускання голосування, а не при кожному рендері
 let votingFinishInFlight = false; // щоб декілька швидких postgres_changes підряд не відправили кілька паралельних finishVoting
+let pendingDiceLogId = null; // id запису в лозі про кидок, який прихований до зупинки кубика
+let pendingDiceLogTimer = null;
 
 // Закрита кімната — режим лише для читання для будь-кого (навіть колишнього хоста/гравця): host_id ігнорується, панель ведучого не рендериться.
 function isHostOf(roomData) {
@@ -360,10 +365,17 @@ const descriptionParts = [
       players: Object.entries(pState).map(([id, p]) => ({ id, name: p.name || 'Гравець', alive: p.is_alive !== false })),
       myId: currentUserId,
       amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false
-    }))
+    })),
+    // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
+    safe('Особисті замітки', () => personalNotes()),
+    // Лог подій — самий низ сторінки, одразу після блоку голосування
+    safe('Лог подій', () => eventLog(bState.logs, pendingDiceLogId ? [pendingDiceLogId] : []))
   ];
 
+  captureNotesFocus(); // запам'ятовуємо курсор у замітках, бо innerHTML нижче створить textarea заново
   container.innerHTML = order.join("");
+  restoreNotesFocus();
+  scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
 
   // Автоматичний скрол до блоку голосування рівно один раз на кожне його запускання (див. syncVotingScroll)
   syncVotingScroll(pState, bState);
@@ -509,6 +521,14 @@ function subscribeToRoomUpdates() {
       const diceRoll = localRoomState.bunker_state?.latest_dice;
       if (diceRoll && diceRoll.id > 0 && diceRoll.id !== prevDiceId && diceRoll.type) {
         showDiceRoll(diceRoll.type, diceRoll.value);
+        // Запис про цей кидок у лозі ховаємо, поки кубик крутиться, і розкриваємо в момент зупинки
+        pendingDiceLogId = diceRoll.id;
+        clearTimeout(pendingDiceLogTimer);
+        pendingDiceLogTimer = setTimeout(() => {
+          pendingDiceLogId = null;
+          const el = document.getElementById('game-board');
+          if (el && localRoomState) updateGameBoard(localRoomState, el);
+        }, DICE_ROLL_MS);
       }
 
       const boardEl = document.getElementById('game-board');
@@ -575,6 +595,11 @@ async function handleKickToggle(btn) {
 }
 
 async function handleGlobalClick(e) {
+  if (e.target.closest('[data-log-toggle]')) {
+    toggleEventLog();
+    return;
+  }
+
   const copyBtn = e.target.closest('[data-copy-target]');
   if (copyBtn) {
     await handleInviteCopy(copyBtn);
@@ -652,6 +677,12 @@ async function handleGlobalClick(e) {
       user_id_val: currentUserId,
       player_data: state[currentUserId]
     });
+
+    // Запис у «Лог подій». Помилка логування не має ламати саме перемикання картки.
+    const label = item.querySelector('.char-label')?.textContent?.trim() || dbKey;
+    const who = state[currentUserId]?.name || currentUserName || 'Гравець';
+    addLog(currentRoomCode, `Гравець ${who} ${isOpen ? 'сховав' : 'відкрив'} характеристику ${label}`)
+      .catch(err => console.error('Не вдалося записати подію в лог:', err));
     
   } catch (err) {
     console.error("Помилка оновлення:", err);
@@ -910,4 +941,6 @@ export function cleanupGame() {
   document.removeEventListener("change", handleVoteRadioChange);
   wasVotingActive = false;
   votingFinishInFlight = false;
+  clearTimeout(pendingDiceLogTimer);
+  pendingDiceLogId = null;
 }

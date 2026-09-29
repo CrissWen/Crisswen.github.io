@@ -1,4 +1,5 @@
 import { supabase } from '../services/supabase.js';
+import { pushLog } from './event-log.js';
 
 // ===== Довідники характеристик (спільні для host-panel.js та host-actions.js) =====
 
@@ -222,6 +223,7 @@ function resolveIds(pState, targetId) {
 // розіслав його всім гравцям разом із фактичною зміною. id — Date.now(), щоб game.js міг відрізнити нову подію від вже показаної.
 function setHostEvent(bState, text) {
   bState.latest_host_event = { id: Date.now(), text };
+  pushLog(bState, text); // те саме повідомлення йде і в «Лог подій» (bunker_state.logs) тим самим UPDATE
 }
 
 function nameOf(pState, id) {
@@ -740,7 +742,10 @@ export async function rollDice(roomCode, type) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   const value = randInt(1, sides);
-  bState.latest_dice = { id: Date.now(), type, value };
+  const id = Date.now();
+  bState.latest_dice = { id, type, value };
+  // Запис у лозі має id кидка: клієнти ховають його до зупинки кубика (див. game.js), щоб не видати результат раніше анімації
+  pushLog(bState, `Ведучий кинув кубик ${type}, випало ${value}`, id);
   await saveRoom(roomCode, { bunker_state: bState });
   return { type, value };
 }
