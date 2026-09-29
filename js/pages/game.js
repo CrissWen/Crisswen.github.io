@@ -35,6 +35,12 @@ let trackedCataclysmTimerEnd = null; // останнє відоме cataclysm_ti
 let wasVotingActive = false; // щоб автоскрол до #voting-section спрацював рівно один раз на кожне запускання голосування, а не при кожному рендері
 let votingFinishInFlight = false; // щоб декілька швидких postgres_changes підряд не відправили кілька паралельних finishVoting
 
+// Закрита кімната — режим лише для читання для будь-кого (навіть колишнього хоста/гравця): host_id ігнорується, панель ведучого не рендериться.
+function isHostOf(roomData) {
+  if (roomData.status === 'closed') return false;
+  return roomData.host_id === currentUserId;
+}
+
 // Синхронізує віджет-таймер катаклізму і скидає флаг модалки "Час сплив", коли ведучий ставить
 // новий катаклізм (інше значення cataclysm_timer_end) — щоб модалка могла показатись знову для наступного відліку.
 function syncCataclysm(bunkerState) {
@@ -164,8 +170,9 @@ export async function initGame() {
 
 function updateGameBoard(roomData, container) {
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
-  const isHost = roomData.host_id === currentUserId;
-  isSpectator = isGameStarted && !roomData.players_state?.[currentUserId];
+  const isHost = isHostOf(roomData);
+  // Закрита кімната — кожен, навіть колишній гравець/ведучий, примусово глядач (режим лише для читання)
+  isSpectator = roomData.status === 'closed' || (isGameStarted && !roomData.players_state?.[currentUserId]);
   document.getElementById('spectator-badge')?.classList.toggle('is-hidden', !isSpectator);
   syncHostPanel(roomData);
   syncCataclysm(roomData.bunker_state);
@@ -253,7 +260,7 @@ async function handleStartGame(e) {
 function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
-  const isHost = roomData.host_id === currentUserId;
+  const isHost = isHostOf(roomData);
   
 const descriptionParts = [
     bState.history,
@@ -481,8 +488,8 @@ function subscribeToRoomUpdates() {
       // і характеристики зникали. Зливаємо зміни поверх попереднього стану замість повної заміни.
       localRoomState = { ...localRoomState, ...payload.new };
 
-      // Ведучий закрив кімнату: повертаємо всіх у лобі
-      if (localRoomState.bunker_state?.room_closed) {
+      // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
+      if (localRoomState.status === 'closed') {
         if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
         window.location.hash = '#/lobby';
         return;
@@ -665,7 +672,7 @@ function hostPanelData(roomData) {
 // Панель живе поза #game-board, тож перемальовування дошки її не зачіпає.
 // Показуємо лише ведучому і лише після старту гри (до роздачі карт дії не мають сенсу).
 function syncHostPanel(roomData) {
-  const isHost = roomData.host_id === currentUserId;
+  const isHost = isHostOf(roomData);
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
   let root = getHostPanelRoot();
 

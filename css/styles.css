@@ -209,12 +209,17 @@ body::-webkit-scrollbar,
 .char-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Заповнення по колонках: елементи 1-5 — ліва колонка, 6-10 — права */
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
   
   gap: 12px clamp(16px, 3vw, 48px); 
 }
 @media (max-width: 600px) {
   .char-list {
     grid-template-columns: 1fr; 
+    grid-template-rows: none;
+    grid-auto-flow: row;
   }
 }
 .abilities-list {

@@ -777,11 +777,10 @@ export async function restartGame(roomCode) {
 }
 
 export async function closeRoom(roomCode) {
-  // Одним атомарним запитом: bunker_state.room_closed сигналізує гравцям у кімнаті (game.js) негайно вийти в лобі,
-  // а status: 'closed' — щоб панель перепідключення (lobby.js) назавжди відфільтрувала цю кімнату,
-  // навіть якщо сам рядок ніколи не буде видалено з БД. (Раніше тут був окремий .delete() з затримкою —
-  // якщо він фактично не відпрацьовував (RLS/мережа), рядок залишався з room_closed:true, але без актуального
-  // status — саме це були “кімнати-привиди” RT4A/BHVI в лобі.)
-  await saveRoom(roomCode, { bunker_state: { room_closed: true }, status: 'closed' });
+  // Оновлюємо лише status — bunker_state не чіпаємо, щоб в БД залишився останній валідний стан гри (історія).
+  // Realtime завжди передає змінений status в payload.new (невелика колонка, не TOAST-иться, на відміну від bunker_state),
+  // тому game.js тепер визначає закриття кімнати саме по status === 'closed', а не по bunker_state.room_closed.
+  // lobby.js вже відфільтровує кімнати зі status IN ('finished','closed').
+  await saveRoom(roomCode, { status: 'closed' });
   lastSnapshot = null;
 }

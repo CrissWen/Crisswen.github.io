@@ -3,7 +3,7 @@ export function waitingRoom({ roomCode, playersState, isHost }) {
   const playersCount = Object.keys(pState).length;
 
   // Ліміти лобі: мінімум для старту гри та максимум місць у кімнаті до старту (16-й вже глядач — перевірка в game.js)
-  const MIN_PLAYERS_TO_START = 6;
+  const MIN_PLAYERS_TO_START = 1;
   const MAX_PLAYERS_IN_LOBBY = 15;
   const canStart = playersCount >= MIN_PLAYERS_TO_START;
 
