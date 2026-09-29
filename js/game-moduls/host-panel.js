@@ -217,8 +217,8 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
 
             ${acc('Кубики', `
               <div class="hp-row">
-                ${actionBtn('D6', 'dice', 'data-arg="6"')}
-                ${actionBtn('D20', 'dice', 'data-arg="20"')}
+                ${actionBtn('Кинути d20', 'dice', 'data-arg="d20"')}
+                ${actionBtn('Кинути d6', 'dice', 'data-arg="d6"')}
               </div>
               <div class="hp-dice-result" data-hp-dice>—</div>
             `)}

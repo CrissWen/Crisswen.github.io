@@ -23,6 +23,7 @@ import {
 } from '../game-moduls/host-panel.js';
 import { showCustomConfirm } from '../game-moduls/confirm-dialog.js';
 import { showGlobalToast } from '../game-moduls/global-toast.js';
+import { showDiceRoll } from '../game-moduls/dice-overlay.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
@@ -482,6 +483,7 @@ function subscribeToRoomUpdates() {
     }, (payload) => {
       // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
       const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
+      const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
 
       // Supabase Realtime у payload.new НЕ передає великі (TOAST) jsonb-колонки, які не змінювались
       // в цьому UPDATE. Тому таймер/голосування (міняють лише bunker_state) приходили без players_state,
@@ -499,6 +501,14 @@ function subscribeToRoomUpdates() {
       const hostEvent = localRoomState.bunker_state?.latest_host_event;
       if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
         showGlobalToast(hostEvent.text);
+      }
+
+      // Новий кидок кубика від ведучого — у всіх клієнтів (включно з ведучим і глядачами) локально запускається анімація.
+      // Порівняння по id не дає повторно програти старий кидок при будь-якому іншому оновленні рядка кімнати.
+      // Записи старого формату (без type/value, з d20+d6) ігноруємо.
+      const diceRoll = localRoomState.bunker_state?.latest_dice;
+      if (diceRoll && diceRoll.id > 0 && diceRoll.id !== prevDiceId && diceRoll.type) {
+        showDiceRoll(diceRoll.type, diceRoll.value);
       }
 
       const boardEl = document.getElementById('game-board');
@@ -743,10 +753,11 @@ const HOST_ACTIONS = {
     }
   },
 
+  // Одна дія на обидві кнопки: тип кубика ('d20' / 'd6') приходить з data-arg натиснутої кнопки
   dice: {
-    run: (f, arg) => HostActions.rollDice(currentRoomCode, Number(arg)),
-    ok: (r, f, arg) => `Кубик D${arg}: ${r}`,
-    after: (root, r) => setHostDiceResult(root, r)
+    run: (f, arg) => HostActions.rollDice(currentRoomCode, arg),
+    ok: r => `${r.type}: ${r.value}`,
+    after: (root, r) => setHostDiceResult(root, `${r.type}: ${r.value}`)
   },
 
   changeHost: {

@@ -37,6 +37,14 @@
     <span class="spectator-badge__text">Ви слідкуєте за грою</span>
   </div>
 
+  <!-- Оверлей кидка кубика: один універсальний слот. js/game-moduls/dice-overlay.js прибирає .is-hidden, ставить на .dice
+       модифікатор форми (.dice--d20 / .dice--d6) і після зупинки анімації вписує число в <span> рівно по центру. -->
+  <div id="dice-overlay" class="dice-overlay is-hidden" role="status" aria-live="polite">
+    <div class="dice-stage">
+      <div class="dice" data-dice><span data-dice-value></span></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Router -->
   <script type="module" src="js/app.js"></script>

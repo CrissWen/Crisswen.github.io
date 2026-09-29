@@ -726,15 +726,23 @@ export async function changeBunkerCapacity(roomCode, delta) {
   return bState.capacity;
 }
 
-// Записує результат у bunker_state.latest_host_event, щоб його бачили всі гравці (Toast), а не лише ведучий
-export async function rollDice(roomCode, sides) {
+// Кількість граней для кожного типу кубика: незалежні кидки d20 і d6.
+const DICE_SIDES = { d20: 20, d6: 6 };
+
+// Кидає ОДИН кубик заданого типу ('d20' або 'd6') і пише результат у bunker_state.latest_dice = { id, type, value }.
+// Текстовий latest_host_event тут НЕ пишеться (кидок не потрапляє в лог/тост): клієнти бачать новий id через Realtime (game.js)
+// і запускають локальну анімацію в dice-overlay.js — так всі гравці бачать її одночасно.
+// snapshot() навмисно немає: кидок не змінює стан гри, а скасування повернуло б старий latest_dice з іншим id
+// і в усіх гравців заново програвся б попередній кидок.
+export async function rollDice(roomCode, type) {
+  const sides = DICE_SIDES[type];
+  if (!sides) throw new Error('Невідомий тип кубика: ' + type);
   const room = await getRoom(roomCode);
-  snapshot(room);
   const bState = room.bunker_state || {};
-  const result = randInt(1, sides);
-  setHostEvent(bState, `Ведучий кинув кубик d${sides}. Випало: ${result}`);
+  const value = randInt(1, sides);
+  bState.latest_dice = { id: Date.now(), type, value };
   await saveRoom(roomCode, { bunker_state: bState });
-  return result;
+  return { type, value };
 }
 
 export async function changeHost(roomCode, newHostId) {

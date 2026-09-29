@@ -1188,3 +1188,96 @@ table.bunker-table td.player-cell .avatar {
     margin-left: 8px;
     margin-right: 4px;
 }
+
+/* ===== Оверлей кидка кубика d20 / d6 (dice-overlay.js) =====
+   Один слот .dice; форма задається модифікатором .dice--d20 / .dice--d6.
+   Хронологія: 0–1.0с — польот і скачки (грань порожня), 1.0с — зупинка + .is-revealed (число “вискакує”). */
+.dice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002; /* над усім, включно з модалкою підтвердження (10001) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .72);
+}
+.dice-overlay.is-hidden { display: none; }
+.dice-overlay.is-rolling { animation: dice-fade-in .15s ease-out both; }
+
+.dice-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 900px;
+}
+/* “Удар” всього слота в момент показу результату. Анімуємо саме сцену, а не .dice, щоб не перезаписати dice-throw. */
+.dice-overlay.is-revealed .dice-stage { animation: dice-thump .35s cubic-bezier(.2, 1.4, .4, 1) both; }
+
+.dice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--head);
+  font-weight: 700;
+  color: var(--bg);
+  text-align: center;
+  user-select: none;
+}
+.dice span { font-size: clamp(40px, 9vw, 72px); line-height: 1; }
+
+/* Цифра прихована (прозора + сильне розмиття), поки кубик крутиться; після зупинки (.is-revealed) миттєво чітка й яскрава, рівно по центру (flex у .dice) */
+.dice span { opacity: 0; filter: blur(14px); }
+.dice-overlay.is-revealed .dice span { animation: dice-number-pop .35s cubic-bezier(.2, 1.4, .4, 1) both; }
+
+/* d6 — класичний квадрат із заокругленими кутами */
+.dice--d6 {
+  width: clamp(96px, 20vw, 140px);
+  height: clamp(96px, 20vw, 140px);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #ffd0a3, var(--hazard));
+  box-shadow: 0 0 40px rgba(240, 168, 104, .45);
+}
+
+/* d20 — шестикутник (clip-path), великий і фіолетовий, щоб легко відрізняти від d6.
+   clip-path відрізає box-shadow, тому світіння в цього кубика немає. */
+.dice--d20 {
+  width: clamp(120px, 26vw, 180px);
+  height: clamp(132px, 29vw, 200px);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: linear-gradient(145deg, #c9c9ff, var(--accent));
+}
+
+/* Кидок: кубик вилітає знизу екрана, пружно “перелітає” центр і хаотично крутиться у 3D. Тривалість 1.5с = ROLL_MS у dice-overlay.js. */
+.dice-overlay.is-rolling .dice { animation: dice-throw 1.5s linear both; }
+
+/* Кути між кадрами стрибають у різні боки (хаос), але в кінці кратні 360° (1440/-1440/1080),
+   тому кубик зупиняється рівно і цифру можна прочитати. Кожен сегмент має свій cubic-bezier:
+   перший — пружний виліт з перельотом (y > 1), наступні — відскоки, останній — різке гальмування. */
+@keyframes dice-throw {
+  0%   { opacity: 0; transform: translateY(75vh) scale(.3) rotateX(0) rotateY(0) rotateZ(0);
+         animation-timing-function: cubic-bezier(.15, 1.5, .4, 1); }
+  8%   { opacity: 1; }
+  22%  { opacity: 1; transform: translateY(-9vh) scale(1.2) rotateX(460deg) rotateY(-340deg) rotateZ(230deg);
+         animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  42%  { transform: translateY(7vh) scale(.92) rotateX(1010deg) rotateY(-760deg) rotateZ(610deg);
+         animation-timing-function: cubic-bezier(.3, 1.4, .5, 1); }
+  62%  { transform: translateY(-5vh) scale(1.1) rotateX(1180deg) rotateY(-1210deg) rotateZ(790deg);
+         animation-timing-function: cubic-bezier(.3, 1.3, .5, 1); }
+  82%  { transform: translateY(2vh) scale(.97) rotateX(1400deg) rotateY(-1400deg) rotateZ(1050deg);
+         animation-timing-function: cubic-bezier(.1, .8, .2, 1); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotateX(1440deg) rotateY(-1440deg) rotateZ(1080deg); }
+}
+/* Цифра миттєво стає чіткою й яскравою в момент удару */
+@keyframes dice-number-pop {
+  0%   { opacity: 1; filter: blur(0) brightness(2.2); transform: scale(1.5); }
+  100% { opacity: 1; filter: blur(0) brightness(1); transform: scale(1); }
+}
+/* “Удар” об екран: різко збільшитися і повернутися назад */
+@keyframes dice-thump {
+  0%   { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+@keyframes dice-fade-in {
+  from { background: rgba(0, 0, 0, 0); }
+  to   { background: rgba(0, 0, 0, .72); }
+}
