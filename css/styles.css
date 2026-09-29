@@ -1127,6 +1127,23 @@ table.bunker-table td.player-cell .avatar {
     min-height: 20px; /* Щоб інтерфейс не стрибав при появі тексту */
 }
 
+/* ===== Ліміти гравців у лобі: підказка мінімуму та блокування кнопки "Почати гру" ===== */
+.lobby-start-hint {
+    margin: 0 0 10px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--text-mute);
+}
+.lobby-start-hint.is-ready {
+    color: var(--ok);
+}
+#start-game-btn:disabled {
+    background: var(--metal) !important;
+    color: var(--text-mute) !important;
+    cursor: not-allowed !important;
+    opacity: .65;
+}
+
 /* ===== Режим глядача: плаваюча іконка в правому нижньому куті ===== */
 .spectator-badge {
     position: fixed;

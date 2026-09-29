@@ -126,6 +126,15 @@ export async function initGame() {
 
     
     // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
+    // Ліміт на 15 місць діє виключно на етапі лобі: якщо гра вже йде, цю перевірку повністю ігноруємо.
+    if (!isGameStarted && !isPlayerInRoom) {
+      const playersCount = Object.keys(room.players_state || {}).length;
+      if (playersCount >= 15) {
+        showGlobalToast('Ця кімната вже переповнена');
+        window.location.hash = '#/lobby';
+        return;
+      }
+    }
 
     
     if (!isGameStarted && !isPlayerInRoom) {
