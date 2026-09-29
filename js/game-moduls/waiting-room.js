@@ -2,6 +2,11 @@ export function waitingRoom({ roomCode, playersState, isHost }) {
   const pState = playersState || {};
   const playersCount = Object.keys(pState).length;
 
+  // Ліміти лобі: мінімум для старту гри та максимум місць у кімнаті до старту (16-й вже глядач — перевірка в game.js)
+  const MIN_PLAYERS_TO_START = 6;
+  const MAX_PLAYERS_IN_LOBBY = 15;
+  const canStart = playersCount >= MIN_PLAYERS_TO_START;
+
   // Повне посилання на основі поточного домену: origin + pathname (без старого hash), далі власний #/lobby?join=
   const inviteLink = `${window.location.origin}${window.location.pathname}#/lobby?join=${roomCode}`;
 
@@ -46,7 +51,10 @@ export function waitingRoom({ roomCode, playersState, isHost }) {
           ${playersListHtml}
         </ul>
         ${isHost ? `
-          <button id="start-game-btn" style="width: 100%; padding: 12px; border-radius: 6px; background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none; font-size: 15px;">
+          <p class="lobby-start-hint ${canStart ? 'is-ready' : ''}" id="lobby-start-hint">
+            Щоб почати гру, потрібно як мінімум ${MIN_PLAYERS_TO_START} осіб. (${playersCount}/${MAX_PLAYERS_IN_LOBBY})
+          </p>
+          <button id="start-game-btn" ${canStart ? '' : 'disabled'} style="width: 100%; padding: 12px; border-radius: 6px; background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none; font-size: 15px;">
             Почати гру
           </button>
         ` : ` 
