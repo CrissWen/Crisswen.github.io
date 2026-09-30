@@ -19,6 +19,9 @@
 }
 
 .header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--head);
   font-size: 24px;
   font-weight: 700;
@@ -32,6 +35,13 @@
 .header-logo:hover {
   color: var(--text);
   text-shadow: 0 0 15px var(--hazard);
+}
+
+.header-logo-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--hazard) 50%, transparent));
 }
 
 /* Клікабельний блок профілю */

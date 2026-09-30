@@ -4,16 +4,19 @@
 // ВАЖЛИВО: маленький inline-скрипт у <head> index.html (одразу під <link id="theme-stylesheet">)
 // дублює лише сам КЛЮЧ localStorage і шаблон шляху до файлу теми, щоб застосувати збережену тему
 // синхронно ДО завантаження цього ES-модуля — інакше при кожному перезавантаженні сторінки на частку
-// секунди блимала б дефолтна тема "Сталкер", перш ніж JS встигав би її підмінити. Якщо міняєте
+// секунди блимала б дефолтна тема "Класика", перш ніж JS встигав би її підмінити. Якщо міняєте
 // THEME_STORAGE_KEY або шаблон шляху нижче — тримайте той inline-скрипт синхронізованим.
 
 export const THEME_STORAGE_KEY = 'bunker-theme';
-export const DEFAULT_THEME = 'stalker';
+export const DEFAULT_THEME = 'classic';
 
 export const THEMES = [
-  { value: 'stalker',   label: 'Сталкер (Гримдарк)' },
-  { value: 'fallout',   label: 'Fallout (Термінал)' },
-  { value: 'cyberpunk', label: 'Cyberpunk (Нео-Нуар)' }
+  { value: 'classic',   label: 'Класична (Dark)' },
+  { value: 'stalker',   label: 'Сталкер (Grimdark)' },
+  { value: 'fallout',   label: 'Fallout (Termainal)' },
+  { value: 'cyberpunk', label: 'Cyberpunk (Neo-Noir)' },
+  { value: 'cryo',      label: 'Кріо-Станція (Deep Sea)' },
+  { value: 'patriot',   label: 'Потужність (Patriot)' }
 ];
 
 const VALID_THEME_VALUES = new Set(THEMES.map(t => t.value));

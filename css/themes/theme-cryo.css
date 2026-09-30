@@ -1,0 +1,102 @@
+/* ===== Тема: КРІО-СТАНЦІЯ (Deep Sea / Glassmorphism) =====
+   Холодна синьо-ціанова палітра підводної/замороженої станції. На відміну від інших тем, тут
+   --panel/--panel-2 напівпрозорі (rgba), а не суцільні — це навмисно, разом з backdrop-filter
+   нижче вони й дають ефект "матового скла". --danger навмисно дорівнює --hazard (немає теплого
+   червоного акценту у цій холодній гамі — і тривога, і небезпека говорять тим самим неоновим ціаном).
+   :root тут — повний набір змінних (як і в інших theme-*.css), бо theme-manager.js підмінює
+   #theme-stylesheet ЦІЛИКОМ (одна тема активна одночасно), тому нічого успадкувати нізвідки. */
+:root{
+  /* Базова палітра станції */
+  --cryo-1: #030B26; /* Темна безодня */
+  --cryo-2: #124973; /* Товща води */
+  --cryo-3: #0B6887; /* Металеві панелі */
+  --cryo-4: #17AEC2; /* Ціанові акценти */
+  --cryo-5: #89FAFA; /* Неонове світіння (лід) */
+
+  --bg:        var(--cryo-1);
+  --panel:     rgba(18, 73, 115, .2);
+  --panel-2:   rgba(11, 104, 135, .3);
+  --metal:     var(--cryo-3);
+  --metal-lt:  var(--cryo-4);
+  --hazard:    var(--cryo-4);
+  --danger:    var(--cryo-4);
+  --ok:        var(--cryo-5);
+  --accent:    var(--cryo-4);
+  --text:      #e6f9f9;
+  --text-mute: var(--cryo-4);
+  --radius:    16px;
+  --radius-sm: 8px;
+  --mono: 'JetBrains Mono', 'Share Tech Mono', 'Courier New', monospace;
+  --head: 'Orbitron', 'Oswald', sans-serif;
+  --body: 'Rajdhani', 'IBM Plex Sans', -apple-system, sans-serif;
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
+}
+
+/* Імітація світла, що пробивається крізь товщу води зверху, і холодна темрява по краях. */
+body{
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 50% -10%, var(--cryo-2) 0%, transparent 60%),
+    linear-gradient(180deg, var(--cryo-1) 0%, #01040f 100%);
+  background-attachment: fixed;
+  color: var(--text);
+}
+
+/* Ефект скла для основних контейнерів: --panel/--panel-2 вже напівпрозорі (див. :root),
+   backdrop-filter розмиває те, що під ними, довершуючи ефект товстого матового скла. */
+.block, .reconnect-card, .voting-block {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(23, 174, 194, .3) !important;
+  border-top: 1px solid rgba(137, 250, 250, .4) !important;
+  box-shadow: 0 10px 30px rgba(3, 11, 38, .8), inset 0 0 20px rgba(18, 73, 115, .2);
+}
+
+/* Логотип у хедері: header.css завантажується ПІСЛЯ цього файлу, тому без !important
+   його color: var(--hazard) переміг би цю специфічну підсвітку. */
+.header-logo {
+  color: var(--cryo-5) !important;
+  text-shadow: 0 0 15px var(--cryo-4), 0 0 30px rgba(23, 174, 194, .5) !important;
+}
+.header-logo-icon {
+  filter: drop-shadow(0 0 5px var(--cryo-5)) hue-rotate(160deg) !important;
+}
+
+/* Кнопки (голографічний ефект) */
+.hp-btn, .vote-submit-btn {
+  background: rgba(11, 104, 135, .2);
+  border-color: var(--cryo-4);
+  color: var(--cryo-5);
+  box-shadow: 0 0 10px rgba(23, 174, 194, .2);
+}
+.hp-btn:hover, .vote-submit-btn:hover {
+  background: var(--cryo-4);
+  color: var(--cryo-1);
+  box-shadow: 0 0 20px var(--cryo-5);
+  transform: translateY(-2px);
+}
+
+/* Характеристики та замки */
+.char-item {
+  background: rgba(18, 73, 115, .1);
+}
+.char-item.open {
+  background: rgba(23, 174, 194, .15);
+  border-color: var(--cryo-4);
+  box-shadow: inset 0 0 15px rgba(23, 174, 194, .3);
+}
+.char-lock:hover .lock-icon {
+  filter: drop-shadow(0 0 6px var(--cryo-5));
+}
+
+/* Таймер Катаклізму: замість тривожного червоного — "крижана загроза" */
+.cataclysm-timer {
+  background: rgba(3, 11, 38, .7) !important;
+  border: 1px solid var(--cryo-5) !important;
+  box-shadow: 0 0 20px rgba(137, 250, 250, .2), inset 0 0 15px rgba(23, 174, 194, .3) !important;
+  backdrop-filter: blur(5px);
+}
+.cataclysm-timer__icon, .cataclysm-timer__time {
+  color: var(--cryo-5) !important;
+  text-shadow: 0 0 12px var(--cryo-5) !important;
+}

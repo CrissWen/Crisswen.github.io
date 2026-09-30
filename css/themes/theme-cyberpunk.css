@@ -36,3 +36,17 @@ body{
   background-size: 48px 48px, 48px 48px, auto, auto, auto;
   background-attachment: fixed;
 }
+
+/* ===== Специфічні стилі хедера для Кіберпанку =====
+   header.css вантажується ПІСЛЯ цього файлу і сам задає .header-logo { color: var(--hazard) }
+   (тут це магента #f6019d, а не фіолетовий), тому без !important ця правка нічого б не змінила. */
+.header-logo {
+  color: #d827f5 !important; /* Неоновий фіолетовий */
+  text-shadow: 0 0 10px rgba(216, 39, 245, .8), 0 0 25px rgba(216, 39, 245, .5) !important;
+  letter-spacing: 0.15em !important; /* Трохи ширше для кібер-естетики */
+}
+
+.header-logo-icon {
+  /* hue-rotate(240deg) перетворює початковий жовтий/помаранчевий на глибокий фіолетовий */
+  filter: drop-shadow(0 0 8px #d827f5) hue-rotate(240deg) saturate(1.5) !important;
+}

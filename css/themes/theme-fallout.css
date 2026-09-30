@@ -34,3 +34,16 @@ body{
     radial-gradient(circle at 50% 50%, transparent 40%, #000 100%);
   background-attachment: fixed;
 }
+
+/* ===== Специфічні стилі хедера для Fallout =====
+   header.css вантажується ПІСЛЯ цього файлу і сам задає .header-logo { color: var(--hazard) }
+   (бурштиновий, а не зелений), тому без !important ця правка нічого б не змінила. */
+.header-logo {
+  color: #4af626 !important; /* Класичний Fallout Green */
+  text-shadow: 0 0 10px rgba(74, 246, 38, .8), 0 0 20px rgba(74, 246, 38, .4) !important;
+}
+
+.header-logo-icon {
+  /* hue-rotate(90deg) зсуває палітру іконки в зелену зону, saturate робить її яскравішою */
+  filter: drop-shadow(0 0 6px #4af626) hue-rotate(90deg) saturate(2) !important;
+}

@@ -1,0 +1,125 @@
+/* ===== ТЕМА: ШТАБ ОБОРОНИ (PATRIOT) — органічна версія =====
+   Друга ітерація: кислотні неонові кольори й сильне світіння з першої версії замінені на м'якшу,
+   приємнішу для очей палітру — глибокий синій + спокійний бронзово-гірчичний, менше box-shadow-світіння,
+   природні тіні для об'єму замість "неону".
+
+   Порядок підключення в index.html: styles.css → ЦЯ тема → header.css. Тобто header.css і частина
+   хардкоджених правил у styles.css (.cataclysm-timer{background:...}) вантажаться ПІСЛЯ цього файлу —
+   там, де потрібно перебити саме хардкод (а не підставити токен), використано !important, так само,
+   як у theme-fallout.css / theme-cyberpunk.css. */
+:root {
+  /* Нова збалансована палітра */
+  --patriot-1: #003882; /* Глибокий синій (основні панелі) */
+  --patriot-2: #006DFF; /* Насичений синій */
+  --patriot-3: #197BFF; /* Світло-синій (акценти) */
+  --patriot-4: #B27500; /* Бронзово-оливковий (бордюри, спокійні елементи) */
+  --patriot-5: #FFA700; /* Теплий бурштиновий (попередження, активні кнопки) */
+
+  /* Перевизначення СИСТЕМНИХ токенів гри — саме ці імена читає css/styles.css і весь JS
+     (host-panel.js, waiting-room.js тощо) через var(...). У чернетці ТЗ фігурували --bg-abyss,
+     --border-metal, --text-main — таких змінних у проєкті немає, тут замінено на реальні --bg/--metal/--text,
+     інакше тема просто нічого б не перефарбувала. */
+  --bg:        #001838; /* Затемнений синій — щоб панелі кольору --patriot-1 на ньому виділялись, а не зливались */
+  --panel:     var(--patriot-1);
+  --panel-2:   rgba(178, 117, 0, .15); /* Дуже м'який бронзовий фон для вторинних блоків */
+  --metal:     var(--patriot-4);
+  --metal-lt:  var(--patriot-3);
+
+  --hazard:    var(--patriot-5);
+  --danger:    var(--patriot-5); /* Тут свідомо бурштиновий замість класичного червоного — тактична тривога, не кров */
+  --ok:        var(--patriot-3);
+  --accent:    var(--patriot-5);
+
+  --text:      #f0f4f8; /* М'який біло-синій текст */
+  --text-mute: #8ba8cc;
+
+  --radius:    6px; /* Трохи м'якші кути для органічності (було 4px) */
+  --radius-sm: 4px; /* було 2px */
+
+  /* Шрифти теж системний токен (кожна тема в проєкті задає свою трійку) — лишив без змін, ТЗ їх не
+     торкається; без них усе, що звертається до var(--mono)/var(--head)/var(--body), впало б на дефолтний
+     шрифт браузера, щойно тема активна */
+  --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --head: 'Oswald', 'Rajdhani', sans-serif;
+  --body: 'Rajdhani', 'IBM Plex Sans', -apple-system, sans-serif;
+
+  /* Бурштиново-сині смуги небезпеки — .reconnect-card::before. Теж не згадано в чернетці, лишив
+     формулу як була (значення підтягнуться нові самі, бо це var(--patriot-5)/var(--patriot-1)) */
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--patriot-5) 0, var(--patriot-5) 10px, var(--patriot-1) 10px, var(--patriot-1) 20px);
+}
+
+/* Тло штучно затемнене відносно --panel, щоб панелі виділялись, а не зливались. Тактична сітка ледь
+   помітна (5% замість 15% у першій версії) — менш "кислотно". */
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(25, 123, 255, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(25, 123, 255, .05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  background-attachment: fixed;
+}
+
+/* ===== UI-елементи =====
+   Менше "неону": замість inset-світіння — природна зовнішня тінь для об'єму, тонша (1px) бронзова рамка
+   замість товстої 2px. .stalker-card і .brutal-btn із чернетки ТЗ прибрано — таких класів у проєкті немає. */
+.block, .voting-block, .reconnect-card {
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+}
+
+/* Кнопки — спокійний бронзовий, тепліє й підсвічується бурштиновим лише на hover, без агресивного світіння */
+.hp-btn, .vote-submit-btn {
+  background: var(--patriot-4);
+  border: 1px solid rgba(255, 167, 0, .3);
+  color: #fff;
+  text-transform: uppercase;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+  transition: all .2s ease;
+}
+.hp-btn:hover:not(:disabled), .vote-submit-btn:hover:not(:disabled) {
+  background: var(--patriot-5);
+  color: #000;
+  border-color: var(--patriot-5);
+  box-shadow: 0 4px 15px rgba(255, 167, 0, .3); /* легке, не агресивне світіння */
+  transform: translateY(-2px);
+}
+
+/* Характеристики гравців — закрита картка тепер майже нейтральна (тонований чорний), відкрита —
+   легкий синій фон з акуратною бурштиновою смужкою зліва замість сильного зовнішнього світіння */
+.char-item {
+  background: rgba(0, 0, 0, .2);
+  border-color: rgba(178, 117, 0, .4);
+}
+.char-item.open {
+  background: rgba(25, 123, 255, .1);
+  border-color: var(--patriot-3);
+  box-shadow: inset 2px 0 0 var(--patriot-5);
+}
+
+/* ===== Хедер =====
+   header.css вантажується ПІСЛЯ цього файлу і сам задає .header-logo{color:var(--hazard)} та
+   .header-logo-icon{filter:...} — без !important ці правки тут нічого б не змінили. */
+.header-logo {
+  color: var(--patriot-5) !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .8) !important; /* звичайна тінь для об'єму замість світіння */
+  letter-spacing: .05em !important;
+}
+.header-logo-icon {
+  /* Без hue-rotate: --patriot-5 (бурштиновий) і так близький до природного кольору іконки (вогонь/радіація).
+     Замість перефарбовування — легка тінь для об'єму + тематичне бурштинове світіння (а не нейтрально-чорне). */
+  filter: drop-shadow(0 0 5px var(--patriot-5)) drop-shadow(0 2px 4px rgba(0, 0, 0, .6)) saturate(1.2) !important;
+}
+
+/* Таймер катаклізму (органічна тривога) — той самий принцип: менше box-shadow-світіння, більше природної тіні */
+.cataclysm-timer {
+  background: var(--patriot-1) !important;
+  border: 1px solid var(--patriot-5) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5) !important;
+}
+.cataclysm-timer__icon, .cataclysm-timer__time {
+  color: var(--patriot-5) !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .8) !important;
+}
