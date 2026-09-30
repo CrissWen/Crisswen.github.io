@@ -755,9 +755,10 @@ table.bunker-table td.player-cell .avatar {
    На відміну від .game-timer (таймер обговорень, знизу по центру, нейтральний вигляд), цей —
    відлік до катастрофи: лівий верхній кут, червонуватий тон, іконка радіації. Джерело —
    bunker_state.cataclysm_timer_end. z-index узгоджений з рештою плаваючих віджетів (9999). */
+/* Змінюємо блок таймера катаклізму */
 .cataclysm-timer {
   position: fixed;
-  top: 20px;
+  top: 80px; /* Було 20px, стало 80px (60px хедер + 20px відступ) */
   left: 20px;
   z-index: 9999;
   display: inline-flex;
@@ -794,7 +795,12 @@ table.bunker-table td.player-cell .avatar {
 }
 
 @media (max-width: 520px) {
-  .cataclysm-timer { top: 12px; left: 12px; padding: 8px 14px; gap: 8px; }
+  .cataclysm-timer { 
+    top: 72px; /* Було 12px, стало 72px (60px хедер + 12px відступ) */
+    left: 12px; 
+    padding: 8px 14px; 
+    gap: 8px; 
+  }
   .cataclysm-timer__icon { font-size: 18px; }
   .cataclysm-timer__time { font-size: 1.35rem; }
 }
