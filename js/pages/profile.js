@@ -1,6 +1,15 @@
 import { supabase } from '../services/supabase.js';
+import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
+
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
 
 export function renderProfile() {
+    const themeOptionsHtml = THEMES.map(t => `<option value="${esc(t.value)}">${esc(t.label)}</option>`).join('');
+
     return `
     <section class="block layout-small-centered">
       <div class="block-head">
@@ -20,6 +29,15 @@ export function renderProfile() {
         </div>
 
         <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
+
+        <div>
+          <p style="margin: 0 0 6px; font-size: 13px; color: var(--text-mute);">Тема інтерфейсу</p>
+          <select id="theme-selector" class="hp-select" style="width: 100%;">
+            ${themeOptionsHtml}
+          </select>
+        </div>
+
+        <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
         
         <button id="profile-logout-btn" style="padding: 10px; border-radius: 6px; background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none; transition: filter 0.2s ease;">
           Вийти з акаунта
@@ -33,6 +51,14 @@ export async function initProfile() {
     const nameEl = document.getElementById('profile-page-name');
     const avatarEl = document.getElementById('profile-page-avatar');
     const logoutBtn = document.getElementById('profile-logout-btn');
+    const themeSelect = document.getElementById('theme-selector');
+
+    // Тему можна перемкнути незалежно від сесії (хоча на цю сторінку і так не пускає неавторизованих —
+    // перевірка нижче), тож вішаємо обробник одразу, до await supabase.auth.getSession()
+    if (themeSelect) {
+        themeSelect.value = getCurrentTheme();
+        themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
 

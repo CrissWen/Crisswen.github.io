@@ -1,0 +1,38 @@
+/* ===== Тема: CYBERPUNK (Нео-Нуар) =====
+   Неонова палітра на глибокому фіолетово-чорному тлі: --hazard тут працює як "гарячий" магента-акцент
+   (замість жовтого попередження), --ok — неоновий ціан, --accent — фіолетовий. Кути ще гостріші,
+   ніж у "Сталкері" (--radius: 2px), а не прямі, як у "Fallout" — трохи технологічного глянцю замість
+   суцільної брутальності. */
+:root{
+  --bg:        #08060f;
+  --panel:     #120f22;
+  --panel-2:   #1a1630;
+  --metal:     #33285a;
+  --metal-lt:  #4a3b82;
+  --hazard:    #f6019d;
+  --danger:    #ff2952;
+  --ok:        #00f0ff;
+  --accent:    #b46bff;
+  --text:      #eae6ff;
+  --text-mute: #8478ad;
+  --radius:    2px;
+  --radius-sm: 0px;
+  --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --head: 'Orbitron', 'Oswald', sans-serif;
+  --body: 'Rajdhani', 'IBM Plex Sans', -apple-system, sans-serif;
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
+}
+
+/* Неонова сітка (як підлога в кіберпанк-інтер'єрі) + два кольорові світіння по кутах (магента/ціан) +
+   темна віньєтка. Той самий принцип шарів у власному фоні body, що й в інших темах — усе під .block-панелями. */
+body{
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(180,107,255,.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,107,255,.10) 1px, transparent 1px),
+    radial-gradient(circle at 15% 10%, rgba(246,1,157,.20) 0%, transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(0,240,255,.18) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, transparent 45%, #020103 100%);
+  background-size: 48px 48px, 48px 48px, auto, auto, auto;
+  background-attachment: fixed;
+}

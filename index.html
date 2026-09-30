@@ -5,10 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>БУНКЕР — інтерфейс гри</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Share+Tech+Mono&family=VT323&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- Підключаємо стилі -->
   <link rel="stylesheet" href="css/styles.css">
+  <!-- Сюди JS (theme-manager.js) буде підставляти потрібний файл теми -->
+  <link id="theme-stylesheet" rel="stylesheet" href="css/themes/theme-stalker.css">
+  <script>
+    // Застосовує збережену тему СИНХРОННО, до першого рендеру — інакше при кожному перезавантаженні на частку
+    // секунди блимала б дефолтна тема "Сталкер", поки не встиг би завантажитися js/app.js (там живе
+    // єдине джерело правди — js/utils/theme-manager.js; тут дублюється лише ключ і шаблон шляху до файлу теми).
+    (function () {
+      try {
+        var t = localStorage.getItem('bunker-theme');
+        if (t === 'fallout' || t === 'cyberpunk') {
+          document.getElementById('theme-stylesheet').href = 'css/themes/theme-' + t + '.css';
+        }
+      } catch (e) { /* localStorage недоступний (приватний режим тощо) — лишаємося на дефолтній href вище */ }
+    })();
+  </script>
   <link rel="stylesheet" href="css/header.css"> <!-- Додали новий файл -->
 </head>
 <body>

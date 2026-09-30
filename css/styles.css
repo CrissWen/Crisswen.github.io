@@ -1,33 +1,17 @@
-/* ===== BUNKER — design tokens ===== */
-:root{
-  --bg:        #10121a;
-  --panel:     #181b26;
-  --panel-2:   #1f2330;
-  --metal:     #2b2f40;
-  --metal-lt:  #3d4256;
-  --hazard:    #f0a868;
-  --danger:    #ef6f61;
-  --ok:        #5fcdb0;
-  --accent:    #8f8ff0;
-  --text:      #edeff5;
-  --text-mute: #8a90a6;
-  --radius:    14px;
-  --radius-sm: 9px;
-  --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
-  --head: 'Oswald', 'Arial Narrow', sans-serif;
-  --body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
-}
+/* ===== BUNKER — базовий файл ("скелет") =====
+   Тут НЕМАЄ кольорів/шрифтів — вся палітра (змінні --bg/--panel/--text/--hazard/тощо) визначається
+   окремо в css/themes/theme-<name>.css, який підключається в index.html через <link id="theme-stylesheet">
+   і перемикається JS-ом (js/utils/theme-manager.js). Усі правила нижче та в інших js-файлах
+   силаються на ці змінні через var(...) — без підключеної теми кольори просто не застосуються. */
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
-  background:
-    radial-gradient(ellipse at top, #1a1e2c 0%, var(--bg) 55%);
   color:var(--text);
   font-family:var(--body);
   line-height:1.5;
   min-height:100vh;
-  padding: 28px 16px 80px;
+  padding: 28px 16px 80px; /* padding-top далі перебивається на 80px в header.css (під фіксований хедер) */
 }
 
 /* ===== Приховані скролбари (прокрутка коліщатком/свайпом лишається, сам повзунок не малюється) ===== */
@@ -54,22 +38,26 @@ body::-webkit-scrollbar,
 /* -- panel / block shell -- */
 .block{
   border:1px solid var(--metal);
+  border-top:3px solid var(--metal);
   border-radius:var(--radius);
   background:var(--panel);
   margin-bottom:22px;
   overflow:hidden;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.6), 0 10px 20px rgba(0,0,0,.5);
 }
 .block-head{
   padding:14px 18px 12px;
   border-bottom:1px solid var(--metal);
+  background: rgba(0,0,0,.2);
 }
 .block-head h2{
   font-family:var(--head);
   font-weight:600;
   font-size:22px;
-  letter-spacing:.02em;
+  letter-spacing:.05em;
   margin:0;
   color:var(--text);
+  text-transform: uppercase;
 }
 .block-body{padding:18px;}
 
@@ -79,11 +67,12 @@ body::-webkit-scrollbar,
   font-size:44px;line-height:1;
   width:76px;height:76px;flex:none;
   display:flex;align-items:center;justify-content:center;
-  background:var(--panel-2);border:1px solid var(--danger);
+  background:var(--bg);border:2px solid var(--danger);
   border-radius:var(--radius-sm);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--danger) 40%, transparent);
 }
-.cata-title{font-family:var(--head);font-size:26px;color:var(--danger);margin:0 0 6px;letter-spacing:.01em;}
-.cata-desc{color:var(--text-mute);max-width:60ch;margin:0;font-size:14.5px;}
+.cata-title{font-family:var(--head);font-size:26px;color:var(--danger);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
+.cata-desc{color:var(--text);max-width:60ch;margin:0;font-size:14.5px;opacity:.9;}
 
 /* ===== Bunker info block ===== */
 .block-desc {
@@ -136,21 +125,23 @@ body::-webkit-scrollbar,
   }
 }
 .info-stat {
-  background: var(--panel-2);
+  background: var(--bg);
   border: 1px solid var(--metal);
+  border-left: 3px solid var(--metal-lt);
   border-radius: var(--radius-sm);
   padding: 12px 16px; 
   
   display: flex;
   flex-direction: column;
   justify-content: flex-start; /* Тепер заголовки завжди будуть рівно зверху на одній лінії */
+  box-shadow: inset 0 0 10px rgba(0,0,0,.8);
 }
-.info-stat .k{font-family:var(--body);font-size:12.5px;color:var(--text-mute);}
-.info-stat .v{font-family:var(--head);font-size:20px;margin-top:2px;}
+.info-stat .k{font-family:var(--mono);font-size:12.5px;color:var(--text-mute);text-transform:uppercase;}
+.info-stat .v{font-family:var(--head);font-size:20px;margin-top:2px;color:var(--text);}
 
 .equipment-title{
-  font-family:var(--body);font-weight:600;font-size:13px;
-  color:var(--text-mute);margin:0 0 10px;
+  font-family:var(--mono);font-weight:600;font-size:13px;
+  color:var(--text-mute);margin:0 0 10px;text-transform:uppercase;
 }
 .equipment-list {
   list-style: none;
@@ -166,7 +157,7 @@ body::-webkit-scrollbar,
 }
 
 .equipment-list li {
-  font-family: var(--body);
+  font-family: var(--mono);
   font-size: 14.5px;
   color: var(--text);
   /* Відступи: верх(8) право(24) низ(8) ліво(12). Збільшений правий відступ додає акуратне вільне місце */
@@ -174,6 +165,7 @@ body::-webkit-scrollbar,
   border-left: 3px solid var(--ok);
   background: var(--panel-2);
   border-radius: var(--radius-sm);
+  box-shadow: 2px 2px 5px rgba(0,0,0,.5);
 }
 /* ===== Компонування блоку Бункер ===== */
 /* Компонування блоку Бункер */
@@ -229,16 +221,27 @@ body::-webkit-scrollbar,
 }
 .char-item{
   display:flex;align-items:center;justify-content:space-between;gap:14px;
-  border:1px solid var(--metal);background:var(--panel-2);
+  border:1px solid var(--metal);
   border-radius:var(--radius-sm);
   padding:12px 14px;
-  transition:border-color .3s ease, background .3s ease;
+  transition:all .3s ease;
+  position:relative;
+  /* Закрита картка — текстура решітки */
+  background: repeating-linear-gradient(45deg, var(--panel), var(--panel) 10px, var(--bg) 10px, var(--bg) 20px);
+  box-shadow: inset 0 0 15px rgba(0,0,0,.8);
+  opacity:.8;
 }
-.char-item.open{border-color:var(--ok);}
+/* Відкрита картка — термінальне свічення */
+.char-item.open{
+  border-color:var(--hazard);
+  background:var(--panel-2);
+  opacity:1;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.5), -4px 0 0 var(--hazard);
+}
 .char-text{display:flex;flex-direction:column;gap:4px;min-width:0;}
 .char-label{
-  font-family:var(--body);font-size:12.5px;
-  color:var(--text-mute);
+  font-family:var(--mono);font-size:12.5px;
+  color:var(--text-mute);text-transform:uppercase;
 }
 .char-value {
   font-family: var(--body); 
@@ -284,19 +287,19 @@ body::-webkit-scrollbar,
 .char-item.open .char-lock .lock-open { display: block; }
 
 /* ===== Special abilities sub-block (inside block 3) ===== */
-.abilities-block{margin-top:22px;padding-top:18px;border-top:1px dashed var(--metal);}
+.abilities-block{margin-top:22px;padding-top:18px;border-top:2px dashed var(--metal);}
 .abilities-title{
-  font-family:var(--body);font-weight:600;font-size:13px;
-  color:var(--hazard);margin:0 0 10px;
+  font-family:var(--mono);font-weight:600;font-size:13px;
+  color:var(--hazard);margin:0 0 10px;text-transform:uppercase;
 }
 .ability-item{border-color:var(--metal-lt);}
-.ability-item.open{border-color:var(--hazard);}
+.ability-item.open{border-color:var(--danger);box-shadow: inset 0 0 20px rgba(0,0,0,.5), -4px 0 0 var(--danger);}
 .ability-item.open .char-lock{border-color:var(--hazard);}
 
 /* ===== Вигнаний гравець ("сірий" рядок) ===== */
 .kicked-player {
-    opacity: 0.5; /* Робить весь рядок напівпрозорим */
-    filter: grayscale(100%); /* Перетворює всі кольори/аватарки на чорно-білі */
+    opacity: 0.35; /* Робить весь рядок напівпрозорим */
+    filter: grayscale(100%) sepia(20%) hue-rotate(80deg); /* Мертвенно-зелений відтінок */
     pointer-events: none; /* Забороняє клікати по картках характеристик цього гравця */
 }
 /* Повертаємо можливість клікати ТІЛЬКИ по кнопці "Повернути" (щоб хост міг це зробити) */
@@ -308,8 +311,8 @@ body::-webkit-scrollbar,
    має власний background-color) і будь-який локальний фон карток характеристик. */
 .kicked-player td,
 .kicked-player th {
-    background-color: #151720 !important; /* темний, майже чорний з синім/металевим відтінком */
-    border-color: var(--metal-lt) !important; /* повертає видиму сітку-розділювачі таблиці */
+    background-color: #050605 !important; /* чорна безодня */
+    border-color: #1a1e1a !important; /* повертає видиму сітку-розділювачі таблиці */
 }
 
 /* Фон і рамки внутрішніх карток (.trait-card, .cell-value тощо) свідомо НЕ чіпаємо: рядок і так має
@@ -494,17 +497,18 @@ table.bunker-table td.player-cell .avatar {
 
 .hp-btn{
   padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;
-  background:#07080c;color:var(--text);border:1px solid var(--metal-lt);
-  font-family:var(--body);font-size:14px;font-weight:600;
-  transition:border-color .2s ease, opacity .2s ease, filter .2s ease;
+  background:var(--bg);color:var(--text);border:1px solid var(--metal);
+  font-family:var(--mono);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;
+  transition:all .2s ease;box-shadow:inset 0 0 5px rgba(0,0,0,.8);
 }
-.hp-btn:hover:not(:disabled){border-color:var(--hazard);}
+.hp-btn:hover:not(:disabled){border-color:var(--hazard);background:color-mix(in srgb, var(--hazard) 10%, transparent);}
 .hp-btn:disabled{opacity:.55;cursor:wait;}
-.hp-btn-green{background:var(--ok);color:#06110d;border-color:var(--ok);}
-.hp-btn-red{background:var(--danger);color:#1a0806;border-color:var(--danger);}
+.hp-btn-green{background:color-mix(in srgb, var(--ok) 20%, transparent);color:var(--ok);border-color:var(--ok);}
+.hp-btn-red{background:color-mix(in srgb, var(--danger) 20%, transparent);color:var(--danger);border-color:var(--danger);}
 .hp-btn-gray{background:var(--metal);color:var(--text-mute);border-color:var(--metal);}
 .hp-btn-gray:disabled{cursor:not-allowed;}
-.hp-btn-green:hover:not(:disabled),.hp-btn-red:hover:not(:disabled){filter:brightness(1.1);border-color:transparent;}
+.hp-btn-green:hover:not(:disabled){background:var(--ok);color:var(--bg);box-shadow:0 0 10px var(--ok);border-color:transparent;}
+.hp-btn-red:hover:not(:disabled){background:var(--danger);color:var(--bg);box-shadow:0 0 10px var(--danger);border-color:transparent;}
 .hp-btn-sq{width:40px;height:40px;padding:0;font-size:20px;line-height:1;}
 
 /* Іконки Пауза/Стоп у блоці таймера панелі ведучого */
@@ -550,10 +554,10 @@ table.bunker-table td.player-cell .avatar {
 .hp-field > span{font-size:12px;color:var(--text-mute);}
 .hp-select,.hp-input{
   width:100%;padding:9px 10px;border-radius:var(--radius-sm);
-  background:var(--panel-2);color:var(--text);border:1px solid var(--metal);
-  font-family:var(--body);font-size:14px;
+  background:var(--bg);color:var(--text);border:1px solid var(--metal);
+  font-family:var(--mono);font-size:14px;
 }
-.hp-select:focus,.hp-input:focus{outline:none;border-color:var(--accent);}
+.hp-select:focus,.hp-input:focus{outline:none;border-color:var(--ok);box-shadow:0 0 8px color-mix(in srgb, var(--ok) 30%, transparent);}
 
 .hp-dice-result{
   font-family:var(--head);font-size:34px;text-align:center;
@@ -1029,6 +1033,16 @@ table.bunker-table td.player-cell .avatar {
   background: var(--panel);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+/* Жовто-чорна смуга-попередження зліва від картки гри */
+.reconnect-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--hazard-pattern);
 }
 .reconnect-card__head {
   display: flex;
@@ -1036,42 +1050,49 @@ table.bunker-table td.player-cell .avatar {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 6px;
+  padding-left: 8px;
 }
 .reconnect-card__code {
-  font-family: var(--head);
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: 16px;
   color: var(--text);
-  letter-spacing: .04em;
+  letter-spacing: .1em;
 }
 .reconnect-card__status {
   margin: 0 0 10px;
   font-size: 12.5px;
   color: var(--text-mute);
+  padding-left: 8px;
+  font-family: var(--mono);
+  text-transform: uppercase;
 }
 .reconnect-card__btn {
   width: 100%;
-  padding: 9px;
-  border-radius: 6px;
-  background: var(--hazard);
-  color: #000;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--metal);
+  color: var(--text);
   font-weight: bold;
   cursor: pointer;
-  border: none;
+  border: 1px solid var(--metal-lt);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .05em;
   font-size: 13.5px;
-  transition: filter .2s ease;
+  transition: all .2s ease;
 }
-.reconnect-card__btn:hover { filter: brightness(1.08); }
+.reconnect-card__btn:hover { background: var(--ok); color: var(--bg); border-color: var(--ok); box-shadow: 0 0 10px var(--ok); }
 
 /* Пульсуючий індикатор статусу гри: зелений = "гра йде", бурштиновий = "очікування в лобі" */
 .reconnect-card__dot {
   flex: none;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
   animation: reconnect-dot-pulse 1.6s ease-in-out infinite;
 }
-.reconnect-card__dot.is-playing { background: var(--ok); }
-.reconnect-card__dot.is-waiting { background: var(--hazard); }
+.reconnect-card__dot.is-playing { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.reconnect-card__dot.is-waiting { background: var(--hazard); box-shadow: 0 0 8px var(--hazard); }
 @keyframes reconnect-dot-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: .35; }
@@ -1225,7 +1246,8 @@ table.bunker-table td.player-cell .avatar {
   justify-content: center;
   font-family: var(--head);
   font-weight: 700;
-  color: var(--bg);
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
   text-align: center;
   user-select: none;
 }
@@ -1240,8 +1262,9 @@ table.bunker-table td.player-cell .avatar {
   width: clamp(96px, 20vw, 140px);
   height: clamp(96px, 20vw, 140px);
   border-radius: 20px;
-  background: linear-gradient(145deg, #ffd0a3, var(--hazard));
-  box-shadow: 0 0 40px rgba(240, 168, 104, .45);
+  background: linear-gradient(145deg, var(--hazard), color-mix(in srgb, var(--hazard) 50%, black));
+  box-shadow: 0 0 40px color-mix(in srgb, var(--hazard) 45%, transparent), inset 0 0 20px rgba(0,0,0,.8);
+  border: 2px solid #fff;
 }
 
 /* d20 — шестикутник (clip-path), великий і фіолетовий, щоб легко відрізняти від d6.
@@ -1250,7 +1273,8 @@ table.bunker-table td.player-cell .avatar {
   width: clamp(120px, 26vw, 180px);
   height: clamp(132px, 29vw, 200px);
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  background: linear-gradient(145deg, #c9c9ff, var(--accent));
+  background: linear-gradient(145deg, var(--danger), #4a100a);
+  border: 2px solid #fff;
 }
 
 /* Кидок: кубик вилітає знизу екрана, пружно “перелітає” центр і хаотично крутиться у 3D. Тривалість 1.5с = ROLL_MS у dice-overlay.js. */
@@ -1342,15 +1366,15 @@ table.bunker-table td.player-cell .avatar {
   min-height: 180px;
   padding: 10px 12px;
   resize: vertical;
-  background: var(--panel-2);
+  background: var(--bg);
   color: var(--text);
   border: 1px solid var(--metal);
   border-radius: var(--radius-sm);
-  font-family: var(--body);
+  font-family: var(--mono);
   font-size: 14px;
   line-height: 1.5;
 }
-.personal-notes__input:focus { outline: none; border-color: var(--accent); }
+.personal-notes__input:focus { outline: none; border-color: var(--ok); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 30%, transparent); }
 .personal-notes__input::placeholder { color: var(--text-mute); }
 
 /* ===== Лог подій (event-log.js) — випадаючий список в самому низу, під блоком голосування ===== */

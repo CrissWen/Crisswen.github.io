@@ -1,0 +1,35 @@
+/* ===== Тема: СТАЛКЕР (Гримдарк) =====
+   :root — уся палітра/шрифти/радіуси, якими через var(...) користується ВЕСЬ проєкт (css/styles.css
+   та інлайн-стилі в host-panel.js, waiting-room.js, lobby.js, auth.js, profile.js, game.js тощо).
+   Тут же — фоновий ефект body, специфічний саме для цієї теми (зерниста текстура + віньєтка). */
+:root{
+  --bg:        #0a0b0a;
+  --panel:     #141613;
+  --panel-2:   #1d211a;
+  --metal:     #2f362a;
+  --metal-lt:  #3c4535;
+  --hazard:    #d6b022;
+  --danger:    #9e2a22;
+  --ok:        #4f6e43;
+  --accent:    #7b8c72;
+  --text:      #c4cdc0;
+  --text-mute: #6b7562;
+  --radius:    4px;
+  --radius-sm: 2px;
+  --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --head: 'Oswald', 'Arial Narrow', sans-serif;
+  --body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+  /* Жовто-чорні смуги небезпеки — .reconnect-card::before */
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
+}
+
+/* Зерниста текстура шуму + віньєтка по краях екрана (атмосфера старого термінала/плівки).
+   Це власний фон body — він завжди малюється ПІД дочірніми елементами (.block тощо мають власний
+   непрозорий фон), тож помітний лише в проміжках між блоками/по краях сторінки. */
+body{
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 20%, #030303 100%),
+    url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.05"/%3E%3C/svg%3E');
+  background-attachment: fixed;
+}

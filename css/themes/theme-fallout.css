@@ -1,0 +1,36 @@
+/* ===== Тема: FALLOUT (Ретро-термінал / Pip-Boy) =====
+   Монохромний фосфорний екран: майже все, включно з основним текстом (--text), — той самий
+   кислотно-зелений колір, бурштиновий (--hazard) лишається єдиним "теплим" акцентом-попередженням,
+   як індикатори тривоги на старих пультах. Кути завжди прямі (--radius: 0) — на ЕЛТ-терміналі
+   заокруглень не буває. */
+:root{
+  --bg:        #050a05;
+  --panel:     #081208;
+  --panel-2:   #0d1a0d;
+  --metal:     #1c3d1c;
+  --metal-lt:  #2c5c2c;
+  --hazard:    #ffb000;
+  --danger:    #ff3b30;
+  --ok:        #39ff6a;
+  --accent:    #39ff6a;
+  --text:      #39ff6a;
+  --text-mute: #1f7a3a;
+  --radius:    0px;
+  --radius-sm: 0px;
+  --mono: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
+  --head: 'VT323', 'Courier New', monospace;
+  --body: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
+}
+
+/* Скан-лінії ЕЛТ-монітора (горизонтальні смужки) + слабке зелене світіння по центру екрана + віньєтка
+   по краях. Усе — шарами у власному фоні body (як і в theme-stalker.css), тому лежить ПІД усіма
+   .block-панелями і не заважає читати текст усередині них. */
+body{
+  background-color: var(--bg);
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(0,0,0,.35) 0px, rgba(0,0,0,.35) 1px, transparent 2px, transparent 3px),
+    radial-gradient(ellipse at center, rgba(57,255,106,.08) 0%, transparent 65%),
+    radial-gradient(circle at 50% 50%, transparent 40%, #000 100%);
+  background-attachment: fixed;
+}

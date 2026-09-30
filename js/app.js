@@ -3,6 +3,11 @@ import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby, initLobby } from './pages/lobby.js';
 import { renderGame, initGame, cleanupGame } from './pages/game.js';
 import { renderProfile, initProfile } from './pages/profile.js'; // Підключаємо сторінку профілю
+import { applyStoredTheme } from './utils/theme-manager.js';
+
+// Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
+// до завантаження цього модуля) — викликається один раз при старті, не всередині router().
+applyStoredTheme();
 
 const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");
