@@ -8,7 +8,7 @@ import { votingSection } from '../game-moduls/voting.js';
 import { mapPlayerState } from '../utils/player-parser.js';
 import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
-import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer } from '../game-moduls/cataclysm-timer.js';
+import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer, getCataclysmTimerText } from '../game-moduls/cataclysm-timer.js';
 import { generateGameState } from '../utils/game-generator.js';
 import * as HostActions from '../utils/host-actions.js';
 import {
@@ -49,13 +49,13 @@ function isHostOf(roomData) {
 
 // Синхронізує віджет-таймер катаклізму і скидає флаг модалки "Час сплив", коли ведучий ставить
 // новий катаклізм (інше значення cataclysm_timer_end) — щоб модалка могла показатись знову для наступного відліку.
-function syncCataclysm(bunkerState) {
+function syncCataclysm(bunkerState, roomStatus) {
   const end = bunkerState?.cataclysm_timer_end ?? null;
   if (end !== trackedCataclysmTimerEnd) {
     trackedCataclysmTimerEnd = end;
     hasSeenCataclysmEnd = false;
   }
-  syncCataclysmTimer(bunkerState);
+  syncCataclysmTimer(bunkerState, roomStatus);
 }
 
 // Захист від спаму: відлік досягає нуля рівно один раз (цей колбек викликає модуль
@@ -166,7 +166,7 @@ export async function initGame() {
     setupActionListeners();
     mountGameTimer(() => localRoomState?.bunker_state);
     mountCataclysmTimer(onCataclysmTimerExpired);
-    syncCataclysm(localRoomState.bunker_state);
+    syncCataclysm(localRoomState.bunker_state, localRoomState.status);
 
   } catch (err) {
     statusEl.textContent = "Помилка: " + err.message;
@@ -181,7 +181,7 @@ function updateGameBoard(roomData, container) {
   isSpectator = roomData.status === 'closed' || (isGameStarted && !roomData.players_state?.[currentUserId]);
   document.getElementById('spectator-badge')?.classList.toggle('is-hidden', !isSpectator);
   syncHostPanel(roomData);
-  syncCataclysm(roomData.bunker_state);
+  syncCataclysm(roomData.bunker_state, roomData.status);
 
   if (!isGameStarted) {
     container.innerHTML = waitingRoom({
@@ -504,6 +504,7 @@ function subscribeToRoomUpdates() {
 
       // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
       if (localRoomState.status === 'closed') {
+        freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
         if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
         window.location.hash = '#/lobby';
         return;
@@ -775,7 +776,9 @@ const HOST_ACTIONS = {
     run: f => f.bunkerField === 'items'
       ? HostActions.changeBunkerItems(currentRoomCode, f.itemAction, f.itemAction === 'remove' ? f.itemRemove : f.itemAddText)
       : HostActions.changeBunker(currentRoomCode, f.bunkerField, f.customValue),
-    ok: r => Array.isArray(r) ? 'Предмети бункера оновлено' : 'Параметр бункера змінено',
+    ok: (r, f) => Array.isArray(r)
+      ? 'Предмети бункера оновлено'
+      : (f?.customValue || '').trim() ? 'Параметр бункера змінено' : `Випадкове значення: ${r}`,
     after: (root, result) => {
       const el = root.querySelector('[data-field="customValue"]');
       if (el) el.value = '';
@@ -801,7 +804,7 @@ const HOST_ACTIONS = {
     ok: 'Гру скинуто'
   },
   closeRoom: {
-    run: () => HostActions.closeRoom(currentRoomCode),
+    run: () => HostActions.closeRoom(currentRoomCode, getCataclysmTimerText()), // час з екрана йде в bunker_state.stopped_timer разом із status: 'closed'
     ok: 'Кімнату закрито',
     after: () => { window.location.hash = '#/lobby'; }
   }
@@ -848,8 +851,9 @@ async function runHostAction(root, btn) {
 
   const arg = btn.dataset.arg;
   try {
-    const result = await def.run(readHostFields(btn), arg);
-    const msg = typeof def.ok === 'function' ? def.ok(result, null, arg) : def.ok;
+    const fields = readHostFields(btn);
+    const result = await def.run(fields, arg);
+    const msg = typeof def.ok === 'function' ? def.ok(result, fields, arg) : def.ok;
     showHostToast(root, msg);
     def.after?.(root, result);
   } catch (err) {

@@ -1,5 +1,6 @@
 import { supabase } from '../services/supabase.js';
 import { pushLog } from './event-log.js';
+import { randomBunkerFieldValue } from './game-generator.js';
 
 // ===== Довідники характеристик (спільні для host-panel.js та host-actions.js) =====
 
@@ -102,8 +103,17 @@ export async function undoLastAction(roomCode) {
   if (!lastSnapshot || lastSnapshot.room_code !== roomCode) {
     throw new Error('Немає дії для скасування');
   }
+  const room = await getRoom(roomCode);
   const { players_state, bunker_state, host_id } = lastSnapshot;
-  await saveRoom(roomCode, { players_state, bunker_state, host_id });
+  // Знімок старший за дії, що були після нього, тому з поточного стану переносимо те, що не належить скасованій дії:
+  // лог (він — історія, тож скасована дія і сам запис про скасування лишаються в ньому) і latest_dice
+  // (інакше повернувся б старий id кидка, і в усіх гравців заново програвся б попередній кидок).
+  const current = room.bunker_state || {};
+  const restored = { ...bunker_state };
+  if (Array.isArray(current.logs)) restored.logs = current.logs;
+  if (current.latest_dice) restored.latest_dice = current.latest_dice;
+  pushLog(restored, 'Ведучий скасував попередню дію');
+  await saveRoom(roomCode, { players_state, bunker_state: restored, host_id });
   lastSnapshot = null;
 }
 
@@ -516,7 +526,18 @@ export async function deleteInventory(roomCode, targetId, actionType) {
   const key = actionType === 'backpack' ? 'backpack' : 'large_inventory';
 
   resolveIds(pState, targetId).forEach(id => {
-    if (pState[id]) pState[id][key] = [];
+    if (!pState[id]) return;
+    const cur = pState[id][key];
+    // Зберігаємо статус видимості слота: змінюється лише текст («Пусто»), а картка лишається відкритою або закритою, як була.
+    // Без маркера (голий []) player-parser вважає порожній слот відкритим, тому картка розкривалася сама.
+    let wasRevealed;
+    if (isEmptyChar(cur)) {
+      const marker = Array.isArray(cur) ? cur.find(x => x && x.isEmpty) : (cur && cur.isEmpty ? cur : null);
+      wasRevealed = marker ? !!marker.is_revealed : true; // без маркера гравець бачив цей слот відкритим
+    } else {
+      wasRevealed = slotRevealed(cur);
+    }
+    pState[id][key] = emptyMarker(key, wasRevealed);
   });
 
   const targetText = targetId === 'all' ? 'усіх гравців' : `гравця ${nameOf(pState, targetId)}`;
@@ -565,19 +586,26 @@ function parseItemsText(text) {
     });
 }
 
+// Порожнє поле = випадкове значення з пулу pack_cards (randomBunkerFieldValue в game-generator.js), а не помилка і не порожній запис.
+// Повертає збережений текст (власний або згенерований), щоб UI міг його показати.
 export async function changeBunker(roomCode, field, customValue) {
   if (!field) throw new Error('Оберіть параметр бункера');
   // "items" — масив, він керується окремою функцією changeBunkerItems (додати/видалити)
   if (field === 'items') throw new Error('Предмети змінюються через дії «Додати» / «Видалити»');
-  const value = (customValue || '').trim();
-  if (!value) throw new Error('Введіть власне значення');
+  let value = (customValue || '').trim();
   const room = await getRoom(roomCode);
-  snapshot(room);
   const bState = room.bunker_state || {};
+  if (!value) {
+    const pools = await loadPools();
+    value = randomBunkerFieldValue(field, pools.bunker, bState);
+    if (!value) throw new Error('Для цього параметра немає варіантів у пулі карток — введіть значення вручну');
+  }
+  snapshot(room); // після всіх перевірок, щоб невдала спроба не затирала попередній знімок для "Скасувати"
   bState[field] = value;
   const fieldLabel = BUNKER_FIELDS.find(f => f.key === field)?.label || field;
   setHostEvent(bState, `Ведучий змінив параметр бункера «${fieldLabel}»`);
   await saveRoom(roomCode, { bunker_state: bState });
+  return value;
 }
 
 // Керування предметами бункера (bunker_state.items).
@@ -646,17 +674,27 @@ export async function setGlobalTimer(roomCode, seconds) {
   bState.global_timer_seconds = seconds;
   bState.global_timer_end = Date.now() + seconds * 1000;
   bState.timer_paused_left = null; // новий запуск скасовує попередню паузу, якщо вона була
+  pushLog(bState, `Ведучий запустив таймер на ${formatTimerSeconds(seconds)}`); // лише запис у лог, без latest_host_event (без Toast)
   await saveRoom(roomCode, { bunker_state: bState });
+}
+
+// 15 -> "15 с", 60 -> "1 хв", 90 -> "1 хв 30 с"
+function formatTimerSeconds(total) {
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return [m ? `${m} хв` : '', s ? `${s} с` : ''].filter(Boolean).join(' ');
 }
 
 // Повністю зупиняє таймер (ховає віджет): і активний відлік, і збережену паузу.
 // Увага: кнопки таймера НІКОЛИ не пишуть latest_host_event — він працює автономно і не повинен спамити Toast'ами.
+// У «Лог подій» вони пишуть напряму через pushLog (без Toast).
 export async function stopGlobalTimer(roomCode) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const bState = room.bunker_state || {};
   bState.global_timer_end = null;
   bState.timer_paused_left = null;
+  pushLog(bState, 'Ведучий зупинив таймер');
   await saveRoom(roomCode, { bunker_state: bState });
 }
 
@@ -672,6 +710,7 @@ export async function pauseGlobalTimer(roomCode) {
     const left = Math.max(0, bState.global_timer_end - Date.now());
     bState.timer_paused_left = left;
     bState.global_timer_end = null;
+    pushLog(bState, 'Ведучий призупинив таймер');
     await saveRoom(roomCode, { bunker_state: bState });
     return 'paused';
   }
@@ -679,6 +718,7 @@ export async function pauseGlobalTimer(roomCode) {
   if (bState.timer_paused_left != null) {
     bState.global_timer_end = Date.now() + bState.timer_paused_left;
     bState.timer_paused_left = null;
+    pushLog(bState, 'Ведучий запустив таймер');
     await saveRoom(roomCode, { bunker_state: bState });
     return 'resumed';
   }
@@ -789,11 +829,16 @@ export async function restartGame(roomCode) {
   await saveRoom(roomCode, { players_state: resetPlayers, bunker_state: {} });
 }
 
-export async function closeRoom(roomCode) {
-  // Оновлюємо лише status — bunker_state не чіпаємо, щоб в БД залишився останній валідний стан гри (історія).
-  // Realtime завжди передає змінений status в payload.new (невелика колонка, не TOAST-иться, на відміну від bunker_state),
-  // тому game.js тепер визначає закриття кімнати саме по status === 'closed', а не по bunker_state.room_closed.
+export async function closeRoom(roomCode, stoppedTimer = null) {
+  // Статус пишемо разом із bunker_state: додаємо в нього stopped_timer (рядок типу "01:25:30" з екрана ведучого), щоб у закритій
+  // кімнаті таймер показував зафіксований час. Інші поля bunker_state лишаються як є (історія гри).
+  // Realtime завжди передає змінений status в payload.new, тому game.js визначає закриття саме по status === 'closed'.
   // lobby.js вже відфільтровує кімнати зі status IN ('finished','closed').
-  await saveRoom(roomCode, { status: 'closed' });
+  const patch = { status: 'closed' };
+  if (stoppedTimer) {
+    const room = await getRoom(roomCode);
+    patch.bunker_state = { ...(room.bunker_state || {}), stopped_timer: stoppedTimer };
+  }
+  await saveRoom(roomCode, patch);
   lastSnapshot = null;
 }

@@ -65,6 +65,54 @@ const calculateFoodMonths = (requiredMonths) => {
   return Math.max(1, foodMonths);
 };
 
+// Запаси їжі/води: місяці від тривалості перебування + з ймовірністю 40% особлива примітка з пулу food_supply
+const buildFoodAndWater = (requiredMonths, bunkerPool) => {
+  let result = formatStayTime(calculateFoodMonths(requiredMonths));
+  if (bunkerPool?.food_supply && bunkerPool.food_supply.length > 0 && Math.random() < 0.4) {
+    result += ` (${getRandomItem(bunkerPool.food_supply).value})`;
+  }
+  return result;
+};
+
+// Зворотне до formatStayTime: "1 рік і 3 місяці" -> 15. Якщо розібрати не вдалося (ведучий ввів власний текст) — 12 місяців, як у generateGameState.
+const parseStayTimeMonths = (text) => {
+  const s = String(text || '');
+  const y = s.match(/(\d+)\s*(?:рік|роки|років)/);
+  const m = s.match(/(\d+)\s*(?:місяць|місяці|місяців)/);
+  const total = (y ? Number(y[1]) * 12 : 0) + (m ? Number(m[1]) : 0);
+  return total || 12;
+};
+
+// Випадкове значення однієї текстової характеристики бункера (викликається з host-actions.js, коли ведучий лишив поле порожнім).
+// Ті ж правила, що й при старті гри: поля history / rooms_description / location / problem беруться з пулу pack_cards,
+// size генерується (у пулі її немає), stay_time — з місяців випадкового катаклізму, food_and_water — від поточного stay_time.
+// Повертає null, якщо для поля немає звідки брати варіанти (порожній пул або невідоме поле).
+const BUNKER_POOL_CATEGORY = { history: 'history', rooms_description: 'rooms_description', location: 'location', problem: 'problems' };
+
+export function randomBunkerFieldValue(field, bunkerPool, currentBunkerState = {}) {
+  const b = bunkerPool || {};
+  const poolKey = BUNKER_POOL_CATEGORY[field];
+
+  if (poolKey) {
+    const pool = b[poolKey];
+    return Array.isArray(pool) && pool.length > 0 ? getRandomItem(pool).value : null;
+  }
+
+  switch (field) {
+    case 'size':
+      return `${getSkewedRandomInt(25, 350, 4)} м²`;
+    case 'stay_time': {
+      if (!Array.isArray(b.cataclysm) || b.cataclysm.length === 0) return null;
+      const months = Number(getRandomItem(b.cataclysm).meta?.stay_time_months) || 12;
+      return formatStayTime(months);
+    }
+    case 'food_and_water':
+      return buildFoodAndWater(parseStayTimeMonths(currentBunkerState.stay_time), b);
+    default:
+      return null;
+  }
+}
+
 export function generateGameState(playersList, pack, config) {
   const b = pack.bunker || {};
   const capacity = Math.max(1, Math.floor(playersList.length / 2));
@@ -75,13 +123,7 @@ export function generateGameState(playersList, pack, config) {
   // Скільки хвилин відведено катаклізму на відлік (0/відсутнє — без таймера, таймер просто не відобразиться)
   const cataclysmTimerMinutes = Number(cataclysm.meta?.timer_minutes) || 0;
   
-  const foodMonths = calculateFoodMonths(stayTimeMonths);
-  let foodAndWater = `${formatStayTime(foodMonths)}`;
-
-  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.4) {
-    const specialFood = getRandomItem(b.food_supply).value;
-    foodAndWater += ` (${specialFood})`;
-  }
+  const foodAndWater = buildFoodAndWater(stayTimeMonths, b);
 
   const bunkerSize = `${getSkewedRandomInt(25, 350, 4)} м²`; 
   
