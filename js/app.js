@@ -2,13 +2,19 @@ import { supabase } from './services/supabase.js';
 import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby, initLobby } from './pages/lobby.js';
 import { renderGame, initGame, cleanupGame } from './pages/game.js';
+import { renderProfile, initProfile } from './pages/profile.js'; // Підключаємо сторінку профілю
 
 const appContainer = document.getElementById("app");
+const globalHeader = document.getElementById("global-header");
+const headerUserName = document.getElementById("header-user-name");
+const headerUserAvatar = document.getElementById("header-user-avatar");
 
+// Додаємо новий роут
 const routes = {
-  '#/login': { render: renderAuth, init: initAuth, cleanup: null },
-  '#/lobby': { render: renderLobby, init: initLobby, cleanup: null },
-  '#/game':  { render: renderGame, init: initGame, cleanup: cleanupGame },
+  '#/login': { render: renderAuth, init: initAuth, cleanup: null },
+  '#/lobby': { render: renderLobby, init: initLobby, cleanup: null },
+  '#/game': { render: renderGame, init: initGame, cleanup: cleanupGame },
+  '#/profile': { render: renderProfile, init: initProfile, cleanup: null },
 };
 
 let currentRouteObj = null;
@@ -18,31 +24,42 @@ async function router() {
 
   const fullHash = window.location.hash || '#/login';
   const path = fullHash.split('?')[0];
-  // Витягуємо код запрошення з усієї після '?' (напр. #/lobby?join=ABCD) — щоб зберегти його при редиректі на логін
   const queryString = fullHash.split('?')[1] || '';
   const joinCode = new URLSearchParams(queryString).get('join');
 
-  // Є сесія, і користувач відкрив просто порожній сайт (без хеша) -> в лобі
+  // --- ЛОГІКА ХЕДЕРА ---
+  if (session && path !== '#/login') {
+    globalHeader.style.display = 'flex';
+    const username = session.user?.user_metadata?.username || 'Гравець';
+
+    // Вставляємо ім'я
+    headerUserName.textContent = username;
+
+    const firstLetter = username.charAt(0);
+    headerUserAvatar.textContent = firstLetter;
+
+    if (/^[gjpqyуфщц]/i.test(firstLetter)) {
+      headerUserAvatar.style.paddingBottom = '3px';
+    } else {
+      headerUserAvatar.style.paddingBottom = '0';
+    }
+  } else {
+    globalHeader.style.display = 'none';
+  }
+
+  // Роутинг
   if (session && !window.location.hash) {
     window.location.hash = '#/lobby';
     return;
   }
 
-  // Є сесія, і гравець прийшов на #/login за посиланням-запрошенням (напр. вже був залогінений,
-  // а хтось скинув йому #/login?join=КОД) — це не спроба зайти в акаунт, а запрошення в кімнату,
-  // тож усе одно ведемо в лобі з тим самим кодом, а не показуємо форму входу.
   if (session && path === '#/login' && joinCode) {
     window.location.hash = `#/lobby?join=${joinCode}`;
     return;
   }
 
-  // Є сесія, але гравець ЦІЛЕСПРЯМОВАНО перейшов на голий #/login (наприклад, через кнопку
-  // "Профіль" у хедері) — більше НЕ редиректимо в лобі: дозволяємо роутеру нижче
-  // зрендерити сторінку авторизації як є (auth.js не перевіряє сесію сам).
-
-  // Немає сесії, але користувач намагається зайти в захищений розділ -> на вхід,
-  // зберігаючи код запрошення в хвості хеша (auth.js поверне гравця саме в потрібну кімнату після логіну)
-  if (!session && (path === '#/lobby' || path === '#/game')) {
+  // Додаємо '#/profile' до списку захищених маршрутів
+  if (!session && (path === '#/lobby' || path === '#/game' || path === '#/profile')) {
     window.location.hash = joinCode ? `#/login?join=${joinCode}` : '#/login';
     return;
   }
@@ -54,12 +71,8 @@ async function router() {
   }
 
   currentRouteObj = route;
-
   appContainer.innerHTML = route.render();
-
-  if (route.init) {
-    route.init();
-  }
+  if (route.init) route.init();
 }
 
 window.addEventListener('hashchange', router);

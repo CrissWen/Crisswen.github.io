@@ -2,7 +2,7 @@ import { supabase } from '../services/supabase.js';
 
 // Статуси кімнати, які вже не вважаються активними. closeRoom (host-actions.js) тепер сам виставляє status: 'closed'
 // в тому ж запиті, що й bunker_state.room_closed, тож цей фільтр вже працює для нових закритих кімнат.
-const EXCLUDED_ROOM_STATUSES = ['finished', 'closed'];
+const EXCLUDED_ROOM_STATUSES = ['closed'];
 
 // Активні кімнати поточного гравця — наповнюється в initLobby(), читається подальшим рендером панелі активних кімнат (наступний етап).
 let userActiveRooms = [];
@@ -11,20 +11,17 @@ let userActiveRooms = [];
 // PostgREST важко надійно запакувати в один .or() jsonb-фільтр контейнменту разом із звичайною умовою
 // (коми/двокрапки в JSON ламають його or-синтаксис), тому робимо дві окремі вибірки і мерджимо/дедуплікуємо результат по room_code.
 async function fetchUserActiveRooms(userId) {
-  const statusFilter = `(${EXCLUDED_ROOM_STATUSES.join(',')})`;
-
   const [hostRes, memberRes] = await Promise.all([
     supabase
       .from('rooms')
       .select('*')
       .eq('host_id', userId)
-      .not('status', 'in', statusFilter),
+      .neq('status', 'closed'),
     supabase
       .from('rooms')
       .select('*')
-      // jsonb containment: players_state має містити ключ userId (будь-яке значення підходить, бо {} тривіально міститься в будь-якому об'єкті)
       .contains('players_state', { [userId]: {} })
-      .not('status', 'in', statusFilter)
+      .neq('status', 'closed')
   ]);
 
   if (hostRes.error) throw hostRes.error;
@@ -33,12 +30,8 @@ async function fetchUserActiveRooms(userId) {
   const byCode = new Map();
   [...(hostRes.data || []), ...(memberRes.data || [])].forEach(room => byCode.set(room.room_code, room));
 
-  // Захист від "кімнат-привидів": старі записи, у яких bunker_state.room_closed === true,
-  // але status так і лишився 'lobby' (з'явилися до того, як closeRoom почав одночасно писати й status).
-  // Фільтруємо такі кімнати додатково, окрім фільтра по status вище.
   return Array.from(byCode.values()).filter(room => room.bunker_state?.room_closed !== true);
 }
-
 // Гра вважається розпочатою, якщо в кімнаті є bunker_state (той же критерій, що й isGameStarted у game.js) — на відміну від поля status,
 // яке в ПРОЄКТІ ніде реально не виставляється в 'playing'. Саме поле status теж перевіряю на майбутнє, якщо воно з'явиться.
 function isRoomPlaying(room) {

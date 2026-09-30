@@ -6,39 +6,39 @@
   <title>БУНКЕР — інтерфейс гри</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Підключаємо стилі -->
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/header.css"> <!-- Додали новий файл -->
 </head>
 <body>
-  <div class="wrap">
+  
+<!-- НОВИЙ ГЛОБАЛЬНИЙ ХЕДЕР -->
+  <header class="main-header" id="global-header" style="display: none;">
+    <a href="#/lobby" class="header-logo">БУНКЕР</a>
     
-    <!-- Temp navigation -->
-    <nav style="margin-bottom: 20px; display: flex; gap: 10px;">
-      <a href="#/login" style="color: var(--ok);">Авторизація</a>
-      <a href="#/lobby" style="color: var(--accent);">Лобі</a>
-      <a href="#/game" style="color: var(--hazard);">Гра</a>
-    </nav>
+    <a href="#/profile" class="header-profile-link">
+      <!-- Додали id="header-user-avatar" і прибрали смайлик -->
+      <span class="header-user-avatar" id="header-user-avatar">?</span>
+      <span class="header-user-name" id="header-user-name">Завантаження...</span>
+    </a>
+  </header>
 
-    <!-- Глобальний хедер: доступний з лобі й далі, навіть якщо гравець уже залогінений —
-         роутер (js/app.js) більше не редиректить із голого #/login у лобі, тож посилання відкриє форму входу як є. -->
-    <header style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
-      <a href="#/login" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--metal); color: var(--text); text-decoration: none; font-size: 13.5px; font-weight: 600;">
-        👤 Профіль
-      </a>
-    </header>
-
+  <div class="wrap">
+    <!-- Тимчасову навігацію та старий header видалено -->
+    
     <main id="app"><!-- place where router insert pages --></main>
 
     <footer class="note">БУНКЕР · демо-версія v0.1</footer>
   </div>
   
-  <!-- Бейдж глядача: прихований за замовчуванням, game.js прибирає .is-hidden, якщо користувач — глядач -->
+  <!-- Бейдж глядача -->
   <div id="spectator-badge" class="spectator-badge is-hidden" role="status">
     <img src="./icons/eye.svg" alt="" class="spectator-badge__icon">
     <span class="spectator-badge__text">Ви слідкуєте за грою</span>
   </div>
 
-  <!-- Оверлей кидка кубика: один універсальний слот. js/game-moduls/dice-overlay.js прибирає .is-hidden, ставить на .dice
-       модифікатор форми (.dice--d20 / .dice--d6) і після зупинки анімації вписує число в <span> рівно по центру. -->
+  <!-- Оверлей кидка кубика -->
   <div id="dice-overlay" class="dice-overlay is-hidden" role="status" aria-live="polite">
     <div class="confetti-container" data-confetti aria-hidden="true"></div>
     <div class="dice-stage">
