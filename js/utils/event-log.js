@@ -1,4 +1,5 @@
 import { supabase } from '../services/supabase.js';
+import { getGameConfigSync } from '../config/config-manager.js';
 
 // Лог подій зберігається в bunker_state.logs — масиві записів { id, t, text }:
 //   id   — унікальний номер запису (за замовчуванням Date.now(); для кидка кубика збігається з latest_dice.id)
@@ -6,16 +7,16 @@ import { supabase } from '../services/supabase.js';
 //   text — готовий текст повідомлення
 // За замовчуванням масив порожній (відсутній, доки не відбулась перша подія).
 
-export const MAX_LOGS = 100; // старші записи відкидаються, щоб база не розросталась
+// Ліміт записів — maxLogEntries з конфігу балансу (js/config/game-config.base.js); старші записи відкидаються, щоб база не розросталась
 
-// Додає запис у bState.logs НА МІСЦІ (без звернення до БД) і обрізає масив до MAX_LOGS.
+// Додає запис у bState.logs НА МІСЦІ (без звернення до БД) і обрізає масив до maxLogEntries.
 // Використовується діями ведучого: запис іде в тому ж UPDATE, що й сама зміна стану, тож лог не може «відстати» від дії.
 export function pushLog(bState, text, id = Date.now()) {
   const clean = String(text ?? '').trim();
   if (!bState || !clean) return;
   const logs = Array.isArray(bState.logs) ? bState.logs : [];
   logs.push({ id, t: Date.now(), text: clean });
-  bState.logs = logs.slice(-MAX_LOGS);
+  bState.logs = logs.slice(-getGameConfigSync().maxLogEntries);
 }
 
 // Загальна функція-реєстратор для дій, які не проходять через host-actions (наприклад, гравець відкрив/приховав картку):

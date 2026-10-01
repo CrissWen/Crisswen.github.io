@@ -10,7 +10,7 @@ import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
 import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer, getCataclysmTimerText } from '../game-moduls/cataclysm-timer.js';
 import { generateGameState } from '../utils/game-generator.js';
-import { getGameConfig } from '../config/config-manager.js';
+import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
 import * as HostActions from '../utils/host-actions.js';
 import {
   renderHostPanel,
@@ -140,8 +140,10 @@ export async function initGame() {
     
     // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
     // Ліміт на місця (bc.maxPlayersInLobby, config-manager.js) діє виключно на етапі лобі: якщо гра вже йде, цю перевірку повністю ігноруємо.
+    // Дочекуємось конфігу (base + можливий game-config.local.js) ДО першого рендеру кімнати. Інакше при прямому заході по посиланню
+    // вейтінг-рум міг би побачити лише базові ліміти, поки локальний файл ще вантажиться (getGameConfigSync дає базу).
+    const bc = await getGameConfig();
     if (!isGameStarted && !isPlayerInRoom) {
-      const bc = await getGameConfig();
       const playersCount = Object.keys(room.players_state || {}).length;
       if (playersCount >= bc.maxPlayersInLobby) {
         showGlobalToast('Ця кімната вже переповнена');
@@ -186,10 +188,14 @@ function updateGameBoard(roomData, container) {
   syncCataclysm(roomData.bunker_state, roomData.status);
 
   if (!isGameStarted) {
+    // Із цього моменту конфіг вже завантажено (див. await getGameConfig() у initGame), тому синхронного читання досить
+    const bc = getGameConfigSync();
     container.innerHTML = waitingRoom({
       roomCode: currentRoomCode,
       playersState: roomData.players_state,
-      isHost: isHost
+      isHost: isHost,
+      minPlayers: bc.minPlayersToStart,
+      maxPlayers: bc.maxPlayersInLobby
     });
     
     if (isHost) {
@@ -210,6 +216,13 @@ async function handleStartGame(e) {
     const { data: room } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
     const pState = room.players_state || {};
     const playersList = Object.entries(pState).map(([id, p]) => ({ id, name: p.name }));
+
+    // Кнопка «Почати гру» вже disabled при недостатній кількості, але відображена кількість могла застаріти
+    // (хтось вийшов між рендером і кліком) — тому рахуємо ще раз по свіжих даних кімнати.
+    const { minPlayersToStart } = await getGameConfig();
+    if (playersList.length < minPlayersToStart) {
+      throw new Error(`Для старту потрібно мінімум ${minPlayersToStart} гравців (зараз ${playersList.length})`);
+    }
 
     
     const { data: pack, error: packError } = await supabase

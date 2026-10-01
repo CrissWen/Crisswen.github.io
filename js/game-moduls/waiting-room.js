@@ -1,10 +1,12 @@
-export function waitingRoom({ roomCode, playersState, isHost }) {
+// minPlayers / maxPlayers — з конфігу балансу (config-manager.js: minPlayersToStart / maxPlayersInLobby), викликач — game.js.
+// Тут немає зашитих чисел: інакше локальне перевизначення в game-config.local.js не змінювало б кнопку «Почати гру» і підказку.
+export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPlayers }) {
   const pState = playersState || {};
   const playersCount = Object.keys(pState).length;
 
-  // Ліміти лобі: мінімум для старту гри та максимум місць у кімнаті до старту (16-й вже глядач — перевірка в game.js)
-  const MIN_PLAYERS_TO_START = 1;
-  const MAX_PLAYERS_IN_LOBBY = 15;
+  // Ліміти лобі: мінімум для старту гри та максимум місць у кімнаті до старту (перевірка максимуму при вході — в game.js)
+  const MIN_PLAYERS_TO_START = minPlayers;
+  const MAX_PLAYERS_IN_LOBBY = maxPlayers;
   const canStart = playersCount >= MIN_PLAYERS_TO_START;
 
   // Повне посилання на основі поточного домену: origin + pathname (без старого hash), далі власний #/lobby?join=

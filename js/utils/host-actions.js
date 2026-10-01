@@ -1,6 +1,7 @@
 import { supabase } from '../services/supabase.js';
 import { pushLog } from './event-log.js';
 import { randomBunkerFieldValue } from './game-generator.js';
+import { getGameConfigSync } from '../config/config-manager.js';
 
 // ===== Довідники характеристик (спільні для host-panel.js та host-actions.js) =====
 
@@ -204,12 +205,12 @@ function withReveal(oldVal, newVal) {
 }
 
 // Вік для нової статі: якщо в meta статі є custom_age (напр. "Без віку" у Кіборга) — беремо його,
-// інакше випадкове число в межах config.age_range пака.
+// інакше випадкове число в межах config.age_range пака (або defaultAgeRange з конфігу балансу, якщо у пака діапазону немає).
 function generateAge(genderCard, config) {
   const custom = genderCard?.meta?.custom_age;
   if (custom) return custom;
-  const range = config?.age_range;
-  return range ? randInt(range.min, range.max) : randInt(18, 60);
+  const range = config?.age_range || getGameConfigSync().defaultAgeRange;
+  return randInt(range.min, range.max);
 }
 
 // Нова стать і новий вік одним махом. Обидва поля успадковують стан "відкрито/закрито" старої статі

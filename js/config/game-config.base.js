@@ -18,6 +18,14 @@ export const gameConfigBase = {
   // Місткість бункера при старті гри = floor(кількість гравців / bunkerCapacityDivisor)
   bunkerCapacityDivisor: 2,
 
+  // Запасний діапазон віку, коли в конфігу пака (packs.config.age_range) його немає. Використовується
+  // лише при переролі статі/віку ведучим (js/utils/host-actions.js → generateAge); при старті гри вік береться з пака.
+  defaultAgeRange: { min: 18, max: 60 },
+
+  // Скільки останніх записів лишається в «Лог подій» (bunker_state.logs). Старіші відкидаються,
+  // щоб запис у базі не розростався (js/utils/event-log.js → pushLog)
+  maxLogEntries: 100,
+
   // Шанс (0..1), що здоров'я гравця одразу згенерується як "Ідеально здоровий" (без хвороби й стадії)
   perfectHealthChance: 0.20,
 
