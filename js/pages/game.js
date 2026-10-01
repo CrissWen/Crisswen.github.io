@@ -4,7 +4,7 @@ import { bunkerInfo } from '../game-moduls/bunker-info.js';
 import { playerCharacteristics } from '../game-moduls/player-characteristics.js';
 import { playersTable } from '../game-moduls/players-table.js';
 import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js';
-import { votingSection } from '../game-moduls/voting.js';
+import { votingSection, captureVoteSelection, restoreVoteSelection } from '../game-moduls/voting.js';
 import { mapPlayerState } from '../utils/player-parser.js';
 import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
@@ -387,8 +387,10 @@ const descriptionParts = [
     safe('Лог подій', () => eventLog(bState.logs, pendingDiceLogId ? [pendingDiceLogId] : []))
   ];
 
+  captureVoteSelection(); // запам'ятовуємо обрану радіокнопку голосування, бо innerHTML нижче створить її заново без checked
   captureNotesFocus(); // запам'ятовуємо курсор у замітках, бо innerHTML нижче створить textarea заново
   container.innerHTML = order.join("");
+  restoreVoteSelection(); // повертаємо виділення і розблоковуємо «Проголосувати»
   restoreNotesFocus();
   scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
 

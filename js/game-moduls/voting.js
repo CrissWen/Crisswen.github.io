@@ -59,6 +59,33 @@ function resultsTableHtml(votes, players, aliveCount) {
   `;
 }
 
+// ===== Збереження локального (ще не відправленого) вибору при перемальовуванні дошки =====
+// Коли будь-хто в кімнаті голосує (або змінюється будь-що інше), Realtime присилає оновлення, і game.js перемальовує
+// всю дошку через innerHTML — радіокнопки створюються заново без checked, і вибір гравця зникає.
+// captureVoteSelection() викликається ПЕРЕД перемалюванням, restoreVoteSelection() — ПІСЛЯ.
+let savedVoteSelection = null;
+
+export function captureVoteSelection() {
+  const checked = document.querySelector('#voting-section .vote-tile__input:checked');
+  savedVoteSelection = checked ? checked.value : null;
+}
+
+export function restoreVoteSelection() {
+  const saved = savedVoteSelection;
+  savedVoteSelection = null; // одноразово: наступне перемальовування знову почнеться з capture
+  if (!saved) return;
+
+  const section = document.getElementById('voting-section');
+  // Шукаємо порівнянням value, а не селектором [value="..."] — щоб незвичні символи в id не ламали запит
+  const input = [...(section?.querySelectorAll('.vote-tile__input') || [])].find(i => i.value === saved);
+
+  // Якщо кандидата вже немає (вибув), або голосування завершилось — нічого не відновлюємо, кнопка лишається disabled
+  if (!input) return;
+  input.checked = true;
+  const submitBtn = section.querySelector('.vote-submit-btn');
+  if (submitBtn) submitBtn.disabled = false; // у новому HTML вона знову disabled за замовчуванням
+}
+
 // votingSection({ voting, players, myId, amAlive })
 //   voting   — bunker_state.voting (може бути відсутнім)
 //   players  — [{ id, name, alive }] ВСІ гравці кімнати (і живі, і вибулі — для мапінгу ID -> ім'я в результатах)
