@@ -1,5 +1,5 @@
 import { supabase } from '../../services/supabase.js';
-import { pushLog } from '../event-log.js';
+import { pushLog } from '../log-writer.js';
 
 // ===== Доступ до кімнати в БД + знімок для «Скасувати» =====
 // lastSnapshot — стан модуля: живе лише тут, інші модулі працюють через snapshot() / clearSnapshot().

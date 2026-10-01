@@ -1,7 +1,7 @@
-import { supabase } from '../services/supabase.js';
-import { showCustomConfirm } from './confirm-dialog.js';
-import { showGlobalToast } from './global-toast.js';
-import { addLog } from '../utils/event-log.js';
+import { supabase } from '../../services/supabase.js';
+import { showCustomConfirm } from '../overlays/confirm-dialog.js';
+import { showGlobalToast } from '../overlays/global-toast.js';
+import { addLog } from '../../utils/log-writer.js';
 
 // ===== Замок характеристики: гравець відкриває/ховає свою картку від інших =====
 // ctx = { getRoomCode, getUserId, getUserName, getRoomState, refreshBoard } з game.js.

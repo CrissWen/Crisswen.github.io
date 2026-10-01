@@ -1,4 +1,4 @@
-import { pushLog } from '../event-log.js';
+import { pushLog } from '../log-writer.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 
 // ===== Глобальний таймер ведучого =====

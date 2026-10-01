@@ -1,4 +1,4 @@
-import * as HostActions from '../utils/host-actions.js';
+import * as HostActions from '../../utils/host-actions.js';
 import {
   renderHostPanel,
   refreshHostPanel,
@@ -8,9 +8,9 @@ import {
   setHostPanelOpen,
   showHostToast,
   setHostDiceResult
-} from './host-panel.js';
-import { showCustomConfirm } from './confirm-dialog.js';
-import { getCataclysmTimerText } from './cataclysm-timer.js';
+} from '../host-panel/host-panel.js';
+import { showCustomConfirm } from '../overlays/confirm-dialog.js';
+import { getCataclysmTimerText } from '../timers/cataclysm-timer.js';
 
 // ===== Панель ведучого: монтування, події, виклик дій =====
 // Контролер не володіє станом гри: усе потрібне (код кімнати, id користувача, поточний стан кімнати) читається

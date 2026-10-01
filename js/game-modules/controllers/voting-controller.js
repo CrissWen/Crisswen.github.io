@@ -1,6 +1,6 @@
-import { supabase } from '../services/supabase.js';
-import { finishVoting } from '../utils/host-actions.js';
-import { showGlobalToast } from './global-toast.js';
+import { supabase } from '../../services/supabase.js';
+import { finishVoting } from '../../utils/host-actions.js';
+import { showGlobalToast } from '../overlays/global-toast.js';
 
 // ===== Поведінка голосування на сторінці гри (мережа, скрол, автозавершення) =====
 // Розмітка блоку — у voting.js. Стан модуля нижче живе лише в пам'яті вкладки; ctx — з game.js.
