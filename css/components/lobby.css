@@ -1,0 +1,188 @@
+/* ===== Лобі: одноколонковий (вертикальний) лейаут (lobby.js) =====
+   Зверху — основні дії (створити/приєднатися), під ним — панель перепідключення (.reconnect-panel)
+   до активних кімнат гравця. Обидва блоки однакової ширини, тож вирівнюються рівно по центру один під одним
+   на всіх екранах — від ПК до телефона, без окремого ламання на flex-direction в медіа-запиті. */
+.lobby-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  max-width: 760px;
+  width: 100%;
+  margin: 15vh auto 0;
+}
+.lobby-main {
+  width: 400px;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+.reconnect-panel {
+  width: 400px;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .lobby-layout {
+    margin: 6vh auto 0;
+  }
+  .lobby-main,
+  .reconnect-panel {
+    width: 100%;
+  }
+}
+
+/* Стос карток активних кімнат — одна під одною, якщо гравець одночасно в кількох активних іграх */
+.reconnect-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reconnect-card {
+  border: 1px solid var(--metal);
+  background: var(--panel);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+/* Жовто-чорна смуга-попередження зліва від картки гри */
+.reconnect-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--hazard-pattern);
+}
+.reconnect-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-left: 8px;
+}
+.reconnect-card__code {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: .1em;
+}
+.reconnect-card__status {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--text-mute);
+  padding-left: 8px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+}
+.reconnect-card__btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--metal);
+  color: var(--text);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--metal-lt);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-size: 13.5px;
+  transition: all .2s ease;
+}
+.reconnect-card__btn:hover { background: var(--ok); color: var(--bg); border-color: var(--ok); box-shadow: 0 0 10px var(--ok); }
+
+/* Пульсуючий індикатор статусу гри: зелений = "гра йде", бурштиновий = "очікування в лобі" */
+.reconnect-card__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  animation: reconnect-dot-pulse 1.6s ease-in-out infinite;
+}
+.reconnect-card__dot.is-playing { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.reconnect-card__dot.is-waiting { background: var(--hazard); box-shadow: 0 0 8px var(--hazard); }
+@keyframes reconnect-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+.reconnect-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-mute);
+}
+
+/* ===== Кімната очікування: розділювач і заголовок списку гравців (waiting-room.js) =====
+   Розділювач відділяє блок "Запросіть друзів" від списку гравців; лічильник переїхав сюди
+   з .block-head (де раніше стояв поруч із назвою кімнати) — тепер він живе поруч із "Гравці:". */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--metal);
+  margin: 16px 0;
+}
+
+.players-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.players-list-head strong {
+  font-family: var(--head);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+.players-list-head span {
+  font-size: 13px;
+  color: var(--text-mute);
+}
+
+/* Унікальна здібність професії */
+.prof-ability {
+  display: block; /* Примусово переносить текст на новий рядок */
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--accent); /* Фіолетовий акцентний колір (можеш змінити на var(--ok) для зеленого) */
+  font-family: var(--body); /* Повертаємо звичайний шрифт для читабельності */
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: normal;
+}
+
+/* ===== Лобі: кнопка "Приєднатися" та текст помилки ===== */
+/* Стиль для заблокованої кнопки. cursor з !important, бо кнопка має inline cursor:pointer (а inline перебиває звичайний CSS) */
+#join-room-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    filter: grayscale(50%);
+}
+
+/* Стиль для тексту помилки */
+.error-text {
+    color: #ff4d4d; /* Червоний колір */
+    font-size: 0.9em;
+    margin-top: 8px;
+    min-height: 20px; /* Щоб інтерфейс не стрибав при появі тексту */
+}
+
+/* ===== Ліміти гравців у лобі: підказка мінімуму та блокування кнопки "Почати гру" ===== */
+.lobby-start-hint {
+    margin: 0 0 10px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--text-mute);
+}
+.lobby-start-hint.is-ready {
+    color: var(--ok);
+}
+#start-game-btn:disabled {
+    background: var(--metal) !important;
+    color: var(--text-mute) !important;
+    cursor: not-allowed !important;
+    opacity: .65;
+}

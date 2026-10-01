@@ -1,0 +1,68 @@
+/* ===== Голосування (voting.js) ===== */
+.voting-block{
+  margin:16px 0; padding:16px;
+  background:var(--panel); border:1px solid var(--metal); border-radius:var(--radius);
+}
+.voting-block__title{
+  margin:0 0 12px; font-family:var(--head); font-size:17px; color:var(--text);
+}
+.voting-block__empty{ color:var(--text-mute); margin:0; }
+
+.vote-grid{
+  display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;
+}
+
+.vote-tile{
+  position:relative; cursor:pointer;
+  padding:10px 16px; border-radius:var(--radius-sm);
+  border:1px solid var(--metal-lt); background:var(--panel-2); color:var(--text);
+  font-family:var(--body); font-size:14px; user-select:none;
+  transition:border-color .15s ease, background .15s ease;
+}
+.vote-tile__input{
+  position:absolute; opacity:0; width:0; height:0; pointer-events:none;
+}
+.vote-tile:has(.vote-tile__input:checked){
+  border-color:var(--accent); background:rgba(143,143,240,.18);
+}
+.vote-tile:has(.vote-tile__input:focus-visible){
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+
+.vote-submit-btn{
+  padding:10px 18px; border-radius:var(--radius-sm);
+  border:1px solid var(--ok); background:var(--ok); color:#10121a; font-weight:600;
+  font-family:var(--body); font-size:14px; cursor:pointer;
+}
+.vote-submit-btn:disabled{
+  opacity:.45; cursor:not-allowed; background:var(--panel-2); color:var(--text-mute); border-color:var(--metal-lt);
+}
+
+.vote-success-panel{
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; border-radius:var(--radius-sm);
+  background:rgba(74,222,128,.12); border:1px solid var(--ok); color:var(--ok);
+}
+.vote-success-panel__icon{
+  display:flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:50%;
+  background:var(--ok); color:#10121a; font-weight:700; font-size:14px; flex:none;
+}
+.vote-success-panel p{ margin:0; color:var(--text); }
+
+.vote-results-wrap{ overflow-x:auto; }
+.vote-results-table{
+  width:100%; border-collapse:collapse; font-family:var(--body); font-size:14px;
+}
+.vote-results-table th,
+.vote-results-table td{
+  padding:10px 12px; text-align:left; border-bottom:1px solid var(--metal);
+  white-space:nowrap;
+}
+.vote-results-table td:nth-child(2){ white-space:normal; color:var(--text-mute); }
+.vote-results-table th{
+  color:var(--text-mute); font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em;
+}
+.vote-results-table tbody tr:last-child td{ border-bottom:none; }
+.vote-results-table td:last-child{ font-weight:700; color:var(--accent); }
+

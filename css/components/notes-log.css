@@ -1,0 +1,81 @@
+/* ===== Особисті замітки (personal-notes.js) ===== */
+.personal-notes { margin-top: 24px; }
+.personal-notes__warning {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--hazard);
+}
+.personal-notes__input {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  padding: 10px 12px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.personal-notes__input:focus { outline: none; border-color: var(--ok); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 30%, transparent); }
+.personal-notes__input::placeholder { color: var(--text-mute); }
+
+/* ===== Лог подій (event-log.js) — випадаючий список в самому низу, під блоком голосування ===== */
+.event-log { margin-top: 24px; } /* візуально відокремлює лог від голосування */
+.event-log__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: .02em;
+  text-align: left;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+.event-log__toggle:hover { background: var(--panel-2); }
+.event-log__arrow {
+  font-size: 14px;
+  color: var(--text-mute);
+  transition: transform .2s ease;
+}
+.event-log__arrow.is-open { transform: rotate(180deg); }
+
+.event-log__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 18px 14px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-top: 1px solid var(--metal);
+}
+/* За замовчуванням список повністю прихований */
+.event-log__list.is-collapsed { display: none; }
+
+.event-log__item {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--metal);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.event-log__item:last-child { border-bottom: none; }
+.event-log__time {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-mute);
+  opacity: .8;
+  padding-top: 1px;
+}
+.event-log__text { color: var(--text-mute); overflow-wrap: anywhere; }
+.event-log__empty { padding: 10px 0; color: var(--text-mute); font-size: 14px; }

@@ -1,0 +1,86 @@
+/* ===== BUNKER — базовий файл ("скелет") =====
+   Тут НЕМАЄ кольорів/шрифтів — вся палітра (змінні --bg/--panel/--text/--hazard/тощо) визначається
+   окремо в css/themes/theme-<name>.css, який підключається в index.html через <link id="theme-stylesheet">
+   і перемикається JS-ом (js/utils/theme-manager.js). Усі правила нижче та в інших js-файлах
+   силаються на ці змінні через var(...) — без підключеної теми кольори просто не застосуються. */
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  color:var(--text);
+  font-family:var(--body);
+  line-height:1.5;
+  min-height:100vh;
+  padding: 28px 16px 80px; /* padding-top далі перебивається на 80px в header.css (під фіксований хедер) */
+}
+
+/* ===== Приховані скролбари (прокрутка коліщатком/свайпом лишається, сам повзунок не малюється) ===== */
+html,
+body,
+.hp-panel,
+.hp-scroll,
+.table-scroll{
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE/Edge (legacy) */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.hp-panel::-webkit-scrollbar,
+.hp-scroll::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar{
+  display: none;               /* Chrome/Safari/Opera */
+  width: 0;
+  height: 0;
+}
+
+.wrap{max-width:1600px;width:95%;margin:0 auto;}
+
+/* -- panel / block shell -- */
+.block{
+  border:1px solid var(--metal);
+  border-top:3px solid var(--metal);
+  border-radius:var(--radius);
+  background:var(--panel);
+  margin-bottom:22px;
+  overflow:hidden;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.6), 0 10px 20px rgba(0,0,0,.5);
+}
+.block-head{
+  padding:14px 18px 12px;
+  border-bottom:1px solid var(--metal);
+  background: rgba(0,0,0,.2);
+}
+.block-head h2{
+  font-family:var(--head);
+  font-weight:600;
+  font-size:22px;
+  letter-spacing:.05em;
+  margin:0;
+  color:var(--text);
+  text-transform: uppercase;
+}
+.block-body{padding:18px;}
+
+
+/* ===== Layout Helpers (Класи для позиціонування) ===== */
+
+/* Для сторінок авторизації та лобі (маленьке вікно по центру) */
+.layout-small-centered {
+  max-width: 400px;  /* Максимальна ширина вікна */
+  width: 100%;       /* Гнучкість: на малих екранах займатиме всю ширину */
+  margin: 15vh auto; /* 15vh - відступ зверху, auto - автоматично центрує по горизонталі */
+}
+
+/* Для вікна гри (60-70% екрану по центру) */
+.layout-large-centered {
+  width: 75%;        /* Змінили з 70% на 60% */
+  max-width: 1800px; /* Жорстке обмеження (60% від 1920px) */
+  margin: 5vh auto;  
+}
+
+/* Медіа-запит: Правило для планшетів та смартфонів */
+@media (max-width: 768px) {
+  .layout-large-centered {
+    width: 98%;
+  }
+}
