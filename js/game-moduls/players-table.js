@@ -13,11 +13,22 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
     
     if (lowerCol.includes("професія") || lowerCol.includes("профессия")) {
       // Ховаємо текст у data-tooltip, жодних вкладених блоків
-      return `<span class="info-icon" data-tooltip="Новачок – до 3 місяців;<br>Стажер – від 3 місяців до 1 року;<br>Аматор – від 1 до 2 років;<br>Досвідчений – від 2 до 5 років;<br>Професіонал – від 5 до 10 років;<br>Експерт – понад 10 років.">i</span>`;
+      return `
+      <span class="info-icon" data-tooltip="Новачок – до 3 місяців;
+      <br>Стажер – від 3 місяців до 1 року;
+      <br>Любитель – від 1 до 2 років;
+      <br>Досвідчений – від 2 до 5 років;
+      <br>Просунутий – від 5 до 10 років;
+      <br>Майстер – понад 10 років.">i</span>`;
     }
     
     if (lowerCol.includes("хобі") || lowerCol.includes("захоплення")) {
-      return `<span class="info-icon" data-tooltip="Новачок – до 3 місяців;<br>Аматор – від 3 місяців до 1 року;<br>Досвідчений – від 1 до 2 років;<br>Просунутий – від 2 до 5 років;<br>Майстер (гуру) – понад 5 років.">i</span>`;
+      return `
+      <span class="info-icon" data-tooltip="Новачок – до 3 місяців;
+      <br>Любитель – від 3 місяців до 1 року;
+      <br>Досвідчений – від 1 до 2 років;
+      <br>Просунутий – від 2 до 5 років;
+      <br>Майстер (гуру) – понад 5 років.">i</span>`;
     }
     
     return '';
@@ -28,7 +39,6 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
 
   const head = columns.map((c) => `<th>${c} ${getTooltip(c)}</th>`).join("");
 
-  // Кнопка рендериться лише для хоста; клас is-return лише перефарбовує колір (зелений/сірий) для "Повернути"
   const kickToggle = (p) => {
     if (!isHost || !p.id) return "";
     const label = p.isKicked ? "Повернути" : "Вигнати";
@@ -42,12 +52,14 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
         .map((val, ci) => `<td data-col-label="${columns[ci]}">${cellHtml(val)}</td>`)
         .join("");
       const rowClass = p.isKicked ? 'kicked-player' : '';
+      const firstLetter = (p.name || '').charAt(0);
+      const avatarPadding = /^[gjpqyуфщц]/i.test(firstLetter) ? 'padding-bottom: 2px;' : 'padding-bottom: 0;';
       return `
         <tr data-player="${p.name}" class="${rowClass}">
           <td class="player-cell">
             <div class="player-info-wrapper">
               <span class="player-num">${index + 1}</span>
-              <span class="avatar">${p.name[0]}</span>
+              <span class="avatar" style="${avatarPadding}">${firstLetter}</span>
               <div class="player-name-wrapper">
                 <div class="player-nickname">${p.name}</div>
                 ${kickToggle(p)}

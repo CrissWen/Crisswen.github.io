@@ -1,0 +1,209 @@
+/* ===== Вигнаний гравець ("сірий" рядок) ===== */
+.kicked-player {
+    opacity: 0.35; /* Робить весь рядок напівпрозорим */
+    filter: grayscale(100%) sepia(20%) hue-rotate(80deg); /* Мертвенно-зелений відтінок */
+    pointer-events: none; /* Забороняє клікати по картках характеристик цього гравця */
+}
+/* Повертаємо можливість клікати ТІЛЬКИ по кнопці "Повернути" (щоб хост міг це зробити) */
+.kicked-player .kick-action-btn {
+    pointer-events: auto;
+}
+
+/* Примусово заливаємо сірим фоном усі комірки рядка — перебиває зебру, sticky-колонку (td:first-child
+   має власний background-color) і будь-який локальний фон карток характеристик. */
+.kicked-player td,
+.kicked-player th {
+    background-color: #050605 !important; /* чорна безодня */
+    border-color: #1a1e1a !important; /* повертає видиму сітку-розділювачі таблиці */
+}
+
+/* Фон і рамки внутрішніх карток (.trait-card, .cell-value тощо) свідомо НЕ чіпаємо: рядок і так має
+   100% grayscale + 50% opacity (правило вище), тож власні кольори/рамки карток самі стають приглушеними
+   сіро-білими — і при цьому лишаються візуально відокремленими від темного фону комірки (#151720). */
+
+
+/* ===== Tables =====
+   .table-scroll — обгортка таблиці (роль "table-responsive"): горизонтальний скрол свайпом на вузьких екранах,
+   аби колонки не налізали один на одний, коли table.bunker-table ширша за екран (див. min-width нижче). */
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  -webkit-overflow-scrolling: touch; /* інерційний свайп-скрол на iOS */
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+}
+
+table.bunker-table {
+  width: 100%;
+  min-width: 800px; /* на вузьких екранах таблиця не стискається менше цього — з'являється горизонтальний скрол у .table-scroll замість здавлених колонок */
+  border-collapse: separate;
+  border-spacing: 0;
+  /* Фіксований font-size прибрано — тепер масштаб задається через clamp() у th/td нижче */
+  /* Прибрали min-width: 560px (тепер 800px вище) */
+  table-layout: fixed; /* Змушує колонки рівномірно ділити 800піксельну/ширшу базу */
+}
+
+table.bunker-table th, table.bunker-table td {
+  border-bottom: 1px solid var(--metal);
+  border-right: 1px solid var(--metal);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  vertical-align: middle;
+  word-wrap: break-word;     
+  overflow-wrap: break-word; 
+  white-space: normal;       
+  transition: all .3s ease;
+}
+
+table.bunker-table th:last-child, table.bunker-table td:last-child {
+  border-right: none;
+}
+table.bunker-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+table.bunker-table th:last-child, table.bunker-table td:last-child {
+  border-right: none;
+}
+table.bunker-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 2. УНІКАЛЬНА ВИСОТА ДЛЯ ЗАГОЛОВКІВ (Шапка таблиці) */
+table.bunker-table thead th {
+  font-family: var(--body);
+  font-size: 12px;
+  color: var(--text-mute);
+  background: var(--panel-2);
+  font-weight: 600;
+  
+  padding: 10px; /* Компактні відступи для шапки */
+  height: 44px;  /* Жорстка висота рядка заголовків */
+}
+
+/* 3. УНІКАЛЬНА ВИСОТА ДЛЯ РЯДКІВ З ГРАВЦЯМИ (Дані) */
+table.bunker-table tbody td {
+  padding: 25px 10px; /* Збільшені відступи зверху та знизу */
+  height: 70px;       /* Базова висота для рядків з гравцями */
+}
+
+table.bunker-table td.player-cell {
+  font-family: var(--head);
+  /* font-size тепер успадковується від базового clamp() вище, щоб бути в тон з рештою таблиці */
+}
+
+/* Липка перша колонка (імена гравців): при горизонтальному свайпі в .table-scroll (Див. вище) залишається зліва,
+   поки характеристики прокручуються під нею — щоб гравець не загубив чию характеристику він дивиться. */
+table.bunker-table th:first-child,
+table.bunker-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 15%;
+}
+table.bunker-table thead th:first-child {
+  background-color: var(--panel-2); /* той же фон, що й у решти заголовків — без цього був би прозорим став під скролом */
+}
+table.bunker-table tbody td:first-child {
+  background-color: var(--panel); /* фон блоку, щоб непрозоро перекривати колонки, що проїжджають під низом */
+}
+
+table.bunker-table td.player-cell .avatar {
+  display: inline-flex; width: 22px; height: 22px; border: 1px solid var(--metal-lt);
+  align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px;
+  margin-right: 6px; color: var(--text-mute); vertical-align: middle; border-radius: 50%;
+}
+
+
+
+/* ===== Глобальний Тултип (Малюється поверх таблиці) ===== */
+.global-info-popup {
+  position: fixed; /* Прикріплюємо жорстко до вікна браузера, а не до таблиці */
+  transform: translate(-50%, -100%); /* Центруємо і піднімаємо рівно над іконкою */
+  width: max-content;
+  background: #edeff5;
+  color: #10121a;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 10000; /* Максимальний пріоритет малювання (Z-Order) */
+}
+
+.global-info-popup.is-visible {
+  opacity: 1;
+}
+
+/* Стрілочка вниз, що вказує на іконку */
+.global-info-popup::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #edeff5 transparent transparent transparent;
+}
+
+/* Сама іконка "i" в заголовку таблиці */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: transparent; border: 1px solid var(--text-mute);
+  color: var(--text-mute);
+  font-size: 10px;
+  font-weight: bold;
+  font-family: var(--mono);
+  transition: background 0.2s ease;
+  cursor: help;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.info-icon:hover { color: var(--on-ok, var(--bg)); border-color: var(--ok);
+  background: var(--ok);
+}
+
+.player-info-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-num {
+  color: var(--text-mute);
+  font-size: 12.5px;
+  font-weight: bold;
+  min-width: 14px;
+}
+
+/* Нік і кнопка "Вигнати/Повернути" — одна колонка, кнопка чітко під ніком */
+.player-name-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.kick-action-btn {
+  font-size: 0.85em;
+  cursor: pointer;
+  text-decoration: underline;
+  color: var(--danger); /* "Вигнати" — червоний */
+}
+
+.kick-action-btn.is-return {
+  color: var(--ok); /* "Повернути" — зелений */
+}

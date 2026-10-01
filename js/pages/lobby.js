@@ -81,10 +81,10 @@ export function renderLobby() {
         </div>
         <div class="block-body" style="display: flex; flex-direction: column; gap: 14px;">
           <button id="create-room-btn" style="padding: 10px; border-radius: 6px; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none;">Створити кімнату</button>
-          <hr style="width: 100%; border-color: var(--metal-lt);">
+          <hr style="width: 100%; border-color: var(--metal-lt); margin: 0;">
           <input type="text" id="room-code" placeholder="Код кімнати (напр. ABCD)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--metal); background: var(--panel-2); color: var(--text); text-transform: uppercase;">
           <button id="join-room-btn" disabled style="padding: 10px; border-radius: 6px; background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none;">Приєднатися</button>
-          <div id="join-error-msg" class="error-text" role="alert" aria-live="polite"></div>
+          <div id="join-error-msg" class="error-text" role="alert" aria-live="polite" style="margin-top: 0; text-align: center;"></div>
         </div>
       </section>
 
