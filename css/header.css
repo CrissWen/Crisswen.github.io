@@ -63,14 +63,14 @@
   background: var(--panel-2);
 }
 
-/* Аватарка з першою літерою — квадратна, менше круглих форм, більше брутальності */
+/* Аватарка з першою літерою — кругла (така ж форма, як у аватарки на сторінці профілю) */
 .header-user-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 2px;
+  border-radius: 50%;
   background: var(--metal-lt);
   border: 1px solid var(--text-mute);
   color: var(--text);
