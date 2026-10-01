@@ -42,12 +42,14 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
         .map((val, ci) => `<td data-col-label="${columns[ci]}">${cellHtml(val)}</td>`)
         .join("");
       const rowClass = p.isKicked ? 'kicked-player' : '';
+      const firstLetter = (p.name || '').charAt(0);
+      const avatarPadding = /^[gjpqyуфщц]/i.test(firstLetter) ? 'padding-bottom: 2px;' : 'padding-bottom: 0;';
       return `
         <tr data-player="${p.name}" class="${rowClass}">
           <td class="player-cell">
             <div class="player-info-wrapper">
               <span class="player-num">${index + 1}</span>
-              <span class="avatar">${p.name[0]}</span>
+              <span class="avatar" style="${avatarPadding}">${firstLetter}</span>
               <div class="player-name-wrapper">
                 <div class="player-nickname">${p.name}</div>
                 ${kickToggle(p)}
