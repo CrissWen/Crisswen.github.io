@@ -20,7 +20,7 @@ export function cataclysm(data) {
       ? Number(data.population).toLocaleString('uk-UA') 
       : data.population;
       
-    popDisplay = `<p class="cataclysm-population" style="margin: 6px 0 0; font-family: var(--mono); font-size: 13.5px; color: var(--hazard);">Залишок населення: ${formattedPop}</p>`;
+    popDisplay = `<p class="cataclysm-population">Залишок населення: ${formattedPop}</p>`;
   }
 
   return `
@@ -30,8 +30,8 @@ export function cataclysm(data) {
       </div>
       <div class="block-body">
         <div class="cataclysm-row">
-          <div class="cataclysm-icon">${data.icon || "☢"}</div>
-          <div>
+          <div class="cataclysm-icon">${(data.icon || "☢").replace(/\uFE0F/g, '\uFE0E')}</div>
+          <div class="cataclysm-content">
             <p class="cataclysm-title">${data.title}</p>
             <p class="cataclysm-desc">${data.desc}</p>
             ${popDisplay}
