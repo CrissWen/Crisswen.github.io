@@ -1,1 +1,6 @@
 .vscode/launch.json
+
+# Локальне перевизначення балансу гри для тестування на localhost (див. js/config/config-manager.js).
+# НЕ повинно потрапити в репозиторій/GitHub Pages — кожен розробник створює свій локально, копіюючи
+# game-config.base.js і правлячи лише ті, поля, які хоче перевизначити.
+js/config/game-config.local.js

@@ -10,6 +10,7 @@ import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
 import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer, getCataclysmTimerText } from '../game-moduls/cataclysm-timer.js';
 import { generateGameState } from '../utils/game-generator.js';
+import { getGameConfig } from '../config/config-manager.js';
 import * as HostActions from '../utils/host-actions.js';
 import {
   renderHostPanel,
@@ -138,10 +139,11 @@ export async function initGame() {
 
     
     // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
-    // Ліміт на 15 місць діє виключно на етапі лобі: якщо гра вже йде, цю перевірку повністю ігноруємо.
+    // Ліміт на місця (bc.maxPlayersInLobby, config-manager.js) діє виключно на етапі лобі: якщо гра вже йде, цю перевірку повністю ігноруємо.
     if (!isGameStarted && !isPlayerInRoom) {
+      const bc = await getGameConfig();
       const playersCount = Object.keys(room.players_state || {}).length;
-      if (playersCount >= 15) {
+      if (playersCount >= bc.maxPlayersInLobby) {
         showGlobalToast('Ця кімната вже переповнена');
         window.location.hash = '#/lobby';
         return;
@@ -247,7 +249,7 @@ async function handleStartGame(e) {
       });
     });
 
-    const { bunkerState, playersState } = generateGameState(playersList, cardsData, pack.config);
+    const { bunkerState, playersState } = await generateGameState(playersList, cardsData, pack.config);
     
     await supabase.from('rooms').update({ 
       bunker_state: bunkerState,

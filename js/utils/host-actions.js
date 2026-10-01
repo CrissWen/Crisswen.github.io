@@ -597,7 +597,7 @@ export async function changeBunker(roomCode, field, customValue) {
   const bState = room.bunker_state || {};
   if (!value) {
     const pools = await loadPools();
-    value = randomBunkerFieldValue(field, pools.bunker, bState);
+    value = await randomBunkerFieldValue(field, pools.bunker, bState);
     if (!value) throw new Error('Для цього параметра немає варіантів у пулі карток — введіть значення вручну');
   }
   snapshot(room); // після всіх перевірок, щоб невдала спроба не затирала попередній знімок для "Скасувати"
