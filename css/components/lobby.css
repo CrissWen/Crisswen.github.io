@@ -164,10 +164,16 @@
 
 /* Стиль для тексту помилки */
 .error-text {
-    color: #ff4d4d; /* Червоний колір */
+    color: #ff4d4d;
     font-size: 0.9em;
-    margin-top: 8px;
-    min-height: 20px; /* Щоб інтерфейс не стрибав при появі тексту */
+    margin-top: 4px;
+    height: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.error-text:empty {
+    display: none;
 }
 
 /* ===== Ліміти гравців у лобі: підказка мінімуму та блокування кнопки "Почати гру" ===== */
