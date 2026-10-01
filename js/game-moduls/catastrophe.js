@@ -1,5 +1,4 @@
 export function catastrophe(data) {
-  // Якщо катаклізм ще не згенеровано
   if (!data) {
     return `
       <section class="block" id="block-catastrophe">
@@ -13,7 +12,17 @@ export function catastrophe(data) {
     `;
   }
 
-  // Якщо дані є — малюємо їх
+  // Форматуємо число населення (наприклад, 184220100 -> 184 220 100)
+  let popDisplay = "";
+  if (data.population && data.population !== "Невідомо") {
+    // Використовуємо toLocaleString для гарного форматування чисел, якщо це число
+    const formattedPop = !isNaN(data.population) 
+      ? Number(data.population).toLocaleString('uk-UA') 
+      : data.population;
+      
+    popDisplay = `<p class="cata-population" style="margin: 6px 0 0; font-family: var(--mono); font-size: 13.5px; color: var(--hazard);">Залишок населення: ${formattedPop}</p>`;
+  }
+
   return `
     <section class="block" id="block-catastrophe">
       <div class="block-head">
@@ -25,6 +34,7 @@ export function catastrophe(data) {
           <div>
             <p class="cata-title">${data.title}</p>
             <p class="cata-desc">${data.desc}</p>
+            ${popDisplay}
           </div>
         </div>
       </div>

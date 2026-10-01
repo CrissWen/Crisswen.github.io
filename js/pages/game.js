@@ -307,7 +307,8 @@ const descriptionParts = [
   const cataclysmData = bState.cataclysm ? {
     icon: "☢",
     title: bState.cataclysm.text,
-    desc: bState.cataclysm.description
+    desc: bState.cataclysm.description,
+    population: bState.cataclysm.population
   } : null;
 
   const parsedPlayers = [];

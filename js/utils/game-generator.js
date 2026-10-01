@@ -128,7 +128,7 @@ export async function generateGameState(playersList, pack, config) {
   const capacity = Math.max(1, Math.floor(playersList.length / bc.bunkerCapacityDivisor));
   
   const cataclysm = getRandomItem(b.cataclysm, "Невідомий катаклізм");
-  const stayTimeMonths = cataclysm.meta?.stay_time_months || 12; 
+  const stayTimeMonths = cataclysm.meta?.stay_time_months || 12;
   const formattedStayTime = formatStayTime(stayTimeMonths);
   // Скільки хвилин відведено катаклізму на відлік (0/відсутнє — без таймера, таймер просто не відобразиться)
   const cataclysmTimerMinutes = Number(cataclysm.meta?.timer_minutes) || 0;
@@ -158,7 +158,8 @@ export async function generateGameState(playersList, pack, config) {
     cataclysm: {
       text: cataclysm.value,
       description: cataclysm.meta.description || "",
-      timer_minutes: cataclysmTimerMinutes
+      timer_minutes: cataclysmTimerMinutes,
+      population: cataclysm.meta.population || "Невідомо" // <--- ДОДАЄМО ЦЕ
     }
   };
 
