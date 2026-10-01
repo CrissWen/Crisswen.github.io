@@ -1,6 +1,6 @@
 /* ===== Catastrophe block ===== */
-.cata-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;}
-.cata-icon{
+.cataclysm-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;}
+.cataclysm-icon{
   font-size:44px;line-height:1;
   width:76px;height:76px;flex:none;
   display:flex;align-items:center;justify-content:center;
@@ -8,8 +8,8 @@
   border-radius:var(--radius-sm);
   box-shadow: inset 0 0 10px color-mix(in srgb, var(--danger) 40%, transparent);
 }
-.cata-title{font-family:var(--head);font-size:26px;color:var(--danger);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
-.cata-desc{color:var(--text);max-width:60ch;margin:0;font-size:14.5px;opacity:.9;}
+.cataclysm-title{font-family:var(--head);font-size:26px;color:var(--danger);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
+.cataclysm-desc{color:var(--text);max-width:60ch;margin:0;font-size:14.5px;opacity:.9;}
 
 /* ===== Bunker info block ===== */
 .block-desc {

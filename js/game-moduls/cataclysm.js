@@ -1,12 +1,12 @@
-export function catastrophe(data) {
+export function cataclysm(data) {
   if (!data) {
     return `
-      <section class="block" id="block-catastrophe">
+      <section class="block" id="block-cataclysm">
         <div class="block-head">
           <h2>Катаклізм</h2>
         </div>
         <div class="block-body">
-          <p class="cata-desc" style="text-align: center; color: var(--text-mute);">Очікування генерації катаклізму...</p>
+          <p class="cataclysm-desc" style="text-align: center; color: var(--text-mute);">Очікування генерації катаклізму...</p>
         </div>
       </section>
     `;
@@ -20,20 +20,20 @@ export function catastrophe(data) {
       ? Number(data.population).toLocaleString('uk-UA') 
       : data.population;
       
-    popDisplay = `<p class="cata-population" style="margin: 6px 0 0; font-family: var(--mono); font-size: 13.5px; color: var(--hazard);">Залишок населення: ${formattedPop}</p>`;
+    popDisplay = `<p class="cataclysm-population" style="margin: 6px 0 0; font-family: var(--mono); font-size: 13.5px; color: var(--hazard);">Залишок населення: ${formattedPop}</p>`;
   }
 
   return `
-    <section class="block" id="block-catastrophe">
+    <section class="block" id="block-cataclysm">
       <div class="block-head">
         <h2>Катаклізм</h2>
       </div>
       <div class="block-body">
-        <div class="cata-row">
-          <div class="cata-icon">${data.icon || "☢"}</div>
+        <div class="cataclysm-row">
+          <div class="cataclysm-icon">${data.icon || "☢"}</div>
           <div>
-            <p class="cata-title">${data.title}</p>
-            <p class="cata-desc">${data.desc}</p>
+            <p class="cataclysm-title">${data.title}</p>
+            <p class="cataclysm-desc">${data.desc}</p>
             ${popDisplay}
           </div>
         </div>

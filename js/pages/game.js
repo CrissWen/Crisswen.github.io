@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js';
-import { catastrophe } from '../game-moduls/catastrophe.js';
+import { cataclysm } from '../game-moduls/cataclysm.js';
 import { bunkerInfo } from '../game-moduls/bunker-info.js';
 import { playerCharacteristics } from '../game-moduls/player-characteristics.js';
 import { playersTable } from '../game-moduls/players-table.js';
@@ -371,7 +371,7 @@ const descriptionParts = [
   };
 
   const order = [
-    safe('Катаклізм', () => catastrophe(cataclysmData)),
+    safe('Катаклізм', () => cataclysm(cataclysmData)),
     safe('Бункер', () => bunkerInfo(bunkerData)),
     isSpectator ? '' : safe('Мої характеристики', () => playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities })),
     safe('Гравці', () => playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows, alivePlayers, totalPlayers, isHost)),
