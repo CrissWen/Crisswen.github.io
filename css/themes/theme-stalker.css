@@ -3,6 +3,8 @@
    та інлайн-стилі в host-panel.js, waiting-room.js, lobby.js, auth.js, profile.js, game.js тощо).
    Тут же — фоновий ефект body, специфічний саме для цієї теми (зерниста текстура + віньєтка). */
 :root{
+  --on-ok:     var(--text);
+  --on-danger: var(--text);
   --bg:        #0a0b0a;
   --panel:     #141613;
   --panel-2:   #1d211a;

@@ -69,7 +69,7 @@ body{
   color: var(--cryo-5);
   box-shadow: 0 0 10px rgba(23, 174, 194, .2);
 }
-.hp-btn:hover, .vote-submit-btn:hover {
+.hp-btn:hover:not(:disabled), .vote-submit-btn:hover:not(:disabled) {
   background: var(--cryo-4);
   color: var(--cryo-1);
   box-shadow: 0 0 20px var(--cryo-5);
@@ -99,4 +99,11 @@ body{
 .cataclysm-timer__icon, .cataclysm-timer__time {
   color: var(--cryo-5) !important;
   text-shadow: 0 0 12px var(--cryo-5) !important;
+}
+
+/* Override waiting dot to be hollow for better contrast against playing dot */
+.reconnect-card__dot.is-waiting {
+  background: transparent !important;
+  border: 2px solid var(--cryo-4) !important;
+  box-shadow: 0 0 5px var(--cryo-4), inset 0 0 5px var(--cryo-4) !important;
 }

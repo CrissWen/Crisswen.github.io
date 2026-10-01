@@ -90,8 +90,8 @@
 .hp-btn-red{background:color-mix(in srgb, var(--danger) 20%, transparent);color:var(--danger);border-color:var(--danger);}
 .hp-btn-gray{background:var(--metal);color:var(--text-mute);border-color:var(--metal);}
 .hp-btn-gray:disabled{cursor:not-allowed;}
-.hp-btn-green:hover:not(:disabled){background:var(--ok);color:var(--bg);box-shadow:0 0 10px var(--ok);border-color:transparent;}
-.hp-btn-red:hover:not(:disabled){background:var(--danger);color:var(--bg);box-shadow:0 0 10px var(--danger);border-color:transparent;}
+.hp-btn-green:hover:not(:disabled){background:var(--ok);color:var(--on-ok, var(--bg));box-shadow:0 0 10px var(--ok);border-color:transparent;}
+.hp-btn-red:hover:not(:disabled){background:var(--danger);color:var(--on-danger, var(--bg));box-shadow:0 0 10px var(--danger);border-color:transparent;}
 .hp-btn-sq{width:40px;height:40px;padding:0;font-size:20px;line-height:1;}
 
 /* Іконки Пауза/Стоп у блоці таймера панелі ведучого */

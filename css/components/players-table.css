@@ -161,8 +161,8 @@ table.bunker-table td.player-cell .avatar {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--metal-lt);
-  color: var(--panel);
+  background: transparent; border: 1px solid var(--text-mute);
+  color: var(--text-mute);
   font-size: 10px;
   font-weight: bold;
   font-family: var(--mono);
@@ -172,7 +172,7 @@ table.bunker-table td.player-cell .avatar {
   vertical-align: middle;
 }
 
-.info-icon:hover {
+.info-icon:hover { color: var(--on-ok, var(--bg)); border-color: var(--ok);
   background: var(--ok);
 }
 

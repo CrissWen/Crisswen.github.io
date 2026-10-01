@@ -99,7 +99,7 @@
   flex: none;
   width: 10px;
   height: 10px;
-  border-radius: 0;
+  border-radius: 50%;
   animation: reconnect-dot-pulse 1.6s ease-in-out infinite;
 }
 .reconnect-card__dot.is-playing { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
