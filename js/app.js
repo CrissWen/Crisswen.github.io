@@ -32,6 +32,11 @@ async function router() {
   const queryString = fullHash.split('?')[1] || '';
   const joinCode = new URLSearchParams(queryString).get('join');
 
+  // Синхронізуємо час із сервером один раз, коли користувач залогінений
+  if (session) {
+    import('./utils/time-sync.js').then(({ syncTime }) => syncTime());
+  }
+
   // --- ЛОГІКА ХЕДЕРА ---
   if (session && path !== '#/login') {
     globalHeader.style.display = 'flex';
