@@ -1,6 +1,11 @@
+import { esc } from '../../utils/escape-html.js';
+import { DEFAULT_PACK_ID, packDisplayName } from '../../services/packs-store.js';
+
 // minPlayers / maxPlayers — з конфігу балансу (config-manager.js: minPlayersToStart / maxPlayersInLobby), викликач — game.js.
 // Тут немає зашитих чисел: інакше локальне перевизначення в game-config.local.js не змінювало б кнопку «Почати гру» і підказку.
-export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPlayers }) {
+// selectedPackId / selectedPackTitle — rooms.selected_pack_id / selected_pack_title (пусте = Базовий пак).
+// packOptions — паки ведучого [{ id, title, isDefault }] для випадаючого списку (null = ще вантажиться); бачить лише ведучий.
+export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPlayers, selectedPackId, selectedPackTitle, packOptions }) {
   const pState = playersState || {};
   const playersCount = Object.keys(pState).length;
 
@@ -13,8 +18,21 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
   const inviteLink = `${window.location.origin}${window.location.pathname}#/lobby?join=${roomCode}`;
 
   const playersListHtml = Object.values(pState)
-    .map(p => `<li style="padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius-sm); margin-bottom: 8px;">${p.name}</li>`)
+    .map(p => `<li style="padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius-sm); margin-bottom: 8px;">${esc(p.name)}</li>`)
     .join('');
+
+  // Пак гри: назву бачать усі, змінює лише ведучий. Опції — від listPacks(): Базовий пак перший, далі особисті.
+  const currentPackId = selectedPackId || DEFAULT_PACK_ID;
+  const packName = packDisplayName(selectedPackId, selectedPackTitle);
+  const options = (packOptions || []).map(p => ({ id: p.id, name: packDisplayName(p.id, p.title) }));
+  // Поки список ще не завантажили (або поставити вантаження не вдалося) — у select лише поточний пак
+  if (!options.some(o => o.id === currentPackId)) options.unshift({ id: currentPackId, name: packName });
+  const packSelectHtml = isHost ? `
+    <label class="wr-pack__label" for="wr-pack-select">Змінити пак гри</label>
+    <select id="wr-pack-select" class="hp-select wr-pack__select" ${packOptions === null ? 'disabled' : ''}>
+      ${options.map(o => `<option value="${esc(o.id)}" ${o.id === currentPackId ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}
+    </select>
+  ` : '';
 
   return `
     <section class="block layout-small-centered" id="block-waiting-room">
@@ -40,6 +58,16 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
             <button type="button" data-copy-target="link"
               style="padding: 9px 12px; border-radius: 6px; border: 1px solid var(--metal-lt); background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px; white-space: nowrap; font-family: var(--body);">Копіювати</button>
           </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <div class="wr-pack">
+          <div class="wr-pack__current">
+            <span class="wr-pack__label">Пак гри:</span>
+            <strong class="wr-pack__name" id="wr-pack-name">${esc(packName)}</strong>
+          </div>
+          ${packSelectHtml}
         </div>
 
         <hr class="section-divider">

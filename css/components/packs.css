@@ -1,0 +1,170 @@
+/* ===== Особисті паки: список паків (#/packs) і редактор (#/pack-editor) =====
+   Кольори/шрифти/радіуси — лише через змінні теми (css/themes/theme-*.css), без жорстких значень,
+   тож сторінки виглядають однаково природно в усіх темах. */
+
+/* ----- Кнопки (.pk-btn) ----- */
+.pk-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 18px;
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  background:transparent;color:var(--text);
+  font-family:var(--body);font-size:14px;font-weight:600;line-height:1.2;
+  text-decoration:none;cursor:pointer;
+  transition:filter .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
+}
+.pk-btn:hover:not(:disabled){border-color:var(--hazard);}
+.pk-btn:disabled{opacity:.45;cursor:not-allowed;}
+.pk-btn--primary{background:var(--hazard);border-color:var(--hazard);color:#000;}
+.pk-btn--primary:hover:not(:disabled){border-color:var(--hazard);filter:brightness(1.08);}
+.pk-btn--danger{border-color:var(--danger);color:var(--danger);}
+.pk-btn--danger:hover:not(:disabled){border-color:var(--danger);background:var(--danger);color:var(--on-danger,#1a0806);}
+
+/* ----- Сторінка списку ----- */
+.packs-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin-bottom:20px;
+}
+.packs-title{
+  margin:0;font-family:var(--head);font-weight:600;font-size:26px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--text);
+}
+.packs-grid{
+  display:grid;gap:18px;
+  grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+  align-items:stretch;
+}
+.packs-empty{
+  margin:22px 0 0;text-align:center;color:var(--text-mute);font-size:14px;
+}
+
+/* ----- Картка пака ----- */
+.pack-card{
+  display:flex;flex-direction:column;gap:10px;
+  padding:16px;
+  border:1px solid var(--metal);border-top:3px solid var(--metal);border-radius:var(--radius);
+  background:var(--panel);
+  box-shadow:inset 0 0 20px rgba(0,0,0,.6), 0 10px 20px rgba(0,0,0,.5);
+}
+.pack-card--default{border-top-color:var(--hazard);}
+.pack-card__head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+}
+.pack-card__title{
+  margin:0;min-width:0;
+  font-family:var(--head);font-weight:600;font-size:19px;letter-spacing:.04em;line-height:1.3;
+  text-transform:uppercase;color:var(--text);
+  overflow-wrap:anywhere;
+}
+.pack-card__badge{
+  flex-shrink:0;padding:2px 8px;
+  border:1px solid var(--hazard);border-radius:var(--radius-sm);
+  color:var(--hazard);font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+}
+.pack-card__author{
+  margin:0;font-size:13px;color:var(--text-mute);
+}
+.pack-card__author span{color:var(--text);}
+
+/* Опис: обмежена висота + вертикальний скролбар (на відміну від решти сайту, тут він видимий — так вимагає ТЗ) */
+.pack-card__desc{
+  flex:1;min-height:60px;max-height:96px;
+  padding:8px 10px;
+  overflow-y:auto;
+  background:var(--panel-2);border:1px solid var(--metal);border-radius:var(--radius-sm);
+  font-size:13.5px;line-height:1.5;color:var(--text);
+  white-space:pre-wrap;overflow-wrap:anywhere;
+  scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
+}
+.pack-card__desc::-webkit-scrollbar{width:6px;}
+.pack-card__desc::-webkit-scrollbar-track{background:transparent;}
+.pack-card__desc::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+.pack-card__desc:focus-visible{outline:1px solid var(--accent);}
+.pack-card__desc-empty{color:var(--text-mute);font-style:italic;}
+
+.pack-card__foot{display:flex;}
+.pack-card__edit{width:100%;}
+.pack-card__readonly{
+  width:100%;padding:10px 0;text-align:center;
+  font-size:13px;color:var(--text-mute);
+}
+
+/* Меню «⋮» у куті картки */
+.pack-card__menu{position:relative;flex-shrink:0;}
+.pack-card__kebab{
+  width:30px;height:30px;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid transparent;border-radius:var(--radius-sm);
+  background:transparent;color:var(--text-mute);
+  font-size:20px;line-height:1;cursor:pointer;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;
+}
+.pack-card__kebab:hover,
+.pack-card__kebab[aria-expanded="true"]{color:var(--text);border-color:var(--metal-lt);background:var(--panel-2);}
+.pack-card__dropdown{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:20;
+  min-width:150px;padding:4px;
+  background:var(--panel);border:1px solid var(--metal-lt);border-radius:var(--radius);
+  box-shadow:0 12px 28px rgba(0,0,0,.55);
+}
+.pack-card__dropdown[hidden]{display:none;}
+.pack-card__dropdown-item{
+  display:block;width:100%;padding:9px 12px;
+  border:none;border-radius:var(--radius-sm);
+  background:transparent;color:var(--danger);
+  font-family:var(--body);font-size:14px;font-weight:600;text-align:left;cursor:pointer;
+  transition:background .2s ease, color .2s ease;
+}
+.pack-card__dropdown-item:hover{background:var(--danger);color:var(--on-danger,#1a0806);}
+
+/* ----- Редактор ----- */
+.pack-editor{transition:opacity .2s ease;}
+.pack-editor.is-loading{opacity:.5;pointer-events:none;}
+.pe-body{display:flex;flex-direction:column;gap:16px;}
+.pe-field{display:flex;flex-direction:column;gap:6px;}
+.pe-label{font-size:13px;color:var(--text-mute);}
+.pe-required{color:var(--danger);}
+.pe-input{
+  width:100%;padding:10px 12px;
+  background:var(--panel-2);border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  color:var(--text);font-family:var(--body);font-size:14px;line-height:1.5;
+  transition:border-color .2s ease;
+}
+.pe-input::placeholder{color:var(--text-mute);}
+.pe-input:focus{outline:none;border-color:var(--accent);}
+.pe-input.is-invalid{border-color:var(--danger);}
+.pe-desc{resize:vertical;min-height:76px;}
+.pe-cards{resize:vertical;min-height:280px;font-family:var(--mono);font-size:13.5px;}
+.pe-select{cursor:pointer;}
+.pe-counter{align-self:flex-end;font-family:var(--mono);font-size:12px;color:var(--text-mute);}
+.pe-error{margin:0;font-size:13px;color:var(--danger);}
+.pe-error[hidden]{display:none;}
+
+/* Блок стадій */
+.pe-hint{margin:0;font-size:13px;line-height:1.5;color:var(--text-mute);}
+.pe-stages{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+.pe-stage{resize:vertical;min-height:120px;font-family:var(--mono);font-size:13.5px;}
+
+.pe-summary{
+  display:flex;flex-direction:column;gap:10px;
+  padding-top:14px;border-top:1px solid var(--metal);
+}
+.pe-summary__total{margin:0;font-size:13px;color:var(--text-mute);}
+.pe-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.pe-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 10px;
+  border:1px solid var(--metal-lt);border-radius:999px;
+  background:transparent;color:var(--text);
+  font-family:var(--body);font-size:13px;cursor:pointer;
+  transition:border-color .2s ease, background .2s ease;
+}
+.pe-chip span{font-family:var(--mono);color:var(--text-mute);}
+.pe-chip:hover{border-color:var(--hazard);}
+.pe-chip.is-active{border-color:var(--hazard);background:var(--panel-2);}
+
+.pe-actions-block{margin-bottom:0;}
+.pe-actions{display:flex;flex-wrap:wrap;gap:10px;}
+
+@media (max-width:600px){
+  .packs-grid{grid-template-columns:1fr;}
+  .pe-actions .pk-btn{flex:1 1 100%;}
+}

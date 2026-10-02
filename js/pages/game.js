@@ -14,6 +14,7 @@ import { removeHostPanel } from '../game-modules/host-panel/host-panel.js';
 import { syncHostPanel } from '../game-modules/controllers/host-panel-controller.js';
 import { syncVotingScroll, maybeAutoFinishVoting, handleVoteRadioChange, handleVoteSubmit, resetVotingState } from '../game-modules/controllers/voting-controller.js';
 import { handleCharLockClick } from '../game-modules/controllers/char-lock.js';
+import { ensurePackOptions, getPackOptions, handlePackChange, resetPackSelect } from '../game-modules/controllers/pack-select-controller.js';
 import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/controllers/cataclysm-end-modal.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
@@ -35,6 +36,7 @@ let isSpectator = false; // глядач: гра вже йде, а гравця 
 let localRoomState = null;
 let pendingDiceLogId = null; // id запису в лозі про кидок, який прихований до зупинки кубика
 let pendingDiceLogTimer = null;
+let renderSkippedForPackSelect = false; // оновлення кімнати очікування пропущено, бо ведучий тримає у фокусі список паків
 
 const ctx = {
   getRoomCode: () => currentRoomCode,
@@ -153,14 +155,25 @@ function updateGameBoard(roomData, container) {
   syncCataclysm(roomData.bunker_state, roomData.status);
 
   if (!isGameStarted) {
+    // Ведучий саме обирає пак у розкритому списку: не перемальовуємо кімнату, щоб список не закрився посеред вибору.
+    // Стан кімнати вже оновлено, а перемалювання відбудеться, щойно список втратить фокус (handleGlobalFocusOut).
+    if (isHost && document.activeElement?.id === 'wr-pack-select') {
+      renderSkippedForPackSelect = true;
+      return;
+    }
+
     // Із цього моменту конфіг вже завантажено (див. await getGameConfig() у initGame), тому синхронного читання досить
     const bc = getGameConfigSync();
+    if (isHost) ensurePackOptions(ctx); // список паків ведучого вантажиться один раз і перемалює кімнату, коли буде готовий
     container.innerHTML = waitingRoom({
       roomCode: currentRoomCode,
       playersState: roomData.players_state,
       isHost: isHost,
       minPlayers: bc.minPlayersToStart,
-      maxPlayers: bc.maxPlayersInLobby
+      maxPlayers: bc.maxPlayersInLobby,
+      selectedPackId: roomData.selected_pack_id,
+      selectedPackTitle: roomData.selected_pack_title,
+      packOptions: isHost ? getPackOptions() : null
     });
 
     if (isHost) {
@@ -288,8 +301,27 @@ function subscribeToRoomUpdates() {
 function setupActionListeners() {
   document.removeEventListener("click", handleGlobalClick);
   document.addEventListener("click", handleGlobalClick);
-  document.removeEventListener("change", handleVoteRadioChange);
-  document.addEventListener("change", handleVoteRadioChange);
+  document.removeEventListener("change", handleGlobalChange);
+  document.addEventListener("change", handleGlobalChange);
+  document.removeEventListener("focusout", handleGlobalFocusOut);
+  document.addEventListener("focusout", handleGlobalFocusOut);
+}
+
+// Диспетчер змін у полях: вибір пака в кімнаті очікування або радіо-плитка голосування
+function handleGlobalChange(e) {
+  if (e.target.id === 'wr-pack-select') {
+    handlePackChange(e.target, ctx);
+    return;
+  }
+  handleVoteRadioChange(e);
+}
+
+// Список паків втратив фокус (вибрали або закрили без зміни) — доганяємо перемальовування, але ЛИШЕ якщо воно було пропущено.
+// Безумовний refresh тут міг би підмінити кнопку «Почати гру» між натисканням і відпусканням миші, і клік пропав би.
+function handleGlobalFocusOut(e) {
+  if (e.target.id !== 'wr-pack-select' || !renderSkippedForPackSelect) return;
+  renderSkippedForPackSelect = false;
+  ctx.refreshBoard();
 }
 
 // Копіювання коду/посилання-запрошення з кімнати очікування (waiting-room.js). Відповідне вхідне поле шукається через
@@ -379,8 +411,11 @@ export function cleanupGame() {
     realtimeSubscription = null;
   }
   document.removeEventListener("click", handleGlobalClick);
-  document.removeEventListener("change", handleVoteRadioChange);
+  document.removeEventListener("change", handleGlobalChange);
+  document.removeEventListener("focusout", handleGlobalFocusOut);
   resetVotingState();
+  resetPackSelect();
+  renderSkippedForPackSelect = false;
   clearTimeout(pendingDiceLogTimer);
   pendingDiceLogId = null;
 }
