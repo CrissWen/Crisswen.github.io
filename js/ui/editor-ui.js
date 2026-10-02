@@ -76,11 +76,16 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
   else if (isEdit) saveLabel = 'Оновити особистий пак';
   else saveLabel = 'Створити особистий пак';
 
+  // У базовому паку кнопки "Очистити все" немає: його не можна залишити порожнім (на ньому базується гра)
+  const clearButton = isDefaultEdit
+    ? ''
+    : '<button type="button" class="pk-btn pk-btn--ghost" data-action="clear">Очистити все</button>';
+
   const buttons = isEdit
     ? `
       <button type="button" class="pk-btn pk-btn--primary" data-action="save">${saveLabel}</button>
       <button type="button" class="pk-btn pk-btn--ghost" data-action="reset">Скасувати зміни</button>
-      <button type="button" class="pk-btn pk-btn--ghost" data-action="clear">Очистити все</button>
+      ${clearButton}
       <button type="button" class="pk-btn pk-btn--danger" data-action="exit">Відмінити та вийти</button>`
     : `
       <button type="button" class="pk-btn pk-btn--primary" data-action="save">${saveLabel}</button>
