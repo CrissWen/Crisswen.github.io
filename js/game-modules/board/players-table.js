@@ -91,24 +91,6 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
   `;
 }
 
-// Синхронізація з Блоком 3
-document.addEventListener("bunker:toggle-characteristic", function (e) {
-  const { owner, group, label, value, open } = e.detail;
-  if (group !== "characteristics") return;
-
-  const row = document.querySelector(
-    `#block-players-table tr[data-player="${owner}"]`
-  );
-  if (!row) return;
-
-  const cell = row.querySelector(`td[data-col-label="${label}"]`);
-  if (!cell) return;
-
-  cell.innerHTML = open
-    ? `<span class="cell-value">${value}</span>`
-    : `<span class="cell-empty"></span>`;
-});
-
 
 // --- ГЛОБАЛЬНИЙ ТУЛТИП (Логіка відображення поверх усього екрану) ---
 document.addEventListener("mouseover", function(e) {
