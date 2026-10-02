@@ -1,14 +1,15 @@
 import { supabase } from './supabase.js';
-import { buildSavePayload } from '../utils/pack-payload.js';
+import { buildSavePayload, cardToLine, extraMetaOf, cataclysmFromRow } from '../utils/pack-payload.js';
 
 // ===== Сховище паків (Supabase: таблиці packs, pack_cards, RPC save_personal_pack) =====
 // Форма пака для сторінок: { id, title, description, authorName, isDefault, cards, config }
-//   cards — { [category]: string[] } (лише в getPack), config — packs.config (лише в getPack)
+//   cards — { [category]: string[] } (лише в getPack): рядки у форматі редактора ("Професія - Можливість" тощо), config — packs.config (лише в getPack)
+//   cataclysms — масив записів катаклізмів (форма в pack-payload.js: cataclysmFromRow), extraMeta — додаткова meta решти карток
 
 export const DEFAULT_PACK_ID = '16ea0906-5874-4471-aa38-aef1513e82c6';
 export const DEFAULT_PACK_LABEL = 'Базовий пак';
 
-// Назва пака для інтерфейсу. Дефолтний у БД зветься 'default' (системна назва), тож для людей підписуємо його «Базовий пак».
+// Назва пака для інтерфейсу. Дефолтний у БД зветься 'default' (системна назва), тож для людей підписуємо його "Базовий пак".
 // Порожній packId (кімната створена до міграції або пак видалено) теж означає дефолтний.
 export function packDisplayName(packId, title) {
   if (!packId || packId === DEFAULT_PACK_ID) return DEFAULT_PACK_LABEL;
@@ -64,7 +65,7 @@ async function fetchAllCards(packId) {
     const from = page * PAGE_SIZE;
     const { data, error } = await supabase
       .from('pack_cards')
-      .select('category, value')
+      .select('category, value, meta')
       .eq('pack_id', packId)
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
@@ -90,9 +91,19 @@ export async function getPack(id) {
   if (!isDefault && data.author_id !== user.id) return null;
 
   const cards = {};
+  const cataclysms = []; // катаклізми — окремі записи з полями (назва, опис, таймер, час перебування, популяція), а не рядки тексту
+  const extraMeta = {}; // { [category]: { [value]: поля meta, яких немає в рядку редактора: custom_age, stages... } }
   if (!isDefault) {
     for (const row of await fetchAllCards(id)) {
-      (cards[row.category] ||= []).push(row.value);
+      if (row.category === 'cataclysm') {
+        cataclysms.push(cataclysmFromRow(row));
+        continue;
+      }
+      // meta (можливість професії) згортаємо назад у рядок редактора,
+      // а решту полів meta тримаємо окремо і повертаємо при збереженні (buildCardRows), інакше "Оновити пак" замінив б їх порожнім
+      (cards[row.category] ||= []).push(cardToLine(row.category, row.value, row.meta));
+      const extra = extraMetaOf(row.category, row.meta);
+      if (extra) (extraMeta[row.category] ||= {})[row.value] = extra;
     }
   }
 
@@ -103,6 +114,8 @@ export async function getPack(id) {
     authorName: isDefault ? 'Система' : usernameOf(user),
     isDefault,
     cards,
+    cataclysms,
+    extraMeta,
     config: data.config || {}
   };
 }

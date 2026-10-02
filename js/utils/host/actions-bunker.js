@@ -94,7 +94,8 @@ export async function changeCataclysm(roomCode) {
   bState.cataclysm = {
     text: card.value,
     description: card.meta?.description || '',
-    timer_minutes: timerMinutes
+    timer_minutes: timerMinutes,
+    population: card.meta?.population || 'Невідомо' // так само, як у generateGameState: інакше після зміни катаклізму населення зникло б з дошки
   };
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.

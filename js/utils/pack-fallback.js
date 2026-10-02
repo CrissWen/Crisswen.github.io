@@ -1,4 +1,4 @@
-import { shuffleArray } from './host/random.js';
+import { shuffleArray } from './random.js';
 import { ALL_PACK_CATEGORIES } from './pack-categories.js';
 
 // ===== Фолбек карток: добір із дефолтного пака, коли в особистому їх не вистачає =====
