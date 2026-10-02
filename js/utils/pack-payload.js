@@ -1,19 +1,11 @@
 import { ALL_PACK_CATEGORIES } from './pack-categories.js';
+import { parseCards, parseLines, oneLine } from './pack-parser.js';
 
-// ===== Парсинг масового вводу та збирання payload для RPC save_personal_pack =====
-// Чисті функції без DOM і мережі.
+// ===== Збирання payload для RPC save_personal_pack / save_default_pack =====
+// Чисті функції без DOM і мережі. Розбір тексту редактора на картки — у pack-parser.js.
 
 // Дзеркало c_max_cards у RPC (supabase/migrations/01_personal_packs_stage1.sql)
 export const MAX_PACK_CARDS = 2000;
-
-// Розділювач — лише розрив рядка (\n); зайві пробіли по краях і порожні рядки відкидаються.
-// \r від Windows-перенесень (\r\n) прибирає trim().
-export function parseLines(text) {
-  return String(text ?? '').split('\n').map(line => line.trim()).filter(line => line !== '');
-}
-
-// Роздільник частин картки професії: тире саме з пробілами навколо (дефіс усередині слова — "IT-спеціаліст" — не чіпаємо)
-const PART_SEPARATOR = ' - ';
 
 // ===== Катаклізми =====
 // Катаклізм — не рядок тексту, а окремий запис із власними полями (форма під списком у редакторі).
@@ -82,48 +74,15 @@ export function extraMetaOf(category, meta) {
   return Object.keys(extra).length ? extra : null;
 }
 
-// Зворотне до buildCardRows: рядок pack_cards → той самий рядок, який вводив автор у редакторі.
-// Потрібне, щоб при відкритті пака на редагування можливість професії не губилася
-// (раніше з бази читалися лише category і value — повторне збереження стирало б meta).
-export function cardToLine(category, value, meta) {
-  const text = String(value ?? '');
-
-  if (category === 'profession') {
-    const ability = String(meta?.ability ?? '').trim();
-    return ability ? `${text}${PART_SEPARATOR}${ability}` : text;
-  }
-
-  return text;
-}
-
-// texts: { [category]: string } → масив рядків pack_cards: { pool_type, category, value, meta: {} }
-// Спеціальний випадок — category === 'profession': рядок формату "Професія - Можливість" (тире саме з пробілами навколо,
-// щоб дефіс усередині слова — наприклад, IT-спеціаліст — не спрацьовував парсер) розбивається на
-// value і meta.ability; їх читають game-generator.js і host/characteristics.js (profItem.meta.ability / card.meta?.ability),
-// а player-parser.js показує як іконку-підказку на картці гравця.
+// texts: { [category]: string } → масив рядків pack_cards: { pool_type, category, value, meta }
+// Текст кожної категорії розбирає parseCards (pack-parser.js: формат "Професія - Можливість", повернення extraMeta).
 // Категорія 'cataclysm' у текстах ігнорується: її рядки збираються з окремих записів cataclysms (cataclysmToRow).
-// Для решти категорій meta залишається порожньою: стадії задаються глобально для пака (packs.config.default_stages), а не для кожної картки.
-// extraMeta — { [category]: { [value]: meta } } з getPack: поля meta, яких редактор не показує, повертаються до картки за ключем category + value
-// (те, що автор ввів у рядку, має пріоритет; якщо картку перейменували, її додаткова meta не підтягується).
 export function buildCardRows(texts, extraMeta = {}, cataclysms = []) {
   const rows = [];
   for (const { category, poolType } of ALL_PACK_CATEGORIES) {
     if (category === 'cataclysm') continue;
 
-    for (const line of parseLines(texts?.[category])) {
-      let value = line;
-      let meta = {};
-
-      if (category === 'profession' && line.includes(PART_SEPARATOR)) {
-        const separatorIndex = line.indexOf(PART_SEPARATOR);
-        value = line.substring(0, separatorIndex).trim();
-        const ability = line.substring(separatorIndex + PART_SEPARATOR.length).trim();
-        if (ability) meta.ability = ability;
-      }
-
-      const extra = extraMeta?.[category]?.[value];
-      if (extra) meta = { ...extra, ...meta };
-
+    for (const { value, meta } of parseCards(texts?.[category], category, extraMeta)) {
       rows.push({ pool_type: poolType, category, value, meta });
     }
   }
@@ -132,6 +91,160 @@ export function buildCardRows(texts, extraMeta = {}, cataclysms = []) {
     if (String(item?.name ?? '').trim()) rows.push(cataclysmToRow(item));
   }
   return rows;
+}
+
+// ===== Форма редактора: валідація, config, порівняння змін =====
+// Чисті функції (без DOM і стану сторінки): контролер pack-editor.js передає їм дані форми й отримує готовий результат.
+
+// Ключі збігаються з packs.config.default_stages, які читає ігровий рушій (підписи для UI — у editor-ui.js)
+export const STAGE_KEYS = ['profession', 'hobby', 'health'];
+
+// Діапазони віку/зросту: підстава для НОВОГО пака, якщо в самому дефолтному паку раптом щось відсутнє (див. rangesFromConfig)
+export const RANGE_DEFAULTS = { ageMin: 16, ageMax: 85, heightMin: 150, heightMax: 210 };
+
+const RESERVED_TITLES = ['default', 'дефолт']; // дзеркало перевірки в RPC save_personal_pack
+
+// 3.2: назва не порожня і не дорівнює default / дефолт (без урахування регістру).
+// Виняток: базовий пак (редагує лише адмін) зветься саме 'default' — його зарезервовану назву не перевіряємо.
+// Повертає текст помилки або '' (все гаразд).
+export function validateTitle(title, { isDefaultPack = false } = {}) {
+  if (!title) return 'Вкажіть назву пака';
+  if (isDefaultPack) return '';
+  if (RESERVED_TITLES.includes(title.toLowerCase())) return `Назва "${title}" зарезервована системою`;
+  return '';
+}
+
+// Числа й min <= max — інакше randInt(min, max) в ігровому рушії (game-generator.js / host/characteristics.js) поверне сміття.
+export function validateRanges(r) {
+  const ageMin = parseInt(r.ageMin, 10), ageMax = parseInt(r.ageMax, 10);
+  const heightMin = parseInt(r.heightMin, 10), heightMax = parseInt(r.heightMax, 10);
+  if ([ageMin, ageMax, heightMin, heightMax].some(Number.isNaN)) return 'Заповніть діапазони віку й зросту коректними числами';
+  if (ageMin > ageMax) return 'Мін. вік не може перевищувати макс. вік';
+  if (heightMin > heightMax) return 'Мін. зріст не може перевищувати макс. зріст';
+  return '';
+}
+
+// Стадії з конфігу пака (масиви рядків) → текст для textarea: { [key]: string }
+export function stagesTextFromConfig(config) {
+  const text = {};
+  for (const key of STAGE_KEYS) {
+    const list = config?.default_stages?.[key];
+    text[key] = Array.isArray(list) ? list.filter(s => typeof s === 'string').join('\n') : '';
+  }
+  return text;
+}
+
+// Діапазони віку/зросту з конфігу → рядки для number-інпутів. fallback — об'єкт тих самих 4 ключів (числа або рядки —
+// байдуже, String() на виході в будь-якому випадку): для базового пака — RANGE_DEFAULTS, для конкретного — діапазони базового.
+export function rangesFromConfig(config, fallback) {
+  const age = config?.age_range || {};
+  const height = config?.height_range || {};
+  return {
+    ageMin:    String(age.min ?? fallback.ageMin),
+    ageMax:    String(age.max ?? fallback.ageMax),
+    heightMin: String(height.min ?? fallback.heightMin),
+    heightMax: String(height.max ?? fallback.heightMax)
+  };
+}
+
+// 3.4: фінальний config для збереження. Основа — конфіг дефолтного пака, поверх нього конфіг самого пака,
+// а default_stages перекриваються стадіями з форми. Порожнє поле стадій = лишається те, що було (стадії дефолтного пака).
+// stages — { [key]: string } (текст textarea), ranges — { ageMin, ageMax, heightMin, heightMax } (рядки).
+export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = {}, ranges }) {
+  const stageLists = {};
+  for (const key of STAGE_KEYS) {
+    const lines = parseLines(stages[key]);
+    if (lines.length) stageLists[key] = lines;
+  }
+  return {
+    ...defaultConfig,
+    ...packConfig,
+    age_range: {
+      min: parseInt(ranges.ageMin, 10),
+      max: parseInt(ranges.ageMax, 10)
+    },
+    height_range: {
+      min: parseInt(ranges.heightMin, 10),
+      max: parseInt(ranges.heightMax, 10)
+    },
+    default_stages: {
+      ...(defaultConfig.default_stages || {}),
+      ...(packConfig.default_stages || {}),
+      ...stageLists
+    }
+  };
+}
+
+// Нормалізований вигляд форми для порівняння: зайві пробіли та порожні рядки змінами не вважаються
+export function normalizeForm(f) {
+  const texts = {};
+  for (const { category } of ALL_PACK_CATEGORIES) {
+    const lines = parseLines(f.texts[category]);
+    if (lines.length) texts[category] = lines.join('\n');
+  }
+  const stages = {};
+  for (const key of STAGE_KEYS) stages[key] = parseLines(f.stages[key]).join('\n');
+  const cataclysms = (f.cataclysms || []).map(c => [
+    String(c.name ?? '').trim(), String(c.description ?? '').trim(), c.timer_minutes || 0, c.stay_time_months || 0, c.population || 0
+  ]);
+  return JSON.stringify({ title: f.title.trim(), description: f.description.trim(), texts, stages, ranges: f.ranges, cataclysms });
+}
+
+// ----- Форма катаклізму (поля читає editor-ui.js: readCataRaw) -----
+// Текст списку катаклізмів (назви по одній на рядок): з нього читаються лічильники, підсумок і трекінг змін
+export const cataclysmNamesText = cataclysms => (cataclysms || []).map(c => oneLine(c.name)).join('\n');
+
+// Значення полів форми для запису (рядками)
+export function cataFieldStrings(item) {
+  return {
+    name: String(item.name ?? '').trim(),
+    desc: String(item.description ?? '').trim(),
+    timer: String(item.timer_minutes || 0),
+    stay: item.stay_time_months ? String(item.stay_time_months) : '',
+    pop: item.population ? String(item.population) : ''
+  };
+}
+
+// Чи є у формі дані, які ще не потрапили в список: новий катаклізм (isEditing=false) або незбережені правки існуючого (item).
+// raw — { name, desc, timer, stay, pop } рядками. Порожній таймер і "0" — одне й те саме (без таймера).
+export function hasCataDraft(raw, item, isEditing) {
+  if (!isEditing) return Boolean(raw.name || raw.desc || (raw.timer && raw.timer !== '0') || raw.stay || raw.pop);
+  if (!item) return false;
+  return JSON.stringify({ ...raw, timer: raw.timer || '0' }) !== JSON.stringify(cataFieldStrings(item));
+}
+
+// Перевіряє поля форми: повертає { item } або { error, field }.
+// cataclysms — поточний список (для пошуку дубліката назви), editIndex — індекс запису, що редагується (-1 — додаємо новий).
+export function validateCataclysmInput(raw, { cataclysms = [], editIndex = -1 } = {}) {
+  const { timerMax, stayMax } = CATACLYSM_LIMITS;
+
+  if (!raw.name) return { error: 'Вкажіть назву катаклізму', field: 'name' };
+
+  const nameKey = raw.name.toLowerCase();
+  const duplicate = cataclysms.some((c, i) => i !== editIndex && String(c.name).trim().toLowerCase() === nameKey);
+  if (duplicate) return { error: 'Катаклізм із такою назвою вже є в цьому паку', field: 'name' };
+
+  const timer = raw.timer === '' ? 0 : Number(raw.timer);
+  if (!Number.isInteger(timer) || timer < 0 || timer > timerMax) {
+    return { error: `Таймер: ціле число від 0 до ${timerMax} хв (0 — без таймера)`, field: 'timer' };
+  }
+
+  let stay = null;
+  if (raw.stay !== '') {
+    stay = Number(raw.stay);
+    if (!Number.isInteger(stay) || stay < 1 || stay > stayMax) {
+      return { error: `Час перебування: від 1 до ${stayMax} міс. (або залиште поле порожнім)`, field: 'stay' };
+    }
+  }
+
+  let population = null;
+  if (raw.pop !== '') {
+    const n = Number(raw.pop);
+    if (!Number.isSafeInteger(n)) return { error: 'Популяція: лише цифри', field: 'pop' };
+    population = n > 0 ? n : null; // 0 = "невідомо", як і порожнє поле
+  }
+
+  return { item: { name: raw.name, description: raw.desc, timer_minutes: timer, stay_time_months: stay, population, extra: {} } };
 }
 
 // Імена полів збігаються з параметрами SQL-функції save_personal_pack

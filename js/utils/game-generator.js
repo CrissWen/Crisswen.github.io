@@ -1,5 +1,6 @@
 import { getGameConfig } from '../config/config-manager.js';
 import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray } from './random.js';
+import { getGlobalTime } from '../services/server-time.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -136,7 +137,7 @@ export async function generateGameState(playersList, pack, config) {
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Якщо timer_minutes відсутній/0 — поле не створюємо, таймер не відображається.
   if (cataclysmTimerMinutes > 0) {
-    bunkerState.cataclysm_timer_end = Date.now() + cataclysmTimerMinutes * 60 * 1000;
+    bunkerState.cataclysm_timer_end = getGlobalTime() + cataclysmTimerMinutes * 60 * 1000;
   }
 
   const c = pack.character || {};

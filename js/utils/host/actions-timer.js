@@ -1,5 +1,6 @@
 import { pushLog } from '../log-writer.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
+import { getGlobalTime } from '../../services/server-time.js';
 
 // ===== Глобальний таймер ведучого =====
 // Кнопки таймера НІКОЛИ не пишуть latest_host_event — таймер працює автономно і не повинен спамити Toast'ами.
@@ -18,7 +19,7 @@ export async function setGlobalTimer(roomCode, seconds) {
   snapshot(room);
   const bState = room.bunker_state || {};
   bState.global_timer_seconds = seconds;
-  bState.global_timer_end = Date.now() + seconds * 1000;
+  bState.global_timer_end = getGlobalTime() + seconds * 1000;
   bState.timer_paused_left = null; // новий запуск скасовує попередню паузу, якщо вона була
   pushLog(bState, `Ведучий запустив таймер на ${formatTimerSeconds(seconds)}`); // лише запис у лог, без latest_host_event (без Toast)
   await saveRoom(roomCode, { bunker_state: bState });
@@ -44,7 +45,7 @@ export async function pauseGlobalTimer(roomCode) {
   const bState = room.bunker_state || {};
 
   if (bState.global_timer_end) {
-    const left = Math.max(0, bState.global_timer_end - Date.now());
+    const left = Math.max(0, bState.global_timer_end - getGlobalTime());
     bState.timer_paused_left = left;
     bState.global_timer_end = null;
     pushLog(bState, 'Ведучий призупинив таймер');
@@ -53,7 +54,7 @@ export async function pauseGlobalTimer(roomCode) {
   }
 
   if (bState.timer_paused_left != null) {
-    bState.global_timer_end = Date.now() + bState.timer_paused_left;
+    bState.global_timer_end = getGlobalTime() + bState.timer_paused_left;
     bState.timer_paused_left = null;
     pushLog(bState, 'Ведучий запустив таймер');
     await saveRoom(roomCode, { bunker_state: bState });

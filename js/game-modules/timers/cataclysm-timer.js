@@ -1,3 +1,5 @@
+import { getGlobalTime } from '../../services/server-time.js';
+
 // Таймер катаклізму — окремий від таймера обговорень (game-timer.js), синхронізований через
 // bunker_state.cataclysm_timer_end. Живе поза #game-board (як і game-timer/host-panel), у лівому
 // верхньому куті екрана, тож перемальовування дошки його не зачіпає.
@@ -45,7 +47,7 @@ let onExpireCallback = null;
 function renderRemaining(end) {
   const root = document.getElementById(WIDGET_ID);
   if (!root) return 0;
-  const remaining = Math.ceil((Number(end) - Date.now()) / 1000);
+  const remaining = Math.ceil((Number(end) - getGlobalTime()) / 1000);
   const timeEl = root.querySelector('[data-cata-time]');
   if (timeEl) timeEl.textContent = formatHMS(remaining);
   return remaining;

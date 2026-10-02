@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
-import { buildSavePayload, cardToLine, extraMetaOf, cataclysmFromRow } from '../utils/pack-payload.js';
+import { buildSavePayload, extraMetaOf, cataclysmFromRow } from '../utils/pack-payload.js';
+import { cardToLine } from '../utils/pack-parser.js';
 
 // ===== Сховище паків (Supabase: таблиці packs, pack_cards, RPC save_personal_pack) =====
 // Форма пака для сторінок: { id, title, description, authorName, isDefault, isOwn, cards, config }

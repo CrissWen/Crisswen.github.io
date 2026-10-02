@@ -4,6 +4,7 @@ import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';
 import { randomBunkerFieldValue } from '../game-generator.js';
+import { getGlobalTime } from '../../services/server-time.js';
 
 // ===== Дії з бункером =====
 
@@ -99,7 +100,7 @@ export async function changeCataclysm(roomCode) {
   };
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.
-  bState.cataclysm_timer_end = timerMinutes > 0 ? Date.now() + timerMinutes * 60 * 1000 : null;
+  bState.cataclysm_timer_end = timerMinutes > 0 ? getGlobalTime() + timerMinutes * 60 * 1000 : null;
   setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
   await saveRoom(roomCode, { bunker_state: bState });
 }

@@ -22,6 +22,8 @@ import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-module
 import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-modules/board/personal-notes.js';
 import { buildBoardViewModel } from '../utils/board-view-model.js';
 import { startGame } from '../utils/start-game.js';
+import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.js';
+import { syncServerTime } from '../services/server-time.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -29,7 +31,7 @@ import { startGame } from '../utils/start-game.js';
 // яким спільний стан передається через getter-и в ctx — тож циклічних імпортів немає.
 
 let currentRoomCode = null;
-let realtimeSubscription = null;
+let unsubscribeRoom = null; // відписка від Realtime-каналу кімнати (services/room-subscription.js)
 let currentUserId = null;
 let currentUserName = null;
 let isSpectator = false; // глядач: гра вже йде, а гравця немає в players_state (виводиться в updateGameBoard на кожне оновлення)
@@ -100,7 +102,7 @@ export async function initGame() {
 
     // Дочекуємось конфігу (base + можливий game-config.local.js) ДО першого рендеру кімнати. Інакше при прямому заході по посиланню
     // вейтінг-рум міг би побачити лише базові ліміти, поки локальний файл ще вантажиться (getGameConfigSync дає базу).
-    const bc = await getGameConfig();
+    const [bc] = await Promise.all([getGameConfig(), syncServerTime()]); // серверний час потрібен таймерам ще до першого рендеру (syncServerTime ніколи не кидає помилку)
 
     // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
     // Ліміт на місця (bc.maxPlayersInLobby, config-manager.js) діє виключно на етапі лобі: якщо гра вже йде, цю перевірку ігноруємо.
@@ -246,56 +248,48 @@ function renderActiveGame(roomData, container) {
 }
 
 function subscribeToRoomUpdates() {
-  if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
+  if (unsubscribeRoom) unsubscribeRoom();
+  unsubscribeRoom = subscribeToRoom(currentRoomCode, handleRoomUpdate);
+}
 
-  realtimeSubscription = supabase
-    .channel(`room-${currentRoomCode}`)
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'rooms',
-      filter: `room_code=eq.${currentRoomCode}`
-    }, (payload) => {
-      // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
-      const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
-      const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
+// Реакції на оновлення рядка кімнати. patch — payload.new з Realtime (може бути неповним, див. mergeRoomState).
+function handleRoomUpdate(patch) {
+  // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
+  const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
+  const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
 
-      // Supabase Realtime у payload.new НЕ передає великі (TOAST) jsonb-колонки, які не змінювались
-      // в цьому UPDATE. Тому таймер/голосування (міняють лише bunker_state) приходили без players_state,
-      // і характеристики зникали. Зливаємо зміни поверх попереднього стану замість повної заміни.
-      localRoomState = { ...localRoomState, ...payload.new };
+  localRoomState = mergeRoomState(localRoomState, patch);
 
-      // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
-      if (localRoomState.status === 'closed') {
-        freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
-        if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
-        window.location.hash = '#/lobby';
-        return;
-      }
+  // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
+  if (localRoomState.status === 'closed') {
+    freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
+    if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
+    window.location.hash = '#/lobby';
+    return;
+  }
 
-      // Нова подія від ведучого (крадіжка, зміна характеристики тощо) — показуємо всім гравцям тост по-центру екрана.
-      const hostEvent = localRoomState.bunker_state?.latest_host_event;
-      if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
-        showGlobalToast(hostEvent.text);
-      }
+  // Нова подія від ведучого (крадіжка, зміна характеристики тощо) — показуємо всім гравцям тост по-центру екрана.
+  const hostEvent = localRoomState.bunker_state?.latest_host_event;
+  if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
+    showGlobalToast(hostEvent.text);
+  }
 
-      // Новий кидок кубика від ведучого — у всіх клієнтів (включно з ведучим і глядачами) локально запускається анімація.
-      // Порівняння по id не дає повторно програти старий кидок при будь-якому іншому оновленні рядка кімнати.
-      // Записи старого формату (без type/value, з d20+d6) ігноруємо.
-      const diceRoll = localRoomState.bunker_state?.latest_dice;
-      if (diceRoll && diceRoll.id > 0 && diceRoll.id !== prevDiceId && diceRoll.type) {
-        showDiceRoll(diceRoll.type, diceRoll.value);
-        // Запис про цей кидок у лозі ховаємо, поки кубик крутиться, і розкриваємо в момент зупинки
-        pendingDiceLogId = diceRoll.id;
-        clearTimeout(pendingDiceLogTimer);
-        pendingDiceLogTimer = setTimeout(() => {
-          pendingDiceLogId = null;
-          ctx.refreshBoard();
-        }, DICE_ROLL_MS);
-      }
-
+  // Новий кидок кубика від ведучого — у всіх клієнтів (включно з ведучим і глядачами) локально запускається анімація.
+  // Порівняння по id не дає повторно програти старий кидок при будь-якому іншому оновленні рядка кімнати.
+  // Записи старого формату (без type/value, з d20+d6) ігноруємо.
+  const diceRoll = localRoomState.bunker_state?.latest_dice;
+  if (diceRoll && diceRoll.id > 0 && diceRoll.id !== prevDiceId && diceRoll.type) {
+    showDiceRoll(diceRoll.type, diceRoll.value);
+    // Запис про цей кидок у лозі ховаємо, поки кубик крутиться, і розкриваємо в момент зупинки
+    pendingDiceLogId = diceRoll.id;
+    clearTimeout(pendingDiceLogTimer);
+    pendingDiceLogTimer = setTimeout(() => {
+      pendingDiceLogId = null;
       ctx.refreshBoard();
-    }).subscribe();
+    }, DICE_ROLL_MS);
+  }
+
+  ctx.refreshBoard();
 }
 
 function setupActionListeners() {
@@ -406,9 +400,9 @@ export function cleanupGame() {
   removeHostPanel();
   unmountGameTimer();
   unmountCataclysmTimer();
-  if (realtimeSubscription) {
-    supabase.removeChannel(realtimeSubscription);
-    realtimeSubscription = null;
+  if (unsubscribeRoom) {
+    unsubscribeRoom();
+    unsubscribeRoom = null;
   }
   document.removeEventListener("click", handleGlobalClick);
   document.removeEventListener("change", handleGlobalChange);
