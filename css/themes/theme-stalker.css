@@ -137,3 +137,54 @@ button.pe-chip:focus-visible{
   outline:2px solid var(--hazard);
   outline-offset:2px;
 }
+
+/* ===== Кнопки лоббі: контраст та яскравість ===== */
+#create-room-btn {
+  background: #3c4a30 !important;
+  color: var(--btn-text) !important;
+  border: 1px solid var(--btn-border) !important;
+  box-shadow: var(--btn-shadow) !important;
+  transition: all .2s ease !important;
+}
+#create-room-btn:hover:not(:disabled) {
+  background: #4f6e43 !important;
+  border-color: var(--btn-hover-border) !important;
+  color: #fff !important;
+  box-shadow: var(--btn-shadow), var(--btn-glow) !important;
+}
+#create-room-btn:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 rgba(0,0,0,.5) !important;
+}
+
+#join-room-btn,
+#start-game-btn {
+  background: var(--hazard) !important;
+  color: #000 !important;
+  border: 1px solid #f0cf3c !important;
+  box-shadow: var(--btn-shadow) !important;
+  transition: all .2s ease !important;
+  font-weight: 700 !important;
+}
+#join-room-btn:hover:not(:disabled),
+#start-game-btn:hover:not(:disabled) {
+  filter: brightness(1.12) !important;
+  box-shadow: var(--btn-shadow), 0 0 10px rgba(214,176,34,.45) !important;
+}
+#join-room-btn:active:not(:disabled),
+#start-game-btn:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 rgba(0,0,0,.5) !important;
+}
+
+#create-room-btn:disabled,
+#join-room-btn:disabled,
+#start-game-btn:disabled {
+  background: var(--btn-disabled-bg) !important;
+  color: var(--btn-disabled-text) !important;
+  border: 1px solid var(--btn-disabled-border) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  cursor: not-allowed !important;
+}
