@@ -49,7 +49,7 @@ export function syncHostPanel(roomData, isHost, ctx) {
     document.body.insertAdjacentHTML('beforeend', renderHostPanel(hostPanelData(roomData, ctx)));
     root = getHostPanelRoot();
     bindHostEvents(root, ctx);
-    HostActions.getStageOptions()
+    HostActions.getStageOptions(roomData.selected_pack_id)
       .then(stages => fillStageOptions(getHostPanelRoot(), stages))
       .catch(err => console.error('Не вдалося завантажити стадії:', err));
   }
