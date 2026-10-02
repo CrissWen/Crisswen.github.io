@@ -46,18 +46,3 @@ export function specialAbilitiesTable (players) {
   `;
 };
 
-// синхронізація з Блоком 3: реагуємо лише на спецможливості
-document.addEventListener("bunker:toggle-characteristic", function (e) {
-  const { owner, group, label, value, open } = e.detail;
-  if (group !== "abilities") return;
-
-  const row = document.querySelector(`#block-special-abilities tr[data-player="${owner}"]`);
-  if (!row) return;
-
-  const cell = row.querySelector(`td[data-col-label="${label}"]`);
-  if (!cell) return;
-
-  cell.innerHTML = open
-    ? `<span class="cell-value">${value}</span>`
-    : `<span class="cell-empty"></span>`;
-});

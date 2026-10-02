@@ -1,5 +1,5 @@
 import { BUNKER_FIELDS } from './constants.js';
-import { pickCard } from './random.js';
+import { pickCard } from '../random.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';

@@ -25,7 +25,7 @@ function emptyMeta(data, key) {
 
 export function mapPlayerState(rawPlayer) {
   const chars = [];
-  
+
   const add = (key, label, formatFunc) => {
     const data = rawPlayer[key];
     if (data === undefined) return;
@@ -37,7 +37,7 @@ export function mapPlayerState(rawPlayer) {
     }
 
     let val, rev;
-    
+
     if (Array.isArray(data)) {
       const items = data.filter(x => x && !x.isEmpty);
       val = items.map(formatFunc).join(", ");
@@ -50,15 +50,15 @@ export function mapPlayerState(rawPlayer) {
   };
 
   if (rawPlayer.gender) {
-    
+
     let ageStr = "";
-    
+
     if (rawPlayer.age && rawPlayer.age.value !== undefined) {
       const val = rawPlayer.age.value;
       const cat = getAgeCategory(val);
       ageStr = isNaN(Number(val)) ? `, ${val}` : `, ${val} р.${cat}`;
     }
-    
+
     const childfreeData = rawPlayer.is_childfree || rawPlayer.childfree;
     const childStr = (childfreeData && childfreeData.value) ? " | Чайлдфрі" : "";
 
@@ -72,16 +72,16 @@ export function mapPlayerState(rawPlayer) {
 
   add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
   add('traits', 'Риса характеру', d => d.value);
-  
-add('professions', 'Професія', d => {
-    const title = d.title || "Невідома професія"; 
+
+  add('professions', 'Професія', d => {
+    const title = d.title || "Невідома професія";
     let profText = d.stage ? `${title} (${d.stage})` : title;
-    
+
     if (d.ability && d.ability !== "") {
       const safeAbilityText = d.ability.replace(/"/g, '&quot;');
       profText += ` <span class="info-icon" data-tooltip="<b>Унікальна здібність:</b><br>${safeAbilityText}">i</span>`;
     }
-    
+
     return profText;
   });
   add('health', "Здоров'я", d => (d.disease === "Ідеально здоровий" || !d.severity) ? d.disease : `${d.disease} (${d.severity})`);
@@ -96,9 +96,9 @@ add('professions', 'Професія', d => {
   for (let i = 0; i < 2; i++) {
     const a = sa[i];
     if (a) {
-      abilities.push({ label: `Спец можливість №${i+1}`, value: a.text, open: a.is_revealed, dbKey: 'special_abilities', index: i });
+      abilities.push({ label: `Спец можливість №${i + 1}`, value: a.text, open: a.is_revealed, dbKey: 'special_abilities', index: i });
     } else {
-      abilities.push({ label: `Спец можливість №${i+1}`, value: "Немає", open: false });
+      abilities.push({ label: `Спец можливість №${i + 1}`, value: "Немає", open: false });
     }
   }
 

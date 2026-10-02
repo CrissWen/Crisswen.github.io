@@ -1,5 +1,5 @@
 import { PERFECT_HEALTH_LABEL, HEAL_PERFECT, CHAR_TYPE_MAP } from './constants.js';
-import { randInt, shuffleArray } from './random.js';
+import { randInt, shuffleArray } from '../random.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { resolveIds, setHostEvent, nameOf, labelOf, targetPhrase } from './common.js';
