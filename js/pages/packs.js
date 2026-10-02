@@ -1,6 +1,6 @@
 import { esc } from '../utils/escape-html.js';
 import { listPacks, deletePack } from '../services/packs-store.js';
-import { showCustomConfirm } from '../game-modules/overlays/confirm-dialog.js';
+import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 
 // ===== Сторінка "Паки" (#/packs): сітка карток паків =====
@@ -21,19 +21,20 @@ function cardHtml(pack) {
     ? esc(pack.description)
     : '<span class="pack-card__desc-empty">Без опису</span>';
 
-  const corner = pack.isDefault
-    ? '<span class="pack-card__badge">Базовий</span>'
-    : `
+  // Кнопки керування рендеряться лише для автора (pack.isOwn); для дефолтного та будь-якого чужого пака їх у верстці немає
+  const corner = pack.isOwn
+    ? `
       <div class="pack-card__menu">
         <button type="button" class="pack-card__kebab" data-menu-toggle aria-haspopup="menu" aria-expanded="false" aria-label="Дії з паком">⋮</button>
         <div class="pack-card__dropdown" role="menu" hidden>
           <button type="button" class="pack-card__dropdown-item" role="menuitem" data-delete-pack="${esc(pack.id)}">Видалити пак</button>
         </div>
-      </div>`;
+      </div>`
+    : (pack.isDefault ? '<span class="pack-card__badge">Базовий</span>' : '');
 
-  const footer = pack.isDefault
-    ? '<span class="pack-card__readonly">Лише перегляд</span>'
-    : `<a class="pk-btn pk-btn--primary pack-card__edit" href="#/pack-editor?id=${encodeURIComponent(pack.id)}">Редагувати</a>`;
+  const footer = pack.isOwn
+    ? `<a class="pk-btn pk-btn--primary pack-card__edit" href="#/pack-editor?id=${encodeURIComponent(pack.id)}">Редагувати</a>`
+    : '<span class="pack-card__readonly">Лише перегляд</span>';
 
   return `
     <article class="pack-card${pack.isDefault ? ' pack-card--default' : ''}" data-pack-id="${esc(pack.id)}">
@@ -49,7 +50,7 @@ function cardHtml(pack) {
 }
 
 function gridHtml(packs) {
-  const hasPersonal = packs.some(p => !p.isDefault);
+  const hasPersonal = packs.some(p => p.isOwn);
   return `
     <div class="packs-grid">${packs.map(cardHtml).join('')}</div>
     ${hasPersonal ? '' : '<p class="packs-empty">У вас ще немає особистих паків. Натисніть "+ Створити пак", щоб додати перший.</p>'}
@@ -98,7 +99,7 @@ async function handleDelete(btn) {
 
   isDeleting = true;
   try {
-    const confirmed = await showCustomConfirm(DELETE_CONFIRM_TEXT, anchor);
+    const confirmed = await showPackConfirm(DELETE_CONFIRM_TEXT, anchor, { confirmLabel: 'Видалити' });
     if (!confirmed) return;
 
     await deletePack(packId);

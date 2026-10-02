@@ -127,10 +127,13 @@
   width:100%;padding:10px 12px;
   background:var(--panel-2);border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
   color:var(--text);font-family:var(--body);font-size:14px;line-height:1.5;
-  transition:border-color .2s ease;
+  transition:border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
 }
-.pe-input::placeholder{color:var(--text-mute);}
-.pe-input:focus{outline:none;border-color:var(--accent);}
+.pe-input::placeholder{color:var(--text-mute);transition:opacity .2s ease;}
+/* Наведення: рамка теплішає; фокус: рамка в акцентний колір + м’яке світіння; підказка-плейсхолдер стишується */
+.pe-input:hover:not(:focus):not(.is-invalid):not(:disabled){border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
+.pe-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);}
+.pe-input:focus::placeholder{opacity:.55;}
 .pe-input.is-invalid{border-color:var(--danger);}
 .pe-desc{resize:vertical;min-height:76px;}
 .pe-cards{resize:vertical;min-height:280px;font-family:var(--mono);font-size:13.5px;}
@@ -155,11 +158,13 @@
   border:1px solid var(--metal-lt);border-radius:999px;
   background:transparent;color:var(--text);
   font-family:var(--body);font-size:13px;cursor:pointer;
-  transition:border-color .2s ease, background .2s ease;
+  transition:border-color .2s ease, background-color .2s ease, transform .1s ease;
 }
 .pe-chip span{font-family:var(--mono);color:var(--text-mute);}
-.pe-chip:hover{border-color:var(--hazard);}
-.pe-chip.is-active{border-color:var(--hazard);background:var(--panel-2);}
+/* Підсвічування й «протискання»: колір від --text теми, тож однаково добре і в темних, і в світлих темах */
+.pe-chip:hover{border-color:var(--hazard);background-color:color-mix(in srgb, var(--text) 8%, transparent);}
+.pe-chip:active{transform:scale(.97);}
+.pe-chip.is-active{border-color:var(--hazard);background-color:var(--panel-2);}
 
 /* Форма катаклізму: кожне поле в окремому блоці (підпис над полем), підказки — у placeholder */
 .pe-cata{
@@ -176,9 +181,143 @@
 .pe-cata .pe-input::placeholder{font-size:13px;}
 .pe-cata__actions{display:flex;flex-wrap:wrap;gap:10px;}
 .pe-cata__actions .pk-btn[hidden]{display:none;}
-.pe-cards--list{cursor:pointer;}
-/* Список катаклізмів: мале поле, висоту виставляє JS (autosizeCataList), ручний resize і скрол вимкнені */
-.pe-cards.pe-cards--list{min-height:84px;resize:none;overflow:hidden;}
+/* Список доданих катаклізмів: справжні рядки-кнопки. Уся анімація (заливка-«хвиля», смужка зліва, зсув тексту, стрілка,
+   «протискання», поява нового рядка) — чистий CSS без JS-вимірювань; кольори — лише змінні теми. */
+.pe-cata-list{
+  display:flex;flex-direction:column;gap:2px;
+  max-height:320px;overflow-y:auto;
+  padding:4px;
+  background:var(--panel-2);border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.pe-cata-list::-webkit-scrollbar{width:6px;}
+.pe-cata-list::-webkit-scrollbar-track{background:transparent;}
+.pe-cata-list::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+.pe-cata-list[hidden]{display:none;}
+/* Список поводиться як текстове поле: рамка реагує на наведення, а коли рядок у фокусі — світиться як активний інпут */
+.pe-cata-list:hover{border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
+.pe-cata-list:focus-within{border-color:var(--accent, var(--hazard));box-shadow:0 0 0 3px color-mix(in srgb, var(--accent, var(--hazard)) 22%, transparent);}
+.pe-cata-list__empty{margin:0;padding:10px 12px;font-size:13.5px;line-height:1.5;color:var(--text-mute);}
+
+.added-item-row{
+  position:relative;isolation:isolate;overflow:hidden;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;padding:9px 12px 9px 16px;
+  border:1px solid transparent;border-radius:var(--radius-sm);
+  /* Заливка-«хвиля»: при наведенні градієнт наїжджає зліва направо (анімується розмір фону) */
+  background:linear-gradient(90deg, color-mix(in srgb, var(--hazard) 18%, transparent), color-mix(in srgb, var(--hazard) 5%, transparent)) no-repeat left center / 0% 100%;
+  color:var(--text);
+  font-family:var(--body);font-size:14px;line-height:1.4;text-align:left;
+  cursor:pointer;
+  transition:background-size .35s cubic-bezier(.22,.8,.3,1), background-color .2s ease, border-color .2s ease, transform .12s ease;
+}
+/* Акцентна смужка зліва «виростає» від центру */
+.added-item-row::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--hazard);
+  transform:scaleY(0);
+  transition:transform .28s cubic-bezier(.22,.8,.3,1);
+}
+.added-item-row:hover,
+.added-item-row:focus-visible{
+  background-size:100% 100%;
+  border-color:color-mix(in srgb, var(--hazard) 35%, transparent);
+}
+.added-item-row:hover::before,
+.added-item-row:focus-visible::before,
+.added-item-row.is-selected::before{transform:scaleY(1);}
+.added-item-row:active{transform:scale(.98);}
+.added-item-row:focus-visible{outline:2px solid var(--accent, var(--hazard));outline-offset:-2px;}
+/* Обраний рядок (той, що зараз у формі): заливка лишається постійно */
+.added-item-row.is-selected{
+  background-size:100% 100%;
+  background-color:color-mix(in srgb, var(--hazard) 10%, transparent);
+  border-color:color-mix(in srgb, var(--hazard) 45%, transparent);
+}
+
+.added-item-row__name{
+  min-width:0;overflow-wrap:anywhere;
+  transition:transform .28s cubic-bezier(.22,.8,.3,1);
+}
+.added-item-row:hover .added-item-row__name,
+.added-item-row:focus-visible .added-item-row__name,
+.added-item-row.is-selected .added-item-row__name{transform:translateX(5px);}
+
+/* Підказка «змінити ›» випливає справа, стрілка виїжджає трохи далі при наведенні */
+.added-item-row__hint{
+  flex-shrink:0;display:inline-flex;align-items:center;gap:2px;
+  font-size:12px;color:var(--text-mute);
+  opacity:0;transform:translateX(-10px);
+  transition:opacity .2s ease, transform .28s cubic-bezier(.22,.8,.3,1), color .2s ease;
+}
+.added-item-row__hint::after{
+  content:"›";font-size:17px;line-height:1;
+  transition:transform .28s cubic-bezier(.22,.8,.3,1);
+}
+.added-item-row:hover .added-item-row__hint,
+.added-item-row:focus-visible .added-item-row__hint,
+.added-item-row.is-selected .added-item-row__hint{opacity:1;transform:translateX(0);color:var(--text);}
+.added-item-row:hover .added-item-row__hint::after{transform:translateX(3px);}
+.added-item-row.is-selected .added-item-row__hint{color:var(--hazard);}
+
+/* Щойно доданий рядок плавно з’являється (клас is-new ставить pack-editor.js лише на момент додавання) */
+@keyframes added-item-in{
+  from{opacity:0;transform:translateY(8px);}
+  to{opacity:1;transform:none;}
+}
+.added-item-row.is-new{animation:added-item-in .35s cubic-bezier(.22,.8,.3,1);}
+
+/* На сенсорних екранах наведення немає — підказка видима завжди */
+@media (hover:none){
+  .added-item-row__hint{opacity:1;transform:none;}
+}
+/* Користувачам із вимкненою анімацією в системі — миттєві стани без руху */
+@media (prefers-reduced-motion:reduce){
+  .added-item-row,
+  .added-item-row::before,
+  .added-item-row__name,
+  .added-item-row__hint,
+  .added-item-row__hint::after{transition:none;}
+  .added-item-row.is-new{animation:none;}
+  .added-item-row:active{transform:none;}
+  .added-item-row:hover .added-item-row__name,
+  .added-item-row:focus-visible .added-item-row__name,
+  .added-item-row.is-selected .added-item-row__name{transform:none;}
+}
+/* ----- Вікно підтвердження для паків (pack-confirm.js) ----- */
+.pk-confirm{
+  position:fixed;z-index:10003;
+  width:min(320px,calc(100vw - 24px));
+  padding:16px;
+  background:var(--panel);border:1px solid var(--metal-lt);border-top:3px solid var(--metal-lt);border-radius:var(--radius);
+  box-shadow:0 14px 36px rgba(0,0,0,.55);
+  opacity:0;transform:translateY(10px) scale(.96);
+  transition:opacity .2s ease, transform .2s ease, top .2s ease, left .2s ease;
+  pointer-events:none;
+}
+.pk-confirm--danger{border-top-color:var(--danger);}
+.pk-confirm.is-open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+.pk-confirm__text{
+  margin:0 0 16px;color:var(--text);font-family:var(--body);font-size:14px;line-height:1.5;
+  overflow-wrap:anywhere;
+}
+/* «Скасувати» завжди ближче до кнопки-якоря (де курсор): вікно ліворуч від якоря — «Скасувати» праворуч, і навпаки */
+.pk-confirm__row{display:flex;gap:10px;}
+.pk-confirm[data-side="left"] .pk-confirm__row{flex-direction:row-reverse;}
+.pk-confirm__btn{
+  flex:1;padding:10px 12px;
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  background:transparent;color:var(--text);
+  font-family:var(--body);font-size:14px;font-weight:600;cursor:pointer;
+  transition:filter .2s ease, border-color .2s ease, opacity .2s ease;
+}
+.pk-confirm__btn:hover:not(:disabled){border-color:var(--hazard);}
+.pk-confirm__btn:focus-visible{outline:2px solid var(--accent, var(--hazard));outline-offset:2px;}
+.pk-confirm__btn--ok{background:var(--hazard);border-color:var(--hazard);color:#000;}
+.pk-confirm--danger .pk-confirm__btn--ok{background:var(--danger);border-color:var(--danger);color:var(--on-danger,#1a0806);}
+.pk-confirm__btn--ok:hover:not(:disabled){filter:brightness(1.1);}
+.pk-confirm__btn.is-locked{opacity:.45;cursor:not-allowed;}
 
 .pe-actions-block{margin-bottom:0;}
 .pe-actions{display:flex;flex-wrap:wrap;gap:10px;}

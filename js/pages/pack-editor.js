@@ -2,7 +2,7 @@ import { esc } from '../utils/escape-html.js';
 import { CHARACTER_CATEGORIES, BUNKER_CATEGORIES, ALL_PACK_CATEGORIES } from '../utils/pack-categories.js';
 import { parseLines, buildCardRows, MAX_PACK_CARDS, CATACLYSM_LIMITS } from '../utils/pack-payload.js';
 import { getPack, savePack, getDefaultPackConfig } from '../services/packs-store.js';
-import { showCustomConfirm } from '../game-modules/overlays/confirm-dialog.js';
+import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 
 // ===== Сторінка "Редактор пака" (#/pack-editor, редагування — #/pack-editor?id=<uuid>) =====
@@ -59,6 +59,9 @@ let isSaving = false;
 let isConfirming = false;
 let allowLeave = false;     // після успішного збереження не питаємо браузер "Залишити сторінку?"
 let cataEditIndex = -1;     // індекс катаклізму, який зараз редагується у формі під списком; -1 = форма додає новий
+let newCataIndex = -1;      // індекс щойно доданого катаклізму: лише на один рендер отримує клас is-new (анімація появи)
+let searchQuery = '';       // запит у полі пошуку по характеристиках
+let searchAll = false;      // true = шукати у всіх категоріях, false = лише в активній
 
 function blankForm() {
   return { title: '', description: '', texts: {}, stages: { ...baseStages }, ranges: { ...baseRanges }, cataclysms: [] };
@@ -231,8 +234,24 @@ export function renderPackEditor() {
               <optgroup label="Бункер">${optionsHtml(BUNKER_CATEGORIES)}</optgroup>
             </select>
           </div>
+          <!-- Пошук: у поточній категорії або в усіх. Для текстових категорій показує список знайдених рядків (клік виділяє рядок у полі),
+               для катаклізмів фільтрує сам список (шукає за назвою й описом) -->
+          <div class="pe-field pe-search">
+            <label class="pe-label" for="pe-search">Пошук</label>
+            <div class="pe-search__box">
+              <svg class="pe-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input id="pe-search" class="pe-input pe-search__input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Пошук...">
+              <button type="button" id="pe-search-clear" class="pe-search__clear" aria-label="Очистити пошук" title="Очистити (Esc)" hidden>×</button>
+            </div>
+            <div class="pe-search__meta">
+              <label class="pe-search__all"><input type="checkbox" id="pe-search-all"> У всіх категоріях</label>
+              <span id="pe-search-count" aria-live="polite"></span>
+            </div>
+            <div id="pe-search-results" class="pe-cata-list pe-search-results" role="group" aria-label="Результати пошуку" hidden></div>
+          </div>
           <div class="pe-field">
             <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
+            <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані катаклізми" hidden></div>
             <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
           </div>
 
@@ -327,7 +346,7 @@ function updateButtons() {
 }
 
 function updateCardsMeta() {
-  const count = parseLines($('pe-cards').value).length;
+  const count = activeCategory === 'cataclysm' ? form.cataclysms.length : parseLines($('pe-cards').value).length;
   $('pe-lines-count').textContent = activeCategory === 'cataclysm' ? `Катаклізмів: ${count}` : `Рядків: ${count}`;
 }
 
@@ -348,11 +367,11 @@ function selectCategory(category) {
   $('pe-category').value = category;
   $('pe-cards').value = form.texts[category] || '';
   $('pe-cards').placeholder = placeholderFor(category);
-  $('pe-cards').readOnly = isCata;                       // у катаклізмів поле — лише список: редагування тільки через клік по назві і форму
-  $('pe-cards').classList.toggle('pe-cards--list', isCata);
+  $('pe-cards').hidden = isCata;                         // у катаклізмів замість textarea — список рядків (.added-item-row); редагування лише через клік по рядку і форму
+  $('pe-cata-list').hidden = !isCata;
   $('pe-cata').hidden = !isCata;
+  renderCataList();
   $('pe-cards').scrollTop = 0;
-  autosizeCataList();
   updateCardsMeta();
   renderSummary();
 }
@@ -390,7 +409,7 @@ function validateRanges() {
   return '';
 }
 
-// ----- Катаклізми: список (textarea лише для перегляду) + форма під ним -----
+// ----- Катаклізми: список рядків (.added-item-row) + форма під ним -----
 // Джерело істини — form.cataclysms (записи з pack-payload.js). Текст у textarea лише відображає їхні назви (по одній на рядок),
 // тому змінити катаклізм можна лише через форму: клік по назві → поля заповнюються → "Зберегти зміни" або "Видалити".
 const CATA_FIELDS = { name: 'pe-cata-name', desc: 'pe-cata-desc', timer: 'pe-cata-timer', stay: 'pe-cata-stay', pop: 'pe-cata-pop' };
@@ -453,6 +472,7 @@ function setCataMode(index) {
   document.querySelector('[data-cata-action="submit"]').textContent = item ? 'Зберегти зміни' : 'Додати';
   document.querySelector('[data-cata-action="cancel"]').hidden = !item;
   document.querySelector('[data-cata-action="delete"]').hidden = !item;
+  renderCataList();
 }
 
 // Очищає поля і повертає форму в режим "додати". Таймер за замовчуванням 0 (без таймера).
@@ -463,32 +483,35 @@ function resetCataForm() {
   setCataMode(-1);
 }
 
-function clearListSelection() {
-  const list = $('pe-cards');
-  list.setSelectionRange(0, 0);
-}
+// Список доданих катаклізмів — справжні рядки (кнопки .added-item-row), а не текст у textarea: підсвічування при наведенні,
+// "протискання" й виділення обраного рядка робить CSS (packs.css), без вимірювань геометрії та JS-анімацій.
+function renderCataList() {
+  const list = $('pe-cata-list');
+  // Перемальовка замінює кнопки, тож клавіатурний фокус треба повернути на рядок з тим самим індексом
+  const focusedIndex = document.activeElement?.closest?.('[data-cata-index]')?.dataset.cataIndex;
 
-// Поле-список катаклізмів мале й розтягується по мірі додавання рядків (без внутрішнього скролу)
-function autosizeCataList() {
-  const list = $('pe-cards');
-  list.style.height = 'auto';
-  if (activeCategory !== 'cataclysm') {
-    list.style.height = ''; // інші категорії мають звичайну велику поле з ручною зміною розміру
+  if (!form.cataclysms.length) {
+    list.innerHTML = `<p class="pe-cata-list__empty">${esc(CATACLYSM_LIST_PLACEHOLDER)}</p>`;
     return;
   }
-  const borders = list.offsetHeight - list.clientHeight;
-  list.style.height = `${list.scrollHeight + borders}px`;
-}
 
+  list.innerHTML = form.cataclysms.map((c, i) => {
+    const selected = i === cataEditIndex;
+    const isNew = i === newCataIndex;
+    return `
+      <button type="button" class="added-item-row${selected ? ' is-selected' : ''}${isNew ? ' is-new' : ''}" data-cata-index="${i}" aria-pressed="${selected}">
+        <span class="added-item-row__name">${esc(oneLine(c.name))}</span>
+        <span class="added-item-row__hint">${selected ? 'редагується' : 'змінити'}</span>
+      </button>`;
+  }).join('');
+
+  if (focusedIndex !== undefined) list.querySelector(`[data-cata-index="${focusedIndex}"]`)?.focus();
+}
 // Після будь-якої зміни списку: перемальовуємо поле-список, лічильники, підсумок і стан кнопок "Скасувати зміни"/"Очистити все"
 function applyCataChange({ scrollToEnd = false } = {}) {
   syncCataText();
-  if (activeCategory === 'cataclysm') {
-    const list = $('pe-cards');
-    list.value = form.texts.cataclysm;
-    autosizeCataList();
-    if (scrollToEnd) list.scrollTop = list.scrollHeight;
-  }
+  renderCataList();
+  if (scrollToEnd) $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
   updateCardsMeta();
   updateCategoryOptionLabels();
   renderSummary();
@@ -545,9 +568,16 @@ function submitCata() {
     form.cataclysms.push(result.item);
   }
 
-  applyCataChange({ scrollToEnd: !existing });
+  applyCataChange();
   resetCataForm();
-  if (existing) clearListSelection();
+
+  // Новий рядок з’являється з анімацією: клас is-new діє лише на цей рендер (далі перемальовки його вже не мають)
+  if (!existing) {
+    newCataIndex = form.cataclysms.length - 1;
+    renderCataList();
+    newCataIndex = -1;
+    $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
+  }
   showGlobalToast(existing ? 'Катаклізм оновлено' : 'Катаклізм додано');
 }
 
@@ -562,27 +592,20 @@ function startCataEdit(index) {
   $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function onCataListClick() {
-  if (activeCategory !== 'cataclysm' || form.cataclysms.length === 0) return;
+function onCataListClick(e) {
+  const row = e.target.closest('[data-cata-index]');
+  if (!row) return;
 
-  const list = $('pe-cards');
-  const lines = list.value.split('\n');
-  const caret = list.selectionStart ?? 0;
-  const index = Math.min(list.value.slice(0, caret).split('\n').length - 1, lines.length - 1);
-  if (!form.cataclysms[index]) return;
+  const index = Number(row.dataset.cataIndex);
+  if (!form.cataclysms[index] || index === cataEditIndex) return;
 
   // Якщо у формі є незбережене, не перезаписуємо її даними іншого катаклізму — спочатку має бути "Додати"/"Зберегти зміни" або "Скасувати"
-  if (index !== cataEditIndex && cataDraftPending()) {
+  if (cataDraftPending()) {
     showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
-    clearListSelection();
     return;
   }
 
-  // Підсвічуємо обраний рядок (виділяємо його цілим)
-  const start = lines.slice(0, index).reduce((sum, line) => sum + line.length + 1, 0);
-  list.setSelectionRange(start, start + lines[index].length);
-
-  if (index !== cataEditIndex) startCataEdit(index);
+  startCataEdit(index);
 }
 
 async function deleteCata(btn) {
@@ -592,7 +615,7 @@ async function deleteCata(btn) {
   isConfirming = true;
   let confirmed = false;
   try {
-    confirmed = await showCustomConfirm(`Чи точно хочете видалити катаклізм "${oneLine(item.name)}"?`, btn);
+    confirmed = await showPackConfirm(`Чи точно хочете видалити катаклізм "${oneLine(item.name)}"?`, btn, { confirmLabel: 'Видалити' });
   } finally {
     isConfirming = false;
   }
@@ -605,7 +628,6 @@ async function deleteCata(btn) {
 
   applyCataChange();
   resetCataForm();
-  clearListSelection();
   showGlobalToast('Катаклізм видалено');
 }
 
@@ -615,7 +637,7 @@ function handleCataClick(e) {
 
   switch (btn.dataset.cataAction) {
     case 'submit': submitCata(); break;
-    case 'cancel': resetCataForm(); clearListSelection(); break;
+    case 'cancel': resetCataForm(); break;
     case 'delete': deleteCata(btn); break;
   }
 }
@@ -634,7 +656,7 @@ async function confirmAction(actionLabel, anchor) {
   if (isConfirming) return false;
   isConfirming = true;
   try {
-    return await showCustomConfirm(`Чи точно хочете ${actionLabel}? ${UNSAVED_NOTE}`, anchor);
+    return await showPackConfirm(`Чи точно хочете ${actionLabel}? ${UNSAVED_NOTE}`, anchor, { confirmLabel: 'Підтвердити' });
   } finally {
     isConfirming = false;
   }
@@ -742,8 +764,11 @@ function onBeforeUnload(e) {
 // ----- Ініціалізація -----
 async function loadPackIntoForm(id) {
   const pack = await getPack(id);
-  if (!pack || pack.isDefault) {
-    showGlobalToast(pack?.isDefault ? 'Дефолтний пак не можна редагувати' : 'Пак не знайдено');
+  if (!pack || pack.forbidden || pack.isDefault) {
+    // Чужий пак (напр., вручну введений id в URL) — негайно назад у список зі сповіщенням
+    showGlobalToast(pack?.forbidden
+      ? 'У вас немає прав для редагування цього пака'
+      : (pack?.isDefault ? 'Дефолтний пак не можна редагувати' : 'Пак не знайдено'));
     goToList();
     return false;
   }
@@ -789,6 +814,7 @@ export async function initPackEditor() {
   isConfirming = false;
   allowLeave = false;
   cataEditIndex = -1;
+  newCataIndex = -1;
 
   window.addEventListener('beforeunload', onBeforeUnload);
 
@@ -807,7 +833,7 @@ export async function initPackEditor() {
   $('pe-category').addEventListener('change', e => selectCategory(e.target.value));
 
   // Катаклізми: клік по назві у полі-списку відкриває їх у формі, кнопки форми додають/зберігають/видаляють
-  $('pe-cards').addEventListener('click', onCataListClick);
+  $('pe-cata-list').addEventListener('click', onCataListClick);
   $('pe-cata').addEventListener('click', handleCataClick);
   $('pe-cata').addEventListener('input', handleCataInput);
 

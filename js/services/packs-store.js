@@ -2,7 +2,9 @@ import { supabase } from './supabase.js';
 import { buildSavePayload, cardToLine, extraMetaOf, cataclysmFromRow } from '../utils/pack-payload.js';
 
 // ===== Сховище паків (Supabase: таблиці packs, pack_cards, RPC save_personal_pack) =====
-// Форма пака для сторінок: { id, title, description, authorName, isDefault, cards, config }
+// Форма пака для сторінок: { id, title, description, authorName, isDefault, isOwn, cards, config }
+//   isOwn — пак належить поточному користувачу (лише такі паки можна редагувати/видаляти; дефолтний — ніколи). Це лише зручність UI:
+//   справжню перевірку авторства роблять RPC save_personal_pack / delete_personal_pack у БД (auth.uid()).
 //   cards — { [category]: string[] } (лише в getPack): рядки у форматі редактора ("Професія - Можливість" тощо), config — packs.config (лише в getPack)
 //   cataclysms — масив записів катаклізмів (форма в pack-payload.js: cataclysmFromRow), extraMeta — додаткова meta решти карток
 
@@ -40,12 +42,14 @@ export async function listPacks() {
   return (data || [])
     .map(row => {
       const isDefault = row.id === DEFAULT_PACK_ID;
+      const isOwn = !isDefault && row.author_id === user.id;
       return {
         id: row.id,
         title: row.title,
         description: row.description || '',
-        authorName: isDefault ? 'Система' : usernameOf(user),
-        isDefault
+        authorName: isDefault ? 'Система' : (isOwn ? usernameOf(user) : 'Невідомо'),
+        isDefault,
+        isOwn
       };
     })
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.title.localeCompare(b.title, 'uk'));
@@ -75,7 +79,7 @@ async function fetchAllCards(packId) {
   return rows;
 }
 
-// Повертає null, якщо пака немає або він чужий (відкрити в редакторі можна лише власний)
+// Повертає null, якщо пака немає, і { forbidden: true }, якщо він чужий (відкрити в редакторі можна лише власний)
 export async function getPack(id) {
   const user = await currentUser();
 
@@ -88,7 +92,7 @@ export async function getPack(id) {
   if (!data) return null;
 
   const isDefault = data.id === DEFAULT_PACK_ID;
-  if (!isDefault && data.author_id !== user.id) return null;
+  if (!isDefault && data.author_id !== user.id) return { forbidden: true };
 
   const cards = {};
   const cataclysms = []; // катаклізми — окремі записи з полями (назва, опис, таймер, час перебування, популяція), а не рядки тексту
@@ -113,6 +117,7 @@ export async function getPack(id) {
     description: data.description || '',
     authorName: isDefault ? 'Система' : usernameOf(user),
     isDefault,
+    isOwn: !isDefault,
     cards,
     cataclysms,
     extraMeta,
@@ -141,18 +146,23 @@ export async function savePack({ id, title, description, config, cards }) {
     if (error.code === 'PGRST202') {
       throw new Error('У базі немає функції save_personal_pack. Виконайте supabase/migrations/01_personal_packs_stage1.sql');
     }
-    throw new Error(error.message);
+    throw new Error(error.message); // текст помилки доступу (RAISE EXCEPTION у БД) показуємо як є
   }
   return packId;
 }
 
-// Видалення особистого пака. Якщо RLS нічого не дозволила видалити, рядків у відповіді не буде — це помилка, а не успіх.
+// Видалення особистого пака — через RPC delete_personal_pack (SECURITY DEFINER): вона сама перевіряє, що auth.uid() — автор пака,
+// і видаляє пак разом із картками. Прямий DELETE у таблицю блокувала RLS.
 export async function deletePack(id) {
   if (id === DEFAULT_PACK_ID) throw new Error('Дефолтний пак видаляти не можна');
 
-  const { data, error } = await supabase.from('packs').delete().eq('id', id).select('id');
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) throw new Error('Не вдалося видалити пак: немає доступу або його вже видалено');
+  const { error } = await supabase.rpc('delete_personal_pack', { p_pack_id: id });
+  if (error) {
+    if (error.code === 'PGRST202') {
+      throw new Error('У базі немає функції delete_personal_pack. Виконайте SQL із ТЗ (частина 1.1)');
+    }
+    throw new Error(error.message);
+  }
 }
 
 // Вибір пака гри в кімнаті очікування (лише ведучий). Пишемо тільки selected_pack_id: назву в selected_pack_title, перевірку
