@@ -5,6 +5,7 @@
 import { getGlobalTime } from '../../utils/time-sync.js';
 
 const TIMER_ID = 'game-timer-root';
+const HIDE_AFTER_EXPIRED_MS = 10000; // скільки показувати 00 після завершення
 
 let intervalId = null;
 
@@ -27,7 +28,7 @@ function timerHtml() {
   `;
 }
 
-function tick(getBunkerState, onExpire) {
+function tick(getBunkerState) {
   const root = document.getElementById(TIMER_ID);
   if (!root) return;
 
@@ -38,7 +39,6 @@ function tick(getBunkerState, onExpire) {
   // Обидва порожні — таймер ніколи не запускали або його зупинили кнопкою "Стоп"
   if (!end && !hasPause) {
     root.hidden = true;
-    delete root.dataset.expiredTriggered;
     return;
   }
 
@@ -57,18 +57,10 @@ function tick(getBunkerState, onExpire) {
   const now = getGlobalTime();
   const remaining = Math.ceil((end - now) / 1000);
 
-  // Коли час вийшов і 00 провисіло 1 секунду — ховаємо і викликаємо onExpire
-  if (remaining <= -1) {
+  if (remaining <= -Math.ceil(HIDE_AFTER_EXPIRED_MS / 1000)) {
     root.hidden = true;
-    if (onExpire && !root.dataset.expiredTriggered) {
-      root.dataset.expiredTriggered = 'true';
-      onExpire();
-    }
     return;
   }
-
-  // Якщо час є — знімаємо прапорець (на випадок, якщо таймер запустили заново)
-  delete root.dataset.expiredTriggered;
 
   root.hidden = false;
   root.classList.toggle('game-timer--done', remaining <= 0);
@@ -76,13 +68,12 @@ function tick(getBunkerState, onExpire) {
   root.querySelector('[data-timer-time]').textContent = formatTime(remaining);
 }
 
-// getBunkerState — функція, що повертає актуальний bunker_state
-// onExpire — колбек, який викликається при досягненні 00
-export function mountGameTimer(getBunkerState, onExpire) {
+// getBunkerState — функція, що повертає актуальний bunker_state (щоб таймер бачив свіжі дані)
+export function mountGameTimer(getBunkerState) {
   unmountGameTimer();
   document.body.insertAdjacentHTML('beforeend', timerHtml());
-  tick(getBunkerState, onExpire);
-  intervalId = setInterval(() => tick(getBunkerState, onExpire), 1000);
+  tick(getBunkerState);
+  intervalId = setInterval(() => tick(getBunkerState), 1000);
 }
 
 export function unmountGameTimer() {

@@ -42,6 +42,7 @@ export function syncHostPanel(roomData, isHost, ctx) {
 
   if (!isHost || !isGameStarted) {
     if (root) removeHostPanel();
+    HostActions.clearTimerAutoStop?.();
     return;
   }
 
@@ -55,6 +56,7 @@ export function syncHostPanel(roomData, isHost, ctx) {
   }
 
   refreshHostPanel(root, hostPanelData(roomData, ctx));
+  HostActions.syncTimerAutoStop?.(ctx.getRoomCode(), roomData.bunker_state);
 }
 
 // Таблиця дій: data-action кнопки -> що викликати (run), що показати в тості (ok) і що зробити після (after).
