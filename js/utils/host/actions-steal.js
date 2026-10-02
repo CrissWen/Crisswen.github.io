@@ -33,7 +33,7 @@ export async function stealCharacteristic(roomCode, thiefId, victimId, charType)
   const thiefWasRevealed = slotRevealed(thief[charType]);   // порожній слот злодія — вважаємо закритим
   const victimWasRevealed = slotRevealed(victim[charType]);
 
-  const pools = replaceMode ? await loadPools(room.selected_pack_id) : null;
+  const pools = replaceMode ? await loadPools() : null;
   snapshot(room);
   const bState = room.bunker_state || {};
 

@@ -3,8 +3,6 @@ import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby, initLobby } from './pages/lobby.js';
 import { renderGame, initGame, cleanupGame } from './pages/game.js';
 import { renderProfile, initProfile } from './pages/profile.js'; // Підключаємо сторінку профілю
-import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
-import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pages/pack-editor.js';
 import { applyStoredTheme } from './utils/theme-manager.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
@@ -22,12 +20,7 @@ const routes = {
   '#/lobby': { render: renderLobby, init: initLobby, cleanup: null },
   '#/game': { render: renderGame, init: initGame, cleanup: cleanupGame },
   '#/profile': { render: renderProfile, init: initProfile, cleanup: null },
-  '#/packs': { render: renderPacks, init: initPacks, cleanup: cleanupPacks },
-  '#/pack-editor': { render: renderPackEditor, init: initPackEditor, cleanup: cleanupPackEditor },
 };
-
-// Маршрути, доступні лише авторизованим (інакше редірект на логін)
-const PROTECTED_ROUTES = ['#/lobby', '#/game', '#/profile', '#/packs', '#/pack-editor'];
 
 let currentRouteObj = null;
 
@@ -59,12 +52,6 @@ async function router() {
     globalHeader.style.display = 'none';
   }
 
-  // Підсвітка активного пункту навігації (редактор пака — частина розділу «Паки»)
-  const navPath = path === '#/pack-editor' ? '#/packs' : path;
-  document.querySelectorAll('.header-nav-link').forEach(link => {
-    link.classList.toggle('is-active', link.dataset.navPath === navPath);
-  });
-
   // Роутинг
   if (session && !window.location.hash) {
     window.location.hash = '#/lobby';
@@ -76,8 +63,8 @@ async function router() {
     return;
   }
 
-  // Захищені маршрути (див. PROTECTED_ROUTES)
-  if (!session && PROTECTED_ROUTES.includes(path)) {
+  // Додаємо '#/profile' до списку захищених маршрутів
+  if (!session && (path === '#/lobby' || path === '#/game' || path === '#/profile')) {
     window.location.hash = joinCode ? `#/login?join=${joinCode}` : '#/login';
     return;
   }

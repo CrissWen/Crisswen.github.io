@@ -33,7 +33,7 @@ export async function changeBunker(roomCode, field, customValue) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   if (!value) {
-    const pools = await loadPools(room.selected_pack_id);
+    const pools = await loadPools();
     value = await randomBunkerFieldValue(field, pools.bunker, bState);
     if (!value) throw new Error('Для цього параметра немає варіантів у пулі карток — введіть значення вручну');
   }
@@ -86,7 +86,7 @@ export async function changeBunkerItems(roomCode, action, value) {
 export async function changeCataclysm(roomCode) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools(room.selected_pack_id);
+  const pools = await loadPools();
   const bState = room.bunker_state || {};
   const card = pickCard(pools.bunker.cataclysm, 'Невідомий катаклізм');
   // Скільки хвилин відведено новому катаклізму на відлік (0/відсутнє — без таймера)
