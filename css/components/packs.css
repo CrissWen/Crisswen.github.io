@@ -88,7 +88,7 @@
   font-size:13px;color:var(--text-mute);
 }
 
-/* Меню "⋮" у куті картки */
+/* Меню «⋮» у куті картки */
 .pack-card__menu{position:relative;flex-shrink:0;}
 .pack-card__kebab{
   width:30px;height:30px;padding:0;
@@ -161,30 +161,10 @@
 .pe-chip:hover{border-color:var(--hazard);}
 .pe-chip.is-active{border-color:var(--hazard);background:var(--panel-2);}
 
-/* Форма катаклізму: кожне поле в окремому блоці (підпис над полем), підказки — у placeholder */
-.pe-cata{
-  display:flex;flex-direction:column;gap:16px;
-  padding-top:14px;border-top:1px solid var(--metal);
-}
-.pe-cata[hidden]{display:none;}
-.pe-cata__title{
-  margin:0;font-family:var(--head);font-weight:600;font-size:16px;letter-spacing:.05em;
-  text-transform:uppercase;color:var(--text);overflow-wrap:anywhere;
-}
-.pe-cata__grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}
-.pe-cata .pe-label{font-weight:600;color:var(--text);}
-.pe-cata .pe-input::placeholder{font-size:13px;}
-.pe-cata__actions{display:flex;flex-wrap:wrap;gap:10px;}
-.pe-cata__actions .pk-btn[hidden]{display:none;}
-.pe-cards--list{cursor:pointer;}
-/* Список катаклізмів: мале поле, висоту виставляє JS (autosizeCataList), ручний resize і скрол вимкнені */
-.pe-cards.pe-cards--list{min-height:84px;resize:none;overflow:hidden;}
-
 .pe-actions-block{margin-bottom:0;}
 .pe-actions{display:flex;flex-wrap:wrap;gap:10px;}
 
 @media (max-width:600px){
   .packs-grid{grid-template-columns:1fr;}
-  .pe-actions .pk-btn,
-  .pe-cata__actions .pk-btn{flex:1 1 100%;}
+  .pe-actions .pk-btn{flex:1 1 100%;}
 }

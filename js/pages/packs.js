@@ -3,9 +3,9 @@ import { listPacks, deletePack } from '../services/packs-store.js';
 import { showCustomConfirm } from '../game-modules/overlays/confirm-dialog.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 
-// ===== Сторінка "Паки" (#/packs): сітка карток паків =====
-// Дефолтний пак є в списку завжди, але без кнопок "Редагувати" / "Видалити" — лише перегляд.
-// Особисті паки: "Редагувати" внизу картки, "Видалити пак" у меню з трьох крапок у куті.
+// ===== Сторінка «Паки» (#/packs): сітка карток паків =====
+// Дефолтний пак є в списку завжди, але без кнопок «Редагувати» / «Видалити» — лише перегляд.
+// Особисті паки: «Редагувати» внизу картки, «Видалити пак» у меню з трьох крапок у куті.
 
 const DELETE_CONFIRM_TEXT = 'Чи точно хочете видалити цей пак? Цю дію неможливо скасувати.';
 
@@ -52,7 +52,7 @@ function gridHtml(packs) {
   const hasPersonal = packs.some(p => !p.isDefault);
   return `
     <div class="packs-grid">${packs.map(cardHtml).join('')}</div>
-    ${hasPersonal ? '' : '<p class="packs-empty">У вас ще немає особистих паків. Натисніть "+ Створити пак", щоб додати перший.</p>'}
+    ${hasPersonal ? '' : '<p class="packs-empty">У вас ще немає особистих паків. Натисніть «+ Створити пак», щоб додати перший.</p>'}
   `;
 }
 

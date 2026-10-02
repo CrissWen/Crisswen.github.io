@@ -1,5 +1,3 @@
-import { esc } from '../../utils/escape-html.js';
-
 export function cataclysm(data) {
   if (!data) {
     return `
@@ -27,7 +25,7 @@ export function cataclysm(data) {
         <div class="cataclysm-pop-label">Населення</div>
         <div class="cataclysm-pop-section">
           <div class="pop-mask"></div>
-          <p class="cataclysm-population">${esc(formattedPop)}</p>
+          <p class="cataclysm-population">${formattedPop}</p>
         </div>
       </div>
     `;
@@ -43,8 +41,8 @@ export function cataclysm(data) {
           <div class="cataclysm-main">
             <div class="cataclysm-icon">${(data.icon || "☢").replace(/\uFE0F/g, '\uFE0E')}</div>
             <div class="cataclysm-content">
-              <p class="cataclysm-title">${esc(data.title)}</p>
-              <p class="cataclysm-desc">${esc(data.desc)}</p>
+              <p class="cataclysm-title">${data.title}</p>
+              <p class="cataclysm-desc">${data.desc}</p>
             </div>
           </div>
           ${popDisplay}
