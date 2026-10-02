@@ -22,7 +22,8 @@ function cardHtml(pack) {
     : '<span class="pack-card__desc-empty">Без опису</span>';
 
   // Кнопки керування рендеряться лише для автора (pack.isOwn); для дефолтного та будь-якого чужого пака їх у верстці немає
-  const corner = pack.isOwn
+  // Виняток: адмін бачить базовий пак із isOwn=true, але без меню видалення (pack.isAdmin)
+  const corner = pack.isOwn && !pack.isAdmin
     ? `
       <div class="pack-card__menu">
         <button type="button" class="pack-card__kebab" data-menu-toggle aria-haspopup="menu" aria-expanded="false" aria-label="Дії з паком">⋮</button>

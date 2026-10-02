@@ -1,7 +1,7 @@
 import { esc } from '../utils/escape-html.js';
 import { CHARACTER_CATEGORIES, BUNKER_CATEGORIES, ALL_PACK_CATEGORIES } from '../utils/pack-categories.js';
 import { parseLines, buildCardRows, MAX_PACK_CARDS, CATACLYSM_LIMITS } from '../utils/pack-payload.js';
-import { getPack, savePack, getDefaultPackConfig } from '../services/packs-store.js';
+import { getPack, savePack, getDefaultPackConfig, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 
@@ -181,7 +181,11 @@ function rangesFieldsHtml() {
 
 export function renderPackEditor() {
   const isEdit = Boolean(getPackIdFromHash());
-  const saveLabel = isEdit ? 'Оновити особистий пак' : 'Створити особистий пак';
+  const isDefaultEdit = getPackIdFromHash() === DEFAULT_PACK_ID;
+  let saveLabel;
+  if (isDefaultEdit) saveLabel = 'Оновити базовий пак';
+  else if (isEdit) saveLabel = 'Оновити особистий пак';
+  else saveLabel = 'Створити особистий пак';
 
   const buttons = isEdit
     ? `
@@ -1057,6 +1061,7 @@ async function loadPackIntoForm(id) {
   const pack = await getPack(id);
   if (!pack || pack.forbidden || pack.isDefault) {
     // Чужий пак (напр., вручну введений id в URL) — негайно назад у список зі сповіщенням
+    // pack.isDefault повертається лише для звичайних користувачів (не адмінів)
     showGlobalToast(pack?.forbidden
       ? 'У вас немає прав для редагування цього пака'
       : (pack?.isDefault ? 'Дефолтний пак не можна редагувати' : 'Пак не знайдено'));

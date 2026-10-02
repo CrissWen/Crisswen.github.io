@@ -21,6 +21,24 @@ export function packDisplayName(packId, title) {
 const PAGE_SIZE = 1000; // ліміт рядків за один запит Supabase за замовчуванням
 const MAX_PAGES = 20;
 
+// Кеш прив'язаний до користувача: після зміни акаунта статус не лишається від попереднього.
+// Помилку запиту НЕ кешуємо (інакше тимчасовий збій назавжди робить адміна "звичайним" користувачем до перезавантаження).
+let _isAdmin = null;
+let _isAdminUserId = null;
+export async function checkIsAdmin() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  if (_isAdmin !== null && _isAdminUserId === user.id) return _isAdmin;
+  const { data, error } = await supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  if (error) {
+    console.error('checkIsAdmin: не вдалося перевірити статус адміна:', error);
+    return false;
+  }
+  _isAdmin = !!data;
+  _isAdminUserId = user.id;
+  return _isAdmin;
+}
+
 async function currentUser() {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) throw new Error('Ви не авторизовані');
@@ -30,8 +48,10 @@ async function currentUser() {
 const usernameOf = user => user.user_metadata?.username || 'Гравець';
 
 // 3.1: паки поточного користувача АБО дефолтний. Дефолтний завжди першим, далі за назвою.
+// Адмін бачить базовий пак із isOwn=true — щоб з'явилась кнопка «Редагувати».
 export async function listPacks() {
   const user = await currentUser();
+  const isAdmin = await checkIsAdmin();
 
   const { data, error } = await supabase
     .from('packs')
@@ -42,14 +62,16 @@ export async function listPacks() {
   return (data || [])
     .map(row => {
       const isDefault = row.id === DEFAULT_PACK_ID;
-      const isOwn = !isDefault && row.author_id === user.id;
+      // Адмін може редагувати базовий пак — isOwn = true для нього
+      const isOwn = (isDefault && isAdmin) || (!isDefault && row.author_id === user.id);
       return {
         id: row.id,
         title: row.title,
         description: row.description || '',
-        authorName: isDefault ? 'Система' : (isOwn ? usernameOf(user) : 'Невідомо'),
+        authorName: isDefault ? 'Система' : (row.author_id === user.id ? usernameOf(user) : 'Невідомо'),
         isDefault,
-        isOwn
+        isOwn,
+        isAdmin: isDefault && isAdmin // маркер: адмін редагує базовий → без кнопки «Видалити»
       };
     })
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.title.localeCompare(b.title, 'uk'));
@@ -79,9 +101,10 @@ async function fetchAllCards(packId) {
   return rows;
 }
 
-// Повертає null, якщо пака немає, і { forbidden: true }, якщо він чужий (відкрити в редакторі можна лише власний)
+// Повертає null, якщо пака немає, і { forbidden: true }, якщо він чужий (відкрити в редакторі можна лише власний або базовий для адміна)
 export async function getPack(id) {
   const user = await currentUser();
+  const isAdmin = await checkIsAdmin();
 
   const { data, error } = await supabase
     .from('packs')
@@ -92,23 +115,24 @@ export async function getPack(id) {
   if (!data) return null;
 
   const isDefault = data.id === DEFAULT_PACK_ID;
-  if (!isDefault && data.author_id !== user.id) return { forbidden: true };
+  const isOwn = (!isDefault && data.author_id === user.id) || (isDefault && isAdmin);
+  if (!isOwn && !isDefault) return { forbidden: true };
+  // Звичайний користувач не може відкрити базовий пак у редакторі
+  if (isDefault && !isAdmin) return { isDefault: true };
 
   const cards = {};
   const cataclysms = []; // катаклізми — окремі записи з полями (назва, опис, таймер, час перебування, популяція), а не рядки тексту
   const extraMeta = {}; // { [category]: { [value]: поля meta, яких немає в рядку редактора: custom_age, stages... } }
-  if (!isDefault) {
-    for (const row of await fetchAllCards(id)) {
-      if (row.category === 'cataclysm') {
-        cataclysms.push(cataclysmFromRow(row));
-        continue;
-      }
-      // meta (можливість професії) згортаємо назад у рядок редактора,
-      // а решту полів meta тримаємо окремо і повертаємо при збереженні (buildCardRows), інакше "Оновити пак" замінив б їх порожнім
-      (cards[row.category] ||= []).push(cardToLine(row.category, row.value, row.meta));
-      const extra = extraMetaOf(row.category, row.meta);
-      if (extra) (extraMeta[row.category] ||= {})[row.value] = extra;
+  for (const row of await fetchAllCards(id)) {
+    if (row.category === 'cataclysm') {
+      cataclysms.push(cataclysmFromRow(row));
+      continue;
     }
+    // meta (можливість професії) згортаємо назад у рядок редактора,
+    // а решту полів meta тримаємо окремо і повертаємо при збереженні (buildCardRows), інакше «Оновити пак» замінив б їх порожнім
+    (cards[row.category] ||= []).push(cardToLine(row.category, row.value, row.meta));
+    const extra = extraMetaOf(row.category, row.meta);
+    if (extra) (extraMeta[row.category] ||= {})[row.value] = extra;
   }
 
   return {
@@ -117,7 +141,8 @@ export async function getPack(id) {
     description: data.description || '',
     authorName: isDefault ? 'Система' : usernameOf(user),
     isDefault,
-    isOwn: !isDefault,
+    isOwn,
+    isAdmin: isDefault && isAdmin,
     cards,
     cataclysms,
     extraMeta,
@@ -127,10 +152,14 @@ export async function getPack(id) {
 
 // 3.5: збирає payload і викликає RPC. Пак і всі картки зберігаються однією транзакцією на стороні БД.
 // cards — рядки pack_cards: [{ pool_type, category, value, meta }]; повертає id збереженого пака.
+// Якщо packId === DEFAULT_PACK_ID і користувач — адмін, викликаємо save_default_pack (адмінський RPC).
 export async function savePack({ id, title, description, config, cards }) {
   const user = await currentUser();
   const packId = id || crypto.randomUUID();
-  if (packId === DEFAULT_PACK_ID) throw new Error('Дефолтний пак змінювати не можна');
+  const isAdmin = await checkIsAdmin();
+
+  const isSavingDefault = packId === DEFAULT_PACK_ID;
+  if (isSavingDefault && !isAdmin) throw new Error('Дефолтний пак змінювати не можна');
 
   const payload = buildSavePayload({
     packId,
@@ -141,10 +170,12 @@ export async function savePack({ id, title, description, config, cards }) {
     cardRows: cards
   });
 
-  const { error } = await supabase.rpc('save_personal_pack', payload);
+  // Адмін зберігає базовий пак через окремий RPC (save_default_pack), який обходить перевірку author_id=auth.uid()
+  const rpcName = isSavingDefault ? 'save_default_pack' : 'save_personal_pack';
+  const { error } = await supabase.rpc(rpcName, payload);
   if (error) {
     if (error.code === 'PGRST202') {
-      throw new Error('У базі немає функції save_personal_pack. Виконайте supabase/migrations/01_personal_packs_stage1.sql');
+      throw new Error(`У базі немає функції ${rpcName}. Виконайте потрібну SQL-міграцію`);
     }
     throw new Error(error.message); // текст помилки доступу (RAISE EXCEPTION у БД) показуємо як є
   }
