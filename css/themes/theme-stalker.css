@@ -35,3 +35,105 @@ body{
     url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.05"/%3E%3C/svg%3E');
   background-attachment: fixed;
 }
+
+/* ===== Кнопки теми «Сталкер»: контраст, чітка рамка, виразний hover =====
+   Базові стилі кнопок (packs.css, lobby.css) беруть рамку з --metal-lt і прозорий фон, тому в цій темі вони зливаються з панелями.
+   Тема підключається окремим <link>, клас .theme-stalker на body не ставиться — тож селектори прив'язані до самих кнопок.
+   Префікс button. і зайві :not() підвищують специфічність, щоб перебити базові правила незалежно від порядку підключення файлів. */
+:root{
+  --btn-bg:           #2b2e2a; /* темний мілітарі / брудний хакі */
+  --btn-text:         #e0d8c0; /* тьмяно-жовтуватий, як старий папір / шкала дозиметра */
+  --btn-border:       #5c6b42; /* оливковий контур */
+  --btn-hover-bg:     #3d423b;
+  --btn-hover-border: #7a8c57;
+  --btn-hover-text:   #ffffff;
+  --btn-shadow:       2px 2px 0 rgba(0,0,0,.5);   /* жорстка тінь у стилі грімдарк */
+  --btn-glow:         0 0 8px rgba(122,140,87,.4); /* легке токсичне світіння при наведенні */
+  --btn-disabled-bg:     #1a1a1a;
+  --btn-disabled-text:   #6b6b62;
+  --btn-disabled-border: #333333;
+}
+
+/* Звичайні (ghost) кнопки: «Скасувати», «Очистити все», «Створити пак» у списку тощо */
+button.pk-btn:not(.pk-btn--primary):not(.pk-btn--danger),
+button.pk-confirm__btn:not(.pk-confirm__btn--ok),
+button.reconnect-card__btn{
+  background:var(--btn-bg);
+  color:var(--btn-text);
+  border:1px solid var(--btn-border);
+  box-shadow:var(--btn-shadow);
+  transition:background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+button.pk-btn:not(.pk-btn--primary):not(.pk-btn--danger):hover:not(:disabled),
+button.pk-confirm__btn:not(.pk-confirm__btn--ok):hover:not(:disabled),
+button.reconnect-card__btn:hover:not(:disabled){
+  background:var(--btn-hover-bg);
+  border-color:var(--btn-hover-border);
+  color:var(--btn-hover-text);
+  box-shadow:var(--btn-shadow), var(--btn-glow);
+}
+button.pk-btn:not(.pk-btn--primary):not(.pk-btn--danger):active:not(:disabled),
+button.pk-confirm__btn:not(.pk-confirm__btn--ok):active:not(:disabled),
+button.reconnect-card__btn:active:not(:disabled){
+  transform:translate(1px,1px);
+  box-shadow:1px 1px 0 rgba(0,0,0,.5);
+}
+
+/* Головні кнопки (жовті): лишаються жовтими, але з темною рамкою, тінню й світінням при наведенні */
+button.pk-btn.pk-btn--primary,
+button.pk-confirm__btn.pk-confirm__btn--ok{
+  border:1px solid #f0cf3c;
+  box-shadow:var(--btn-shadow);
+  font-weight:700;
+}
+button.pk-btn.pk-btn--primary:hover:not(:disabled),
+button.pk-confirm__btn.pk-confirm__btn--ok:hover:not(:disabled){
+  filter:brightness(1.12);
+  box-shadow:var(--btn-shadow), 0 0 10px rgba(214,176,34,.45);
+}
+button.pk-btn.pk-btn--primary:active:not(:disabled){transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,.5);}
+
+/* Небезпечні кнопки: світліший червоний текст і рамка, щоб читались на темному; при наведенні заливаються */
+button.pk-btn.pk-btn--danger{
+  background:color-mix(in srgb, var(--danger) 18%, var(--btn-bg));
+  color:#e0746b;
+  border:1px solid #b8382e;
+  box-shadow:var(--btn-shadow);
+}
+button.pk-btn.pk-btn--danger:hover:not(:disabled){
+  background:var(--danger);
+  border-color:#d4483c;
+  color:#fff3ef;
+  box-shadow:var(--btn-shadow), 0 0 8px rgba(158,42,34,.55);
+}
+button.pk-btn.pk-btn--danger:active:not(:disabled){transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,.5);}
+
+/* Неактивні кнопки: темні й приглушені, але текст лишається читабельним (opacity повертаємо до 1, інакше колір «тоне» вдвічі) */
+button.pk-btn:disabled,
+button.pk-confirm__btn:disabled,
+button.reconnect-card__btn:disabled{
+  background:var(--btn-disabled-bg);
+  color:var(--btn-disabled-text);
+  border-color:var(--btn-disabled-border);
+  box-shadow:none;
+  opacity:1;
+  cursor:not-allowed;
+}
+
+/* Чіпи категорій у редакторі паків: та сама рамка, активний — із жовтою рамкою */
+button.pe-chip{
+  background:var(--btn-bg);
+  color:var(--btn-text);
+  border-color:var(--btn-border);
+}
+button.pe-chip:hover{background:var(--btn-hover-bg);border-color:var(--btn-hover-border);color:var(--btn-hover-text);}
+button.pe-chip.is-active{border-color:var(--hazard);background:var(--btn-hover-bg);}
+
+/* Фокус з клавіатури видно в усіх кнопок */
+button.pk-btn:focus-visible,
+button.pk-confirm__btn:focus-visible,
+button.reconnect-card__btn:focus-visible,
+button.pe-chip:focus-visible{
+  outline:2px solid var(--hazard);
+  outline-offset:2px;
+}

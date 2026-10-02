@@ -372,6 +372,7 @@ function selectCategory(category) {
   $('pe-cata').hidden = !isCata;
   renderCataList();
   $('pe-cards').scrollTop = 0;
+  renderSearch();
   updateCardsMeta();
   renderSummary();
 }
@@ -388,6 +389,285 @@ function syncFieldsFromForm() {
   resetCataForm();
   selectCategory(activeCategory);
   updateButtons();
+}
+
+// ----- Пошук по характеристиках -----
+// Один рядок пошуку на всі категорії. Запит розбивається на слова, і рядок підходить, якщо містить УСІ слова (без урахування регістру й різновидів апострофа).
+// Дві поведінки залежно від того, де шукаємо:
+//  • категорія "Катаклізм" (лише активна): фільтрується сам список катаклізмів (renderCataList) за назвою й описом;
+//  • решта (текстові категорії, або будь-яка, якщо увімкнено "У всіх категоріях"): під полем будується список знайдених рядків.
+// Клік по результату перемикає категорію, виділяє рядок у textarea (або відкриває катаклізм у формі).
+const SEARCH_MAX_RESULTS = 100;
+const SEARCH_APOSTROPHES = /[\u2019\u02BC\u2018`\u00B4]/g;
+
+function normalizeSearch(text) {
+  return String(text ?? '').toLocaleLowerCase('uk').replace(SEARCH_APOSTROPHES, "'");
+}
+
+const searchTokens = () => normalizeSearch(searchQuery).split(/\s+/).filter(Boolean);
+
+function matchesTokens(text, tokens) {
+  const normalized = normalizeSearch(text);
+  return tokens.every(token => normalized.includes(token));
+}
+
+const cataMatches = (c, tokens) => matchesTokens(`${c.name ?? ''} ${c.description ?? ''}`, tokens);
+
+// Фільтр самого списку катаклізмів діє, лише коли шукаємо в активній категорії "Катаклізм"
+const cataFilterActive = () => activeCategory === 'cataclysm' && !searchAll && searchTokens().length > 0;
+
+// Екранований HTML з підсвіченими збігами (<mark>). Якщо нормалізація змінила довжину рядка, позиції б зсунулись — тоді без підсвітки.
+function highlightHtml(text, tokens) {
+  const src = String(text ?? '');
+  if (!tokens || !tokens.length) return esc(src);
+  const normalized = normalizeSearch(src);
+  if (normalized.length !== src.length) return esc(src);
+
+  const ranges = [];
+  for (const token of tokens) {
+    let from = 0;
+    let at;
+    while ((at = normalized.indexOf(token, from)) !== -1) {
+      ranges.push([at, at + token.length]);
+      from = at + token.length;
+    }
+  }
+  if (!ranges.length) return esc(src);
+
+  ranges.sort((a, b) => a[0] - b[0]);
+  let html = '';
+  let pos = 0;
+  for (const [s, e] of ranges) {
+    if (e <= pos) continue; // діапазон повністю всередині вже підсвіченого
+    const start = Math.max(s, pos);
+    html += esc(src.slice(pos, start)) + `<mark class="pe-mark">${esc(src.slice(start, e))}</mark>`;
+    pos = e;
+  }
+  return html + esc(src.slice(pos));
+}
+
+// Уривок опису катаклізму навколо першого збігу (порожній рядок, якщо в описі збігів немає)
+function snippetHtml(text, tokens) {
+  const src = oneLine(text);
+  const normalized = normalizeSearch(src);
+  if (!src || normalized.length !== src.length) return '';
+  const hits = tokens.map(t => normalized.indexOf(t)).filter(i => i >= 0);
+  if (!hits.length) return '';
+  const from = Math.max(0, Math.min(...hits) - 30);
+  const part = src.slice(from, from + 90);
+  return `<small class="pe-result__snippet">${from > 0 ? '…' : ''}${highlightHtml(part, tokens)}${from + 90 < src.length ? '…' : ''}</small>`;
+}
+
+function collectSearchResults(tokens) {
+  const categories = searchAll ? ALL_PACK_CATEGORIES : ALL_PACK_CATEGORIES.filter(c => c.category === activeCategory);
+  const results = [];
+  let total = 0;
+
+  for (const { category, label } of categories) {
+    if (category === 'cataclysm') {
+      form.cataclysms.forEach((c, index) => {
+        if (!cataMatches(c, tokens)) return;
+        total++;
+        if (results.length < SEARCH_MAX_RESULTS) results.push({ type: 'cata', category, label, index, item: c });
+      });
+      continue;
+    }
+    String(form.texts[category] || '').split('\n').forEach((line, index) => {
+      const text = line.trim();
+      if (!text || !matchesTokens(text, tokens)) return;
+      total++;
+      if (results.length < SEARCH_MAX_RESULTS) results.push({ type: 'text', category, label, line: index, text });
+    });
+  }
+  return { results, total };
+}
+
+function resultRowHtml(r, tokens) {
+  if (r.type === 'cata') {
+    return `
+      <button type="button" class="added-item-row pe-result" data-res-cat="${esc(r.category)}" data-res-cata="${r.index}">
+        <span class="added-item-row__name">${highlightHtml(oneLine(r.item.name), tokens)}${snippetHtml(r.item.description, tokens)}</span>
+        <span class="pe-result__meta">${esc(r.label)}</span>
+      </button>`;
+  }
+  const where = `${searchAll ? `${esc(r.label)} · ` : ''}рядок ${r.line + 1}`;
+  return `
+    <button type="button" class="added-item-row pe-result" data-res-cat="${esc(r.category)}" data-res-line="${r.line}">
+      <span class="added-item-row__name">${highlightHtml(r.text, tokens)}</span>
+      <span class="pe-result__meta">${where}</span>
+    </button>`;
+}
+
+// Перемальовує панель результатів, лічильник і кнопку "×" за станом (searchQuery / searchAll / activeCategory / form)
+function renderSearch() {
+  const panel = $('pe-search-results');
+  if (!panel) return;
+  const count = $('pe-search-count');
+  const tokens = searchTokens();
+  $('pe-search-clear').hidden = !searchQuery;
+
+  if (!tokens.length) {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    count.textContent = '';
+    return;
+  }
+
+  // Катаклізми в активній категорії: фільтрується сам список, окрема панель не потрібна
+  if (cataFilterActive()) {
+    const n = form.cataclysms.filter(c => cataMatches(c, tokens)).length;
+    panel.hidden = true;
+    panel.innerHTML = '';
+    count.textContent = n ? `Знайдено: ${n}` : 'Нічого не знайдено';
+    return;
+  }
+
+  const { results, total } = collectSearchResults(tokens);
+  panel.hidden = false;
+  if (!total) {
+    count.textContent = 'Нічого не знайдено';
+    panel.innerHTML = `<p class="pe-cata-list__empty">Нічого не знайдено за запитом "${esc(searchQuery.trim())}"${searchAll ? '' : '. Спробуйте увімкнути "У всіх категоріях"'}</p>`;
+    return;
+  }
+  count.textContent = total > results.length ? `Знайдено: ${total} (показано ${results.length})` : `Знайдено: ${total}`;
+  panel.innerHTML = results.map(r => resultRowHtml(r, tokens)).join('');
+}
+
+function setSearchQuery(value, { focus = false } = {}) {
+  searchQuery = value;
+  const input = $('pe-search');
+  if (input.value !== value) input.value = value;
+  renderCataList();
+  renderSearch();
+  if (focus) input.focus();
+}
+
+// Вертикальна позиція символа в textarea (з урахуванням переносів): рахуємо у прихованому дзеркалі з тими самими шрифтом і шириною
+function textareaOffsetTop(ta, offset) {
+  const cs = getComputedStyle(ta);
+  const mirror = document.createElement('div');
+  for (const prop of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'tabSize',
+    'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']) {
+    mirror.style[prop] = cs[prop];
+  }
+  Object.assign(mirror.style, {
+    position: 'absolute', visibility: 'hidden', left: '-9999px', top: '0',
+    boxSizing: 'border-box', width: `${ta.clientWidth}px`, border: '0',
+    whiteSpace: 'pre-wrap', overflowWrap: 'break-word'
+  });
+  mirror.textContent = ta.value.slice(0, offset);
+  const marker = document.createElement('span');
+  marker.textContent = '\u200b';
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+  const top = marker.offsetTop;
+  mirror.remove();
+  return top;
+}
+
+// Результат-рядок: переходимо в його категорію, виділяємо рядок у textarea й прокручуємо до нього
+function openTextResult(category, lineIndex) {
+  if (category !== activeCategory) selectCategory(category);
+  const ta = $('pe-cards');
+  const lines = ta.value.split('\n');
+  const line = lines[lineIndex];
+  if (line === undefined || !line.trim()) {
+    showGlobalToast('Рядок змінився — виберіть результат ще раз');
+    renderSearch();
+    return;
+  }
+  let start = 0;
+  for (let i = 0; i < lineIndex; i++) start += lines[i].length + 1;
+  start += line.search(/\S/);
+  const end = start + line.trim().length;
+
+  ta.focus({ preventScroll: true });
+  ta.setSelectionRange(start, end);
+  ta.scrollTop = Math.max(0, textareaOffsetTop(ta, start) - ta.clientHeight / 3);
+  ta.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// Результат-катаклізм: відкриваємо його у формі (з тим самим захистом від втрати незбереженого, що й у кліку по списку)
+function openCataResult(index) {
+  if (activeCategory !== 'cataclysm') selectCategory('cataclysm');
+  if (!form.cataclysms[index]) return;
+  if (index !== cataEditIndex) {
+    if (cataDraftPending()) {
+      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
+      $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    startCataEdit(index);
+    return;
+  }
+  $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function onSearchResultClick(e) {
+  const row = e.target.closest('.pe-result');
+  if (!row) return;
+  if (row.dataset.resCata !== undefined) openCataResult(Number(row.dataset.resCata));
+  else openTextResult(row.dataset.resCat, Number(row.dataset.resLine));
+}
+
+// Перший елемент, на який можна перейти з поля пошуку (результат або відфільтрований катаклізм)
+function firstSearchTarget() {
+  const panel = $('pe-search-results');
+  if (!panel.hidden) return panel.querySelector('.pe-result');
+  if (cataFilterActive()) return $('pe-cata-list').querySelector('[data-cata-index]');
+  return null;
+}
+
+function onSearchKeydown(e) {
+  if (e.key === 'Escape') {
+    if (searchQuery) {
+      e.preventDefault();
+      setSearchQuery('');
+    }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    firstSearchTarget()?.click();
+  } else if (e.key === 'ArrowDown') {
+    const target = firstSearchTarget();
+    if (target) {
+      e.preventDefault();
+      target.focus();
+    }
+  }
+}
+
+// Стрілки ↑/↓ ходять по рядках результатів (або по списку катаклізмів), Esc / ↑ з першого рядка повертає в поле пошуку
+function onSearchListKeydown(e) {
+  const btn = e.target.closest('button');
+  if (!btn || !searchQuery) return;
+  if (e.key === 'Escape') {
+    $('pe-search').focus();
+    return;
+  }
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  const rows = [...btn.parentElement.querySelectorAll('button')];
+  const next = rows[rows.indexOf(btn) + (e.key === 'ArrowDown' ? 1 : -1)];
+  if (next) next.focus();
+  else if (e.key === 'ArrowUp') $('pe-search').focus();
+}
+
+function initSearch() {
+  const input = $('pe-search');
+  input.value = searchQuery;
+  $('pe-search-all').checked = searchAll;
+  input.addEventListener('input', e => setSearchQuery(e.target.value));
+  input.addEventListener('keydown', onSearchKeydown);
+  $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }));
+  $('pe-search-all').addEventListener('change', e => {
+    searchAll = e.target.checked;
+    renderCataList();
+    renderSearch();
+  });
+  const results = $('pe-search-results');
+  results.addEventListener('click', onSearchResultClick);
+  results.addEventListener('keydown', onSearchListKeydown);
+  $('pe-cata-list').addEventListener('keydown', onSearchListKeydown);
 }
 
 // ----- Дії -----
@@ -495,12 +775,22 @@ function renderCataList() {
     return;
   }
 
-  list.innerHTML = form.cataclysms.map((c, i) => {
+  // Пошук по катаклізмах фільтрує сам список; рядок, що зараз відкритий у формі, лишається видимим, навіть якщо не збігається
+  const tokens = cataFilterActive() ? searchTokens() : [];
+  const rows = form.cataclysms
+    .map((c, i) => ({ c, i }))
+    .filter(({ c, i }) => !tokens.length || i === cataEditIndex || cataMatches(c, tokens));
+  if (!rows.length) {
+    list.innerHTML = '<p class="pe-cata-list__empty">Нічого не знайдено за запитом</p>';
+    return;
+  }
+
+  list.innerHTML = rows.map(({ c, i }) => {
     const selected = i === cataEditIndex;
     const isNew = i === newCataIndex;
     return `
       <button type="button" class="added-item-row${selected ? ' is-selected' : ''}${isNew ? ' is-new' : ''}" data-cata-index="${i}" aria-pressed="${selected}">
-        <span class="added-item-row__name">${esc(oneLine(c.name))}</span>
+        <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}</span>
         <span class="added-item-row__hint">${selected ? 'редагується' : 'змінити'}</span>
       </button>`;
   }).join('');
@@ -512,6 +802,7 @@ function applyCataChange({ scrollToEnd = false } = {}) {
   syncCataText();
   renderCataList();
   if (scrollToEnd) $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
+  renderSearch();
   updateCardsMeta();
   updateCategoryOptionLabels();
   renderSummary();
@@ -816,6 +1107,9 @@ export async function initPackEditor() {
   cataEditIndex = -1;
   newCataIndex = -1;
 
+  searchQuery = '';
+  searchAll = false;
+
   window.addEventListener('beforeunload', onBeforeUnload);
 
   $('pe-title').addEventListener('input', e => {
@@ -840,6 +1134,7 @@ export async function initPackEditor() {
   $('pe-cards').addEventListener('input', e => {
     if (activeCategory === 'cataclysm') return; // список катаклізмів не редагується текстом (джерело — form.cataclysms)
     form.texts[activeCategory] = e.target.value;
+    renderSearch(); // результати пошуку завжди відображають актуальний текст
     updateCardsMeta();
     updateCategoryOptionLabels();
     renderSummary();
@@ -864,6 +1159,8 @@ export async function initPackEditor() {
     form.ranges[field.dataset.range] = field.value;
     updateButtons();
   });
+
+  initSearch();
 
   $('pe-actions').addEventListener('click', handleActionsClick);
 

@@ -322,6 +322,63 @@
 .pe-actions-block{margin-bottom:0;}
 .pe-actions{display:flex;flex-wrap:wrap;gap:10px;}
 
+/* ----- Пошук у редакторі ----- */
+/* Лейбл «Пошук» лишається в DOM для скрінрідерів (for="pe-search"), але візуально прихований: підказка вже є в placeholder */
+.pe-search > .pe-label{
+  position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+.pe-search__box{position:relative;display:flex;align-items:center;}
+/* Лупа: жорсткий розмір (без цього SVG розтягується на всю ширину) + позиція всередині поля зліва */
+.pe-search__icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;flex:none;
+  color:var(--text-mute);opacity:.6;
+  pointer-events:none;
+  transition:color .2s ease, opacity .2s ease;
+}
+.pe-search__box:focus-within .pe-search__icon{color:var(--accent);opacity:1;}
+.pe-search__box .pe-search__input{padding-left:38px;padding-right:36px;}
+/* Кнопка очищення — всередині поля справа */
+.pe-search__clear{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;padding:0;
+  background:transparent;border:0;border-radius:50%;
+  color:var(--text-mute);font-size:18px;line-height:1;cursor:pointer;
+  transition:color .2s ease, background-color .2s ease;
+}
+.pe-search__clear:hover{color:var(--text);background-color:color-mix(in srgb, var(--text) 10%, transparent);}
+.pe-search__clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.pe-search__clear[hidden]{display:none;}
+/* Рядок під полем: чекбокс «У всіх категоріях» і лічильник знайденого */
+.pe-search__meta{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;
+  font-size:13px;color:var(--text-mute);
+}
+.pe-search__all{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+.pe-search__all input{margin:0;accent-color:var(--accent);cursor:pointer;}
+.pe-search-results[hidden]{display:none;}
+
+/* Підсвітка збігів (<mark class="pe-mark">) у результатах і в відфільтрованому списку катаклізмів */
+.pe-mark{
+  padding:0 1px;border-radius:2px;
+  background:color-mix(in srgb, var(--hazard) 35%, transparent);
+  color:inherit;
+}
+/* Рядок результату: текст зліва (для катаклізмів — назва + уривок опису), мітка категорії / номер рядка справа */
+.pe-result{align-items:center;}
+.pe-result .added-item-row__name{display:block;flex:1 1 auto;}
+.pe-result__snippet{display:block;margin-top:2px;font-size:12px;line-height:1.4;color:var(--text-mute);}
+.pe-result__meta{
+  flex:0 1 auto;max-width:45%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:var(--mono);font-size:11px;text-align:right;color:var(--text-mute);
+  transition:color .2s ease;
+}
+.pe-result:hover .pe-result__meta,
+.pe-result:focus-visible .pe-result__meta{color:var(--text);}
+
 @media (max-width:600px){
   .packs-grid{grid-template-columns:1fr;}
   .pe-actions .pk-btn,
