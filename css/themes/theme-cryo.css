@@ -107,7 +107,7 @@ body{
 }
 
 /* Header override for Cryo theme to make it less transparent and add ice texture */
-.main-header {
+.main-header, .confirm-dialog, .cataclysm-end-modal__card {
   
   background-image: linear-gradient(rgba(3, 11, 38, 0.92), rgba(3, 11, 38, 0.92)), url('../../textures/ice.svg') !important;
   background-size: 1200px !important;
