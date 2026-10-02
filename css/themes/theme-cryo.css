@@ -105,3 +105,15 @@ body{
   border: 2px solid var(--cryo-4) !important;
   box-shadow: 0 0 5px var(--cryo-4), inset 0 0 5px var(--cryo-4) !important;
 }
+
+/* Header override for Cryo theme to make it less transparent and add ice texture */
+.main-header {
+  
+  background-image: linear-gradient(rgba(3, 11, 38, 0.92), rgba(3, 11, 38, 0.92)), url('../../textures/ice.svg') !important;
+  background-size: 1200px !important;
+  background-repeat: repeat !important;
+  
+  
+  background-position: center !important;
+  
+}
