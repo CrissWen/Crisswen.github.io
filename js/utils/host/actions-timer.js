@@ -26,13 +26,13 @@ export async function setGlobalTimer(roomCode, seconds) {
 }
 
 // Повністю зупиняє таймер (ховає віджет): і активний відлік, і збережену паузу.
-export async function stopGlobalTimer(roomCode) {
+export async function stopGlobalTimer(roomCode, isAuto = false) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const bState = room.bunker_state || {};
   bState.global_timer_end = null;
   bState.timer_paused_left = null;
-  pushLog(bState, 'Ведучий зупинив таймер');
+  pushLog(bState, isAuto ? 'Час таймера вийшов' : 'Ведучий зупинив таймер');
   await saveRoom(roomCode, { bunker_state: bState });
 }
 

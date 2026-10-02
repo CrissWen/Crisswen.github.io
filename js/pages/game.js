@@ -133,7 +133,14 @@ export async function initGame() {
 
     subscribeToRoomUpdates();
     setupActionListeners();
-    mountGameTimer(() => localRoomState?.bunker_state);
+    mountGameTimer(
+      () => localRoomState?.bunker_state,
+      () => {
+        if (isHostOf(localRoomState)) {
+          HostActions.stopGlobalTimer(currentRoomCode, true).catch(err => console.error('Не вдалося зупинити таймер:', err));
+        }
+      }
+    );
     mountCataclysmTimer(onCataclysmTimerExpired);
     syncCataclysm(localRoomState.bunker_state, localRoomState.status);
 
