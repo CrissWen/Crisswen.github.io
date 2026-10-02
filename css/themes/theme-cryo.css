@@ -85,9 +85,7 @@ body{
   border-color: var(--cryo-4);
   box-shadow: inset 0 0 15px rgba(23, 174, 194, .3);
 }
-.char-lock:hover .lock-icon {
-  filter: drop-shadow(0 0 6px var(--cryo-5));
-}
+
 
 /* Таймер Катаклізму: замість тривожного червоного — "крижана загроза" */
 .cataclysm-timer {
