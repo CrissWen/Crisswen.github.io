@@ -1,6 +1,6 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
-import { randInt, pickCard, pickStage } from './random.js';
+import { randInt, pickCard, pickStage } from '../random.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
 

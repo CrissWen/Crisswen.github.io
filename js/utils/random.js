@@ -5,6 +5,15 @@ export function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+export function getSkewedRandomInt(min, max, skew = 3) {
+  let rand = Math.pow(Math.random(), skew); 
+  return Math.floor(rand * (max - min + 1)) + min;
+}
+
+export function rollChance(probability) {
+  return Math.random() < probability;
+}
+
 export function pickFromStrings(arr, fallback) {
   if (!arr || !Array.isArray(arr) || arr.length === 0) return fallback;
   return arr[randInt(0, arr.length - 1)];

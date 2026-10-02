@@ -1,10 +1,5 @@
 import { getGameConfig } from '../config/config-manager.js';
-import { randInt, pickCard, pickFromStrings, pickStage, shuffleArray } from './host/random.js';
-
-const getSkewedRandomInt = (min, max, skew = 3) => {
-  let rand = Math.pow(Math.random(), skew); 
-  return Math.floor(rand * (max - min + 1)) + min;
-};
+import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray } from './random.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -47,7 +42,7 @@ const calculateFoodMonths = (requiredMonths, bc) => {
 // Запаси їжі/води: місяці від тривалості перебування + з шансом bc.foodSupplyNoteChance особлива примітка з пулу food_supply
 const buildFoodAndWater = (requiredMonths, bunkerPool, bc) => {
   let result = formatStayTime(calculateFoodMonths(requiredMonths, bc));
-  if (bunkerPool?.food_supply && bunkerPool.food_supply.length > 0 && Math.random() < bc.foodSupplyNoteChance) {
+  if (bunkerPool?.food_supply && bunkerPool.food_supply.length > 0 && rollChance(bc.foodSupplyNoteChance)) {
     result += ` (${pickCard(bunkerPool.food_supply).value})`;
   }
   return result;
@@ -113,7 +108,7 @@ export async function generateGameState(playersList, pack, config) {
   const bunkerSize = `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
   
   let bunkerProblem = "Відсутня";
-  if (Math.random() < bc.bunkerProblemChance) {
+  if (rollChance(bc.bunkerProblemChance)) {
     bunkerProblem = pickCard(b.problems, "Відсутня").value;
   }
 
@@ -170,7 +165,7 @@ export async function generateGameState(playersList, pack, config) {
     if (genderItem.meta && genderItem.meta.custom_age) {
       ageVal = genderItem.meta.custom_age;
     }
-    const isChildfree = config.allow_childfree ? (Math.random() < bc.childfreeChance) : false;
+    const isChildfree = config.allow_childfree ? (rollChance(bc.childfreeChance)) : false;
 
     let bodyTypeVal = "Тілобудова невідома";
     if (c.body_type && c.body_type.length > 0) {
@@ -183,7 +178,7 @@ export async function generateGameState(playersList, pack, config) {
     let healthDisease = "Хвороба невідома";
     let healthStage = "Невідома стадія";
 
-    if (Math.random() < bc.perfectHealthChance) {
+    if (rollChance(bc.perfectHealthChance)) {
       healthDisease = "Ідеально здоровий";
       healthStage = null; 
     } else {
