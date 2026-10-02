@@ -675,9 +675,11 @@ function initSearch() {
 }
 
 // ----- Дії -----
-// 3.2: назва не порожня і не дорівнює default / дефолт (без урахування регістру)
+// 3.2: назва не порожня і не дорівнює default / дефолт (без урахування регістру).
+// Виняток: базовий пак (редагує лише адмін) зветься саме 'default' — його зарезервовану назву не перевіряємо.
 function validateTitle(title) {
   if (!title) return 'Вкажіть назву пака';
+  if (packId === DEFAULT_PACK_ID) return '';
   if (RESERVED_TITLES.includes(title.toLowerCase())) return `Назва "${title}" зарезервована системою`;
   return '';
 }
@@ -1059,12 +1061,14 @@ function onBeforeUnload(e) {
 // ----- Ініціалізація -----
 async function loadPackIntoForm(id) {
   const pack = await getPack(id);
-  if (!pack || pack.forbidden || pack.isDefault) {
+  // Для адміна getPack повертає повний об'єкт базового пака (isDefault: true, isAdmin: true) — його пускаємо.
+  // Для звичайного користувача — лише заглушка { isDefault: true } (без isAdmin), її блокуємо.
+  const blockedDefault = Boolean(pack?.isDefault && !pack.isAdmin);
+  if (!pack || pack.forbidden || blockedDefault) {
     // Чужий пак (напр., вручну введений id в URL) — негайно назад у список зі сповіщенням
-    // pack.isDefault повертається лише для звичайних користувачів (не адмінів)
     showGlobalToast(pack?.forbidden
       ? 'У вас немає прав для редагування цього пака'
-      : (pack?.isDefault ? 'Дефолтний пак не можна редагувати' : 'Пак не знайдено'));
+      : (blockedDefault ? 'Дефолтний пак не можна редагувати' : 'Пак не знайдено'));
     goToList();
     return false;
   }

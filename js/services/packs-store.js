@@ -161,14 +161,24 @@ export async function savePack({ id, title, description, config, cards }) {
   const isSavingDefault = packId === DEFAULT_PACK_ID;
   if (isSavingDefault && !isAdmin) throw new Error('Дефолтний пак змінювати не можна');
 
-  const payload = buildSavePayload({
-    packId,
-    authorId: user.id,
-    title,
-    description,
-    config,
-    cardRows: cards
-  });
+  // save_default_pack приймає (p_pack_id, p_title, p_description, p_config, p_cards) — без p_author_id (автор пака не міняється).
+  // PostgREST шукає функцію за іменами параметрів, тому при незбігу повертає 404 (PGRST202).
+  const payload = isSavingDefault
+    ? {
+        p_pack_id: packId,
+        p_title: title,
+        p_description: description,
+        p_config: config,
+        p_cards: cards
+      }
+    : buildSavePayload({
+        packId,
+        authorId: user.id,
+        title,
+        description,
+        config,
+        cardRows: cards
+      });
 
   // Адмін зберігає базовий пак через окремий RPC (save_default_pack), який обходить перевірку author_id=auth.uid()
   const rpcName = isSavingDefault ? 'save_default_pack' : 'save_personal_pack';
