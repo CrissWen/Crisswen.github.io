@@ -90,7 +90,8 @@ export function buildBoardViewModel(roomData, currentUserId) {
   const votingPlayers = Object.entries(pState).map(([id, p]) => ({
     id,
     name: p.name || 'Гравець',
-    alive: p.is_alive !== false
+    // Вигнаний (is_kicked) не голосує і не може бути кандидатом — так само, як і вибулий (is_alive === false)
+    alive: p.is_alive !== false && !p.is_kicked
   }));
 
   return {

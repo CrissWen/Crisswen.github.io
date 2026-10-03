@@ -213,7 +213,7 @@ function renderActiveGame(roomData, container) {
       voting: bState.voting,
       players: vm.votingPlayers,
       myId: currentUserId,
-      amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false
+      amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false && !pState[currentUserId]?.is_kicked
     })),
     // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
     safe('Особисті замітки', () => personalNotes()),

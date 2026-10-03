@@ -8,6 +8,11 @@ import { showGlobalToast } from '../overlays/global-toast.js';
 let wasVotingActive = false; // щоб автоскрол до #voting-section спрацював рівно один раз на кожне запускання голосування, а не при кожному рендері
 let votingFinishInFlight = false; // щоб декілька швидких postgres_changes підряд не відправили кілька паралельних finishVoting
 
+// Гравець бере участь у голосуванні (голосує і може бути кандидатом), лише якщо він не вибув і не вигнаний ведучим.
+function canParticipate(player) {
+  return !!player && player.is_alive !== false && !player.is_kicked;
+}
+
 // Скидання при виході зі сторінки гри
 export function resetVotingState() {
   wasVotingActive = false;
@@ -20,7 +25,7 @@ export function resetVotingState() {
 export function syncVotingScroll(pState, bState, ctx) {
   const userId = ctx.getUserId();
   const isActive = !!bState?.voting?.isActive;
-  const amAlive = !ctx.isSpectator() && pState?.[userId]?.is_alive !== false;
+  const amAlive = !ctx.isSpectator() && canParticipate(pState?.[userId]);
   const myVote = bState?.voting?.votes?.[userId];
 
   if (isActive && !wasVotingActive && amAlive && !myVote) {
@@ -40,9 +45,13 @@ export function maybeAutoFinishVoting(roomData, ctx) {
   const voting = roomData.bunker_state?.voting;
   if (!voting?.isActive) return;
 
-  const aliveCount = Object.values(roomData.players_state || {}).filter(p => p.is_alive !== false).length;
-  const votedCount = Object.keys(voting.votes || {}).length;
-  if (aliveCount === 0 || votedCount !== aliveCount) return;
+  // Рахуємо лише тих, хто може брати участь (не вибув і не вигнаний), і лише їхні голоси —
+  // голос вигнаного, відданий до вигнання, не має ні заважати, ні допомагати завершенню.
+  const pState = roomData.players_state || {};
+  const eligibleIds = Object.entries(pState).filter(([, p]) => canParticipate(p)).map(([id]) => id);
+  const votes = voting.votes || {};
+  const votedCount = eligibleIds.filter(id => votes[id]).length;
+  if (eligibleIds.length === 0 || votedCount < eligibleIds.length) return;
 
   if (votingFinishInFlight) return;
   votingFinishInFlight = true;
@@ -78,10 +87,15 @@ export async function handleVoteSubmit(btn, ctx) {
     // хто проголосував між останнім Realtime-оновленням локального стейту і цим кліком.
     const { data: room, error: fetchError } = await supabase
       .from('rooms')
-      .select('bunker_state')
+      .select('bunker_state, players_state')
       .eq('room_code', ctx.getRoomCode())
       .single();
     if (fetchError || !room) throw new Error(fetchError?.message || 'Кімнату не знайдено');
+
+    // Свіжа перевірка на момент запису: вигнаний не може голосувати і не може бути обраний кандидатом
+    const freshPlayers = room.players_state || {};
+    if (!canParticipate(freshPlayers[ctx.getUserId()])) throw new Error('Вигнані гравці не можуть голосувати');
+    if (!canParticipate(freshPlayers[candidateId])) throw new Error('Цього гравця вже виключено з голосування');
 
     const bunker_state = room.bunker_state || {};
     if (!bunker_state.voting?.isActive) throw new Error('Голосування вже завершено');
