@@ -16,8 +16,8 @@ function isEmptyValue(data) {
 }
 
 function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  return String(str ?? '').replace(/[&<>"]/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
   ));
 }
 
