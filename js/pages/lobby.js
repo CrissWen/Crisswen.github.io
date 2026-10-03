@@ -38,6 +38,12 @@ function isRoomPlaying(room) {
 return Object.keys(room.bunker_state || {}).length > 0 || room.status === 'playing';
 }
 
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 // HTML-вміст .reconnect-panel: або картки активних кімнат, або напис "Немає активних ігор", якщо масив порожній.
 // Стилі — в css/styles.css (.reconnect-card, .reconnect-panel тощо); тут лише розмітка з класами.
 function renderReconnectCards(rooms) {
@@ -50,11 +56,11 @@ return rooms.map(room => {
     return `
       <div class="reconnect-card">
         <div class="reconnect-card__head">
-          <span class="reconnect-card__code">Кімната: ${room.room_code}</span>
+          <span class="reconnect-card__code">Кімната: ${esc(room.room_code)}</span>
           <span class="reconnect-card__dot ${playing ? 'is-playing' : 'is-waiting'}" aria-hidden="true"></span>
         </div>
         <p class="reconnect-card__status">${playing ? 'Гра вже почалася' : 'Очікування гравців'}</p>
-        <button type="button" class="reconnect-card__btn" data-reconnect-code="${room.room_code}">Повернутися</button>
+        <button type="button" class="reconnect-card__btn" data-reconnect-code="${esc(room.room_code)}">Повернутися</button>
       </div>
     `;
   }).join('');

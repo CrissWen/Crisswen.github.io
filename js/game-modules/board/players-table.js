@@ -1,3 +1,43 @@
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
+// Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
+function renderSafeTooltip(popup, rawTooltip) {
+  popup.textContent = '';
+  if (!rawTooltip) return;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawTooltip, 'text/html');
+
+  function appendSafe(node, target) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      target.appendChild(document.createTextNode(node.textContent));
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tag = node.tagName.toLowerCase();
+      if (tag === 'b') {
+        const b = document.createElement('b');
+        for (const child of node.childNodes) {
+          appendSafe(child, b);
+        }
+        target.appendChild(b);
+      } else if (tag === 'br') {
+        target.appendChild(document.createElement('br'));
+      } else {
+        for (const child of node.childNodes) {
+          appendSafe(child, target);
+        }
+      }
+    }
+  }
+
+  for (const child of doc.body.childNodes) {
+    appendSafe(child, popup);
+  }
+}
+
 // БЛОК 4 — ТАБЛИЦЯ ГРАВЦІВ (перша колонка — ім'я, далі — характеристики)
 // aliveCount / totalCount — лічильник "Живі / Всі" у заголовку (#bunker-candidates-count).
 // Якщо не передано, лічильник рахується по масиву players (старa поведінка).
@@ -37,31 +77,31 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
   const cellHtml = (val) =>
     val ? `<span class="cell-value">${val}</span>` : `<span class="cell-empty"></span>`;
 
-  const head = columns.map((c) => `<th>${c} ${getTooltip(c)}</th>`).join("");
+  const head = columns.map((c) => `<th>${esc(c)} ${getTooltip(c)}</th>`).join("");
 
   const kickToggle = (p) => {
     if (!isHost || !p.id) return "";
     const label = p.isKicked ? "Повернути" : "Вигнати";
     const stateClass = p.isKicked ? " is-return" : "";
-    return `<div class="kick-action-btn${stateClass}" data-kick-id="${p.id}">${label}</div>`;
+    return `<div class="kick-action-btn${stateClass}" data-kick-id="${esc(p.id)}">${label}</div>`;
   };
 
   const rows = players
     .map((p, index) => {
       const cells = p.cells
-        .map((val, ci) => `<td data-col-label="${columns[ci]}">${cellHtml(val)}</td>`)
+        .map((val, ci) => `<td data-col-label="${esc(columns[ci])}">${cellHtml(val)}</td>`)
         .join("");
       const rowClass = p.isKicked ? 'kicked-player' : '';
       const firstLetter = (p.name || '').charAt(0);
       const avatarPadding = /^[gjpqyуфщц]/i.test(firstLetter) ? 'padding-bottom: 2px;' : 'padding-bottom: 0;';
       return `
-        <tr data-player="${p.name}" class="${rowClass}">
+        <tr data-player="${esc(p.name)}" class="${rowClass}">
           <td class="player-cell">
             <div class="player-info-wrapper">
               <span class="player-num">${index + 1}</span>
-              <span class="avatar" style="${avatarPadding}">${firstLetter}</span>
+              <span class="avatar" style="${avatarPadding}">${esc(firstLetter)}</span>
               <div class="player-name-wrapper">
-                <div class="player-nickname">${p.name}</div>
+                <div class="player-nickname">${esc(p.name)}</div>
                 ${kickToggle(p)}
               </div>
             </div>
@@ -106,8 +146,8 @@ document.addEventListener("mouseover", function(e) {
     document.body.appendChild(popup);
   }
 
-  // 2. Вставляємо текст із властивості data-tooltip нашої іконки
-  popup.innerHTML = icon.dataset.tooltip;
+  // 2. Вставляємо безпечно вміст із властивості data-tooltip нашої іконки
+  renderSafeTooltip(popup, icon.dataset.tooltip);
   
   // 3. Визначаємо абсолютні координати іконки на екрані
   const rect = icon.getBoundingClientRect();
