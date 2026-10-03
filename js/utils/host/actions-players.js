@@ -86,7 +86,7 @@ export async function invertGender(roomCode, targetId) {
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
-export async function swapCharacteristics(roomCode, charType, targetId = 'all') {
+export async function swapCharacteristics(roomCode, charType, target1, target2) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const pState = room.players_state || {};
@@ -94,21 +94,16 @@ export async function swapCharacteristics(roomCode, charType, targetId = 'all') 
   const allIds = Object.keys(pState);
   if (allIds.length < 2) throw new Error('Замало гравців для обміну');
 
-  let eventText;
-  if (targetId === 'all') {
-    const values = allIds.map(id => pState[id][charType]);
-    const shuffled = shuffleArray(values);
-    allIds.forEach((id, idx) => { pState[id][charType] = shuffled[idx]; });
-    eventText = `Ведучий обміняв характеристику «${labelOf(charType)}» між усіма гравцями`;
-  } else {
-    if (!pState[targetId]) throw new Error('Гравця не знайдено');
-    const others = allIds.filter(id => id !== targetId);
-    const partner = others[randInt(0, others.length - 1)];
-    const tmp = pState[targetId][charType];
-    pState[targetId][charType] = pState[partner][charType];
-    pState[partner][charType] = tmp;
-    eventText = `Ведучий обміняв характеристику «${labelOf(charType)}» між ${nameOf(pState, targetId)} та ${nameOf(pState, partner)}`;
-  }
+  if (!target1 || target1 === 'all') throw new Error('Оберіть першого гравця для обміну');
+  if (!pState[target1]) throw new Error('Гравця 1 не знайдено');
+  if (!target2 || target2 === 'all') throw new Error('Оберіть другого гравця для обміну');
+  if (!pState[target2]) throw new Error('Гравця 2 не знайдено');
+  if (target1 === target2) throw new Error('Гравці для обміну мають бути різними');
+
+  const tmp = pState[target1][charType];
+  pState[target1][charType] = pState[target2][charType];
+  pState[target2][charType] = tmp;
+  const eventText = `Ведучий обміняв характеристику «${labelOf(charType)}» між ${nameOf(pState, target1)} та ${nameOf(pState, target2)}`;
 
   setHostEvent(bState, eventText);
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });

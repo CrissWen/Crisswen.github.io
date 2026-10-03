@@ -158,7 +158,8 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
             `)}
 
             ${acc('Обмінятися характеристиками', `
-              ${field('Гравець (для всіх — випадковий обмін між усіма)', playersSelect('all'))}
+              ${field('Гравець 1', playersSelect('only', 'target1'))}
+              ${field('Гравець 2', playersSelect('only', 'target2'))}
               ${field('Характеристика', `<select class="hp-select" data-field="charType">${charTypeOptions()}</select>`)}
               ${actionBtn('Обміняти', 'swapCharacteristics')}
             `)}

@@ -83,7 +83,7 @@ function createHostActions(ctx) {
     changeExperience:     { run: f => HostActions.changeExperience(code(), f.target, f.level), ok: 'Стаж змінено' },
     changeDiseaseSeverity:{ run: f => HostActions.changeDiseaseSeverity(code(), f.target, f.level), ok: 'Ступінь хвороби змінено' },
     invertGender:        { run: f => HostActions.invertGender(code(), f.target), ok: 'Стать змінено' },
-    swapCharacteristics: { run: f => HostActions.swapCharacteristics(code(), f.charType, f.target), ok: 'Обмін виконано' },
+    swapCharacteristics: { run: f => HostActions.swapCharacteristics(code(), f.charType, f.target1, f.target2), ok: 'Обмін виконано' },
     stealCharacteristic: { run: f => HostActions.stealCharacteristic(code(), f.thief, f.victim, f.charType), ok: 'Характеристику викрадено' },
     healPlayer:          { run: f => HostActions.healPlayer(code(), f.target, f.heal), ok: 'Лікування застосовано' },
     addExtraCharacteristic: {
