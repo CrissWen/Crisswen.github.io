@@ -78,7 +78,7 @@ export async function invertGender(roomCode, targetId) {
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
     if (!p?.gender) return;
-    rerollGenderAndAge(p, pools, true);
+    rerollGenderAndAge(p, pools, true, false);
   });
 
   setHostEvent(bState, `Ведучий змінив стать ${targetPhrase(pState, targetId)}`);

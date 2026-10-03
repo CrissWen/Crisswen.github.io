@@ -171,12 +171,8 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Вкрасти', 'stealCharacteristic')}
             `)}
 
-            ${acc('Лікування', `
+            ${acc('Лікувати', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Ефект', `
-                <select class="hp-select" data-field="heal" data-stages="health" data-with-static>
-                  <option value="${HEAL_PERFECT}" data-static>Зробити ідеально здоровим</option>
-                </select>`)}
               ${actionBtn('Вилікувати', 'healPlayer')}
             `)}
 

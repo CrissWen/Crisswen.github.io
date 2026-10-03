@@ -42,7 +42,32 @@ export async function undoLastAction(roomCode) {
     throw new Error('Немає дії для скасування');
   }
   const room = await getRoom(roomCode);
-  const { players_state, bunker_state, host_id } = lastSnapshot;
+  const { players_state: restoredPState, bunker_state, host_id } = lastSnapshot;
+
+  // Переносимо стан відкритості карток та використання здібностей з поточного стану,
+  // щоб "Скасувати" не закривало те, що гравці встигли відкрити або використати
+  const currentPState = room.players_state || {};
+  for (const pid in currentPState) {
+    if (!restoredPState[pid]) continue;
+    for (const charKey in currentPState[pid]) {
+      const currVal = currentPState[pid][charKey];
+      const restVal = restoredPState[pid][charKey];
+      if (!currVal || !restVal) continue;
+      
+      if (Array.isArray(currVal) && Array.isArray(restVal)) {
+        for (let i = 0; i < currVal.length; i++) {
+          if (restVal[i] && currVal[i]) {
+            if ('is_revealed' in currVal[i]) restVal[i].is_revealed = currVal[i].is_revealed;
+            if ('is_used' in currVal[i]) restVal[i].is_used = currVal[i].is_used;
+          }
+        }
+      } else if (typeof currVal === 'object' && typeof restVal === 'object') {
+        if ('is_revealed' in currVal) restVal.is_revealed = currVal.is_revealed;
+        if ('is_used' in currVal) restVal.is_used = currVal.is_used;
+      }
+    }
+  }
+
   // Знімок старший за дії, що були після нього, тому з поточного стану переносимо те, що не належить скасованій дії:
   // лог (він — історія, тож скасована дія і сам запис про скасування лишаються в ньому) і latest_dice
   // (інакше повернувся б старий id кидка, і в усіх гравців заново програвся б попередній кидок).
@@ -51,6 +76,6 @@ export async function undoLastAction(roomCode) {
   if (Array.isArray(current.logs)) restored.logs = current.logs;
   if (current.latest_dice) restored.latest_dice = current.latest_dice;
   pushLog(restored, 'Ведучий скасував попередню дію');
-  await saveRoom(roomCode, { players_state, bunker_state: restored, host_id });
+  await saveRoom(roomCode, { players_state: restoredPState, bunker_state: restored, host_id });
   lastSnapshot = null;
 }
