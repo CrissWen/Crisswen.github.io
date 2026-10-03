@@ -152,6 +152,12 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Застосувати', 'changeDiseaseSeverity')}
             `)}
 
+            ${acc('Змінити статуру', `
+              ${field('Гравець', playersSelect('all'))}
+              ${field('Статура', `<select class="hp-select" data-field="level" data-stages="body_type"></select>`)}
+              ${actionBtn('Застосувати', 'changeBodyType')}
+            `)}
+
             ${acc('Змінити стать на протилежну', `
               ${field('Гравець', playersSelect('all'))}
               ${actionBtn('Змінити стать', 'invertGender')}

@@ -68,6 +68,24 @@ export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
+export async function changeBodyType(roomCode, targetId, bodyType) {
+  if (!bodyType) throw new Error('Оберіть статуру');
+  const room = await getRoom(roomCode);
+  snapshot(room);
+  const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
+
+  resolveIds(pState, targetId).forEach(id => {
+    const p = pState[id];
+    if (!p?.body) return;
+    p.body.type = bodyType;
+  });
+
+  setHostEvent(bState, `Ведучий встановив статуру «${bodyType}» ${targetPhrase(pState, targetId)}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+}
+
 export async function invertGender(roomCode, targetId) {
   const room = await getRoom(roomCode);
   snapshot(room);
