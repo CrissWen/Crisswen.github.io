@@ -108,6 +108,16 @@ export async function toggleKickPlayer(roomCode, playerId) {
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
+export async function kickPlayerFromLobby(roomCode, playerId) {
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  if (!playerId || !pState[playerId]) return;
+  
+  delete pState[playerId];
+  
+  await saveRoom(roomCode, { players_state: pState });
+}
+
 export async function restartGame(roomCode) {
   const room = await getRoom(roomCode);
   snapshot(room);
