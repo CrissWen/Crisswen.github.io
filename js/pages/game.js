@@ -256,7 +256,7 @@ function subscribeToRoomUpdates() {
       // Якщо гра ще не почалася, і нас видалили з players_state, значить нас вигнали з лобі
       const isGameStartedNow = Object.keys(localRoomState.bunker_state || {}).length > 0;
       if (!isGameStartedNow && localRoomState.host_id !== currentUserId && !localRoomState.players_state?.[currentUserId]) {
-        alert('Вас вигнали з кімнати.');
+        showGlobalToast('Вас вигнали з кімнати.');
         window.location.hash = '#/lobby';
         return;
       }
@@ -264,7 +264,7 @@ function subscribeToRoomUpdates() {
       // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
       if (localRoomState.status === 'closed') {
         freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
-        if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
+        if (localRoomState.host_id !== currentUserId) showGlobalToast('Ведучий закрив кімнату.');
         window.location.hash = '#/lobby';
         return;
       }
