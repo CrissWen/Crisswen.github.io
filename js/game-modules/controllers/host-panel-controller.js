@@ -82,10 +82,11 @@ function createHostActions(ctx) {
     changeCharacteristic: { run: f => HostActions.changeCharacteristic(code(), f.target, f.charType), ok: 'Характеристику змінено' },
     changeExperience:     { run: f => HostActions.changeExperience(code(), f.target, f.level), ok: 'Стаж змінено' },
     changeDiseaseSeverity:{ run: f => HostActions.changeDiseaseSeverity(code(), f.target, f.level), ok: 'Ступінь хвороби змінено' },
+    changeBodyType:       { run: f => HostActions.changeBodyType(code(), f.target, f.level), ok: 'Статуру змінено' },
     invertGender:        { run: f => HostActions.invertGender(code(), f.target), ok: 'Стать змінено' },
-    swapCharacteristics: { run: f => HostActions.swapCharacteristics(code(), f.charType, f.target), ok: 'Обмін виконано' },
+    swapCharacteristics: { run: f => HostActions.swapCharacteristics(code(), f.charType, f.target1, f.target2), ok: 'Обмін виконано' },
     stealCharacteristic: { run: f => HostActions.stealCharacteristic(code(), f.thief, f.victim, f.charType), ok: 'Характеристику викрадено' },
-    healPlayer:          { run: f => HostActions.healPlayer(code(), f.target, f.heal), ok: 'Лікування застосовано' },
+    healPlayer:          { run: f => HostActions.healPlayer(code(), f.target, HostActions.HEAL_PERFECT), ok: 'Гравця вилікувано' },
     addExtraCharacteristic: {
       // Якщо текстове поле не порожнє — передаємо його як кастомне значення, інакше береться випадкова картка
       run: f => HostActions.addExtraCharacteristic(code(), f.target, f.category, (f.customExtra || '').trim()),

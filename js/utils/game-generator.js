@@ -150,7 +150,8 @@ export async function generateGameState(playersList, pack, config) {
     backpacks: shuffleArray(c.backpack),
     large_inventory: shuffleArray(c.large_inventory),
     extra_info: shuffleArray(c.extra_info),
-    abilities: shuffleArray(c.special_ability)
+    abilities: shuffleArray(c.special_ability),
+    healths: shuffleArray(c.health)
   };
 
   const drawCard = (deckName, fallbackArray) => {
@@ -182,7 +183,7 @@ export async function generateGameState(playersList, pack, config) {
       healthDisease = "Ідеально здоровий";
       healthStage = null; 
     } else {
-      const healthItem = pickCard(c.health, "Хвороба невідома");
+      const healthItem = drawCard('healths', c.health);
       healthDisease = healthItem.value;
       healthStage = pickStage(healthItem, config.default_stages.health);
     }

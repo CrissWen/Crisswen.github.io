@@ -192,3 +192,22 @@
     cursor: not-allowed !important;
     opacity: .65;
 }
+
+/* Кнопка вигнання гравця з лобі (хост-режим) */
+.lobby-kick-btn {
+  opacity: 1; /* Завжди видно на мобільних (де hover: none) */
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+@media (hover: hover) {
+  .lobby-kick-btn {
+    opacity: 0; /* Ховаємо за замовчуванням на десктопі */
+  }
+  .lobby-player-item:hover .lobby-kick-btn {
+    opacity: 1; /* Показуємо при наведенні на рядок гравця */
+  }
+}
+
+.lobby-kick-btn:hover {
+  transform: scale(1.2);
+}

@@ -152,13 +152,20 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Застосувати', 'changeDiseaseSeverity')}
             `)}
 
+            ${acc('Змінити статуру', `
+              ${field('Гравець', playersSelect('all'))}
+              ${field('Статура', `<select class="hp-select" data-field="level" data-stages="body_type"></select>`)}
+              ${actionBtn('Застосувати', 'changeBodyType')}
+            `)}
+
             ${acc('Змінити стать на протилежну', `
               ${field('Гравець', playersSelect('all'))}
               ${actionBtn('Змінити стать', 'invertGender')}
             `)}
 
             ${acc('Обмінятися характеристиками', `
-              ${field('Гравець (для всіх — випадковий обмін між усіма)', playersSelect('all'))}
+              ${field('Гравець 1', playersSelect('only', 'target1'))}
+              ${field('Гравець 2', playersSelect('only', 'target2'))}
               ${field('Характеристика', `<select class="hp-select" data-field="charType">${charTypeOptions()}</select>`)}
               ${actionBtn('Обміняти', 'swapCharacteristics')}
             `)}
@@ -170,12 +177,8 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Вкрасти', 'stealCharacteristic')}
             `)}
 
-            ${acc('Лікування', `
+            ${acc('Лікувати', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Ефект', `
-                <select class="hp-select" data-field="heal" data-stages="health" data-with-static>
-                  <option value="${HEAL_PERFECT}" data-static>Зробити ідеально здоровим</option>
-                </select>`)}
               ${actionBtn('Вилікувати', 'healPlayer')}
             `)}
 

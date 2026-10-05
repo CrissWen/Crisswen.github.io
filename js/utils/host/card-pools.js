@@ -35,6 +35,7 @@ export async function getStageOptions() {
   return {
     profession: stages.profession || [],
     hobby: stages.hobby || [],
-    health: stages.health || []
+    health: stages.health || [],
+    body_type: stages.body_type || (pools.character?.body_type?.map(c => c.value)) || []
   };
 }
