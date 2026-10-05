@@ -1,0 +1,115 @@
+/* ===== Тест "Оцінка виживання бункера" (survival-test.html) =====
+   Кольори/шрифти — лише через змінні активної теми (--panel, --metal, --hazard, --ok, --text...),
+   тож тест автоматично виглядає в тій самій темі, що й гра. Клас-префікс .st-* і .survival-test-* не перетинається
+   з іншими компонентами. Цей файл підключений напряму в survival-test.html, а не через styles.css. */
+
+.st-wrap {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 0 60px;
+}
+
+.st-title {
+  font-family: var(--head);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 700;
+  text-align: center;
+  color: var(--hazard);
+  margin: 0 0 32px;
+}
+
+.st-card {
+  border: 1px solid var(--metal);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 18px 20px;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+
+.st-question {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--text);
+  padding: 0;
+  margin: 0 0 12px;
+  float: left; /* legend всередині fieldset інакше не переноситься коректно */
+  width: 100%;
+}
+.st-question + * { clear: both; }
+
+.st-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.st-option input {
+  accent-color: var(--hazard);
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  flex: none;
+  cursor: pointer;
+}
+
+fieldset.st-card { margin-inline: 0; }
+
+.st-actions {
+  display: flex;
+  gap: 16px;
+}
+.st-actions .st-btn { flex: 1; }
+
+.st-btn {
+  font-family: var(--body);
+  font-size: 15px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hazard);
+  background: var(--hazard);
+  color: #000;
+  cursor: pointer;
+  transition: filter .2s ease;
+}
+.st-btn:hover { filter: brightness(1.1); }
+.st-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.st-btn--ghost {
+  background: transparent;
+  color: var(--text);
+}
+.st-btn--ghost:hover { background: var(--panel-2); filter: none; }
+
+.st-btn--result {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--on-ok, var(--bg));
+}
+
+.st-result {
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.6;
+  border-color: var(--hazard);
+}
+.st-result--good { border-color: var(--ok); }
+.st-result--bad { border-color: var(--danger); }
+
+.st-restart {
+  display: block;
+  width: auto;
+  min-width: 200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .st-actions { flex-direction: column-reverse; gap: 10px; }
+  .st-question { font-size: 16px; }
+}

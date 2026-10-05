@@ -207,3 +207,17 @@ table.bunker-table td.player-cell .avatar {
 .kick-action-btn.is-return {
   color: var(--ok); /* "Повернути" — зелений */
 }
+
+/* Підказка під таблицею з посиланням на тест виживання (відкривається в новій вкладці, див. survival-test.html) */
+.survival-test-hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-mute);
+}
+.survival-test-link {
+  color: var(--hazard);
+  text-decoration: underline; /* підкреслені саме слова в лапках */
+  cursor: pointer;
+}
+.survival-test-link:hover { filter: brightness(1.2); }
