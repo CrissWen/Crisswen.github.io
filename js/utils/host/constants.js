@@ -34,6 +34,20 @@ export const BUNKER_FIELDS = [
   { key: 'items',             label: 'Предмети (Що є в бункері)' }
 ];
 
+// Характеристики, які ведучий може "обнулити" універсальною дією "Видалити характеристику" (actions-players.js → deleteCharacteristic).
+// key — поле в players_state; порядок — як у випадаючому списку панелі. Стать і спец. можливості свідомо не входять.
+export const DELETABLE_CHARACTERISTICS = [
+  { key: 'professions',     label: 'Професія' },
+  { key: 'health',          label: "Здоров'я" },
+  { key: 'phobias',         label: 'Фобія / Страх' },
+  { key: 'hobbies',         label: 'Хобі / Захоплення' },
+  { key: 'traits',          label: 'Риса характеру' },
+  { key: 'extra_info',      label: 'Додаткові відомості' },
+  { key: 'body',            label: 'Статура' },
+  { key: 'backpack',        label: 'Рюкзак' },
+  { key: 'large_inventory', label: 'Крупний інвентар' }
+];
+
 export const HEAL_PERFECT = 'perfect';
 
 // Значення поля health[0].disease для здорової людини (у неї немає ступеня хвороби)

@@ -1,10 +1,10 @@
-import { PERFECT_HEALTH_LABEL, HEAL_PERFECT, CHAR_TYPE_MAP } from './constants.js';
+import { PERFECT_HEALTH_LABEL, HEAL_PERFECT, CHAR_TYPE_MAP, DELETABLE_CHARACTERISTICS } from './constants.js';
 import { randInt, shuffleArray } from '../random.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { resolveIds, setHostEvent, nameOf, labelOf, targetPhrase } from './common.js';
 import {
-  drawCharacteristic, withReveal, rerollGenderAndAge, buildCustomCard,
+  drawCharacteristic, withReveal, rerollGenderAndAge, applyGenderCard, buildCustomCard,
   isEmptyChar, realCards, slotRevealed, emptyMarker
 } from './characteristics.js';
 
@@ -72,12 +72,28 @@ export async function changeBodyType(roomCode, targetId, bodyType) {
   if (!bodyType) throw new Error('Оберіть статуру');
   const room = await getRoom(roomCode);
   snapshot(room);
+  const pools = await loadPools(); // потрібна лише для діапазону зросту, коли статуру треба відновити після видалення
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
-    if (!p?.body) return;
+    if (!p) return;
+
+    // Після «Видалити характеристику» поле body — масив-заглушка [{ isEmpty: true, is_revealed }], а не об'єкт статури.
+    // Запис body.type у такий масив нічого не відновлює, тож будуємо картку заново (зріст — випадковий в діапазоні пака),
+    // статус відкрито/закрито беремо з самого маркера (slotRevealed для порожнього слота завжди false).
+    if (isEmptyChar(p.body)) {
+      const marker = Array.isArray(p.body) ? p.body.find(x => x && x.isEmpty) : p.body;
+      const range = pools.config?.height_range;
+      p.body = {
+        type: bodyType,
+        height_cm: range ? randInt(range.min, range.max) : 170,
+        is_revealed: !!marker?.is_revealed
+      };
+      return;
+    }
+
     p.body.type = bodyType;
   });
 
@@ -199,30 +215,111 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
-export async function deleteInventory(roomCode, targetId, actionType) {
+// Універсальне "Видалити характеристику": будь-яке поле зі списку DELETABLE_CHARACTERISTICS (constants.js) стає порожнім.
+// Замість голого [] пишемо маркер-заглушку (emptyMarker), що тримає статус відкриття слота: player-parser показує «Пусто» рівно там,
+// де картка була (відкрита або закрита), і вона не розкривається сама. Уже порожні слоти пропускаються.
+export async function deleteCharacteristic(roomCode, targetId, charKey) {
+  const meta = DELETABLE_CHARACTERISTICS.find(c => c.key === charKey);
+  if (!meta) throw new Error('Оберіть характеристику для видалення');
+
   const room = await getRoom(roomCode);
-  snapshot(room);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
-  const key = actionType === 'backpack' ? 'backpack' : 'large_inventory';
 
-  resolveIds(pState, targetId).forEach(id => {
-    if (!pState[id]) return;
-    const cur = pState[id][key];
-    // Зберігаємо статус видимості слота: змінюється лише текст («Пусто»), а картка лишається відкритою або закритою, як була.
-    // Без маркера (голий []) player-parser вважає порожній слот відкритим, тому картка розкривалася сама.
-    let wasRevealed;
-    if (isEmptyChar(cur)) {
-      const marker = Array.isArray(cur) ? cur.find(x => x && x.isEmpty) : (cur && cur.isEmpty ? cur : null);
-      wasRevealed = marker ? !!marker.is_revealed : true; // без маркера гравець бачив цей слот відкритим
-    } else {
-      wasRevealed = slotRevealed(cur);
-    }
-    pState[id][key] = emptyMarker(key, wasRevealed);
+  // Цілі, де ще є що видаляти. Перевірка ДО snapshot, щоб невдала спроба не затирала попередню точку скасування.
+  const ids = resolveIds(pState, targetId).filter(id => pState[id] && !isEmptyChar(pState[id][charKey]));
+  if (!ids.length) throw new Error('Ця характеристика вже порожня');
+
+  snapshot(room);
+
+  ids.forEach(id => {
+    // Статус відкриття беремо з поточної (непорожньої) картки — слот лишається відкритим або закритим, як був
+    pState[id][charKey] = emptyMarker(charKey, slotRevealed(pState[id][charKey]));
   });
 
-  const itemText = key === 'backpack' ? 'рюкзак' : 'крупний інвентар';
-  setHostEvent(bState, `Ведучий видалив ${itemText} у ${targetPhrase(pState, targetId, 'genitive')}`);
+  setHostEvent(bState, `Ведучий видалив характеристику «${meta.label}» у ${targetPhrase(pState, targetId, 'genitive')}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+}
+
+// Старий вхід для рюкзака / крупного інвентаря — тепер тонка обгортка над deleteCharacteristic (в панелі не використовується).
+export function deleteInventory(roomCode, targetId, actionType) {
+  return deleteCharacteristic(roomCode, targetId, actionType === 'backpack' ? 'backpack' : 'large_inventory');
+}
+
+// ===== Блок "Лікувати / Зробити" =====
+
+// Прапорець чайлдфрі живе в players_state[id].childfree = { value: boolean, is_revealed } (пише game-generator.js; читає player-parser.js,
+// першим дивиться старе поле is_childfree). Відображається разом із статтю та віком, тому is_revealed беремо в статі.
+async function setChildfree(roomCode, targetId, value) {
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
+
+  const flagKey = p => ('is_childfree' in p ? 'is_childfree' : 'childfree');
+  const ids = resolveIds(pState, targetId).filter(id => {
+    const p = pState[id];
+    return p?.gender && !!(p[flagKey(p)]?.value) !== value;
+  });
+  if (!ids.length) throw new Error(value ? 'Уже чайлдфрі' : 'Чайлдфрі відсутнє');
+
+  snapshot(room);
+
+  ids.forEach(id => {
+    const p = pState[id];
+    p[flagKey(p)] = { value, is_revealed: !!p.gender.is_revealed };
+  });
+
+  setHostEvent(bState, value
+    ? `Ведучий зробив ${targetPhrase(pState, targetId, 'genitive')} чайлдфрі`
+    : `Ведучий вилікував ${targetPhrase(pState, targetId, 'genitive')} від чайлдфрі`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+}
+
+export const makeChildfree = (roomCode, targetId) => setChildfree(roomCode, targetId, true);
+export const cureChildfree = (roomCode, targetId) => setChildfree(roomCode, targetId, false);
+
+// Вилікувати фобію: слот стає порожнім з написом «Немає» (статус відкриття слота зберігається).
+export async function curePhobia(roomCode, targetId) {
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
+
+  const ids = resolveIds(pState, targetId).filter(id => pState[id] && !isEmptyChar(pState[id].phobias));
+  if (!ids.length) throw new Error('Фобії вже немає');
+
+  snapshot(room);
+
+  ids.forEach(id => {
+    const wasRevealed = slotRevealed(pState[id].phobias);
+    pState[id].phobias = [{ isEmpty: true, value: 'Немає', is_revealed: wasRevealed }];
+  });
+
+  setHostEvent(bState, `Ведучий вилікував від фобії ${targetPhrase(pState, targetId, 'genitive')}`);
+
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+}
+
+// Задати конкретну стать (з пулу пака) і перегенерувати вік під неї. Вже маючих цю стать пропускаємо.
+export async function setGender(roomCode, targetId, genderValue) {
+  if (!genderValue) throw new Error('Оберіть стать');
+  const pools = await loadPools();
+  const card = (pools.character.gender || []).find(c => c.value === genderValue);
+  if (!card) throw new Error('Такої статі немає в паку');
+
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  const bState = room.bunker_state || {};
+
+  const ids = resolveIds(pState, targetId).filter(id => pState[id]?.gender && pState[id].gender.value !== card.value);
+  if (!ids.length) throw new Error('У гравця вже ця стать');
+
+  snapshot(room);
+
+  ids.forEach(id => applyGenderCard(pState[id], card, pools.config));
+
+  setHostEvent(bState, `Ведучий встановив стать «${card.value}» ${targetPhrase(pState, targetId)}`);
 
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }

@@ -79,6 +79,14 @@ export function rerollGenderAndAge(player, pools, excludeCurrent = false, update
   }
 }
 
+// Виставляє конкретну (обрану ведучим) стать і перегенеровує вік під неї (як у rerollGenderAndAge, але без випадкового вибору).
+// Стан "відкрито/закрито" старої статі успадковують і стать, і вік.
+export function applyGenderCard(player, card, config) {
+  const wasRevealed = !!player.gender?.is_revealed;
+  player.gender = { value: card.value, is_revealed: wasRevealed };
+  player.age = { value: generateAge(card, config), is_revealed: wasRevealed };
+}
+
 // Картка з тексту, який ведучий ввів вручну: { value, meta: {}, is_revealed: false }.
 // Додатково дублюємо текст у поле, яке читає player-parser (title / disease / item),
 // щоб картка коректно відобразилась. До БД не звертаємось: стадії залишаємо порожніми.

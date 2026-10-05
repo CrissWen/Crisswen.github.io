@@ -28,7 +28,8 @@ export async function loadPools() {
   return pools;
 }
 
-// Стадії (стаж професії, ступінь хвороби, рівень хобі) для випадаючих списків панелі
+// Стадії (стаж професії, ступінь хвороби, рівень хобі) для випадаючих списків панелі.
+// gender — усі варіанти статі з пака (для дії "Змінити стать" в блоці "Лікувати / Зробити"). Вони теж заповнюються через data-stages.
 export async function getStageOptions() {
   const pools = await loadPools();
   const stages = pools.config?.default_stages || {};
@@ -36,6 +37,7 @@ export async function getStageOptions() {
     profession: stages.profession || [],
     hobby: stages.hobby || [],
     health: stages.health || [],
-    body_type: stages.body_type || (pools.character?.body_type?.map(c => c.value)) || []
+    body_type: stages.body_type || (pools.character?.body_type?.map(c => c.value)) || [],
+    gender: (pools.character?.gender || []).map(c => c.value)
   };
 }

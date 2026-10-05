@@ -59,6 +59,17 @@ export function syncHostPanel(roomData, isHost, ctx) {
   HostActions.syncTimerAutoStop?.(ctx.getRoomCode(), roomData.bunker_state);
 }
 
+// Блок «Лікувати / Зробити»: одна кнопка «Застосувати» (data-action="healMake") виконує дію, обрану у select-і healAction.
+// Ключі — value у <option> (host-panel.js); run повертає проміс дії з host-actions.js, ok — текст тоста.
+const HEAL_MAKE_ACTIONS = {
+  bodyType:      { run: (code, f) => HostActions.changeBodyType(code, f.target, f.bodyType),                ok: 'Статуру змінено' },
+  perfect:       { run: (code, f) => HostActions.healPlayer(code, f.target, HostActions.HEAL_PERFECT),      ok: 'Гравця зроблено ідеально здоровим' },
+  makeChildfree: { run: (code, f) => HostActions.makeChildfree(code, f.target),                             ok: 'Статус «чайлдфрі» додано' },
+  cureChildfree: { run: (code, f) => HostActions.cureChildfree(code, f.target),                             ok: 'Статус «чайлдфрі» знято' },
+  curePhobia:    { run: (code, f) => HostActions.curePhobia(code, f.target),                                ok: 'Фобію вилікувано' },
+  gender:        { run: (code, f) => HostActions.setGender(code, f.target, f.genderValue),                  ok: 'Стать змінено' }
+};
+
 // Таблиця дій: data-action кнопки -> що викликати (run), що показати в тості (ok) і що зробити після (after).
 // Збирається фабрикою, а не константою, бо код кімнати береться з ctx у момент натискання.
 function createHostActions(ctx) {
@@ -82,18 +93,29 @@ function createHostActions(ctx) {
     changeCharacteristic: { run: f => HostActions.changeCharacteristic(code(), f.target, f.charType), ok: 'Характеристику змінено' },
     changeExperience:     { run: f => HostActions.changeExperience(code(), f.target, f.level), ok: 'Стаж змінено' },
     changeDiseaseSeverity:{ run: f => HostActions.changeDiseaseSeverity(code(), f.target, f.level), ok: 'Ступінь хвороби змінено' },
-    changeBodyType:       { run: f => HostActions.changeBodyType(code(), f.target, f.level), ok: 'Статуру змінено' },
     invertGender:        { run: f => HostActions.invertGender(code(), f.target), ok: 'Стать змінено' },
     swapCharacteristics: { run: f => HostActions.swapCharacteristics(code(), f.charType, f.target1, f.target2), ok: 'Обмін виконано' },
     stealCharacteristic: { run: f => HostActions.stealCharacteristic(code(), f.thief, f.victim, f.charType), ok: 'Характеристику викрадено' },
-    healPlayer:          { run: f => HostActions.healPlayer(code(), f.target, HostActions.HEAL_PERFECT), ok: 'Гравця вилікувано' },
+    healMake: {
+      run: async (f) => {
+        const entry = HEAL_MAKE_ACTIONS[f.healAction];
+        if (!entry) throw new Error('Оберіть дію');
+        await entry.run(code(), f);
+        return entry.ok; // текст тоста для обраної дії
+      },
+      ok: (message) => message
+    },
     addExtraCharacteristic: {
       // Якщо текстове поле не порожнє — передаємо його як кастомне значення, інакше береться випадкова картка
       run: f => HostActions.addExtraCharacteristic(code(), f.target, f.category, (f.customExtra || '').trim()),
       ok: 'Картку додано',
       after: root => { const el = root.querySelector('[data-field="customExtra"]'); if (el) el.value = ''; }
     },
-    deleteInventory:     { run: (f, arg) => HostActions.deleteInventory(code(), f.target, arg), ok: 'Інвентар видалено' },
+    deleteCharacteristic: {
+      run: f => HostActions.deleteCharacteristic(code(), f.target, f.charKey),
+      ok: 'Характеристику видалено',
+      after: root => { const el = root.querySelector('#charToDelete'); if (el) el.value = ''; } // назад до заглушки «Оберіть характеристику...»
+    },
     shift:               { run: (f, arg) => HostActions.shiftAnnulCharacteristics(code(), f.charType, arg), ok: 'Характеристики зсунуто' },
     changeBunker: {
       run: f => f.bunkerField === 'items'
@@ -144,7 +166,9 @@ const NO_CONFIRM_ACTIONS = new Set(['timer', 'pauseTimer', 'stopTimer', 'dice', 
 const CONFIRM_TEXTS = {
   closeRoom: 'Точно закрити кімнату? Усіх гравців буде відключено, дію не можна скасувати.',
   restart:   'Почати гру заново? Усі картки буде скинуто, гравці повернуться до кімнати очікування.',
-  changeHost:'Передати права ведучого обраному гравцю? Ви втратите доступ до цієї панелі.'
+  changeHost:'Передати права ведучого обраному гравцю? Ви втратите доступ до цієї панелі.',
+  healMake:  'Застосувати обрану дію до гравця?',
+  deleteCharacteristic: 'Видалити обрану характеристику? Картку буде обнулено (можна скасувати).'
 };
 const DEFAULT_CONFIRM_TEXT = 'Виконати цю дію з характеристикою?';
 
@@ -207,10 +231,20 @@ function bindHostEvents(root, ctx) {
   root.addEventListener('change', (e) => {
     if (e.target.closest('#bunker-item-action')) applyBunkerItemActionUI(root, ctx);
     else if (e.target.closest('[data-field="bunkerField"]')) applyBunkerParamUI(root, ctx);
+    else if (e.target.closest('[data-field="healAction"]')) applyHealActionUI(e.target);
   });
 }
 
 const setShown = (el, shown) => { if (el) el.style.display = shown ? '' : 'none'; };
+
+// «Лікувати / Зробити»: підсписок статури або статі показується лише для відповідної дії, усі інші дії працюють без додаткового вибору.
+function applyHealActionUI(actionSelect) {
+  const scope = actionSelect.closest('.hp-acc-body');
+  if (!scope) return;
+  scope.querySelectorAll('[data-heal-sub]').forEach(el => {
+    setShown(el, el.dataset.healSub === actionSelect.value);
+  });
+}
 
 // Вибір параметра бункера: "items" ховає стандартне поле і відкриває керування предметами
 // (дія за замовчуванням — "Додати"); будь-який інший параметр повертає стандартний вигляд.
