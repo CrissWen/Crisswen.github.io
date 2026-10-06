@@ -4,7 +4,7 @@ import { renderLobby, initLobby } from './pages/lobby.js';
 import { renderGame, initGame, cleanupGame } from './pages/game.js';
 import { renderProfile, initProfile } from './pages/profile.js'; // Підключаємо сторінку профілю
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
-import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pages/pack-editor.js';
+import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/index.js';
 import { applyStoredTheme } from './utils/theme-manager.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми

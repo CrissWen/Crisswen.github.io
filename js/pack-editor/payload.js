@@ -1,5 +1,5 @@
-import { ALL_PACK_CATEGORIES } from './pack-categories.js';
-import { parseCards, parseLines, oneLine } from './pack-parser.js';
+import { ALL_PACK_CATEGORIES } from './categories.js';
+import { parseCards, parseLines, oneLine } from './parser.js';
 
 // ===== Збирання payload для RPC save_personal_pack / save_default_pack =====
 // Чисті функції без DOM і мережі. Розбір тексту редактора на картки — у pack-parser.js.

@@ -1,16 +1,16 @@
-import { ALL_PACK_CATEGORIES } from '../utils/pack-categories.js';
-import { parseLines, oneLine } from '../utils/pack-parser.js';
+import { ALL_PACK_CATEGORIES } from './categories.js';
+import { parseLines, oneLine } from './parser.js';
 import {
   buildCardRows, MAX_PACK_CARDS, RANGE_DEFAULTS,
   validateTitle, validateRanges, stagesTextFromConfig, rangesFromConfig, buildPackConfig, normalizeForm,
   cataclysmNamesText, cataFieldStrings, hasCataDraft, validateCataclysmInput
-} from '../utils/pack-payload.js';
-import { tokenize, cataMatches, collectSearchResults } from '../utils/pack-search.js';
+} from './payload.js';
+import { tokenize, cataMatches, collectSearchResults } from './search.js';
 import { getPack, savePack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
-import * as ui from '../ui/editor-ui.js';
-import { $ } from '../ui/editor-ui.js';
+import * as ui from './ui.js';
+import { $ } from './ui.js';
 
 // ===== Сторінка "Редактор пака" (#/pack-editor, редагування — #/pack-editor?id=<uuid>) =====
 // Це контролер: стан сторінки, валідація, обробники подій і координація

@@ -1,8 +1,8 @@
 import { esc } from '../utils/escape-html.js';
-import { CHARACTER_CATEGORIES, BUNKER_CATEGORIES, ALL_PACK_CATEGORIES } from '../utils/pack-categories.js';
-import { CATACLYSM_LIMITS, STAGE_KEYS } from '../utils/pack-payload.js';
-import { oneLine } from '../utils/pack-parser.js';
-import { normalizeSearch, cataMatches } from '../utils/pack-search.js';
+import { CHARACTER_CATEGORIES, BUNKER_CATEGORIES, ALL_PACK_CATEGORIES } from './categories.js';
+import { CATACLYSM_LIMITS, STAGE_KEYS } from './payload.js';
+import { oneLine } from './parser.js';
+import { normalizeSearch, cataMatches } from './search.js';
 
 // ===== UI редактора паків: розмітка і робота з DOM =====
 // Усі функції отримують дані аргументами й нічого не знають про стан сторінки (form, activeCategory, пошуковий запит...):
