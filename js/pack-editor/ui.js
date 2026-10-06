@@ -1,5 +1,5 @@
 import { esc } from '../utils/escape-html.js';
-import { CHARACTER_CATEGORIES, BUNKER_CATEGORIES, ALL_PACK_CATEGORIES } from './categories.js';
+import { CHARACTER_CATEGORIES, BUNKER_CATEGORIES, ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from './categories.js';
 import { CATACLYSM_LIMITS, STAGE_KEYS } from './payload.js';
 import { oneLine } from './parser.js';
 import { normalizeSearch, cataMatches } from './search.js';
@@ -147,6 +147,18 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
             </div>
             <div id="pe-search-results" class="pe-cata-list pe-search-results" role="group" aria-label="Результати пошуку" hidden></div>
           </div>
+          <div class="pe-field pe-view-toggle" id="pe-view-toggle-wrap" hidden>
+            <label class="pe-label" for="pe-view-toggle">Режим вводу</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <select id="pe-view-toggle" class="pe-input pe-select" style="max-width: 250px;">
+                <option value="visual">Візуальний список (картки)</option>
+                <option value="llm">Режим LLM (Текст)</option>
+              </select>
+              <button type="button" id="pe-llm-copy" class="pk-btn pk-btn--ghost" title="Скопіювати промпт для LLM" style="padding: 0 12px; height: 38px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            </div>
+          </div>
           <div class="pe-field">
             <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
             <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані катаклізми" hidden></div>
@@ -184,6 +196,23 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
               <button type="button" class="pk-btn pk-btn--primary" data-cata-action="submit">Додати</button>
               <button type="button" class="pk-btn pk-btn--ghost" data-cata-action="cancel" hidden>Скасувати</button>
               <button type="button" class="pk-btn pk-btn--danger" data-cata-action="delete" hidden>Видалити</button>
+            </div>
+          </div>
+
+          <!-- Форма для динамічних категорій -->
+          <div id="pe-dynamic-form" class="pe-cata" hidden>
+            <h3 id="pe-dyn-mode" class="pe-cata__title">Нова картка</h3>
+            <p class="pe-hint">Список вище лише для перегляду. Щоб змінити або видалити картку, натисніть на її назву у списку.</p>
+            <div class="pe-field">
+              <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
+              <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
+            </div>
+            <div id="pe-dyn-fields"></div>
+            <p id="pe-dyn-error" class="pe-error" role="alert" hidden></p>
+            <div class="pe-cata__actions">
+              <button type="button" class="pk-btn pk-btn--primary" data-dyn-action="submit">Додати</button>
+              <button type="button" class="pk-btn pk-btn--ghost" data-dyn-action="cancel" hidden>Скасувати</button>
+              <button type="button" class="pk-btn pk-btn--danger" data-dyn-action="delete" hidden>Видалити</button>
             </div>
           </div>
 
@@ -275,16 +304,78 @@ export function setButtonState(btn, { disabled, text }) {
 // ----- Поля форми -----
 export const getCardsText = () => $('pe-cards').value;
 
-// Показує категорію: у катаклізмів замість textarea — список рядків (.added-item-row) і форма; редагування лише через клік по рядку
-export function showCategory({ category, text }) {
+// Показує категорію: перемикає textarea / списки / форми залежно від наявності схеми та режиму
+export function showCategory({ category, text, viewMode = 'visual' }) {
   const isCata = category === 'cataclysm';
+  const schema = CATEGORY_SCHEMAS[category];
+  const hasVisualMode = isCata || Boolean(schema);
+  
   $('pe-category').value = category;
   $('pe-cards').value = text;
-  $('pe-cards').placeholder = placeholderFor(category);
-  $('pe-cards').hidden = isCata;
-  $('pe-cata-list').hidden = !isCata;
-  $('pe-cata').hidden = !isCata;
+  $('pe-cards').placeholder = isCata ? CATACLYSM_LIST_PLACEHOLDER : (hasVisualMode && viewMode === 'visual') ? 'Список карток (додавайте через форму нижче)' : placeholderFor(category);
+  
+  const toggleWrap = $('pe-view-toggle-wrap');
+  if (schema && !isCata) {
+    toggleWrap.hidden = false;
+    $('pe-view-toggle').value = viewMode;
+    $('pe-llm-copy').hidden = (viewMode !== 'llm');
+  } else {
+    toggleWrap.hidden = true;
+    $('pe-llm-copy').hidden = true;
+  }
+
+  const isVisual = viewMode === 'visual' || isCata;
+  
+  if (hasVisualMode && isVisual) {
+    $('pe-cards').hidden = true;
+    $('pe-cata-list').hidden = false;
+    
+    if (isCata) {
+      $('pe-cata').hidden = false;
+      $('pe-dynamic-form').hidden = true;
+    } else {
+      $('pe-cata').hidden = true;
+      $('pe-dynamic-form').hidden = false;
+      renderDynamicFormFields(schema);
+    }
+  } else {
+    $('pe-cards').hidden = false;
+    $('pe-cata-list').hidden = true;
+    $('pe-cata').hidden = true;
+    $('pe-dynamic-form').hidden = true;
+  }
+  
   $('pe-cards').scrollTop = 0;
+}
+
+export function renderDynamicFormFields(schema) {
+  const container = $('pe-dyn-fields');
+  if (!schema || !schema.fields) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  container.innerHTML = schema.fields.map(f => {
+    if (f.type === 'checkbox') {
+      return `
+        <div class="pe-field" style="flex-direction: row; align-items: center; gap: 8px;">
+          <input id="pe-dyn-${f.key}" type="checkbox" data-dyn-key="${f.key}">
+          <label class="pe-label" for="pe-dyn-${f.key}" style="margin: 0; padding-bottom: 0;">${esc(f.label)}</label>
+        </div>`;
+    } else if (f.type === 'list') {
+      return `
+        <div class="pe-field">
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
+          <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc" rows="3" data-dyn-key="${f.key}"></textarea>
+        </div>`;
+    } else {
+      return `
+        <div class="pe-field">
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
+          <input id="pe-dyn-${f.key}" class="pe-input" type="text" data-dyn-key="${f.key}" autocomplete="off">
+        </div>`;
+    }
+  }).join('');
 }
 
 // Повністю перемальовує значення полів зі стану форми (після "Очистити все" / "Скасувати зміни" / завантаження пака)

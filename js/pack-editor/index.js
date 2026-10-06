@@ -1,5 +1,5 @@
-import { ALL_PACK_CATEGORIES } from './categories.js';
-import { parseLines, oneLine } from './parser.js';
+import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from './categories.js';
+import { parseLines, oneLine, parseCards, cardToLine } from './parser.js';
 import {
   buildCardRows, MAX_PACK_CARDS, RANGE_DEFAULTS,
   validateTitle, validateRanges, stagesTextFromConfig, rangesFromConfig, buildPackConfig, normalizeForm,
@@ -34,6 +34,9 @@ let baseRanges = {};        // діапазони віку/зросту дефо
 let form = { title: '', description: '', texts: {}, stages: {}, ranges: {}, cataclysms: [] }; // texts: { [category]: string }, stages: { [key]: string }, cataclysms: записи катаклізмів (форма в pack-payload.js)
 let initialForm = cloneForm(form); // значення на момент відкриття (для "Скасувати зміни" і відстеження змін)
 let activeCategory = ALL_PACK_CATEGORIES[0].category;
+let viewMode = 'visual';
+let dynEditIndex = -1;
+let newDynIndex = -1;
 let isSaving = false;
 let isConfirming = false;
 let allowLeave = false;     // після успішного збереження не питаємо браузер "Залишити сторінку?"
@@ -89,13 +92,23 @@ const updateButtons = () => ui.updateButtons({ dirty: isDirty(), empty: isFormEm
 
 function updateCardsMeta() {
   const isCata = activeCategory === 'cataclysm';
-  ui.updateCardsMeta(isCata, isCata ? form.cataclysms.length : parseLines(ui.getCardsText()).length);
+  let count = 0;
+  if (isCata) {
+    count = form.cataclysms.length;
+  } else if (CATEGORY_SCHEMAS[activeCategory] && viewMode === 'visual') {
+    count = getDynamicCards().length;
+  } else {
+    count = parseLines(ui.getCardsText()).length;
+  }
+  ui.updateCardsMeta(isCata, count);
 }
 
 function selectCategory(category) {
   activeCategory = category;
-  ui.showCategory({ category, text: form.texts[category] || '' });
-  renderCataList();
+  viewMode = 'visual';
+  dynEditIndex = -1;
+  ui.showCategory({ category, text: form.texts[category] || '', viewMode });
+  renderList();
   renderSearch();
   updateCardsMeta();
   renderSummary();
@@ -146,7 +159,7 @@ function renderSearch() {
 function setSearchQuery(value, { focus = false } = {}) {
   searchQuery = value;
   ui.setSearchInput(value);
-  renderCataList();
+  renderList();
   renderSearch();
   if (focus) ui.focusSearchInput();
 }
@@ -222,7 +235,7 @@ function initSearch() {
   $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }));
   $('pe-search-all').addEventListener('change', e => {
     searchAll = e.target.checked;
-    renderCataList();
+    renderList();
     renderSearch();
   });
   const results = $('pe-search-results');
@@ -253,11 +266,30 @@ function renderCataList() {
   });
 }
 
+function getDynamicCards() {
+  if (activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[activeCategory]) return [];
+  return parseCards(form.texts[activeCategory] || '', activeCategory, extraMeta);
+}
+
+function renderList() {
+  if (activeCategory === 'cataclysm') {
+    renderCataList();
+  } else if (CATEGORY_SCHEMAS[activeCategory] && viewMode === 'visual') {
+    const cards = getDynamicCards();
+    ui.renderCataList({
+      cataclysms: cards.map(c => ({ name: c.value })),
+      editIndex: dynEditIndex,
+      newIndex: newDynIndex,
+      tokens: searchAll && !cataFilterActive() ? searchTokens() : []
+    });
+  }
+}
+
 // Режим форми: -1 — додавання нового, ≥ 0 — редагування існуючого
 function setCataMode(index) {
   cataEditIndex = index;
   ui.paintCataMode(index >= 0 ? form.cataclysms[index] : null);
-  renderCataList();
+  renderList();
 }
 
 // Очищає поля і повертає форму в режим "додати"
@@ -270,7 +302,7 @@ function resetCataForm() {
 // Після будь-якої зміни списку: перемальовуємо поле-список, лічильники, підсумок і стан кнопок "Скасувати зміни"/"Очистити все"
 function applyCataChange({ scrollToEnd = false } = {}) {
   syncCataText();
-  renderCataList();
+  renderList();
   if (scrollToEnd) ui.scrollCataListToEnd();
   renderSearch();
   updateCardsMeta();
@@ -301,7 +333,7 @@ function submitCata() {
   // Новий рядок з’являється з анімацією: клас is-new діє лише на цей рендер (далі перемальовки його вже не мають)
   if (!existing) {
     newCataIndex = form.cataclysms.length - 1;
-    renderCataList();
+    renderList();
     newCataIndex = -1;
     ui.scrollCataListToEnd();
   }
@@ -321,17 +353,24 @@ function startCataEdit(index) {
 function onCataListClick(e) {
   const row = e.target.closest('[data-cata-index]');
   if (!row) return;
-
   const index = Number(row.dataset.cataIndex);
-  if (!form.cataclysms[index] || index === cataEditIndex) return;
 
-  // Якщо у формі є незбережене, не перезаписуємо її даними іншого катаклізму — спочатку має бути "Додати"/"Зберегти зміни" або "Скасувати"
-  if (cataDraftPending()) {
-    showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
-    return;
+  if (activeCategory === 'cataclysm') {
+    if (!form.cataclysms[index] || index === cataEditIndex) return;
+    if (cataDraftPending()) {
+      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
+      return;
+    }
+    startCataEdit(index);
+  } else {
+    const cards = getDynamicCards();
+    if (!cards[index] || index === dynEditIndex) return;
+    if (dynDraftPending()) {
+      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
+      return;
+    }
+    startDynEdit(index, cards[index]);
   }
-
-  startCataEdit(index);
 }
 
 async function deleteCata(btn) {
@@ -374,6 +413,191 @@ function handleCataInput(e) {
   if (ui.isCataErrorVisible()) ui.showCataError('');
 }
 
+
+// ----- Динамічні форми -----
+
+function dynDraftPending() {
+  if (activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[activeCategory] || viewMode !== 'visual') return false;
+  const current = readDynRaw();
+  if (!current.value && Object.values(current).every(v => !v || (Array.isArray(v) && !v.length))) return false;
+  
+  if (dynEditIndex < 0) return true;
+  
+  const cards = getDynamicCards();
+  const item = cards[dynEditIndex];
+  if (!item) return false;
+  
+  if (current.value !== item.value) return true;
+  for (const f of CATEGORY_SCHEMAS[activeCategory].fields) {
+    const v1 = current[f.key];
+    const v2 = item.meta[f.key];
+    if (f.type === 'checkbox') {
+      if (Boolean(v1) !== Boolean(v2)) return true;
+    } else if (f.type === 'list') {
+      if ((v1 || []).join('\n') !== (v2 || []).join('\n')) return true;
+    } else {
+      if ((v1 || '') !== (v2 || '')) return true;
+    }
+  }
+  return false;
+}
+
+function readDynRaw() {
+  const schema = CATEGORY_SCHEMAS[activeCategory];
+  if (!schema) return {};
+  const data = {};
+  data.value = $('pe-dyn-name').value.trim();
+  for (const f of schema.fields) {
+    const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
+    if (el) {
+      if (f.type === 'checkbox') data[f.key] = el.checked;
+      else if (f.type === 'list') data[f.key] = parseLines(el.value);
+      else data[f.key] = el.value.trim();
+    }
+  }
+  return data;
+}
+
+function fillDynFields(card) {
+  const schema = CATEGORY_SCHEMAS[activeCategory];
+  if (!schema) return;
+  $('pe-dyn-name').value = card.value;
+  for (const f of schema.fields) {
+    const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
+    if (el) {
+      const val = card.meta[f.key];
+      if (f.type === 'checkbox') el.checked = Boolean(val);
+      else if (f.type === 'list') el.value = Array.isArray(val) ? val.join('\n') : '';
+      else el.value = val || '';
+    }
+  }
+}
+
+function setDynMode(index) {
+  dynEditIndex = index;
+  const cards = getDynamicCards();
+  const item = index >= 0 ? cards[index] : null;
+  const submitBtn = document.querySelector('[data-dyn-action="submit"]');
+  if (submitBtn) submitBtn.textContent = item ? 'Зберегти зміни' : 'Додати';
+  
+  const cancelBtn = document.querySelector('[data-dyn-action="cancel"]');
+  if (cancelBtn) cancelBtn.hidden = !item;
+  
+  const deleteBtn = document.querySelector('[data-dyn-action="delete"]');
+  if (deleteBtn) deleteBtn.hidden = !item;
+  
+  const modeEl = $('pe-dyn-mode');
+  if (modeEl) modeEl.textContent = item ? `Редагування: "${oneLine(item.value)}"` : 'Нова картка';
+  
+  renderList();
+}
+
+function startDynEdit(index, card) {
+  fillDynFields(card);
+  const err = $('pe-dyn-error');
+  if (err) err.hidden = true;
+  setDynMode(index);
+  $('pe-dynamic-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetDynForm() {
+  $('pe-dyn-name').value = '';
+  const schema = CATEGORY_SCHEMAS[activeCategory];
+  if (schema) {
+    for (const f of schema.fields) {
+      const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
+      if (el) {
+        if (f.type === 'checkbox') el.checked = f.default !== undefined ? f.default : false;
+        else el.value = '';
+      }
+    }
+  }
+  const err = $('pe-dyn-error');
+  if (err) err.hidden = true;
+  setDynMode(-1);
+}
+
+function applyDynChange({ scrollToEnd = false } = {}) {
+  ui.showCategory({ category: activeCategory, text: form.texts[activeCategory] || '', viewMode });
+  renderList();
+  if (scrollToEnd) $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
+  renderSearch();
+  updateCardsMeta();
+  updateCategoryOptionLabels();
+  renderSummary();
+  updateButtons();
+}
+
+function submitDyn() {
+  const data = readDynRaw();
+  if (!data.value) {
+    const err = $('pe-dyn-error');
+    err.textContent = 'Назва обов\'язкова';
+    err.hidden = false;
+    $('pe-dyn-name').focus();
+    return;
+  }
+  
+  const cards = getDynamicCards();
+  const meta = { ...data };
+  delete meta.value;
+  
+  for (const k of Object.keys(meta)) {
+    if (meta[k] === '' || (Array.isArray(meta[k]) && meta[k].length === 0)) {
+      delete meta[k];
+    }
+  }
+  
+  if (dynEditIndex >= 0) {
+    cards[dynEditIndex] = { value: data.value, meta };
+  } else {
+    cards.push({ value: data.value, meta });
+    newDynIndex = cards.length - 1;
+  }
+  
+  form.texts[activeCategory] = cards.map(c => cardToLine(activeCategory, c.value, c.meta)).join('\n');
+  
+  applyDynChange({ scrollToEnd: newDynIndex >= 0 });
+  resetDynForm();
+  
+  if (newDynIndex >= 0) {
+    newDynIndex = -1;
+  }
+  showGlobalToast(dynEditIndex >= 0 ? 'Картку оновлено' : 'Картку додано');
+}
+
+async function deleteDyn(btn) {
+  if (dynEditIndex < 0 || isConfirming) return;
+  const cards = getDynamicCards();
+  const item = cards[dynEditIndex];
+  
+  isConfirming = true;
+  let confirmed = false;
+  try {
+    confirmed = await showPackConfirm(`Чи точно хочете видалити картку "${oneLine(item.value)}"?`, btn, { confirmLabel: 'Видалити' });
+  } finally {
+    isConfirming = false;
+  }
+  if (!confirmed) return;
+
+  cards.splice(dynEditIndex, 1);
+  form.texts[activeCategory] = cards.map(c => cardToLine(activeCategory, c.value, c.meta)).join('\n');
+  
+  applyDynChange();
+  resetDynForm();
+  showGlobalToast('Картку видалено');
+}
+
+function handleDynClick(e) {
+  const btn = e.target.closest('[data-dyn-action]');
+  if (!btn || btn.disabled) return;
+  switch (btn.dataset.dynAction) {
+    case 'submit': submitDyn(); break;
+    case 'cancel': resetDynForm(); break;
+    case 'delete': deleteDyn(btn); break;
+  }
+}
+
 // ----- Дії -----
 async function confirmAction(actionLabel, anchor) {
   if (isConfirming) return false;
@@ -410,6 +634,11 @@ async function handleSave(btn) {
   // Заповнену, але не додану форму катаклізму не зберігаємо мовчки разом з паком — автор має спочатку натиснути "Додати" або "Скасувати"
   if (cataDraftPending()) {
     showGlobalToast('У формі катаклізму є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
+    return;
+  }
+  
+  if (typeof dynDraftPending === 'function' && dynDraftPending()) {
+    showGlobalToast('У формі характеристики є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
     return;
   }
 
@@ -563,6 +792,28 @@ export async function initPackEditor() {
   $('pe-cata-list').addEventListener('click', onCataListClick);
   $('pe-cata').addEventListener('click', handleCataClick);
   $('pe-cata').addEventListener('input', handleCataInput);
+  
+  $('pe-dynamic-form').addEventListener('click', handleDynClick);
+  
+  $('pe-view-toggle').addEventListener('change', e => {
+    viewMode = e.target.value;
+    ui.showCategory({ category: activeCategory, text: form.texts[activeCategory] || '', viewMode });
+    renderList();
+    renderSearch();
+    updateCardsMeta();
+  });
+  
+  $('pe-llm-copy').addEventListener('click', async () => {
+    const schema = CATEGORY_SCHEMAS[activeCategory];
+    if (schema && schema.llmPrompt) {
+      try {
+        await navigator.clipboard.writeText(schema.llmPrompt);
+        showGlobalToast('Промпт скопійовано');
+      } catch (err) {
+        showGlobalToast('Не вдалося скопіювати промпт');
+      }
+    }
+  });
 
   $('pe-cards').addEventListener('input', e => {
     if (activeCategory === 'cataclysm') return; // список катаклізмів не редагується текстом (джерело — form.cataclysms)

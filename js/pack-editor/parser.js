@@ -15,19 +15,74 @@ export const oneLine = text => String(text ?? '').replace(/\s*[\r\n]+\s*/g, ' ')
 export const PART_SEPARATOR = ' - ';
 
 // Один рядок тексту → { value, meta }.
-// Спеціальний випадок — category === 'profession': рядок формату "Професія - Можливість" розбивається на
-// value і meta.ability; їх читають game-generator.js і host/characteristics.js (profItem.meta.ability / card.meta?.ability),
-// а player-parser.js показує як іконку-підказку на картці гравця.
-// Для решти категорій meta порожня: стадії задаються глобально для пака (packs.config.default_stages), а не для кожної картки.
+// Підтримує компактний синтаксис (LLM-режим):
+// - Стадії у квадратних дужках: [стадія 1, стадія 2]
+// - Прапорці у фігурних дужках: {rep: false, opp: "назва", age: "Без віку", action_type: "change_gender"}
 export function parseCardLine(category, line) {
   let value = line;
   const meta = {};
 
-  if (category === 'profession' && line.includes(PART_SEPARATOR)) {
-    const separatorIndex = line.indexOf(PART_SEPARATOR);
-    value = line.substring(0, separatorIndex).trim();
-    const ability = line.substring(separatorIndex + PART_SEPARATOR.length).trim();
+  let extracting = true;
+  while (extracting) {
+    let matched = false;
+
+    // Шукаємо стадії в кінці рядка
+    const stagesMatch = value.match(/\[(.*?)\]\s*$/);
+    if (stagesMatch) {
+      meta.stages = stagesMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+      value = value.substring(0, stagesMatch.index).trim();
+      matched = true;
+    }
+    
+    // Шукаємо прапорці в кінці рядка
+    const propsMatch = value.match(/\{(.*?)\}\s*$/);
+    if (propsMatch) {
+      const propsStr = propsMatch[1];
+      // Розбиваємо "rep: false, age: Без віку" на частини
+      // Щоб не розбити по комі всередині тексту, ми використовуємо простий split і склеюємо назад, 
+      // але для LLM-режиму зазвичай коми всередині значень не використовуються.
+      // Надійніше розбивати регуляркою, що ігнорує коми в лапках, але для простоти припустимо що коми в значеннях рідкісні.
+      const props = propsStr.split(',');
+      let currentProp = '';
+      
+      const processProp = (pStr) => {
+        const [k, ...vParts] = pStr.split(':');
+        if (!k || !vParts.length) return;
+        const key = k.trim();
+        let val = vParts.join(':').trim().replace(/^["'](.*)["']$/, '$1'); // видаляємо лапки
+        
+        if (val === 'true') val = true;
+        else if (val === 'false') val = false;
+        else if (val === 'null' || val === 'none') val = null;
+
+        if (key === 'rep') meta.can_reproduce = val;
+        else if (key === 'opp') meta.opposite = val;
+        else if (key === 'age') meta.custom_age = val;
+        else if (key === 'action_type') meta.action_type = val;
+      };
+
+      for (let i = 0; i < props.length; i++) {
+        // Простий евристичний парсер, який склеює значення, якщо в них була кома
+        currentProp += (currentProp ? ',' : '') + props[i];
+        if ((currentProp.match(/"/g) || []).length % 2 === 0) {
+          processProp(currentProp);
+          currentProp = '';
+        }
+      }
+      
+      value = value.substring(0, propsMatch.index).trim();
+      matched = true;
+    }
+    
+    if (!matched) extracting = false;
+  }
+
+  // Спеціальний випадок для професій — "Назва - Здібність"
+  if (category === 'profession' && value.includes(PART_SEPARATOR)) {
+    const separatorIndex = value.indexOf(PART_SEPARATOR);
+    const ability = value.substring(separatorIndex + PART_SEPARATOR.length).trim();
     if (ability) meta.ability = ability;
+    value = value.substring(0, separatorIndex).trim();
   }
 
   return { value, meta };
@@ -45,15 +100,28 @@ export function parseCards(text, category, extraMeta = {}) {
   });
 }
 
-// Зворотне до parseCards: рядок pack_cards → той самий рядок, який вводив автор у редакторі.
-// Потрібне, щоб при відкритті пака на редагування можливість професії не губилася
-// (раніше з бази читалися лише category і value — повторне збереження стирало б meta).
+// Зворотне до parseCards: рядок pack_cards → компактний синтаксис (або просто назва).
 export function cardToLine(category, value, meta) {
-  const text = String(value ?? '');
+  let text = String(value ?? '');
 
-  if (category === 'profession') {
-    const ability = String(meta?.ability ?? '').trim();
-    return ability ? `${text}${PART_SEPARATOR}${ability}` : text;
+  if (category === 'profession' && meta?.ability) {
+    text = `${text}${PART_SEPARATOR}${String(meta.ability).trim()}`;
+  }
+
+  // Додаємо прапорці
+  const props = [];
+  if (meta?.can_reproduce !== undefined) props.push(`rep: ${meta.can_reproduce}`);
+  if (meta?.opposite !== undefined) props.push(`opp: ${meta.opposite === null ? 'null' : `"${meta.opposite}"`}`);
+  if (meta?.custom_age !== undefined) props.push(`age: "${meta.custom_age}"`);
+  if (meta?.action_type !== undefined) props.push(`action_type: "${meta.action_type}"`);
+  
+  if (props.length > 0) {
+    text += ` {${props.join(', ')}}`;
+  }
+
+  // Додаємо стадії
+  if (Array.isArray(meta?.stages) && meta.stages.length > 0) {
+    text += ` [${meta.stages.join(', ')}]`;
   }
 
   return text;
