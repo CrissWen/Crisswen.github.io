@@ -127,13 +127,75 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         <div class="block-body pe-body">
           <div class="pe-field">
             <label class="pe-label" for="pe-category">Категорія</label>
-            <select id="pe-category" class="pe-input pe-select">
-              <optgroup label="Характеристики гравця">${optionsHtml(CHARACTER_CATEGORIES)}</optgroup>
-              <optgroup label="Бункер">${optionsHtml(BUNKER_CATEGORIES)}</optgroup>
-            </select>
+            <div class="pe-category-row">
+              <select id="pe-category" class="pe-input pe-select">
+                <optgroup label="Характеристики гравця">${optionsHtml(CHARACTER_CATEGORIES)}</optgroup>
+                <optgroup label="Бункер">${optionsHtml(BUNKER_CATEGORIES)}</optgroup>
+              </select>
+              <div class="pe-llm-controls">
+                <label class="pe-llm-toggle" title="Режим LLM (робота з чистим текстом)">
+                  <input type="checkbox" id="pe-llm-mode">
+                  <span>Режим LLM</span>
+                </label>
+                <button type="button" id="pe-llm-copy" class="pk-btn pk-btn--ghost pe-llm-copy-btn" title="Скопіювати промпт для LLM" aria-label="Скопіювати промпт для LLM">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <!-- Пошук: у поточній категорії або в усіх. Для текстових категорій показує список знайдених рядків (клік виділяє рядок у полі),
-               для катаклізмів фільтрує сам список (шукає за назвою й описом) -->
+
+          <!-- Форма катаклізму: розміщена зверху для зручного введення через Tab -->
+          <div id="pe-cata" class="pe-cata" hidden>
+            <h3 id="pe-cata-mode" class="pe-cata__title">Новий катаклізм</h3>
+            <p class="pe-hint">Заповніть поля та натисніть "Додати". Список нижче відображає додані катаклізми.</p>
+            <div class="pe-field">
+              <label class="pe-label" for="pe-cata-name">Назва катаклізму <span class="pe-required" title="Обов'язкове поле">*</span></label>
+              <input id="pe-cata-name" class="pe-input" type="text" maxlength="${CATACLYSM_LIMITS.nameMax}" autocomplete="off" placeholder="Напр.: Повстання штучного інтелекту">
+            </div>
+            <div class="pe-field">
+              <label class="pe-label" for="pe-cata-desc">Опис</label>
+              <textarea id="pe-cata-desc" class="pe-input pe-desc" rows="3" maxlength="${CATACLYSM_LIMITS.descMax}" placeholder="Напр.: Штучний інтелект захопив керування мережами, міста знеструмлено"></textarea>
+            </div>
+            <div class="pe-cata__grid">
+              <div class="pe-field">
+                <label class="pe-label" for="pe-cata-timer">Таймер (хв)</label>
+                <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30 (0 або порожньо — без таймера)">
+              </div>
+              <div class="pe-field">
+                <label class="pe-label" for="pe-cata-stay">Час перебування (міс.)</label>
+                <input id="pe-cata-stay" class="pe-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Напр.: 6 (стандартно 12)">
+              </div>
+              <div class="pe-field">
+                <label class="pe-label" for="pe-cata-pop">Популяція</label>
+                <input id="pe-cata-pop" class="pe-input" type="text" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="Напр.: 5000 (лише цифри)">
+              </div>
+            </div>
+            <p id="pe-cata-error" class="pe-error" role="alert" hidden></p>
+            <div class="pe-cata__actions">
+              <button type="button" class="pk-btn pk-btn--primary" data-cata-action="submit">Додати</button>
+              <button type="button" class="pk-btn pk-btn--ghost" data-cata-action="cancel" hidden>Скасувати</button>
+              <button type="button" class="pk-btn pk-btn--danger" data-cata-action="delete" hidden>Видалити</button>
+            </div>
+          </div>
+
+          <!-- Форма для динамічних категорій: розміщена зверху для зручного введення через Tab -->
+          <div id="pe-dynamic-form" class="pe-cata" hidden>
+            <h3 id="pe-dyn-mode" class="pe-cata__title">Нова картка</h3>
+            <p class="pe-hint">Заповніть поля та натисніть "Додати". Список нижче відображає додані картки.</p>
+            <div class="pe-field">
+              <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
+              <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
+            </div>
+            <div id="pe-dyn-fields" class="pe-dyn-fields"></div>
+            <p id="pe-dyn-error" class="pe-error" role="alert" hidden></p>
+            <div class="pe-cata__actions">
+              <button type="button" class="pk-btn pk-btn--primary" data-dyn-action="submit">Додати</button>
+              <button type="button" class="pk-btn pk-btn--ghost" data-dyn-action="cancel" hidden>Скасувати</button>
+              <button type="button" class="pk-btn pk-btn--danger" data-dyn-action="delete" hidden>Видалити</button>
+            </div>
+          </div>
+
+          <!-- Пошук: у поточній категорії або в усіх -->
           <div class="pe-field pe-search">
             <label class="pe-label" for="pe-search">Пошук</label>
             <div class="pe-search__box">
@@ -147,73 +209,12 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
             </div>
             <div id="pe-search-results" class="pe-cata-list pe-search-results" role="group" aria-label="Результати пошуку" hidden></div>
           </div>
-          <div class="pe-field pe-view-toggle" id="pe-view-toggle-wrap" hidden>
-            <label class="pe-label" for="pe-view-toggle">Режим вводу</label>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <select id="pe-view-toggle" class="pe-input pe-select" style="max-width: 250px;">
-                <option value="visual">Візуальний список (картки)</option>
-                <option value="llm">Режим LLM (Текст)</option>
-              </select>
-              <button type="button" id="pe-llm-copy" class="pk-btn pk-btn--ghost" title="Скопіювати промпт для LLM" style="padding: 0 12px; height: 38px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              </button>
-            </div>
-          </div>
+
+          <!-- Список карток / textarea -->
           <div class="pe-field">
             <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
-            <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані катаклізми" hidden></div>
+            <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані картки" hidden></div>
             <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
-          </div>
-
-          <!-- Форма катаклізму: видна лише для категорії "Катаклізм" (перемикає showCategory) -->
-          <div id="pe-cata" class="pe-cata" hidden>
-            <h3 id="pe-cata-mode" class="pe-cata__title">Новий катаклізм</h3>
-            <p class="pe-hint">Список вище лише для перегляду. Щоб змінити або видалити катаклізм, натисніть на його назву у списку.</p>
-            <div class="pe-field">
-              <label class="pe-label" for="pe-cata-name">Назва катаклізму <span class="pe-required" title="Обов'язкове поле">*</span></label>
-              <input id="pe-cata-name" class="pe-input" type="text" maxlength="${CATACLYSM_LIMITS.nameMax}" autocomplete="off" placeholder="Напр.: Повстання штучного інтелекту">
-            </div>
-            <div class="pe-field">
-              <label class="pe-label" for="pe-cata-desc">Опис</label>
-              <textarea id="pe-cata-desc" class="pe-input pe-desc" rows="4" maxlength="${CATACLYSM_LIMITS.descMax}" placeholder="Напр.: Штучний інтелект захопив керування мережами, міста знеструмлено"></textarea>
-            </div>
-            <div class="pe-cata__grid">
-              <div class="pe-field">
-                <label class="pe-label" for="pe-cata-timer">Таймер (хв)</label>
-                <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30 (0 або порожньо — без таймера, макс. ${CATACLYSM_LIMITS.timerMax})">
-              </div>
-              <div class="pe-field">
-                <label class="pe-label" for="pe-cata-stay">Час перебування (міс.)</label>
-                <input id="pe-cata-stay" class="pe-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Напр.: 6 (порожньо — стандартні 12)">
-              </div>
-              <div class="pe-field">
-                <label class="pe-label" for="pe-cata-pop">Популяція</label>
-                <input id="pe-cata-pop" class="pe-input" type="text" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="Напр.: 5000 (лише цифри; порожньо — &quot;Невідомо&quot;)">
-              </div>
-            </div>
-            <p id="pe-cata-error" class="pe-error" role="alert" hidden></p>
-            <div class="pe-cata__actions">
-              <button type="button" class="pk-btn pk-btn--primary" data-cata-action="submit">Додати</button>
-              <button type="button" class="pk-btn pk-btn--ghost" data-cata-action="cancel" hidden>Скасувати</button>
-              <button type="button" class="pk-btn pk-btn--danger" data-cata-action="delete" hidden>Видалити</button>
-            </div>
-          </div>
-
-          <!-- Форма для динамічних категорій -->
-          <div id="pe-dynamic-form" class="pe-cata" hidden>
-            <h3 id="pe-dyn-mode" class="pe-cata__title">Нова картка</h3>
-            <p class="pe-hint">Список вище лише для перегляду. Щоб змінити або видалити картку, натисніть на її назву у списку.</p>
-            <div class="pe-field">
-              <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
-              <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
-            </div>
-            <div id="pe-dyn-fields"></div>
-            <p id="pe-dyn-error" class="pe-error" role="alert" hidden></p>
-            <div class="pe-cata__actions">
-              <button type="button" class="pk-btn pk-btn--primary" data-dyn-action="submit">Додати</button>
-              <button type="button" class="pk-btn pk-btn--ghost" data-dyn-action="cancel" hidden>Скасувати</button>
-              <button type="button" class="pk-btn pk-btn--danger" data-dyn-action="delete" hidden>Видалити</button>
-            </div>
           </div>
 
           <div class="pe-summary">
@@ -312,21 +313,27 @@ export function showCategory({ category, text, viewMode = 'visual' }) {
   
   $('pe-category').value = category;
   $('pe-cards').value = text;
-  $('pe-cards').placeholder = isCata ? CATACLYSM_LIST_PLACEHOLDER : (hasVisualMode && viewMode === 'visual') ? 'Список карток (додавайте через форму нижче)' : placeholderFor(category);
+  $('pe-cards').placeholder = isCata 
+    ? CATACLYSM_LIST_PLACEHOLDER 
+    : (hasVisualMode && viewMode === 'visual') 
+      ? 'Список карток (додавайте через форму вище)' 
+      : placeholderFor(category);
   
-  const toggleWrap = $('pe-view-toggle-wrap');
-  if (schema && !isCata) {
-    toggleWrap.hidden = false;
-    $('pe-view-toggle').value = viewMode;
-    $('pe-llm-copy').hidden = (viewMode !== 'llm');
-  } else {
-    toggleWrap.hidden = true;
-    $('pe-llm-copy').hidden = true;
+  const llmCheckbox = $('pe-llm-mode');
+  const llmToggleWrap = llmCheckbox?.closest('.pe-llm-toggle');
+  if (llmCheckbox && llmToggleWrap) {
+    if (hasVisualMode) {
+      llmToggleWrap.style.display = 'inline-flex';
+      llmCheckbox.checked = (viewMode === 'llm');
+    } else {
+      llmToggleWrap.style.display = 'none';
+      llmCheckbox.checked = false;
+    }
   }
 
-  const isVisual = viewMode === 'visual' || isCata;
+  const isVisual = hasVisualMode && (viewMode === 'visual');
   
-  if (hasVisualMode && isVisual) {
+  if (isVisual) {
     $('pe-cards').hidden = true;
     $('pe-cata-list').hidden = false;
     
@@ -358,21 +365,21 @@ export function renderDynamicFormFields(schema) {
   container.innerHTML = schema.fields.map(f => {
     if (f.type === 'checkbox') {
       return `
-        <div class="pe-field" style="flex-direction: row; align-items: center; gap: 8px;">
+        <div class="pe-field pe-dyn-field-checkbox">
           <input id="pe-dyn-${f.key}" type="checkbox" data-dyn-key="${f.key}">
-          <label class="pe-label" for="pe-dyn-${f.key}" style="margin: 0; padding-bottom: 0;">${esc(f.label)}</label>
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
         </div>`;
     } else if (f.type === 'list') {
       return `
         <div class="pe-field">
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
-          <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc" rows="3" data-dyn-key="${f.key}"></textarea>
+          <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc" rows="3" data-dyn-key="${f.key}" placeholder="По одній стадії на рядок"></textarea>
         </div>`;
     } else {
       return `
         <div class="pe-field">
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
-          <input id="pe-dyn-${f.key}" class="pe-input" type="text" data-dyn-key="${f.key}" autocomplete="off">
+          <input id="pe-dyn-${f.key}" class="pe-input" type="text" data-dyn-key="${f.key}" autocomplete="off" placeholder="Введіть ${esc(f.label).toLowerCase()}">
         </div>`;
     }
   }).join('');

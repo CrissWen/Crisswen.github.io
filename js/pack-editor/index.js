@@ -1,4 +1,4 @@
-import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from './categories.js';
+import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
 import { parseLines, oneLine, parseCards, cardToLine } from './parser.js';
 import {
   buildCardRows, MAX_PACK_CARDS, RANGE_DEFAULTS,
@@ -338,6 +338,7 @@ function submitCata() {
     ui.scrollCataListToEnd();
   }
   showGlobalToast(existing ? 'Катаклізм оновлено' : 'Катаклізм додано');
+  $(ui.CATA_FIELDS.name)?.focus();
 }
 
 // Клік по назві у списку → поля форми заповнюються даними цього катаклізму
@@ -564,6 +565,7 @@ function submitDyn() {
     newDynIndex = -1;
   }
   showGlobalToast(dynEditIndex >= 0 ? 'Картку оновлено' : 'Картку додано');
+  $('pe-dyn-name')?.focus();
 }
 
 async function deleteDyn(btn) {
@@ -794,24 +796,39 @@ export async function initPackEditor() {
   $('pe-cata').addEventListener('input', handleCataInput);
   
   $('pe-dynamic-form').addEventListener('click', handleDynClick);
+  $('pe-dynamic-form').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+      submitDyn();
+    }
+  });
+
+  $('pe-cata').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+      submitCata();
+    }
+  });
   
-  $('pe-view-toggle').addEventListener('change', e => {
-    viewMode = e.target.value;
+  $('pe-llm-mode')?.addEventListener('change', e => {
+    viewMode = e.target.checked ? 'llm' : 'visual';
     ui.showCategory({ category: activeCategory, text: form.texts[activeCategory] || '', viewMode });
     renderList();
     renderSearch();
     updateCardsMeta();
   });
   
-  $('pe-llm-copy').addEventListener('click', async () => {
-    const schema = CATEGORY_SCHEMAS[activeCategory];
-    if (schema && schema.llmPrompt) {
+  $('pe-llm-copy')?.addEventListener('click', async () => {
+    const prompt = getPromptForCategory(activeCategory);
+    if (prompt) {
       try {
-        await navigator.clipboard.writeText(schema.llmPrompt);
-        showGlobalToast('Промпт скопійовано');
+        await navigator.clipboard.writeText(prompt);
+        showGlobalToast('Промпт для LLM скопійовано');
       } catch (err) {
         showGlobalToast('Не вдалося скопіювати промпт');
       }
+    } else {
+      showGlobalToast('Промпт для цієї категорії відсутній');
     }
   });
 

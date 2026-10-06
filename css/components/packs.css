@@ -167,25 +167,61 @@
 .pe-chip.is-active{border-color:var(--hazard);background-color:var(--panel-2);}
 
 /* Форма катаклізму: кожне поле в окремому блоці (підпис над полем), підказки — у placeholder */
+/* Рядок категорії та перемикач режиму LLM */
+.pe-category-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;}
+.pe-category-row .pe-select{flex:1 1 240px;}
+.pe-llm-controls{display:inline-flex;align-items:center;gap:10px;}
+.pe-llm-toggle{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13.5px;color:var(--text-mute);
+  cursor:pointer;user-select:none;white-space:nowrap;
+  transition:color .2s ease;
+}
+.pe-llm-toggle:hover{color:var(--text);}
+.pe-llm-toggle input[type="checkbox"]{
+  accent-color:var(--hazard);
+  width:16px;height:16px;cursor:pointer;
+}
+.pe-llm-copy-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:0 10px;height:38px;
+}
+
+/* Форма додавання та редагування (зверху над списком) */
 .pe-cata{
-  display:flex;flex-direction:column;gap:16px;
-  padding-top:14px;border-top:1px solid var(--metal);
+  display:flex;flex-direction:column;gap:14px;
+  padding:16px;
+  background:color-mix(in srgb, var(--panel-2) 60%, transparent);
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  margin-bottom:8px;
 }
 .pe-cata[hidden]{display:none;}
 .pe-cata__title{
-  margin:0;font-family:var(--head);font-weight:600;font-size:16px;letter-spacing:.05em;
+  margin:0;font-family:var(--head);font-weight:600;font-size:15px;letter-spacing:.05em;
   text-transform:uppercase;color:var(--text);overflow-wrap:anywhere;
 }
-.pe-cata__grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}
-.pe-cata .pe-label{font-weight:600;color:var(--text);}
+.pe-cata__grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+.pe-cata .pe-label{font-weight:600;color:var(--text);font-size:13px;}
 .pe-cata .pe-input::placeholder{font-size:13px;}
-.pe-cata__actions{display:flex;flex-wrap:wrap;gap:10px;}
+.pe-cata__actions{display:flex;flex-wrap:wrap;gap:10px;padding-top:4px;}
 .pe-cata__actions .pk-btn[hidden]{display:none;}
-/* Список доданих катаклізмів: справжні рядки-кнопки. Уся анімація (заливка-«хвиля», смужка зліва, зсув тексту, стрілка,
-   «протискання», поява нового рядка) — чистий CSS без JS-вимірювань; кольори — лише змінні теми. */
+
+/* Динамічні поля */
+.pe-dyn-fields{display:flex;flex-direction:column;gap:14px;}
+.pe-dyn-field-checkbox{
+  flex-direction:row !important;align-items:center !important;gap:8px !important;
+}
+.pe-dyn-field-checkbox .pe-label{
+  margin:0 !important;padding:0 !important;cursor:pointer;font-weight:normal;
+}
+.pe-dyn-field-checkbox input[type="checkbox"]{
+  accent-color:var(--hazard);width:16px;height:16px;cursor:pointer;
+}
+
+/* Список доданих катаклізмів / карток: справжні рядки-кнопки */
 .pe-cata-list{
   display:flex;flex-direction:column;gap:2px;
-  max-height:320px;overflow-y:auto;
+  max-height:340px;overflow-y:auto;
   padding:4px;
   background:var(--panel-2);border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
   scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
@@ -195,24 +231,21 @@
 .pe-cata-list::-webkit-scrollbar-track{background:transparent;}
 .pe-cata-list::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
 .pe-cata-list[hidden]{display:none;}
-/* Список поводиться як текстове поле: рамка реагує на наведення, а коли рядок у фокусі — світиться як активний інпут */
 .pe-cata-list:hover{border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
 .pe-cata-list:focus-within{border-color:var(--accent, var(--hazard));box-shadow:0 0 0 3px color-mix(in srgb, var(--accent, var(--hazard)) 22%, transparent);}
 .pe-cata-list__empty{margin:0;padding:10px 12px;font-size:13.5px;line-height:1.5;color:var(--text-mute);}
 
 .added-item-row{
   position:relative;isolation:isolate;overflow:hidden;flex-shrink:0;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  display:flex;align-items:center;justify-content:flex-start;gap:12px;
   width:100%;padding:9px 12px 9px 16px;
   border:1px solid transparent;border-radius:var(--radius-sm);
-  /* Заливка-«хвиля»: при наведенні градієнт наїжджає зліва направо (анімується розмір фону) */
   background:linear-gradient(90deg, color-mix(in srgb, var(--hazard) 18%, transparent), color-mix(in srgb, var(--hazard) 5%, transparent)) no-repeat left center / 0% 100%;
   color:var(--text);
   font-family:var(--body);font-size:14px;line-height:1.4;text-align:left;
   cursor:pointer;
   transition:background-size .35s cubic-bezier(.22,.8,.3,1), background-color .2s ease, border-color .2s ease, transform .12s ease;
 }
-/* Акцентна смужка зліва «виростає» від центру */
 .added-item-row::before{
   content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
   background:var(--hazard);
@@ -229,7 +262,6 @@
 .added-item-row.is-selected::before{transform:scaleY(1);}
 .added-item-row:active{transform:scale(.98);}
 .added-item-row:focus-visible{outline:2px solid var(--accent, var(--hazard));outline-offset:-2px;}
-/* Обраний рядок (той, що зараз у формі): заливка лишається постійно */
 .added-item-row.is-selected{
   background-size:100% 100%;
   background-color:color-mix(in srgb, var(--hazard) 10%, transparent);
@@ -237,40 +269,55 @@
 }
 
 .added-item-row__name{
-  min-width:0;overflow-wrap:anywhere;
+  flex:0 1 auto;min-width:0;overflow-wrap:anywhere;
   transition:transform .28s cubic-bezier(.22,.8,.3,1);
 }
 .added-item-row:hover .added-item-row__name,
 .added-item-row:focus-visible .added-item-row__name,
-.added-item-row.is-selected .added-item-row__name{transform:translateX(5px);}
+.added-item-row.is-selected .added-item-row__name{transform:translateX(4px);}
 
-/* Підказка «змінити ›» випливає справа, стрілка виїжджає трохи далі при наведенні */
+/* Підказка «змінити ›» розташована поруч з назвою, не відриваючись в інший кінець екрану */
 .added-item-row__hint{
-  flex-shrink:0;display:inline-flex;align-items:center;gap:2px;
-  font-size:12px;color:var(--text-mute);
-  opacity:0;transform:translateX(-10px);
-  transition:opacity .2s ease, transform .28s cubic-bezier(.22,.8,.3,1), color .2s ease;
+  flex-shrink:0;display:inline-flex;align-items:center;gap:3px;
+  font-size:11.5px;color:var(--text-mute);
+  padding:1px 7px;border-radius:10px;
+  background:color-mix(in srgb, var(--metal-lt) 40%, transparent);
+  opacity:.65;
+  transition:opacity .2s ease, transform .28s cubic-bezier(.22,.8,.3,1), color .2s ease, background-color .2s ease;
 }
 .added-item-row__hint::after{
-  content:"›";font-size:17px;line-height:1;
+  content:"›";font-size:14px;line-height:1;
   transition:transform .28s cubic-bezier(.22,.8,.3,1);
 }
 .added-item-row:hover .added-item-row__hint,
 .added-item-row:focus-visible .added-item-row__hint,
-.added-item-row.is-selected .added-item-row__hint{opacity:1;transform:translateX(0);color:var(--text);}
-.added-item-row:hover .added-item-row__hint::after{transform:translateX(3px);}
-.added-item-row.is-selected .added-item-row__hint{color:var(--hazard);}
+.added-item-row.is-selected .added-item-row__hint{
+  opacity:1;transform:translateX(2px);
+  color:var(--hazard);
+  background:color-mix(in srgb, var(--hazard) 18%, transparent);
+}
+.added-item-row:hover .added-item-row__hint::after{transform:translateX(2px);}
 
-/* Щойно доданий рядок плавно з’являється (клас is-new ставить pack-editor.js лише на момент додавання) */
 @keyframes added-item-in{
   from{opacity:0;transform:translateY(8px);}
   to{opacity:1;transform:none;}
 }
 .added-item-row.is-new{animation:added-item-in .35s cubic-bezier(.22,.8,.3,1);}
 
-/* На сенсорних екранах наведення немає — підказка видима завжди */
 @media (hover:none){
   .added-item-row__hint{opacity:1;transform:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  .added-item-row,
+  .added-item-row::before,
+  .added-item-row__name,
+  .added-item-row__hint,
+  .added-item-row__hint::after{transition:none;}
+  .added-item-row.is-new{animation:none;}
+  .added-item-row:active{transform:none;}
+  .added-item-row:hover .added-item-row__name,
+  .added-item-row:focus-visible .added-item-row__name,
+  .added-item-row.is-selected .added-item-row__name{transform:none;}
 }
 /* Користувачам із вимкненою анімацією в системі — миттєві стани без руху */
 @media (prefers-reduced-motion:reduce){
