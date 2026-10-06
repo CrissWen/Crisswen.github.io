@@ -38,7 +38,7 @@ export const CATEGORY_SCHEMAS = {
   gender: {
     fields: [
       { key: 'can_reproduce', type: 'checkbox', label: 'Здатен до репродукції', default: true },
-      { key: 'opposite', type: 'text', label: 'Протилежна стать (для обміну)' },
+      { key: 'opposite', type: 'datalist', label: 'Протилежна стать (для обміну)' },
       { key: 'custom_age', type: 'text', label: 'Перевизначений вік (напр. "Без віку")' }
     ]
   },

@@ -282,6 +282,12 @@ function renderList() {
       newIndex: newDynIndex,
       tokens: searchAll && !cataFilterActive() ? searchTokens() : []
     });
+    if (activeCategory === 'gender') {
+      const datalist = document.getElementById('pe-dyn-opposite-list');
+      if (datalist) {
+        datalist.innerHTML = cards.map(c => '<option value="' + c.value.replace(/"/g, '&quot;') + '">').join('');
+      }
+    }
   }
 }
 
@@ -508,7 +514,7 @@ function resetDynForm() {
     for (const f of schema.fields) {
       const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
       if (el) {
-        if (f.type === 'checkbox') el.checked = f.default !== undefined ? f.default : false;
+        if (f.type === 'checkbox') el.checked = false;
         else el.value = '';
       }
     }
@@ -548,6 +554,32 @@ function submitDyn() {
       delete meta[k];
     }
   }
+
+    let oldOpposite = null;
+    if (activeCategory === 'gender') {
+      if (dynEditIndex >= 0) oldOpposite = cards[dynEditIndex].meta.opposite;
+      const targetName = meta.opposite;
+      const currentName = data.value;
+      if (targetName) {
+        if (targetName === currentName) {
+          const err = document.getElementById('pe-dyn-error');
+          err.textContent = "Стать не може бути протилежною сама собі.";
+          err.hidden = false;
+          return;
+        }
+        let targetIndex = cards.findIndex(c => c.value === targetName);
+        if (targetIndex >= 0) {
+          const targetOpposite = cards[targetIndex].meta.opposite;
+          if (targetOpposite && targetOpposite !== currentName) {
+            const err = document.getElementById('pe-dyn-error');
+            err.textContent = `Стать "${targetName}" вже має протилежну стать "${targetOpposite}".`;
+            err.hidden = false;
+            return;
+          }
+        }
+      }
+    }
+
   
   if (dynEditIndex >= 0) {
     cards[dynEditIndex] = { value: data.value, meta };
@@ -555,6 +587,26 @@ function submitDyn() {
     cards.push({ value: data.value, meta });
     newDynIndex = cards.length - 1;
   }
+
+    if (activeCategory === 'gender') {
+      const targetName = meta.opposite;
+      const currentName = data.value;
+      if (oldOpposite && oldOpposite !== targetName) {
+        let oldIndex = cards.findIndex(c => c.value === oldOpposite);
+        if (oldIndex >= 0 && cards[oldIndex].meta.opposite === currentName) {
+          delete cards[oldIndex].meta.opposite;
+        }
+      }
+      if (targetName) {
+        let targetIndex = cards.findIndex(c => c.value === targetName);
+        if (targetIndex >= 0) {
+          cards[targetIndex].meta.opposite = currentName;
+        } else {
+          cards.push({ value: targetName, meta: { opposite: currentName } });
+        }
+      }
+    }
+
   
   form.texts[activeCategory] = cards.map(c => cardToLine(activeCategory, c.value, c.meta)).join('\n');
   
@@ -755,6 +807,26 @@ async function loadPackIntoForm(id) {
   return true;
 }
 
+
+function updateComboDropdown(input, forceShowAll = false) {
+  const list = input.parentElement.querySelector('.pe-combo__dropdown');
+  if (!list) return;
+  const cards = getDynamicCards();
+  const nameEl = document.getElementById('pe-dyn-name');
+  const currentName = nameEl ? nameEl.value : '';
+  let options = cards.map(c => c.value);
+  if (currentName) options = options.filter(o => o !== currentName);
+  
+  const filter = forceShowAll ? '' : input.value.toLowerCase();
+  const filtered = options.filter(o => o.toLowerCase().includes(filter));
+  
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="pe-combo__empty">Введіть нове значення</div>';
+  } else {
+    list.innerHTML = filtered.map(o => `<div class="pe-combo__item" data-val="${o.replace(/"/g, '&quot;')}">${o.replace(/</g, '&lt;')}</div>`).join('');
+  }
+}
+
 export async function initPackEditor() {
   packId = getPackIdFromHash();
   defaultConfig = {};
@@ -865,6 +937,53 @@ export async function initPackEditor() {
 
   $('pe-actions').addEventListener('click', handleActionsClick);
 
+  const dynForm = document.getElementById('pe-dynamic-form');
+  if (dynForm) {
+    dynForm.addEventListener('input', e => {
+      if (e.target.classList.contains('pe-combo__input')) {
+        const list = e.target.parentElement.querySelector('.pe-combo__dropdown');
+        list.hidden = false;
+        updateComboDropdown(e.target);
+      }
+    });
+
+    dynForm.addEventListener('focusin', e => {
+      if (e.target.classList.contains('pe-combo__input')) {
+        const list = e.target.parentElement.querySelector('.pe-combo__dropdown');
+        list.hidden = false;
+        updateComboDropdown(e.target);
+      }
+    });
+
+    dynForm.addEventListener('click', e => {
+      const toggle = e.target.closest('.pe-combo__toggle');
+      if (toggle) {
+        const input = toggle.parentElement.querySelector('.pe-combo__input');
+        const list = toggle.parentElement.querySelector('.pe-combo__dropdown');
+        list.hidden = !list.hidden;
+        if (!list.hidden) {
+          updateComboDropdown(input, true);
+          input.focus();
+        }
+        return;
+      }
+      
+      const item = e.target.closest('.pe-combo__item');
+      if (item) {
+        const input = item.closest('.pe-combo').querySelector('.pe-combo__input');
+        input.value = item.dataset.val;
+        item.closest('.pe-combo__dropdown').hidden = true;
+      }
+    });
+  }
+
+  document.getElementById('pe-root')?.addEventListener('click', e => {
+    if (!e.target.closest('.pe-combo')) {
+      document.querySelectorAll('.pe-combo__dropdown').forEach(d => d.hidden = true);
+    }
+  });
+
+
   try {
     // Базовий пак редагує лише адмін: перевіряємо ще до завантаження даних (статус кешується в packs-store.js; дублює перевірку в getPack)
     if (packId === DEFAULT_PACK_ID && !(await checkIsAdmin())) {
@@ -904,3 +1023,4 @@ export function cleanupPackEditor() {
   isSaving = false;
   isConfirming = false;
 }
+
