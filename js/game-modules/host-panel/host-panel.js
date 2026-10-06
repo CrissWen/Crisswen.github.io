@@ -145,9 +145,14 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Змінити на випадкову', 'changeCharacteristic')}
             `)}
 
-            ${acc('Змінити стаж професії', `
+            ${acc('Змінити стаж', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Стаж', `<select class="hp-select" data-field="level" data-stages="profession"></select>`)}
+              ${field('Характеристика', `<select class="hp-select" data-field="expType">
+                <option value="profession" selected>Професія</option>
+                <option value="hobby">Хобі</option>
+              </select>`)}
+              <label class="hp-field" data-exp-sub="profession"><span>Стаж</span><select class="hp-select" data-field="levelProf" data-stages="profession"></select></label>
+              <label class="hp-field" data-exp-sub="hobby" style="display:none"><span>Стаж</span><select class="hp-select" data-field="levelHobby" data-stages="hobby"></select></label>
               ${actionBtn('Застосувати', 'changeExperience')}
             `)}
 
@@ -157,9 +162,19 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Застосувати', 'changeDiseaseSeverity')}
             `)}
 
-            ${acc('Змінити стать на протилежну', `
+            ${acc('Змінити статуру', `
               ${field('Гравець', playersSelect('all'))}
-              ${actionBtn('Змінити стать', 'invertGender')}
+              ${field('Статура', `<select class="hp-select" data-field="level" data-stages="body_type"></select>`)}
+              ${actionBtn('Застосувати', 'changeBodyType')}
+            `)}
+
+            ${acc('Змінити стать', `
+              ${field('Гравець', playersSelect('all'))}
+              ${field('На конкретну', `<select class="hp-select" data-field="genderValue" data-stages="gender"></select>`)}
+              <div class="hp-row hp-row-stack hp-mt">
+                ${actionBtn('Застосувати', 'setGender')}
+                ${actionBtn('На протилежну', 'invertGender')}
+              </div>
             `)}
 
             ${acc('Обмінятися характеристиками', `
@@ -179,17 +194,11 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
             ${acc('Лікувати / Зробити', `
               ${field('Гравець', playersSelect('all'))}
               ${field('Дія', `<select class="hp-select" data-field="healAction">
-                <option value="bodyType" selected>Змінити статуру</option>
-                <option value="perfect">Зробити ідеально здоровим</option>
+                <option value="perfect" selected>Зробити ідеально здоровим</option>
                 <option value="makeChildfree">Зробити чайлдфрі</option>
                 <option value="cureChildfree">Вилікувати чайлдфрі</option>
                 <option value="curePhobia">Вилікувати фобію</option>
-                <option value="gender">Змінити стать</option>
               </select>`)}
-              <!-- Підсписки: показується лише той, що відповідає обраній дії (перемикає host-panel-controller.js → applyHealActionUI).
-                   Варіанти заповнює fillStageOptions за data-stages (body_type / gender з пака). -->
-              <label class="hp-field" data-heal-sub="bodyType"><span>Статура</span><select class="hp-select" data-field="bodyType" data-stages="body_type"></select></label>
-              <label class="hp-field" data-heal-sub="gender" style="display:none"><span>Стать</span><select class="hp-select" data-field="genderValue" data-stages="gender"></select></label>
               ${actionBtn('Застосувати', 'healMake')}
             `)}
 

@@ -34,7 +34,7 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
 
-export async function changeExperience(roomCode, targetId, newExpLevel) {
+export async function changeExperience(roomCode, targetId, charType, newExpLevel) {
   if (!newExpLevel) throw new Error('Оберіть рівень стажу');
   const room = await getRoom(roomCode);
   snapshot(room);
@@ -42,10 +42,16 @@ export async function changeExperience(roomCode, targetId, newExpLevel) {
   const bState = room.bunker_state || {};
 
   resolveIds(pState, targetId).forEach(id => {
-    if (pState[id]?.professions?.[0]) pState[id].professions[0].stage = newExpLevel;
+    const p = pState[id];
+    if (charType === 'hobby' && p?.hobbies?.[0]) {
+      p.hobbies[0].stage = newExpLevel;
+    } else if (p?.professions?.[0]) {
+      p.professions[0].stage = newExpLevel;
+    }
   });
 
-  setHostEvent(bState, `Ведучий встановив стаж «${newExpLevel}» ${targetPhrase(pState, targetId)}`);
+  const typeName = charType === 'hobby' ? 'хобі' : 'професії';
+  setHostEvent(bState, `Ведучий встановив стаж ${typeName} «${newExpLevel}» ${targetPhrase(pState, targetId)}`);
 
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
 }
@@ -317,7 +323,7 @@ export async function setGender(roomCode, targetId, genderValue) {
 
   snapshot(room);
 
-  ids.forEach(id => applyGenderCard(pState[id], card, pools.config));
+  ids.forEach(id => applyGenderCard(pState[id], card, pools.config, false));
 
   setHostEvent(bState, `Ведучий встановив стать «${card.value}» ${targetPhrase(pState, targetId)}`);
 

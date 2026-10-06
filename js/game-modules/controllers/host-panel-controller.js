@@ -62,12 +62,10 @@ export function syncHostPanel(roomData, isHost, ctx) {
 // Блок «Лікувати / Зробити»: одна кнопка «Застосувати» (data-action="healMake") виконує дію, обрану у select-і healAction.
 // Ключі — value у <option> (host-panel.js); run повертає проміс дії з host-actions.js, ok — текст тоста.
 const HEAL_MAKE_ACTIONS = {
-  bodyType:      { run: (code, f) => HostActions.changeBodyType(code, f.target, f.bodyType),                ok: 'Статуру змінено' },
   perfect:       { run: (code, f) => HostActions.healPlayer(code, f.target, HostActions.HEAL_PERFECT),      ok: 'Гравця зроблено ідеально здоровим' },
   makeChildfree: { run: (code, f) => HostActions.makeChildfree(code, f.target),                             ok: 'Статус «чайлдфрі» додано' },
   cureChildfree: { run: (code, f) => HostActions.cureChildfree(code, f.target),                             ok: 'Статус «чайлдфрі» знято' },
-  curePhobia:    { run: (code, f) => HostActions.curePhobia(code, f.target),                                ok: 'Фобію вилікувано' },
-  gender:        { run: (code, f) => HostActions.setGender(code, f.target, f.genderValue),                  ok: 'Стать змінено' }
+  curePhobia:    { run: (code, f) => HostActions.curePhobia(code, f.target),                                ok: 'Фобію вилікувано' }
 };
 
 // Таблиця дій: data-action кнопки -> що викликати (run), що показати в тості (ok) і що зробити після (after).
@@ -91,9 +89,14 @@ function createHostActions(ctx) {
     },
 
     changeCharacteristic: { run: f => HostActions.changeCharacteristic(code(), f.target, f.charType), ok: 'Характеристику змінено' },
-    changeExperience:     { run: f => HostActions.changeExperience(code(), f.target, f.level), ok: 'Стаж змінено' },
+    changeExperience: { 
+      run: f => HostActions.changeExperience(code(), f.target, f.expType, f.expType === 'hobby' ? f.levelHobby : f.levelProf), 
+      ok: 'Стаж змінено' 
+    },
     changeDiseaseSeverity:{ run: f => HostActions.changeDiseaseSeverity(code(), f.target, f.level), ok: 'Ступінь хвороби змінено' },
-    invertGender:        { run: f => HostActions.invertGender(code(), f.target), ok: 'Стать змінено' },
+    changeBodyType:       { run: f => HostActions.changeBodyType(code(), f.target, f.level), ok: 'Статуру змінено' },
+    setGender:           { run: f => HostActions.setGender(code(), f.target, f.genderValue), ok: 'Стать змінено' },
+    invertGender:        { run: f => HostActions.invertGender(code(), f.target), ok: 'Стать змінено на протилежну' },
     swapCharacteristics: { run: f => HostActions.swapCharacteristics(code(), f.charType, f.target1, f.target2), ok: 'Обмін виконано' },
     stealCharacteristic: { run: f => HostActions.stealCharacteristic(code(), f.thief, f.victim, f.charType), ok: 'Характеристику викрадено' },
     healMake: {
@@ -232,17 +235,25 @@ function bindHostEvents(root, ctx) {
     if (e.target.closest('#bunker-item-action')) applyBunkerItemActionUI(root, ctx);
     else if (e.target.closest('[data-field="bunkerField"]')) applyBunkerParamUI(root, ctx);
     else if (e.target.closest('[data-field="healAction"]')) applyHealActionUI(e.target);
+    else if (e.target.closest('[data-field="expType"]')) applyExpActionUI(e.target);
   });
 }
 
 const setShown = (el, shown) => { if (el) el.style.display = shown ? '' : 'none'; };
 
-// «Лікувати / Зробити»: підсписок статури або статі показується лише для відповідної дії, усі інші дії працюють без додаткового вибору.
 function applyHealActionUI(actionSelect) {
   const scope = actionSelect.closest('.hp-acc-body');
   if (!scope) return;
   scope.querySelectorAll('[data-heal-sub]').forEach(el => {
     setShown(el, el.dataset.healSub === actionSelect.value);
+  });
+}
+
+function applyExpActionUI(actionSelect) {
+  const scope = actionSelect.closest('.hp-acc-body');
+  if (!scope) return;
+  scope.querySelectorAll('[data-exp-sub]').forEach(el => {
+    setShown(el, el.dataset.expSub === actionSelect.value);
   });
 }
 
