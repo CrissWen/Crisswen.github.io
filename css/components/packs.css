@@ -167,27 +167,85 @@
 .pe-chip.is-active{border-color:var(--hazard);background-color:var(--panel-2);}
 
 /* Форма катаклізму: кожне поле в окремому блоці (підпис над полем), підказки — у placeholder */
-/* Рядок категорії та перемикач режиму LLM */
-.pe-category-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;}
-.pe-category-row .pe-select{flex:1 1 240px;}
-.pe-llm-controls{display:inline-flex;align-items:center;gap:10px;}
-.pe-llm-toggle{
-  display:inline-flex;align-items:center;gap:8px;
+/* ----- Панель керування: категорія + пошук + «В усіх категоріях» + «Режим LLM» + слот кнопки Copy в одному рядку ----- */
+/* Усі кольори — зі змінних активної теми (--panel-2, --metal-lt, --text, --text-mute, --accent, --hazard, --bg) */
+.pe-toolbar{--pe-control-h:44px;display:flex;flex-direction:column;gap:8px;}
+.pe-toolbar__row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;}
+.pe-toolbar__category{flex:1 1 180px;min-width:0;}
+/* container-type: ширина самого поля (а не екрана) вирішує, який підпис у чекбокса всередині пошуку («В усіх» / «В усіх категоріях»), див. .pe-search__box нижче */
+.pe-toolbar__search{flex:2 1 200px;min-width:0;container:pe-search / inline-size;}
+/* Однакова висота селекта, пошуку, чекбоксів і слота: рядок рівний, а підпис «Категорія» не зсуває поля */
+.pe-toolbar .pe-input{box-sizing:border-box;min-height:var(--pe-control-h);}
+/* Права частина рядка. Її розмір не залежить від стану чекбоксів: слот під кнопку має фіксовану ширину завжди,
+   тому рядок ні зсувається, ні переноситься при вмиканні «Режиму LLM» */
+.pe-toolbar__opts{display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:0 18px;min-height:var(--pe-control-h);}
+
+/* Єдиний кастомний чекбокс («В усіх категоріях», «Режим LLM») */
+.pe-check{
+  display:inline-flex;align-items:center;gap:8px;min-height:var(--pe-control-h);
   font-size:13.5px;color:var(--text-mute);
   cursor:pointer;user-select:none;white-space:nowrap;
-  transition:color .2s ease;
+  transition:color .2s ease, opacity .2s ease;
 }
-.pe-llm-toggle:hover{color:var(--text);}
-.pe-llm-toggle input[type="checkbox"]{
-  accent-color:var(--hazard);
-  width:16px;height:16px;cursor:pointer;
+.pe-check:hover,
+.pe-check:has(.pe-check__input:checked){color:var(--text);}
+/* Справжній input лишається в DOM (клавіатура, скрінрідери), але візуально прихований: малюємо власний квадрат поруч */
+.pe-check__input{
+  position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
 }
+.pe-check__box{
+  position:relative;flex:none;box-sizing:border-box;
+  width:18px;height:18px;
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  background:var(--panel-2);
+  transition:border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.pe-check:hover .pe-check__box{border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
+/* Галочка: рамки двох сторін повернутого прямокутника, колір — фон теми (контраст до заливки --hazard) */
+.pe-check__box::after{
+  content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;
+  border:solid var(--bg);border-width:0 2px 2px 0;
+  transform:rotate(45deg) scale(0);
+  transition:transform .15s ease;
+}
+.pe-check__input:checked + .pe-check__box{background:var(--hazard);border-color:var(--hazard);}
+.pe-check__input:checked + .pe-check__box::after{transform:rotate(45deg) scale(1);}
+.pe-check__input:focus-visible + .pe-check__box{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* Недоступний (напр. «Режим LLM» для категорії без схеми): приглушений, але займає те саме місце */
+.pe-check.is-unavailable{opacity:.45;cursor:not-allowed;}
+.pe-check.is-unavailable:hover{color:var(--text-mute);}
+.pe-check.is-unavailable:hover .pe-check__box{border-color:var(--metal-lt);}
+
+/* Слот під кнопку копіювання: фіксована ширина завжди. Кнопка заповнює слот (position:absolute), тому розміри сусідів не залежать
+   від її стану. Схована кнопка: opacity:0 + visibility:hidden (неможливо клікнути й дістатись табом). */
+.pe-llm-slot{position:relative;flex:none;width:var(--pe-control-h);height:var(--pe-control-h);}
 .pe-llm-copy-btn{
+  position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;padding:0;
   display:inline-flex;align-items:center;justify-content:center;
-  padding:0 10px;height:38px;
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-4px);
+  transition:opacity .2s ease, transform .2s ease, visibility 0s linear .2s;
+}
+.pe-llm-slot.is-active .pe-llm-copy-btn{
+  opacity:1;visibility:visible;pointer-events:auto;transform:none;
+  transition:opacity .2s ease, transform .2s ease, visibility 0s;
+}
+@media (prefers-reduced-motion:reduce){
+  .pe-check,
+  .pe-check__box,
+  .pe-check__box::after,
+  .pe-llm-copy-btn,
+  .pe-llm-slot.is-active .pe-llm-copy-btn{transition:none;}
+}
+@media (max-width:600px){
+  .pe-toolbar__category,
+  .pe-toolbar__search{flex-basis:100%;}
 }
 
-/* Форма додавання та редагування (зверху над списком) */
+/* Форма додавання та редагування (під списком і підсумком, нижче за них) */
 .pe-cata{
   display:flex;flex-direction:column;gap:14px;
   padding:16px;
@@ -384,11 +442,44 @@
   pointer-events:none;
   transition:color .2s ease, opacity .2s ease;
 }
-.pe-search__box:focus-within .pe-search__icon{color:var(--accent);opacity:1;}
-.pe-search__box .pe-search__input{padding-left:38px;padding-right:36px;}
-/* Кнопка очищення — всередині поля справа */
+/* Іконка реагує лише на фокус самого поля вводу, а не на :focus-within усієї обгортки: чекбокс і «×» тепер всередині обгортки,
+   тож клік по них (фокус переходить на чекбокс) запускав би анімацію кольору/прозорості іконки туди-назад (миготіння). */
+.pe-search__box:has(.pe-search__input:focus) .pe-search__icon{color:var(--accent);opacity:1;}
+/* Наведення на «×» / чекбокс не знімає hover-рамку поля: вони сусіди інпута, а не нащадки, тому без цього :hover у інпута
+   зникав би, щойно курсор заходить на чекбокс (рамка миготіла). Колір той самий, що в .pe-input:hover. */
+.pe-search__box:hover .pe-search__input:not(:focus):not(.is-invalid):not(:disabled){border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
+/* --pe-inside-w — ширина, зарезервована справа під «×» і чекбокс (з запасом): текст запиту ніколи не забегає під них.
+   Тримати в синхроні з розмірами .pe-search__inside / .pe-check--inline нижче. */
+.pe-search__box{--pe-inside-w:120px;}
+.pe-search__box .pe-search__input{padding-left:38px;padding-right:var(--pe-inside-w);}
+/* Права частина поля: кнопка очищення + чекбокс, по вертикалі по центру. Сама група кліків не ловить
+   (pointer-events:none), тому весь інпут лишається клікабельним для вводу; клікаються лише її діти. */
+.pe-search__inside{
+  position:absolute;top:0;right:8px;bottom:0;
+  display:flex;align-items:center;gap:4px;
+  pointer-events:none;
+}
+.pe-search__inside > *{pointer-events:auto;}
+/* Чекбокс всередині поля: той самий .pe-check, але без висоти рядка тулбара і з тонким розділювачем зліва */
+.pe-check--inline{
+  min-height:0;padding:6px 2px 6px 10px;margin-left:2px;
+  border-left:1px solid var(--metal-lt);
+  font-size:13px;
+  -webkit-tap-highlight-color:transparent; /* без системного спалаху по тапу на мобільних */
+  outline:none;
+}
+/* Кільце фокусу малюється лише при навігації з клавіатури (:focus-visible у .pe-check__input:focus-visible + .pe-check__box вище);
+   від кліку мишею/тапу ніякої обводки немає. Саме кільце свідомо НЕ вимикаємо: це єдиний індикатор фокусу для користувачів клавіатури. */
+.pe-check--inline .pe-check__input:focus:not(:focus-visible) + .pe-check__box{box-shadow:none;}
+/* Підпис: у вузькому полі — «В усіх». Для браузерів без container queries лишається безпечний короткий варіант. */
+.pe-check--inline .pe-check__full{display:none;}
+@container pe-search (min-width:380px){
+  .pe-search__box{--pe-inside-w:200px;}
+  .pe-check--inline .pe-check__full{display:inline;}
+  .pe-check--inline .pe-check__short{display:none;}
+}
+/* Кнопка очищення — усередині поля (позиція задається групою .pe-search__inside) */
 .pe-search__clear{
-  position:absolute;right:8px;top:50%;transform:translateY(-50%);
   display:inline-flex;align-items:center;justify-content:center;
   width:24px;height:24px;padding:0;
   background:transparent;border:0;border-radius:50%;
@@ -398,13 +489,11 @@
 .pe-search__clear:hover{color:var(--text);background-color:color-mix(in srgb, var(--text) 10%, transparent);}
 .pe-search__clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
 .pe-search__clear[hidden]{display:none;}
-/* Рядок під полем: чекбокс «У всіх категоріях» і лічильник знайденого */
+/* Рядок під полем: лічильник знайденого. min-height резервує висоту, щоб поява тексту не зсувала блоки нижче */
 .pe-search__meta{
-  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-height:20px;
   font-size:13px;color:var(--text-mute);
 }
-.pe-search__all{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
-.pe-search__all input{margin:0;accent-color:var(--accent);cursor:pointer;}
 .pe-search-results[hidden]{display:none;}
 
 /* Підсвітка збігів (<mark class="pe-mark">) у результатах і в відфільтрованому списку катаклізмів */

@@ -125,29 +125,72 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
       <div class="block">
         <div class="block-head"><h2>Характеристики</h2></div>
         <div class="block-body pe-body">
-          <div class="pe-field">
-            <label class="pe-label" for="pe-category">Категорія</label>
-            <div class="pe-category-row">
-              <select id="pe-category" class="pe-input pe-select">
-                <optgroup label="Характеристики гравця">${optionsHtml(CHARACTER_CATEGORIES)}</optgroup>
-                <optgroup label="Бункер">${optionsHtml(BUNKER_CATEGORIES)}</optgroup>
-              </select>
-              <div class="pe-llm-controls">
-                <label class="pe-llm-toggle" title="Режим LLM (робота з чистим текстом)">
-                  <input type="checkbox" id="pe-llm-mode">
-                  <span>Режим LLM</span>
+          <!-- Панель керування: категорія, пошук і режим LLM в одному рядку; під рядком — лічильник пошуку та результати -->
+          <div class="pe-toolbar">
+            <div class="pe-toolbar__row">
+              <div class="pe-field pe-toolbar__category">
+                <label class="pe-label" for="pe-category">Категорія</label>
+                <select id="pe-category" class="pe-input pe-select">
+                  <optgroup label="Характеристики гравця">${optionsHtml(CHARACTER_CATEGORIES)}</optgroup>
+                  <optgroup label="Бункер">${optionsHtml(BUNKER_CATEGORIES)}</optgroup>
+                </select>
+              </div>
+              <div class="pe-field pe-search pe-toolbar__search">
+                <label class="pe-label" for="pe-search">Пошук</label>
+                <div class="pe-search__box">
+                  <svg class="pe-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                  <input id="pe-search" class="pe-input pe-search__input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Пошук...">
+                  <!-- Права частина поля: «×» і чекбокс «В усіх категоріях» розташовані всередині її. Група не перехоплює кліки (pointer-events:none), клікабельні лише її діти -->
+                  <div class="pe-search__inside">
+                    <button type="button" id="pe-search-clear" class="pe-search__clear" aria-label="Очистити пошук" title="Очистити (Esc)" hidden>×</button>
+                    <label class="pe-check pe-check--inline" title="Шукати в усіх категоріях">
+                      <input type="checkbox" id="pe-search-all" class="pe-check__input" aria-label="В усіх категоріях">
+                      <span class="pe-check__box" aria-hidden="true"></span>
+                      <!-- На вузькому полі показується короткий підпис (перемикає container query в packs.css); повна назва для скрінрідерів — у aria-label вище -->
+                      <span class="pe-check__text" aria-hidden="true"><span class="pe-check__full">В усіх категоріях</span><span class="pe-check__short">В усіх</span></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="pe-toolbar__opts">
+                <label class="pe-check" title="Режим LLM (робота з чистим текстом)">
+                  <input type="checkbox" id="pe-llm-mode" class="pe-check__input">
+                  <span class="pe-check__box" aria-hidden="true"></span>
+                  <span class="pe-check__text">Режим LLM</span>
                 </label>
+                <!-- Слот зарезервовано завжди (фіксована ширина): кнопка всередині лише з'являється/зникає через opacity/visibility, рядок не зсувається -->
+                <span class="pe-llm-slot" id="pe-llm-slot">
                 <button type="button" id="pe-llm-copy" class="pk-btn pk-btn--ghost pe-llm-copy-btn" title="Скопіювати промпт для LLM" aria-label="Скопіювати промпт для LLM">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 </button>
+                </span>
               </div>
             </div>
+            <div class="pe-search__meta">
+              <span id="pe-search-count" aria-live="polite"></span>
+            </div>
+            <div id="pe-search-results" class="pe-cata-list pe-search-results" role="group" aria-label="Результати пошуку" hidden></div>
           </div>
 
-          <!-- Форма катаклізму: розміщена зверху для зручного введення через Tab -->
+          <!-- Список карток / textarea -->
+          <div class="pe-field">
+            <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
+            <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані картки" hidden></div>
+            <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
+          </div>
+
+          <div class="pe-summary">
+            <p id="pe-summary-total" class="pe-summary__total"></p>
+            <div id="pe-chips" class="pe-chips"></div>
+          </div>
+
+          <!-- Форми додавання / редагування — ПІД списком і підсумком: спершу бачимо пошук і наявні елементи, форма завершує блок.
+               Видима рівно одна з двох (катаклізм / динамічна картка): перемикає showCategory(). Ідентифікатори не змінені — обробники працюють по id. -->
+
+          <!-- Форма катаклізму -->
           <div id="pe-cata" class="pe-cata" hidden>
             <h3 id="pe-cata-mode" class="pe-cata__title">Новий катаклізм</h3>
-            <p class="pe-hint">Заповніть поля та натисніть "Додати". Список нижче відображає додані катаклізми.</p>
+            <p class="pe-hint">Заповніть поля та натисніть "Додати". Список вище відображає додані катаклізми.</p>
             <div class="pe-field">
               <label class="pe-label" for="pe-cata-name">Назва катаклізму <span class="pe-required" title="Обов'язкове поле">*</span></label>
               <input id="pe-cata-name" class="pe-input" type="text" maxlength="${CATACLYSM_LIMITS.nameMax}" autocomplete="off" placeholder="Напр.: Повстання штучного інтелекту">
@@ -178,10 +221,10 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
             </div>
           </div>
 
-          <!-- Форма для динамічних категорій: розміщена зверху для зручного введення через Tab -->
+          <!-- Форма для динамічних категорій -->
           <div id="pe-dynamic-form" class="pe-cata" hidden>
             <h3 id="pe-dyn-mode" class="pe-cata__title">Нова картка</h3>
-            <p class="pe-hint">Заповніть поля та натисніть "Додати". Список нижче відображає додані картки.</p>
+            <p class="pe-hint">Заповніть поля та натисніть "Додати". Список вище відображає додані картки.</p>
             <div class="pe-field">
               <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
               <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
@@ -193,33 +236,6 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
               <button type="button" class="pk-btn pk-btn--ghost" data-dyn-action="cancel" hidden>Скасувати</button>
               <button type="button" class="pk-btn pk-btn--danger" data-dyn-action="delete" hidden>Видалити</button>
             </div>
-          </div>
-
-          <!-- Пошук: у поточній категорії або в усіх -->
-          <div class="pe-field pe-search">
-            <label class="pe-label" for="pe-search">Пошук</label>
-            <div class="pe-search__box">
-              <svg class="pe-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-              <input id="pe-search" class="pe-input pe-search__input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Пошук...">
-              <button type="button" id="pe-search-clear" class="pe-search__clear" aria-label="Очистити пошук" title="Очистити (Esc)" hidden>×</button>
-            </div>
-            <div class="pe-search__meta">
-              <label class="pe-search__all"><input type="checkbox" id="pe-search-all"> У всіх категоріях</label>
-              <span id="pe-search-count" aria-live="polite"></span>
-            </div>
-            <div id="pe-search-results" class="pe-cata-list pe-search-results" role="group" aria-label="Результати пошуку" hidden></div>
-          </div>
-
-          <!-- Список карток / textarea -->
-          <div class="pe-field">
-            <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
-            <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані картки" hidden></div>
-            <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
-          </div>
-
-          <div class="pe-summary">
-            <p id="pe-summary-total" class="pe-summary__total"></p>
-            <div id="pe-chips" class="pe-chips"></div>
           </div>
         </div>
       </div>
@@ -305,6 +321,12 @@ export function setButtonState(btn, { disabled, text }) {
 // ----- Поля форми -----
 export const getCardsText = () => $('pe-cards').value;
 
+// Кнопка копіювання промпту активна лише при ввімкненому режимі LLM. Слот у рядку зарезервовано завжди, тому міняється лише прозорість/доступність
+// (клас is-active на слоті; анімацію робить CSS), а розміри та позиції сусідніх елементів не змінюються.
+export function setLlmCopyVisible(on) {
+  $('pe-llm-slot')?.classList.toggle('is-active', Boolean(on));
+}
+
 // Показує категорію: перемикає textarea / списки / форми залежно від наявності схеми та режиму
 export function showCategory({ category, text, viewMode = 'visual' }) {
   const isCata = category === 'cataclysm';
@@ -316,20 +338,18 @@ export function showCategory({ category, text, viewMode = 'visual' }) {
   $('pe-cards').placeholder = isCata 
     ? CATACLYSM_LIST_PLACEHOLDER 
     : (hasVisualMode && viewMode === 'visual') 
-      ? 'Список карток (додавайте через форму вище)' 
+      ? 'Список карток (додавайте через форму нижче)' 
       : placeholderFor(category);
   
   const llmCheckbox = $('pe-llm-mode');
-  const llmToggleWrap = llmCheckbox?.closest('.pe-llm-toggle');
+  const llmToggleWrap = llmCheckbox?.closest('.pe-check');
   if (llmCheckbox && llmToggleWrap) {
-    if (hasVisualMode) {
-      llmToggleWrap.style.display = 'inline-flex';
-      llmCheckbox.checked = (viewMode === 'llm');
-    } else {
-      llmToggleWrap.style.display = 'none';
-      llmCheckbox.checked = false;
-    }
+    // Для категорій без візуального режиму чекбокс лише гаситься (disabled), а не зникає: інакше сусідні елементи рядка зсувалися би
+    llmToggleWrap.classList.toggle('is-unavailable', !hasVisualMode);
+    llmCheckbox.disabled = !hasVisualMode;
+    llmCheckbox.checked = hasVisualMode && viewMode === 'llm';
   }
+  setLlmCopyVisible(Boolean(llmCheckbox?.checked));
 
   const isVisual = hasVisualMode && (viewMode === 'visual');
   
@@ -535,7 +555,7 @@ export function paintSearch(view) {
   panel.hidden = false;
   if (!total) {
     count.textContent = 'Нічого не знайдено';
-    panel.innerHTML = `<p class="pe-cata-list__empty">Нічого не знайдено за запитом "${esc(query.trim())}"${searchAll ? '' : '. Спробуйте увімкнути "У всіх категоріях"'}</p>`;
+    panel.innerHTML = `<p class="pe-cata-list__empty">Нічого не знайдено за запитом "${esc(query.trim())}"${searchAll ? '' : '. Спробуйте увімкнути "В усіх категоріях"'}</p>`;
     return;
   }
   count.textContent = total > results.length ? `Знайдено: ${total} (показано ${results.length})` : `Знайдено: ${total}`;

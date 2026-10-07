@@ -230,13 +230,30 @@ function onSearchListKeydown(e) {
 
 function initSearch() {
   ui.initSearchControls({ query: searchQuery, all: searchAll });
-  $('pe-search').addEventListener('input', e => setSearchQuery(e.target.value));
-  $('pe-search').addEventListener('keydown', onSearchKeydown);
+  const searchInput = $('pe-search');
+  searchInput.addEventListener('input', e => setSearchQuery(e.target.value));
+  searchInput.addEventListener('keydown', onSearchKeydown);
   $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }));
+
+  // Клік мишею/тапом по «×» або чекбоксу всередині поля не має відбирати фокус у поля вводу: інакше воно на мить втрачає
+  // фокус (зникає світіння рамки, тьмяніє лупа), а потім фокус стрибає назад — це й було миготінням.
+  // preventDefault на mousedown лишає фокус в інпуті (сам click і перемикання чекбокса працюють як раніше).
+  // Деякі браузери при кліку по label усе одно переводять фокус на чекбокс, тому після change повертаємо його в поле.
+  // Клавіатурна навігація (Tab / Space) не зачеплена: прапорець виставляється лише від миші.
+  let searchHadFocus = false;
+  document.querySelector('.pe-search__inside')?.addEventListener('mousedown', e => {
+    searchHadFocus = document.activeElement === searchInput;
+    if (!searchHadFocus) return;
+    e.preventDefault();
+    // Прапорець скидаємо одразу після відпускання кнопки (click і change спрацьовують до цього таймера), навіть якщо курсор зсунули повз
+    window.addEventListener('mouseup', () => setTimeout(() => { searchHadFocus = false; }), { once: true });
+  });
+
   $('pe-search-all').addEventListener('change', e => {
     searchAll = e.target.checked;
     renderList();
     renderSearch();
+    if (searchHadFocus) searchInput.focus({ preventScroll: true }); // курсор лишається там, де був
   });
   const results = $('pe-search-results');
   results.addEventListener('click', onSearchResultClick);
@@ -884,6 +901,7 @@ export async function initPackEditor() {
   
   $('pe-llm-mode')?.addEventListener('change', e => {
     viewMode = e.target.checked ? 'llm' : 'visual';
+    ui.setLlmCopyVisible(e.target.checked); // кнопка копіювання з'являється лише в режимі LLM
     ui.showCategory({ category: activeCategory, text: form.texts[activeCategory] || '', viewMode });
     renderList();
     renderSearch();
