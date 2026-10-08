@@ -275,7 +275,7 @@ export function renderSummary(counts, activeCategory) {
   const total = charTotal + bunkerTotal;
 
   const totalEl = $("pe-summary-total");
-  if (totalEl) totalEl.textContent = `Усього: ${total} (Персонаж: ${charTotal}, Бункер: ${bunkerTotal})`;
+  if (totalEl) totalEl.textContent = `${total} (П: ${charTotal}, Б: ${bunkerTotal})`;
 
   const chipsEl = $("pe-chips");
   if (chipsEl) {
