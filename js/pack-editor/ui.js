@@ -27,7 +27,7 @@ export function placeholderFor(category) {
 const STAGE_LABELS = { profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби', body_type: 'Дефолтні типи статури' };
 export const STAGE_FIELDS = STAGE_KEYS.map(key => ({ key, label: STAGE_LABELS[key] }));
 
-// Діапазони віку/зросту, які читає ігровий рушій з packs.config.age_range / height_settings
+// Діапазони віку/зросту, які читає ігровий рушій з packs.config.age_range / height_range
 // (game-generator.js при старті гри, host/characteristics.js при переролі статі/статури ведучим).
 export const RANGE_FIELDS = [
   { key: 'ageMin',    label: 'Мін. вік',    min: 1,  max: 120 },
@@ -75,13 +75,6 @@ function rangesFieldsHtml() {
     </div>
   `;
   const heightHtml = `
-    <div class="pe-field">
-      <label class="pe-label" for="pe-range-heightMode">Режим зросту</label>
-      <select id="pe-range-heightMode" class="pe-input" data-range="heightMode">
-        <option value="base">Стандартний (150-210)</option>
-        <option value="custom">Кастомний</option>
-      </select>
-    </div>
     <div class="pe-field">
       <label class="pe-label" for="pe-range-heightMin">Мін. зріст</label>
       <input id="pe-range-heightMin" class="pe-input" type="number" data-range="heightMin" min="50" max="300" step="1">

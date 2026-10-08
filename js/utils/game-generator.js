@@ -181,8 +181,8 @@ export async function generateGameState(playersList, pack, config) {
         if (bodyItem.meta?.exact_height) {
           heightVal = Number(bodyItem.meta.exact_height) || bodyItem.meta.exact_height;
         } else if (bodyItem.meta?.custom_height_mode === 'range') {
-          const min = bodyItem.meta.height_min ?? config.height_settings?.min ?? 150;
-          const max = bodyItem.meta.height_max ?? config.height_settings?.max ?? 210;
+          const min = bodyItem.meta.height_min ?? config.height_range?.min ?? 150;
+          const max = bodyItem.meta.height_max ?? config.height_range?.max ?? 210;
           heightVal = randInt(min, max);
         }
       }
@@ -191,8 +191,8 @@ export async function generateGameState(playersList, pack, config) {
     }
 
     if (!hasNoHeight && heightVal === null) {
-      const min = config.height_settings?.min ?? 150;
-      const max = config.height_settings?.max ?? 210;
+      const min = config.height_range?.min ?? 150;
+      const max = config.height_range?.max ?? 210;
       heightVal = randInt(min, max);
     }
 

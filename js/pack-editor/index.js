@@ -98,34 +98,12 @@ function selectCategory(category) {
   renderSummary();
 }
 
-function updateGlobalRangesState() {
-  const modeEl = $('pe-range-heightMode');
-  if (!modeEl) return;
-  const mode = modeEl.value;
-  const isCustom = mode === 'custom';
-  
-  const minEl = $('pe-range-heightMin');
-  const maxEl = $('pe-range-heightMax');
-  
-  if (minEl) {
-    minEl.disabled = !isCustom;
-    minEl.closest('.pe-field').style.display = isCustom ? '' : 'none';
-    if (!isCustom) minEl.value = '150';
-  }
-  if (maxEl) {
-    maxEl.disabled = !isCustom;
-    maxEl.closest('.pe-field').style.display = isCustom ? '' : 'none';
-    if (!isCustom) maxEl.value = '210';
-  }
-}
-
 // Повністю перемальовує значення полів зі стану (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 function syncFieldsFromForm() {
   ui.fillFields(state.form);
   ui.showTitleError('');
   ui.updateDescCounter();
   
-  updateGlobalRangesState();
   resetCataForm();
   selectCategory(state.activeCategory);
   updateButtons();
@@ -1054,15 +1032,7 @@ export async function initPackEditor() {
   $('pe-ranges').addEventListener('input', e => {
     const field = e.target.closest('[data-range]');
     if (!field) return;
-    if (field.id === 'pe-range-heightMode') {
-      updateGlobalRangesState();
-    }
     state.form.ranges[field.dataset.range] = field.value;
-    // For min/max, update state in case they were changed automatically by mode switch
-    if (field.id === 'pe-range-heightMode') {
-      state.form.ranges['heightMin'] = $('pe-range-heightMin').value;
-      state.form.ranges['heightMax'] = $('pe-range-heightMax').value;
-    }
     updateButtons();
   });
 
@@ -1158,7 +1128,7 @@ export async function initPackEditor() {
       return;
     }
 
-    // Конфіг дефолтного пака потрібен в обох режимах: без нього не зібрати повний config (age_range, height_settings...)
+    // Конфіг дефолтного пака потрібен в обох режимах: без нього не зібрати повний config (age_range, height_range...)
     state.defaultConfig = await getDefaultPackConfig();
     state.baseStages = stagesTextFromConfig(state.defaultConfig);
     state.baseRanges = rangesFromConfig(state.defaultConfig, RANGE_DEFAULTS);

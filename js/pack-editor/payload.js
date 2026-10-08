@@ -138,20 +138,19 @@ export function stagesTextFromConfig(config) {
 // байдуже, String() на виході в будь-якому випадку): для базового пака — RANGE_DEFAULTS, для конкретного — діапазони базового.
 export function rangesFromConfig(config, fallback) {
   const age = config?.age_range || {};
-  const heightSet = config?.height_settings || {};
+  const height = config?.height_range || {};
 
   return {
     ageMin:    String(age.min ?? fallback.ageMin),
     ageMax:    String(age.max ?? fallback.ageMax),
-    heightMode: String(heightSet.mode ?? fallback.heightMode ?? 'base'),
-    heightMin: String(heightSet.min ?? fallback.heightMin),
-    heightMax: String(heightSet.max ?? fallback.heightMax)
+    heightMin: String(height.min ?? fallback.heightMin),
+    heightMax: String(height.max ?? fallback.heightMax)
   };
 }
 
 // 3.4: фінальний config для збереження. Основа — конфіг дефолтного пака, поверх нього конфіг самого пака,
 // а default_stages перекриваються стадіями з форми. Порожнє поле стадій = лишається те, що було (стадії дефолтного пака).
-// stages — { [key]: string } (текст textarea), ranges — { ageMin, ageMax, heightMin, heightMax, heightMode } (рядки).
+// stages — { [key]: string } (текст textarea), ranges — { ageMin, ageMax, heightMin, heightMax } (рядки).
 export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = {}, ranges }) {
   const stageLists = {};
   for (const key of STAGE_KEYS) {
@@ -166,8 +165,7 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
       min: parseInt(ranges.ageMin, 10),
       max: parseInt(ranges.ageMax, 10)
     },
-    height_settings: {
-      mode: ranges.heightMode || 'base',
+    height_range: {
       min: parseInt(ranges.heightMin, 10),
       max: parseInt(ranges.heightMax, 10)
     },
@@ -178,9 +176,8 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
     }
   };
 
-  // Видаляємо легасі костиль з конфіга (height_range), якщо він туди потрапив з packConfig / defaultConfig
-  // (А default_body_types видаляємо, бо тепер це стадія body_type)
-  delete finalConfig.height_range;
+  // Видаляємо помилково додані поля, якщо вони туди потрапили
+  delete finalConfig.height_settings;
   delete finalConfig.default_body_types;
 
   return finalConfig;
