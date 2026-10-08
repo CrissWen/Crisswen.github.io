@@ -6,11 +6,29 @@ import { CHARACTERISTIC_TYPES } from '../utils/host/constants.js';
 // Категорії бункера — ті, що гра реально тягне з пулу (utils/game-generator.js: BUNKER_POOL_CATEGORY,
 // utils/host/actions-bunker.js: cataclysm, game-config.base.js: items, game-generator.js: food_supply).
 
+const MENU_ORDER = [
+  'gender',
+  'body_type',
+  'trait',
+  'profession',
+  'health',
+  'hobby',
+  'phobia',
+  'large_inventory',
+  'backpack',
+  'extra_info',
+  'special_ability'
+];
+
 export const CHARACTER_CATEGORIES = CHARACTERISTIC_TYPES.map(t => ({
   poolType: 'character',
   category: t.category,
   label: t.label
-}));
+})).sort((a, b) => {
+  const iA = MENU_ORDER.indexOf(a.category);
+  const iB = MENU_ORDER.indexOf(b.category);
+  return (iA === -1 ? 99 : iA) - (iB === -1 ? 99 : iB);
+});
 
 export const BUNKER_CATEGORIES = [
   { poolType: 'bunker', category: 'cataclysm',         label: 'Катаклізм' },

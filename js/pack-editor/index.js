@@ -1182,8 +1182,3 @@ export function cleanupPackEditor() {
   state.isSaving = false;
   state.isConfirming = false;
 }
-
-
-
-
-
