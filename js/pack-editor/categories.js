@@ -93,6 +93,17 @@ export const CATEGORY_SCHEMAS = {
       { key: 'height_max', type: 'text', label: 'Макс. зріст (см, якщо обрано діапазон)' },
       { key: 'exact_height', type: 'text', label: 'Точний зріст (число або текст, якщо обрано точне значення)' }
     ]
-  }
+  },
+  phobia: { fields: [] },
+  trait: { fields: [] },
+  large_inventory: { fields: [] },
+  backpack: { fields: [] },
+  extra_info: { fields: [] },
+  history: { fields: [] },
+  rooms_description: { fields: [] },
+  location: { fields: [] },
+  problems: { fields: [] },
+  items: { fields: [] },
+  food_supply: { fields: [] }
 };
 

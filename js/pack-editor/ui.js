@@ -267,7 +267,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         <div class="block-body pe-body">
           <p class="pe-hint">
             Стадії діють на весь пак: для кожної професії, хобі та хвороби гра випадково обирає одне зі значень.
-            Одне значення — один рядок. Порожнє поле означає, що лишаються стадії дефолтного пака.
+            Одне значення — один рядок.
           </p>
           <div class="pe-stages" id="pe-stages">${stageFieldsHtml()}</div>
         </div>
@@ -295,7 +295,7 @@ export function renderSummary(counts, activeCategory) {
   const total = charTotal + bunkerTotal;
 
   const totalEl = $("pe-summary-total");
-  if (totalEl) totalEl.textContent = `${total} (П: ${charTotal}, Б: ${bunkerTotal})`;
+  if (totalEl) totalEl.textContent = `Усього: ${total} (П: ${charTotal}, Б: ${bunkerTotal})`;
 
   const chipsEl = $("pe-chips");
   if (chipsEl) {
