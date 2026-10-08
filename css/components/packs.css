@@ -630,12 +630,7 @@
     border-right: 1px solid var(--metal);
     align-self: stretch; display: flex; flex-direction: column; justify-content: flex-start;
   }
-    .pe-char-sidebar-inner {
-    position: sticky;
-    top: 60px;
-    max-height: calc(100vh - 60px);
-    overflow-y: auto;
-  }
+    .pe-char-sidebar-inner {}
 }
 
 .pe-char-sidebar-inner {
@@ -844,6 +839,8 @@
   resize: vertical;
   overflow: auto;
 }
+
+
 
 
 
