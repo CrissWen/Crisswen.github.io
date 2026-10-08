@@ -25,28 +25,10 @@ import { $ } from './ui.js';
 const UNSAVED_NOTE = 'Усі незбережені зміни будуть втрачені';
 
 // ----- Стан сторінки (модульний: на екрані завжди один редактор) -----
-let packId = null;          // null = режим створення
-let defaultConfig = {};     // packs.config дефолтного пака: основа конфігу, бо рушій вимагає age_range, height_range тощо
-let packConfig = {};        // packs.config пака, що редагується (для нового — порожній)
-let extraMeta = {};         // meta карток, яких немає в тексті редактора (custom_age, stages...): повертається в картки при збереженні (катаклізми тримають свою extra у самих записах)
-let baseStages = {};        // стадії дефолтного пака (текст): те, до чого повертає "Очистити все" і порожнє поле стадій
-let baseRanges = {};        // діапазони віку/зросту дефолтного пака (рядки): те, до чого повертає "Очистити все"
-let form = { title: '', description: '', texts: {}, stages: {}, ranges: {}, cataclysms: [] }; // texts: { [category]: string }, stages: { [key]: string }, cataclysms: записи катаклізмів (форма в pack-payload.js)
-let initialForm = cloneForm(form); // значення на момент відкриття (для "Скасувати зміни" і відстеження змін)
-let activeCategory = ALL_PACK_CATEGORIES[0].category;
-let viewMode = 'visual';
-let dynEditIndex = -1;
-let newDynIndex = -1;
-let isSaving = false;
-let isConfirming = false;
-let allowLeave = false;     // після успішного збереження не питаємо браузер "Залишити сторінку?"
-let cataEditIndex = -1;     // індекс катаклізму, який зараз редагується у формі під списком; -1 = форма додає новий
-let newCataIndex = -1;      // індекс щойно доданого катаклізму: лише на один рендер отримує клас is-new (анімація появи)
-let searchQuery = '';       // запит у полі пошуку по характеристиках
-let searchAll = false;      // true = шукати у всіх категоріях, false = лише в активній
+import { state } from './state.js';
 
 function blankForm() {
-  return { title: '', description: '', texts: {}, stages: { ...baseStages }, ranges: { ...baseRanges }, cataclysms: [] };
+  return { title: '', description: '', texts: {}, stages: { ...state.baseStages }, ranges: { ...state.baseRanges }, cataclysms: [] };
 }
 
 function cloneForm(f) {
@@ -66,11 +48,11 @@ function getPackIdFromHash() {
 
 // ----- Допоміжні -----
 // Зайві пробіли та порожні рядки змінами не вважаються (нормалізація — pack-payload.js)
-const isDirty = () => normalizeForm(form) !== normalizeForm(initialForm);
-const isFormEmpty = () => normalizeForm(form) === normalizeForm(blankForm());
+const isDirty = () => normalizeForm(state.form) !== normalizeForm(state.initialForm);
+const isFormEmpty = () => normalizeForm(state.form) === normalizeForm(blankForm());
 
 // Фінальний config для збереження (логіка злиття — buildPackConfig у pack-payload.js)
-const buildConfig = () => buildPackConfig({ defaultConfig, packConfig, stages: form.stages, ranges: form.ranges });
+const buildConfig = () => buildPackConfig({ defaultConfig: state.defaultConfig, packConfig: state.packConfig, stages: state.form.stages, ranges: state.form.ranges });
 
 // ----- Розмітка -----
 export function renderPackEditor() {
@@ -82,19 +64,19 @@ export function renderPackEditor() {
 // { [category]: кількість рядків } для підписів у списку категорій і підсумку
 function categoryCounts() {
   const counts = {};
-  for (const { category } of ALL_PACK_CATEGORIES) counts[category] = parseLines(form.texts[category]).length;
+  for (const { category } of ALL_PACK_CATEGORIES) counts[category] = parseLines(state.form.texts[category]).length;
   return counts;
 }
 
-const renderSummary = () => ui.renderSummary(categoryCounts(), activeCategory);
+const renderSummary = () => ui.renderSummary(categoryCounts(), state.activeCategory);
 const updateButtons = () => ui.updateButtons({ dirty: isDirty(), empty: isFormEmpty() });
 
 function updateCardsMeta() {
-  const isCata = activeCategory === 'cataclysm';
+  const isCata = state.activeCategory === 'cataclysm';
   let count = 0;
   if (isCata) {
-    count = form.cataclysms.length;
-  } else if (CATEGORY_SCHEMAS[activeCategory] && viewMode === 'visual') {
+    count = state.form.cataclysms.length;
+  } else if (CATEGORY_SCHEMAS[state.activeCategory] && state.viewMode === 'visual') {
     count = getDynamicCards().length;
   } else {
     count = parseLines(ui.getCardsText()).length;
@@ -103,10 +85,10 @@ function updateCardsMeta() {
 }
 
 function selectCategory(category) {
-  activeCategory = category;
-  viewMode = 'visual';
+  state.activeCategory = category;
+  state.viewMode = 'visual';
   
-  ui.showCategory({ category, text: form.texts[category] || '', viewMode });
+  ui.showCategory({ category, text: state.form.texts[category] || '', viewMode: state.viewMode });
   
   resetCataForm();
   resetDynForm();
@@ -118,12 +100,12 @@ function selectCategory(category) {
 
 // Повністю перемальовує значення полів зі стану (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 function syncFieldsFromForm() {
-  ui.fillFields(form);
+  ui.fillFields(state.form);
   ui.showTitleError('');
   ui.updateDescCounter();
   
   resetCataForm();
-  selectCategory(activeCategory);
+  selectCategory(state.activeCategory);
   updateButtons();
 }
 
@@ -132,15 +114,15 @@ function syncFieldsFromForm() {
 //  • категорія "Катаклізм" (лише активна): фільтрується сам список катаклізмів (renderCataList) за назвою й описом;
 //  • решта (текстові категорії, або будь-яка, якщо увімкнено "У всіх категоріях"): під полем будується список знайдених рядків.
 // Клік по результату перемикає категорію, виділяє рядок у textarea (або відкриває катаклізм у формі).
-const searchTokens = () => tokenize(searchQuery);
+const searchTokens = () => tokenize(state.searchQuery);
 
 // Фільтр самого списку катаклізмів діє, лише коли шукаємо в активній категорії "Катаклізм"
-const cataFilterActive = () => activeCategory === 'cataclysm' && !searchAll && searchTokens().length > 0;
+const cataFilterActive = () => state.activeCategory === 'cataclysm' && !state.searchAll && searchTokens().length > 0;
 
-// Перемальовує панель результатів, лічильник і кнопку "×" за станом (searchQuery / searchAll / activeCategory / form)
+// Перемальовує панель результатів, лічильник і кнопку "×" за станом (state.searchQuery / state.searchAll / state.activeCategory / state.form)
 function renderSearch() {
   const tokens = searchTokens();
-  const view = { query: searchQuery, tokens, searchAll };
+  const view = { query: state.searchQuery, tokens, searchAll: state.searchAll };
 
   if (!tokens.length) {
     ui.paintSearch({ ...view, mode: 'idle' });
@@ -149,17 +131,17 @@ function renderSearch() {
 
   // Катаклізми в активній категорії: фільтрується сам список, окрема панель не потрібна
   if (cataFilterActive()) {
-    ui.paintSearch({ ...view, mode: 'cata-filter', cataCount: form.cataclysms.filter(c => cataMatches(c, tokens)).length });
+    ui.paintSearch({ ...view, mode: 'cata-filter', cataCount: state.form.cataclysms.filter(c => cataMatches(c, tokens)).length });
     return;
   }
 
-  const categories = searchAll ? ALL_PACK_CATEGORIES : ALL_PACK_CATEGORIES.filter(c => c.category === activeCategory);
-  const { results, total } = collectSearchResults({ categories, texts: form.texts, cataclysms: form.cataclysms, tokens });
+  const categories = state.searchAll ? ALL_PACK_CATEGORIES : ALL_PACK_CATEGORIES.filter(c => c.category === state.activeCategory);
+  const { results, total } = collectSearchResults({ categories, texts: state.form.texts, cataclysms: state.form.cataclysms, tokens });
   ui.paintSearch({ ...view, mode: 'results', results, total });
 }
 
 function setSearchQuery(value, { focus = false } = {}) {
-  searchQuery = value;
+  state.searchQuery = value;
   ui.setSearchInput(value);
   renderList();
   renderSearch();
@@ -168,7 +150,7 @@ function setSearchQuery(value, { focus = false } = {}) {
 
 // Результат-рядок: переходимо в його категорію, виділяємо рядок у textarea й прокручуємо до нього
 function openTextResult(category, lineIndex) {
-  if (category !== activeCategory) selectCategory(category);
+  if (category !== state.activeCategory) selectCategory(category);
   if (!ui.selectCardsLine(lineIndex)) {
     showGlobalToast('Рядок змінився — виберіть результат ще раз');
     renderSearch();
@@ -177,9 +159,9 @@ function openTextResult(category, lineIndex) {
 
 // Результат-катаклізм: відкриваємо його у формі (з тим самим захистом від втрати незбереженого, що й у кліку по списку)
 function openCataResult(index) {
-  if (activeCategory !== 'cataclysm') selectCategory('cataclysm');
-  if (!form.cataclysms[index]) return;
-  if (index !== cataEditIndex) {
+  if (state.activeCategory !== 'cataclysm') selectCategory('cataclysm');
+  if (!state.form.cataclysms[index]) return;
+  if (index !== state.cataEditIndex) {
     if (cataDraftPending()) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
       ui.scrollCataFormIntoView();
@@ -200,7 +182,7 @@ function onSearchResultClick(e) {
 
 function onSearchKeydown(e) {
   if (e.key === 'Escape') {
-    if (searchQuery) {
+    if (state.searchQuery) {
       e.preventDefault();
       setSearchQuery('');
     }
@@ -219,7 +201,7 @@ function onSearchKeydown(e) {
 // Стрілки ↑/↓ ходять по рядках результатів (або по списку катаклізмів), Esc / ↑ з першого рядка повертає в поле пошуку
 function onSearchListKeydown(e) {
   const btn = e.target.closest('button');
-  if (!btn || !searchQuery) return;
+  if (!btn || !state.searchQuery) return;
   if (e.key === 'Escape') {
     ui.focusSearchInput();
     return;
@@ -231,7 +213,7 @@ function onSearchListKeydown(e) {
 }
 
 function initSearch() {
-  ui.initSearchControls({ query: searchQuery, all: searchAll });
+  ui.initSearchControls({ query: state.searchQuery, all: state.searchAll });
   const searchInput = $('pe-search');
   searchInput.addEventListener('input', e => setSearchQuery(e.target.value));
   searchInput.addEventListener('keydown', onSearchKeydown);
@@ -252,7 +234,7 @@ function initSearch() {
   });
 
   $('pe-search-all').addEventListener('change', e => {
-    searchAll = e.target.checked;
+    state.searchAll = e.target.checked;
     renderList();
     renderSearch();
     if (searchHadFocus) searchInput.focus({ preventScroll: true }); // курсор лишається там, де був
@@ -264,44 +246,45 @@ function initSearch() {
 }
 
 // ----- Катаклізми: список рядків (.added-item-row) + форма під ним -----
-// Джерело істини — form.cataclysms (записи з pack-payload.js). Текст у textarea лише відображає їхні назви (по одній на рядок),
+// Джерело істини — state.form.cataclysms (записи з pack-payload.js). Текст у textarea лише відображає їхні назви (по одній на рядок),
 // тому змінити катаклізм можна лише через форму: клік по назві → поля заповнюються → "Зберегти зміни" або "Видалити".
 
-// Текст списку (назви по одній на рядок) усередині form.texts.cataclysm: з нього читаються лічильники, підсумок і трекінг змін
-function syncCataText(f = form) {
+// Текст списку (назви по одній на рядок) усередині state.form.texts.cataclysm: з нього читаються лічильники, підсумок і трекінг змін
+function syncCataText(f = state.form) {
   f.texts.cataclysm = cataclysmNamesText(f.cataclysms);
 }
 
 // Чи є у формі дані, які ще не потрапили в список (новий катаклізм або незбережені правки існуючого).
 // Захист від втрати: без нього "Оновити пак" або клік по іншому катаклізму мовчки відкинули б заповнене.
-const cataDraftPending = () => hasCataDraft(ui.readCataRaw(), form.cataclysms[cataEditIndex], cataEditIndex >= 0);
+const cataDraftPending = () => hasCataDraft(ui.readCataRaw(), state.form.cataclysms[state.cataEditIndex], state.cataEditIndex >= 0);
 
 function renderCataList() {
   ui.renderCataList({
-    cataclysms: form.cataclysms,
-    editIndex: cataEditIndex,
-    newIndex: newCataIndex,
+    cataclysms: state.form.cataclysms,
+    editIndex: state.cataEditIndex,
+    newIndex: state.newCataIndex,
     tokens: cataFilterActive() ? searchTokens() : []
   });
 }
 
 function getDynamicCards() {
-  if (activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[activeCategory]) return [];
-  return parseCards(form.texts[activeCategory] || '', activeCategory, extraMeta);
+  if (state.activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[state.activeCategory]) return [];
+  return parseCards(state.form.texts[state.activeCategory] || '', state.activeCategory, state.extraMeta);
 }
 
 function renderList() {
-  if (activeCategory === 'cataclysm') {
+  if (state.activeCategory === 'cataclysm') {
     renderCataList();
-  } else if (CATEGORY_SCHEMAS[activeCategory] && viewMode === 'visual') {
+  } else if (CATEGORY_SCHEMAS[state.activeCategory] && state.viewMode === 'visual') {
     const cards = getDynamicCards();
     ui.renderCataList({
       cataclysms: cards.map(c => ({ name: c.value })),
-      editIndex: dynEditIndex,
-      newIndex: newDynIndex,
-      tokens: searchAll && !cataFilterActive() ? searchTokens() : []
+      editIndex: state.dynEditIndex,
+      newIndex: state.newDynIndex,
+      tokens: state.searchAll && !cataFilterActive() ? searchTokens() : [],
+      category: state.activeCategory
     });
-    if (activeCategory === 'gender') {
+    if (state.activeCategory === 'gender') {
       const datalist = document.getElementById('pe-dyn-opposite-list');
       if (datalist) {
         datalist.innerHTML = cards.map(c => '<option value="' + c.value.replace(/"/g, '&quot;') + '">').join('');
@@ -312,8 +295,8 @@ function renderList() {
 
 // Режим форми: -1 — додавання нового, ≥ 0 — редагування існуючого
 function setCataMode(index) {
-  cataEditIndex = index;
-  ui.paintCataMode(index >= 0 ? form.cataclysms[index] : null);
+  state.cataEditIndex = index;
+  ui.paintCataMode(index >= 0 ? state.form.cataclysms[index] : null);
   renderList();
 }
 
@@ -338,18 +321,18 @@ function applyCataChange({ scrollToEnd = false } = {}) {
 
 // "Додати" / "Зберегти зміни" — залежно від режиму форми. Після успіху дані з’являються в полі-списку, а поля форми очищаються.
 function submitCata() {
-  const result = validateCataclysmInput(ui.readCataRaw(), { cataclysms: form.cataclysms, editIndex: cataEditIndex });
+  const result = validateCataclysmInput(ui.readCataRaw(), { cataclysms: state.form.cataclysms, editIndex: state.cataEditIndex });
   if (result.error) {
     ui.showCataError(result.error, result.field);
     return;
   }
 
-  const existing = cataEditIndex >= 0 ? form.cataclysms[cataEditIndex] : null;
+  const existing = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
   if (existing) {
     // Додаткова meta цього катаклізму, якої форма не показує, лишається правою
-    form.cataclysms[cataEditIndex] = { ...result.item, extra: existing.extra || {} };
+    state.form.cataclysms[state.cataEditIndex] = { ...result.item, extra: existing.extra || {} };
   } else {
-    form.cataclysms.push(result.item);
+    state.form.cataclysms.push(result.item);
   }
 
   applyCataChange();
@@ -357,9 +340,9 @@ function submitCata() {
 
   // Новий рядок з’являється з анімацією: клас is-new діє лише на цей рендер (далі перемальовки його вже не мають)
   if (!existing) {
-    newCataIndex = form.cataclysms.length - 1;
+    state.newCataIndex = state.form.cataclysms.length - 1;
     renderList();
-    newCataIndex = -1;
+    state.newCataIndex = -1;
     ui.scrollCataListToEnd();
   }
   showGlobalToast(existing ? 'Катаклізм оновлено' : 'Катаклізм додано');
@@ -368,7 +351,7 @@ function submitCata() {
 
 // Клік по назві у списку → поля форми заповнюються даними цього катаклізму
 function startCataEdit(index) {
-  const item = form.cataclysms[index];
+  const item = state.form.cataclysms[index];
   if (!item) return;
   ui.fillCataFields(cataFieldStrings(item));
   ui.showCataError('');
@@ -381,8 +364,8 @@ function onCataListClick(e) {
   if (!row) return;
   const index = Number(row.dataset.cataIndex);
 
-  if (activeCategory === 'cataclysm') {
-    if (!form.cataclysms[index] || index === cataEditIndex) return;
+  if (state.activeCategory === 'cataclysm') {
+    if (!state.form.cataclysms[index] || index === state.cataEditIndex) return;
     if (cataDraftPending()) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
       return;
@@ -390,7 +373,7 @@ function onCataListClick(e) {
     startCataEdit(index);
   } else {
     const cards = getDynamicCards();
-    if (!cards[index] || index === dynEditIndex) return;
+    if (!cards[index] || index === state.dynEditIndex) return;
     if (dynDraftPending()) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
       return;
@@ -400,22 +383,22 @@ function onCataListClick(e) {
 }
 
 async function deleteCata(btn) {
-  const item = cataEditIndex >= 0 ? form.cataclysms[cataEditIndex] : null;
-  if (!item || isConfirming) return;
+  const item = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
+  if (!item || state.isConfirming) return;
 
-  isConfirming = true;
+  state.isConfirming = true;
   let confirmed = false;
   try {
     confirmed = await showPackConfirm(`Чи точно хочете видалити катаклізм "${oneLine(item.name)}"?`, btn, { confirmLabel: 'Видалити' });
   } finally {
-    isConfirming = false;
+    state.isConfirming = false;
   }
   if (!confirmed) return;
 
   // Після await індекс міг змінитися (наприклад, "Очистити все"), тому шукаємо запис за посиланням
-  const index = form.cataclysms.indexOf(item);
+  const index = state.form.cataclysms.indexOf(item);
   if (index < 0) return;
-  form.cataclysms.splice(index, 1);
+  state.form.cataclysms.splice(index, 1);
 
   applyCataChange();
   resetCataForm();
@@ -443,18 +426,18 @@ function handleCataInput(e) {
 // ----- Динамічні форми -----
 
 function dynDraftPending() {
-  if (activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[activeCategory] || viewMode !== 'visual') return false;
+  if (state.activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[state.activeCategory] || state.viewMode !== 'visual') return false;
   const current = readDynRaw();
   if (!current.value && Object.values(current).every(v => !v || (Array.isArray(v) && !v.length))) return false;
   
-  if (dynEditIndex < 0) return true;
+  if (state.dynEditIndex < 0) return true;
   
   const cards = getDynamicCards();
-  const item = cards[dynEditIndex];
+  const item = cards[state.dynEditIndex];
   if (!item) return false;
   
   if (current.value !== item.value) return true;
-  for (const f of CATEGORY_SCHEMAS[activeCategory].fields) {
+  for (const f of CATEGORY_SCHEMAS[state.activeCategory].fields) {
     const v1 = current[f.key];
     const v2 = item.meta[f.key];
     if (f.type === 'checkbox') {
@@ -469,7 +452,7 @@ function dynDraftPending() {
 }
 
 function readDynRaw() {
-  const schema = CATEGORY_SCHEMAS[activeCategory];
+  const schema = CATEGORY_SCHEMAS[state.activeCategory];
   if (!schema) return {};
   const data = {};
   data.value = $('pe-dyn-name').value.trim();
@@ -485,7 +468,7 @@ function readDynRaw() {
 }
 
 function fillDynFields(card) {
-  const schema = CATEGORY_SCHEMAS[activeCategory];
+  const schema = CATEGORY_SCHEMAS[state.activeCategory];
   if (!schema) return;
   $('pe-dyn-name').value = card.value;
   for (const f of schema.fields) {
@@ -500,7 +483,7 @@ function fillDynFields(card) {
 }
 
 function setDynMode(index) {
-  dynEditIndex = index;
+  state.dynEditIndex = index;
   const cards = getDynamicCards();
   const item = index >= 0 ? cards[index] : null;
   const submitBtn = document.querySelector('[data-dyn-action="submit"]');
@@ -528,7 +511,7 @@ function startDynEdit(index, card) {
 
 function resetDynForm() {
   $('pe-dyn-name').value = '';
-  const schema = CATEGORY_SCHEMAS[activeCategory];
+  const schema = CATEGORY_SCHEMAS[state.activeCategory];
   if (schema) {
     for (const f of schema.fields) {
       const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
@@ -544,7 +527,7 @@ function resetDynForm() {
 }
 
 function applyDynChange({ scrollToEnd = false } = {}) {
-  ui.showCategory({ category: activeCategory, text: form.texts[activeCategory] || '', viewMode });
+  ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
   renderList();
   if (scrollToEnd) $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
   renderSearch();
@@ -575,8 +558,8 @@ function submitDyn() {
   }
 
     let oldOpposite = null;
-    if (activeCategory === 'gender') {
-      if (dynEditIndex >= 0) oldOpposite = cards[dynEditIndex].meta.opposite;
+    if (state.activeCategory === 'gender') {
+      if (state.dynEditIndex >= 0) oldOpposite = cards[state.dynEditIndex].meta.opposite;
       const targetName = meta.opposite;
       const currentName = data.value;
       if (targetName) {
@@ -600,14 +583,14 @@ function submitDyn() {
     }
 
   
-  if (dynEditIndex >= 0) {
-    cards[dynEditIndex] = { value: data.value, meta };
+  if (state.dynEditIndex >= 0) {
+    cards[state.dynEditIndex] = { value: data.value, meta };
   } else {
     cards.push({ value: data.value, meta });
-    newDynIndex = cards.length - 1;
+    state.newDynIndex = cards.length - 1;
   }
 
-    if (activeCategory === 'gender') {
+    if (state.activeCategory === 'gender') {
       const targetName = meta.opposite;
       const currentName = data.value;
       if (oldOpposite && oldOpposite !== targetName) {
@@ -627,34 +610,34 @@ function submitDyn() {
     }
 
   
-  form.texts[activeCategory] = cards.map(c => cardToLine(activeCategory, c.value, c.meta)).join('\n');
+  state.form.texts[state.activeCategory] = cards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
   
-  applyDynChange({ scrollToEnd: newDynIndex >= 0 });
+  applyDynChange({ scrollToEnd: state.newDynIndex >= 0 });
   resetDynForm();
   
-  if (newDynIndex >= 0) {
-    newDynIndex = -1;
+  if (state.newDynIndex >= 0) {
+    state.newDynIndex = -1;
   }
-  showGlobalToast(dynEditIndex >= 0 ? 'Картку оновлено' : 'Картку додано');
+  showGlobalToast(state.dynEditIndex >= 0 ? 'Картку оновлено' : 'Картку додано');
   $('pe-dyn-name')?.focus();
 }
 
 async function deleteDyn(btn) {
-  if (dynEditIndex < 0 || isConfirming) return;
+  if (state.dynEditIndex < 0 || state.isConfirming) return;
   const cards = getDynamicCards();
-  const item = cards[dynEditIndex];
+  const item = cards[state.dynEditIndex];
   
-  isConfirming = true;
+  state.isConfirming = true;
   let confirmed = false;
   try {
     confirmed = await showPackConfirm(`Чи точно хочете видалити картку "${oneLine(item.value)}"?`, btn, { confirmLabel: 'Видалити' });
   } finally {
-    isConfirming = false;
+    state.isConfirming = false;
   }
   if (!confirmed) return;
 
-  cards.splice(dynEditIndex, 1);
-  form.texts[activeCategory] = cards.map(c => cardToLine(activeCategory, c.value, c.meta)).join('\n');
+  cards.splice(state.dynEditIndex, 1);
+  state.form.texts[state.activeCategory] = cards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
   
   applyDynChange();
   resetDynForm();
@@ -673,32 +656,32 @@ function handleDynClick(e) {
 
 // ----- Дії -----
 async function confirmAction(actionLabel, anchor) {
-  if (isConfirming) return false;
-  isConfirming = true;
+  if (state.isConfirming) return false;
+  state.isConfirming = true;
   try {
     return await showPackConfirm(`Чи точно хочете ${actionLabel}? ${UNSAVED_NOTE}`, anchor, { confirmLabel: 'Підтвердити' });
   } finally {
-    isConfirming = false;
+    state.isConfirming = false;
   }
 }
 
 function goToList() {
-  allowLeave = true;
+  state.allowLeave = true;
   window.location.hash = '#/packs';
 }
 
 async function handleSave(btn) {
-  if (isSaving) return;
+  if (state.isSaving) return;
 
-  const title = form.title.trim();
-  const error = validateTitle(title, { isDefaultPack: packId === DEFAULT_PACK_ID });
+  const title = state.form.title.trim();
+  const error = validateTitle(title, { isDefaultPack: state.packId === DEFAULT_PACK_ID });
   if (error) {
     ui.showTitleError(error);
     ui.focusTitle();
     return;
   }
 
-  const rangeError = validateRanges(form.ranges);
+  const rangeError = validateRanges(state.form.ranges);
   if (rangeError) {
     showGlobalToast(rangeError);
     return;
@@ -716,22 +699,22 @@ async function handleSave(btn) {
   }
 
   // 3.3: рядки масового вводу → [{ pool_type, category, value, meta }] (розбір тексту — pack-parser.js)
-  const cards = buildCardRows(form.texts, extraMeta, form.cataclysms);
+  const cards = buildCardRows(state.form.texts, state.extraMeta, state.form.cataclysms);
   if (cards.length > MAX_PACK_CARDS) {
     showGlobalToast(`Забагато характеристик: ${cards.length}. Максимум — ${MAX_PACK_CARDS}`);
     return;
   }
 
-  const isEdit = Boolean(packId);
+  const isEdit = Boolean(state.packId);
   const originalLabel = btn.textContent;
-  isSaving = true;
+  state.isSaving = true;
   ui.setButtonState(btn, { disabled: true, text: 'Збереження...' });
 
   try {
     await savePack({
-      id: packId,
+      id: state.packId,
       title,
-      description: form.description.trim(),
+      description: state.form.description.trim(),
       config: buildConfig(),
       cards
     });
@@ -742,20 +725,20 @@ async function handleSave(btn) {
     showGlobalToast(err.message || 'Не вдалося зберегти пак');
     ui.setButtonState(btn, { disabled: false, text: originalLabel });
   } finally {
-    isSaving = false;
+    state.isSaving = false;
   }
 }
 
 async function handleClear(btn) {
   if (!(await confirmAction('очистити все', btn))) return;
-  form = blankForm();
-  extraMeta = {}; // очищені картки не мають підтягувати стару додаткову meta, якщо автор введе ту саму назву заново
+  state.form = blankForm();
+  state.extraMeta = {}; // очищені картки не мають підтягувати стару додаткову meta, якщо автор введе ту саму назву заново
   syncFieldsFromForm();
 }
 
 async function handleReset(btn) {
   if (!(await confirmAction('скасувати зміни', btn))) return;
-  form = cloneForm(initialForm);
+  state.form = cloneForm(state.initialForm);
   syncFieldsFromForm();
 }
 
@@ -778,7 +761,7 @@ function handleActionsClick(e) {
 }
 
 function onBeforeUnload(e) {
-  if (!allowLeave && isDirty()) {
+  if (!state.allowLeave && isDirty()) {
     e.preventDefault();
     e.returnValue = ''; // потрібно для Chrome
   }
@@ -799,8 +782,8 @@ async function loadPackIntoForm(id) {
     return false;
   }
 
-  packConfig = pack.config || {};
-  extraMeta = pack.extraMeta || {};
+  state.packConfig = pack.config || {};
+  state.extraMeta = pack.extraMeta || {};
 
   const texts = {};
   for (const [category, values] of Object.entries(pack.cards || {})) {
@@ -808,12 +791,12 @@ async function loadPackIntoForm(id) {
   }
   // Стадії пака; якщо якоїсь немає — показуємо дефолтні (саме їх рушій і застосував би)
   const stages = {
-    ...baseStages,
-    ...Object.fromEntries(Object.entries(stagesTextFromConfig(packConfig)).filter(([, v]) => v))
+    ...state.baseStages,
+    ...Object.fromEntries(Object.entries(stagesTextFromConfig(state.packConfig)).filter(([, v]) => v))
   };
-  const ranges = rangesFromConfig(packConfig, baseRanges);
+  const ranges = rangesFromConfig(state.packConfig, state.baseRanges);
 
-  form = {
+  state.form = {
     title: pack.title,
     description: pack.description || '',
     texts,
@@ -821,8 +804,8 @@ async function loadPackIntoForm(id) {
     ranges,
     cataclysms: (pack.cataclysms || []).map(c => ({ ...c, extra: { ...(c.extra || {}) } }))
   };
-  syncCataText(form); // текст поля-списку будується з назв катаклізмів
-  initialForm = cloneForm(form);
+  syncCataText(state.form); // текст поля-списку будується з назв катаклізмів
+  state.initialForm = cloneForm(state.form);
   return true;
 }
 
@@ -846,35 +829,54 @@ function updateComboDropdown(input, forceShowAll = false) {
   }
 }
 
-export async function initPackEditor() {
-  packId = getPackIdFromHash();
-  defaultConfig = {};
-  packConfig = {};
-  extraMeta = {};
-  baseStages = {};
-  baseRanges = {};
-  form = blankForm();
-  initialForm = cloneForm(form);
-  activeCategory = ALL_PACK_CATEGORIES[0].category;
-  isSaving = false;
-  isConfirming = false;
-  allowLeave = false;
-  cataEditIndex = -1;
-  newCataIndex = -1;
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
-  searchQuery = '';
-  searchAll = false;
+const debouncedCardUpdates = debounce(() => {
+  renderSearch();
+  updateCardsMeta();
+  renderSummary();
+  updateButtons();
+}, 200);
+
+export async function initPackEditor() {
+  state.packId = getPackIdFromHash();
+  state.defaultConfig = {};
+  state.packConfig = {};
+  state.extraMeta = {};
+  state.baseStages = {};
+  state.baseRanges = {};
+  state.form = blankForm();
+  state.initialForm = cloneForm(state.form);
+  state.activeCategory = ALL_PACK_CATEGORIES[0].category;
+  state.isSaving = false;
+  state.isConfirming = false;
+  state.allowLeave = false;
+  state.cataEditIndex = -1;
+  state.newCataIndex = -1;
+
+  state.searchQuery = '';
+  state.searchAll = false;
 
   window.addEventListener('beforeunload', onBeforeUnload);
 
   $('pe-title').addEventListener('input', e => {
-    form.title = e.target.value;
+    state.form.title = e.target.value;
     ui.showTitleError('');
     updateButtons();
   });
 
   $('pe-desc').addEventListener('input', e => {
-    form.description = e.target.value;
+    state.form.description = e.target.value;
     ui.updateDescCounter();
     updateButtons();
   });
@@ -902,16 +904,16 @@ export async function initPackEditor() {
   });
   
   $('pe-llm-mode')?.addEventListener('change', e => {
-    viewMode = e.target.checked ? 'llm' : 'visual';
+    state.viewMode = e.target.checked ? 'llm' : 'visual';
     ui.setLlmCopyVisible(e.target.checked); // кнопка копіювання з'являється лише в режимі LLM
-    ui.showCategory({ category: activeCategory, text: form.texts[activeCategory] || '', viewMode });
+    ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
     renderList();
     renderSearch();
     updateCardsMeta();
   });
   
   $('pe-llm-copy')?.addEventListener('click', async () => {
-    const prompt = getPromptForCategory(activeCategory);
+    const prompt = getPromptForCategory(state.activeCategory);
     if (prompt) {
       try {
         await navigator.clipboard.writeText(prompt);
@@ -925,13 +927,9 @@ export async function initPackEditor() {
   });
 
   $('pe-cards').addEventListener('input', e => {
-    if (activeCategory === 'cataclysm') return; // список катаклізмів не редагується текстом (джерело — form.cataclysms)
-    form.texts[activeCategory] = e.target.value;
-    renderSearch(); // результати пошуку завжди відображають актуальний текст
-    updateCardsMeta();
-    
-    renderSummary();
-    updateButtons();
+    if (state.activeCategory === 'cataclysm') return; // список катаклізмів не редагується текстом
+    state.form.texts[state.activeCategory] = e.target.value;
+    debouncedCardUpdates();
   });
 
   $('pe-chips').addEventListener('click', e => {
@@ -942,14 +940,14 @@ export async function initPackEditor() {
   $('pe-stages').addEventListener('input', e => {
     const field = e.target.closest('[data-stage]');
     if (!field) return;
-    form.stages[field.dataset.stage] = field.value;
+    state.form.stages[field.dataset.stage] = field.value;
     updateButtons();
   });
 
   $('pe-ranges').addEventListener('input', e => {
     const field = e.target.closest('[data-range]');
     if (!field) return;
-    form.ranges[field.dataset.range] = field.value;
+    state.form.ranges[field.dataset.range] = field.value;
     updateButtons();
   });
 
@@ -1007,22 +1005,22 @@ export async function initPackEditor() {
 
   try {
     // Базовий пак редагує лише адмін: перевіряємо ще до завантаження даних (статус кешується в packs-store.js; дублює перевірку в getPack)
-    if (packId === DEFAULT_PACK_ID && !(await checkIsAdmin())) {
+    if (state.packId === DEFAULT_PACK_ID && !(await checkIsAdmin())) {
       showGlobalToast('Дефолтний пак не можна редагувати');
       goToList();
       return;
     }
 
     // Конфіг дефолтного пака потрібен в обох режимах: без нього не зібрати повний config (age_range, height_range...)
-    defaultConfig = await getDefaultPackConfig();
-    baseStages = stagesTextFromConfig(defaultConfig);
-    baseRanges = rangesFromConfig(defaultConfig, RANGE_DEFAULTS);
+    state.defaultConfig = await getDefaultPackConfig();
+    state.baseStages = stagesTextFromConfig(state.defaultConfig);
+    state.baseRanges = rangesFromConfig(state.defaultConfig, RANGE_DEFAULTS);
 
-    if (packId) {
-      if (!(await loadPackIntoForm(packId))) return;
+    if (state.packId) {
+      if (!(await loadPackIntoForm(state.packId))) return;
     } else {
-      form = blankForm();
-      initialForm = cloneForm(form);
+      state.form = blankForm();
+      state.initialForm = cloneForm(state.form);
     }
   } catch (err) {
     console.error('Не вдалося завантажити дані редактора:', err);
@@ -1036,13 +1034,13 @@ export async function initPackEditor() {
   ui.markEditorLoaded();
 
   syncFieldsFromForm();
-  if (!packId) ui.focusTitle();
+  if (!state.packId) ui.focusTitle();
 }
 
 export function cleanupPackEditor() {
   window.removeEventListener('beforeunload', onBeforeUnload);
-  isSaving = false;
-  isConfirming = false;
+  state.isSaving = false;
+  state.isConfirming = false;
 }
 
 

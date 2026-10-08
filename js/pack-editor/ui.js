@@ -333,6 +333,12 @@ export function setLlmCopyVisible(on) {
 
 // Показує категорію: перемикає textarea / списки / форми залежно від наявності схеми та режиму
 export function showCategory({ category, text, viewMode = "visual" }) {
+  const mainEl = document.querySelector(".pe-char-main");
+  if (mainEl) {
+    mainEl.classList.remove("is-updating");
+    void mainEl.offsetWidth;
+    mainEl.classList.add("is-updating");
+  }
   const isCata = category === "cataclysm";
   const schema = CATEGORY_SCHEMAS[category];
   const hasVisualMode = isCata || Boolean(schema);
@@ -479,7 +485,7 @@ export function selectCardsLine(lineIndex) {
   ta.focus({ preventScroll: true });
   ta.setSelectionRange(start, end);
   ta.scrollTop = Math.max(0, textareaOffsetTop(ta, start) - ta.clientHeight / 3);
-  ta.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  ta.scrollIntoView({ block: 'start', behavior: 'smooth' });
   return true;
 }
 
@@ -654,19 +660,19 @@ export function fillCataFields(values) {
   for (const key of Object.keys(CATA_FIELDS)) $(CATA_FIELDS[key]).value = values[key];
 }
 
-export const scrollCataFormIntoView = () => $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-export const scrollCataListToEnd = () => $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
+export const scrollCataFormIntoView = () => $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'start' });
+export const scrollCataListToEnd = () => $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'start' });
 
 // Список доданих катаклізмів — справжні рядки (кнопки .added-item-row), а не текст у textarea: підсвічування при наведенні,
 // "протискання" й виділення обраного рядка робить CSS (packs.css), без вимірювань геометрії та JS-анімацій.
 // view: { cataclysms, editIndex, newIndex, tokens }; tokens — слова пошуку, якщо список зараз фільтрується (інакше порожній масив).
-export function renderCataList({ cataclysms, editIndex, newIndex, tokens }) {
+export function renderCataList({ cataclysms, editIndex, newIndex, tokens, category = 'cataclysm' }) {
   const list = $('pe-cata-list');
   // Перемальовка замінює кнопки, тож клавіатурний фокус треба повернути на рядок з тим самим індексом
   const focusedIndex = document.activeElement?.closest?.('[data-cata-index]')?.dataset.cataIndex;
 
   if (!cataclysms.length) {
-    list.innerHTML = `<p class="pe-cata-list__empty">${esc(CATACLYSM_LIST_PLACEHOLDER)}</p>`;
+    list.innerHTML = `<p class="pe-cata-list__empty">${esc(category === 'cataclysm' ? CATACLYSM_LIST_PLACEHOLDER : 'Тут з’являться додані картки для вибраної категорії. Заповніть форму праворуч та натисніть \"Додати\". Щоб редагувати або видалити картку — натисніть на неї тут.')}</p>`;
     return;
   }
 
@@ -685,12 +691,14 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens }) {
     return `
       <button type="button" class="added-item-row${selected ? ' is-selected' : ''}${isNew ? ' is-new' : ''}" data-cata-index="${i}" aria-pressed="${selected}">
         <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}</span>
-        <span class="added-item-row__hint">${selected ? 'редагується' : 'змінити'}</span>
+        <span class="added-item-row__hint">${selected ? 'редагується' : 'редагувати'}</span>
       </button>`;
   }).join('');
 
   if (focusedIndex !== undefined) list.querySelector(`[data-cata-index="${focusedIndex}"]`)?.focus();
 }
+
+
 
 
 

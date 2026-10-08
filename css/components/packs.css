@@ -628,8 +628,26 @@
     width: 250px;
     border-bottom: none;
     border-right: 1px solid var(--metal);
+    position: sticky;
+    top: 60px;
+    align-self: flex-start;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--metal-lt) transparent;
+  }
+  .pe-char-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .pe-char-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .pe-char-sidebar::-webkit-scrollbar-thumb {
+    background: var(--metal-lt);
+    border-radius: 3px;
   }
 }
+
 
 .pe-char-sidebar__header {
   padding: 18px 18px 10px;
@@ -704,6 +722,14 @@
   padding: 18px;
   display: flex;
   flex-direction: column;
+}
+
+@keyframes pe-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.pe-char-main.is-updating {
+  animation: pe-fade-in 0.25s cubic-bezier(.22,.8,.3,1);
 }
 
 .pe-char-header {
@@ -813,6 +839,9 @@
   resize: vertical;
   overflow: auto;
 }
+
+
+
 
 
 
