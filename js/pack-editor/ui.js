@@ -54,11 +54,19 @@ function optionsHtml(list, counts) {
 }
 
 function stageFieldsHtml() {
-  return STAGE_FIELDS.map(({ key, label }) => `
+  const stagesHtml = STAGE_FIELDS.map(({ key, label }) => `
     <div class="pe-field">
       <label class="pe-label" for="pe-stage-${key}">${esc(label)}</label>
       <textarea id="pe-stage-${key}" class="pe-input pe-stage" data-stage="${key}" rows="6" spellcheck="false" placeholder="Одна стадія на рядок"></textarea>
     </div>`).join('');
+    
+  const bodyTypesHtml = `
+    <div class="pe-field">
+      <label class="pe-label" for="pe-range-defaultBodyTypes">Дефолтні типи статури</label>
+      <textarea id="pe-range-defaultBodyTypes" class="pe-input pe-stage" data-range="defaultBodyTypes" rows="6" spellcheck="false" placeholder="Один тип на рядок"></textarea>
+    </div>
+  `;
+  return stagesHtml + bodyTypesHtml;
 }
 
 function rangesFieldsHtml() {
@@ -89,13 +97,7 @@ function rangesFieldsHtml() {
       <input id="pe-range-heightMax" class="pe-input" type="number" data-range="heightMax" min="50" max="300" step="1">
     </div>
   `;
-  const bodyTypesHtml = `
-    <div class="pe-field" style="grid-column: 1 / -1;">
-      <label class="pe-label" for="pe-range-defaultBodyTypes">Дефолтні типи статури (по одному на рядок)</label>
-      <textarea id="pe-range-defaultBodyTypes" class="pe-input pe-desc" rows="4" data-range="defaultBodyTypes" placeholder="Хрупкое&#10;Худое"></textarea>
-    </div>
-  `;
-  return ageHtml + heightHtml + bodyTypesHtml;
+  return ageHtml + heightHtml;
 }
 
 // Розмітка всієї сторінки. isEdit — редагування існуючого пака, isDefaultEdit — редагування базового пака (лише адмін)

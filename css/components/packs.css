@@ -166,7 +166,7 @@
 /* Блок стадій */
 .pe-hint{margin:0;font-size:13px;line-height:1.5;color:var(--text-mute);}
 .pe-stages{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
-.pe-stage{resize:vertical;min-height:120px;font-family:var(--mono);font-size:13.5px;}
+.pe-stage{resize:vertical;min-height:170px;font-family:var(--mono);font-size:13.5px;}
 
 .pe-summary{
   display:flex;flex-direction:column;gap:10px;
