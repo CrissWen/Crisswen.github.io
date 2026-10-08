@@ -106,9 +106,12 @@ function updateCardsMeta() {
 function selectCategory(category) {
   activeCategory = category;
   viewMode = 'visual';
-  dynEditIndex = -1;
+  
   ui.showCategory({ category, text: form.texts[category] || '', viewMode });
-  renderList();
+  
+  resetCataForm();
+  resetDynForm();
+  
   renderSearch();
   updateCardsMeta();
   renderSummary();
