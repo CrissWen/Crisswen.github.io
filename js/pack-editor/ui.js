@@ -674,7 +674,7 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   const focusedIndex = document.activeElement?.closest?.('[data-cata-index]')?.dataset.cataIndex;
 
   if (!cataclysms.length) {
-    list.innerHTML = `<p class="pe-cata-list__empty">${esc(category === 'cataclysm' ? CATACLYSM_LIST_PLACEHOLDER : 'Тут з’являться додані картки для вибраної категорії. Заповніть форму праворуч та натисніть \"Додати\". Щоб редагувати або видалити картку — натисніть на неї тут.')}</p>`;
+    list.innerHTML = `<p class="pe-cata-list__empty">${esc(category === 'cataclysm' ? CATACLYSM_LIST_PLACEHOLDER : 'Тут з’являться додані картки для вибраної категорії. Заповніть форму нижче та натисніть \"Додати\". Щоб редагувати або видалити картку — натисніть на неї тут.')}</p>`;
     return;
   }
 
@@ -699,6 +699,7 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
 
   if (focusedIndex !== undefined) list.querySelector(`[data-cata-index="${focusedIndex}"]`)?.focus();
 }
+
 
 
 

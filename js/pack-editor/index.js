@@ -164,13 +164,13 @@ function openCataResult(index) {
   if (index !== state.cataEditIndex) {
     if (cataDraftPending()) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
-      ui.scrollCataFormIntoView();
+      // ui.scrollCataFormIntoView();
       return;
     }
     startCataEdit(index);
     return;
   }
-  ui.scrollCataFormIntoView();
+  // ui.scrollCataFormIntoView();
 }
 
 function onSearchResultClick(e) {
@@ -356,7 +356,7 @@ function startCataEdit(index) {
   ui.fillCataFields(cataFieldStrings(item));
   ui.showCataError('');
   setCataMode(index);
-  ui.scrollCataFormIntoView();
+  // ui.scrollCataFormIntoView();
 }
 
 function onCataListClick(e) {
