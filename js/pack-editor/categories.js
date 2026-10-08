@@ -96,7 +96,12 @@ export const CATEGORY_SCHEMAS = {
       { key: 'exact_height', type: 'text', label: 'Точний зріст (число або текст, якщо обрано точне значення)' }
     ]
   },
-  phobia: { fields: [] },
+  // Фобія: у формі два поля ("Назва" + "Пояснення"), у БД — один рядок "Назва - Пояснення" (зклеює submitDyn через joinNameExplanation)
+  phobia: {
+    fields: [
+      { key: 'explanation', type: 'text', label: 'Пояснення' }
+    ]
+  },
   trait: { fields: [] },
   large_inventory: { fields: [] },
   backpack: { fields: [] },

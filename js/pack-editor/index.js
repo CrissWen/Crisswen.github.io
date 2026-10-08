@@ -1,5 +1,5 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
-import { parseLines, oneLine, parseCards, cardToLine } from './parser.js';
+import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, joinNameExplanation, splitNameExplanation } from './parser.js';
 import {
   buildCardRows, MAX_PACK_CARDS, RANGE_DEFAULTS,
   validateTitle, validateRanges, stagesTextFromConfig, rangesFromConfig, buildPackConfig, normalizeForm,
@@ -306,7 +306,13 @@ function renderList() {
   } else if (CATEGORY_SCHEMAS[state.activeCategory] && state.viewMode === 'visual') {
     const cards = getDynamicCards();
     ui.renderCataList({
-      cataclysms: cards.map(c => ({ name: c.value })),
+      // Фобія: у списку зліва показуємо лише назву (без " - пояснення"). В БД і в LLM-тексті картка лишається зклеєною;
+      // пояснення передаємо як description, щоб пошук у списку і надалі знаходив картку за поясненням (в рядку воно не рендериться).
+      cataclysms: cards.map(c => {
+        if (!hasExplanationField(state.activeCategory)) return { name: c.value };
+        const { name, explanation } = splitNameExplanation(c.value);
+        return { name, description: explanation };
+      }),
       editIndex: state.dynEditIndex,
       newIndex: state.newDynIndex,
       tokens: state.searchAll && !cataFilterActive() ? searchTokens() : [],
@@ -464,8 +470,15 @@ function dynDraftPending() {
   const item = cards[state.dynEditIndex];
   if (!item) return false;
   
-  if (current.value !== item.value) return true;
+  // Фобія: порівнюємо зклеєне "Назва - Пояснення" з збереженим value (обидва нормалізуємо), інакше картка завжди виглядала б "зміненою"
+  const withExplanation = hasExplanationField(state.activeCategory);
+  const savedValue = withExplanation
+    ? (s => joinNameExplanation(s.name, s.explanation))(splitNameExplanation(item.value))
+    : item.value;
+  const currentValue = withExplanation ? joinNameExplanation(current.value, current.explanation) : current.value;
+  if (currentValue !== savedValue) return true;
   for (const f of CATEGORY_SCHEMAS[state.activeCategory].fields) {
+    if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище (у meta цей ключ не зберігається)
     const v1 = current[f.key];
     const v2 = item.meta[f.key];
     if (f.type === 'checkbox') {
@@ -498,11 +511,12 @@ function readDynRaw() {
 function fillDynFields(card) {
   const schema = CATEGORY_SCHEMAS[state.activeCategory];
   if (!schema) return;
-  $('pe-dyn-name').value = card.value;
+  const split = hasExplanationField(state.activeCategory) ? splitNameExplanation(card.value) : null;
+  $('pe-dyn-name').value = split ? split.name : card.value;
   for (const f of schema.fields) {
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
-      const val = card.meta[f.key];
+      const val = split && f.key === 'explanation' ? split.explanation : card.meta[f.key];
       if (f.type === 'checkbox') el.checked = Boolean(val);
       else if (f.type === 'list') el.value = Array.isArray(val) ? val.join('\n') : '';
       else el.value = val || '';
@@ -622,6 +636,12 @@ function submitDyn() {
   const cards = getDynamicCards();
   const meta = { ...data };
   delete meta.value;
+
+  // Фобія: "Назва" + "Пояснення" → один рядок "Назва - Пояснення" (це й йде в value у Supabase). Порожнє пояснення — лише назва, без дефіса.
+  // Пояснення не додаємо в meta, бо воно вже входить у зклеєний value.
+  const withExplanation = hasExplanationField(state.activeCategory);
+  const storedValue = withExplanation ? joinNameExplanation(data.value, data.explanation) : data.value;
+  if (withExplanation) delete meta.explanation;
   
   for (const k of Object.keys(meta)) {
     if (meta[k] === '' || (Array.isArray(meta[k]) && meta[k].length === 0)) {
@@ -665,9 +685,9 @@ function submitDyn() {
 
   
   if (state.dynEditIndex >= 0) {
-    cards[state.dynEditIndex] = { value: data.value, meta };
+    cards[state.dynEditIndex] = { value: storedValue, meta };
   } else {
-    cards.push({ value: data.value, meta });
+    cards.push({ value: storedValue, meta });
     state.newDynIndex = cards.length - 1;
   }
 

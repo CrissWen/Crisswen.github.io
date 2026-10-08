@@ -14,6 +14,26 @@ export const oneLine = text => String(text ?? '').replace(/\s*[\r\n]+\s*/g, ' ')
 // Роздільник частин картки професії: тире саме з пробілами навколо (дефіс усередині слова — "IT-спеціаліст" — не чіпаємо)
 export const PART_SEPARATOR = ' - ';
 
+// Категорії, де картка в БД — один рядок "Назва - Пояснення" (колонка value), а у формі це два окремі поля.
+// Дефіс користувач не вводить — його ставить joinNameExplanation. У meta пояснення не потрапляє, лише у зклеєний value.
+export const NAME_EXPLANATION_CATEGORIES = ['phobia'];
+export const hasExplanationField = category => NAME_EXPLANATION_CATEGORIES.includes(category);
+
+// "Ситофобія" + "страх їжі" → "Ситофобія - страх їжі". Якщо пояснення порожнє — повертаємо лише назву, без зайвого дефіса.
+export function joinNameExplanation(name, explanation) {
+  const n = String(name ?? '').trim();
+  const e = String(explanation ?? '').trim();
+  return e ? `${n}${PART_SEPARATOR}${e}` : n;
+}
+
+// Зворотне: картка з БД → два поля форми. Ділимо по ПЕРШОМУ " - " (дефіс без пробілів усередині слова не чіпаємо).
+export function splitNameExplanation(value) {
+  const text = String(value ?? '');
+  const at = text.indexOf(PART_SEPARATOR);
+  if (at < 0) return { name: text.trim(), explanation: '' };
+  return { name: text.slice(0, at).trim(), explanation: text.slice(at + PART_SEPARATOR.length).trim() };
+}
+
 // Один рядок тексту → { value, meta }.
 // Підтримує компактний синтаксис (LLM-режим):
 // - Стадії у квадратних дужках: [стадія 1, стадія 2]
@@ -110,6 +130,11 @@ export function parseCards(text, category, extraMeta = {}) {
 
 // Зворотне до parseCards: рядок pack_cards → компактний синтаксис (або просто назва).
 export function cardToLine(category, value, meta) {
+  // Фобія в тексті (включно з режимом LLM) — тільки зклеєний value "Назва - Пояснення", без прапорців {desc: ...} та іншої meta.
+  // Картки з бази можуть мати meta.description (повертається через extraMeta), і без цього рядка вона б приклеювалася до тексту.
+  // Це лише відображення: при збереженні meta картки в БД повертається з extraMeta, тож дані не втрачаються.
+  if (hasExplanationField(category)) return String(value ?? '');
+
   let text = String(value ?? '');
 
   if (category === 'profession' && meta?.ability) {
