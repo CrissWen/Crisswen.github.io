@@ -151,9 +151,24 @@ function setSearchQuery(value, { focus = false } = {}) {
 // Результат-рядок: переходимо в його категорію, виділяємо рядок у textarea й прокручуємо до нього
 function openTextResult(category, lineIndex) {
   if (category !== state.activeCategory) selectCategory(category);
-  if (!ui.selectCardsLine(lineIndex)) {
-    showGlobalToast('Рядок змінився — виберіть результат ще раз');
-    renderSearch();
+
+  if (state.viewMode === 'visual' && CATEGORY_SCHEMAS[category]) {
+    const cards = getDynamicCards();
+    if (!cards[lineIndex]) {
+      showGlobalToast('Рядок змінився — виберіть результат ще раз');
+      renderSearch();
+      return;
+    }
+    if (typeof dynDraftPending === 'function' && dynDraftPending()) {
+      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
+      return;
+    }
+    startDynEdit(lineIndex, cards[lineIndex]);
+  } else {
+    if (!ui.selectCardsLine(lineIndex)) {
+      showGlobalToast('Рядок змінився — виберіть результат ще раз');
+      renderSearch();
+    }
   }
 }
 
@@ -1042,6 +1057,7 @@ export function cleanupPackEditor() {
   state.isSaving = false;
   state.isConfirming = false;
 }
+
 
 
 
