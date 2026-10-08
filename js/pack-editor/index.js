@@ -629,6 +629,15 @@ function submitDyn() {
     }
   }
 
+  // Поле action_type тимчасово приховане з форми (categories.js), тому readDynRaw його не читає і не помиляється (селектор не знаходить елемент).
+  // У новій картці ключа просто немає (не null і не "": null записався би як рядок "null" у cardToLine).
+  // При редагуванні існуючої картки meta замінюється цілком, так що вже збережене значення повертаємо вручну, щоб воно не зникло.
+  // (Коли поле повернуть у форму — цей блок можна закоментувати.)
+  if (state.dynEditIndex >= 0 && state.activeCategory === 'special_ability') {
+    const prevAction = cards[state.dynEditIndex]?.meta?.action_type;
+    if (prevAction !== undefined && prevAction !== null && prevAction !== '') meta.action_type = prevAction;
+  }
+
     let oldOpposite = null;
     if (state.activeCategory === 'gender') {
       if (state.dynEditIndex >= 0) oldOpposite = cards[state.dynEditIndex].meta.opposite;

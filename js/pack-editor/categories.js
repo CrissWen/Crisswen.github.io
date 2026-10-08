@@ -78,7 +78,9 @@ export const CATEGORY_SCHEMAS = {
   },
   special_ability: {
     fields: [
-      { key: 'action_type', type: 'text', label: 'Системна дія (action_type)' }
+      // ТИМЧАСОВО приховано з форми «Нова картка»: функціонал зарезервовано для майбутніх оновлень логіки.
+      // Щоб повернути поле — розкоментуйте рядок нижче (і блок захисту action_type у submitDyn, index.js).
+      // { key: 'action_type', type: 'text', label: 'Системна дія (action_type)' }
     ]
   },
   body_type: {
