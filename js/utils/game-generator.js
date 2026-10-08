@@ -181,20 +181,18 @@ export async function generateGameState(playersList, pack, config) {
         if (bodyItem.meta?.exact_height) {
           heightVal = Number(bodyItem.meta.exact_height) || bodyItem.meta.exact_height;
         } else if (bodyItem.meta?.custom_height_mode === 'range') {
-          const min = bodyItem.meta.height_min ?? config.height_settings?.min ?? config.height_range?.min ?? 150;
-          const max = bodyItem.meta.height_max ?? config.height_settings?.max ?? config.height_range?.max ?? 210;
+          const min = bodyItem.meta.height_min ?? config.height_settings?.min ?? 150;
+          const max = bodyItem.meta.height_max ?? config.height_settings?.max ?? 210;
           heightVal = randInt(min, max);
         }
       }
-    } else if (config.default_body_types && config.default_body_types.length > 0) {
-      bodyTypeVal = pickFromStrings(config.default_body_types, "Тілобудова невідома");
     } else if (config.default_stages && config.default_stages.body_type) {
       bodyTypeVal = pickFromStrings(config.default_stages.body_type, "Тілобудова невідома");
     }
 
     if (!hasNoHeight && heightVal === null) {
-      const min = config.height_settings?.min ?? config.height_range?.min ?? 150;
-      const max = config.height_settings?.max ?? config.height_range?.max ?? 210;
+      const min = config.height_settings?.min ?? 150;
+      const max = config.height_settings?.max ?? 210;
       heightVal = randInt(min, max);
     }
 

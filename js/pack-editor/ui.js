@@ -24,10 +24,10 @@ export function placeholderFor(category) {
 }
 
 // Ключі (STAGE_KEYS у pack-payload.js) збігаються з packs.config.default_stages, які читає ігровий рушій (game-generator.js, characteristics.js); тут лише підписи
-const STAGE_LABELS = { profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби' };
+const STAGE_LABELS = { profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби', body_type: 'Дефолтні типи статури' };
 export const STAGE_FIELDS = STAGE_KEYS.map(key => ({ key, label: STAGE_LABELS[key] }));
 
-// Діапазони віку/зросту, які читає ігровий рушій з packs.config.age_range / height_range
+// Діапазони віку/зросту, які читає ігровий рушій з packs.config.age_range / height_settings
 // (game-generator.js при старті гри, host/characteristics.js при переролі статі/статури ведучим).
 export const RANGE_FIELDS = [
   { key: 'ageMin',    label: 'Мін. вік',    min: 1,  max: 120 },
@@ -57,16 +57,10 @@ function stageFieldsHtml() {
   const stagesHtml = STAGE_FIELDS.map(({ key, label }) => `
     <div class="pe-field">
       <label class="pe-label" for="pe-stage-${key}">${esc(label)}</label>
-      <textarea id="pe-stage-${key}" class="pe-input pe-stage" data-stage="${key}" rows="6" spellcheck="false" placeholder="Одна стадія на рядок"></textarea>
+      <textarea id="pe-stage-${key}" class="pe-input pe-stage" data-stage="${key}" rows="6" spellcheck="false" placeholder="Одна стадія/варіант на рядок"></textarea>
     </div>`).join('');
     
-  const bodyTypesHtml = `
-    <div class="pe-field">
-      <label class="pe-label" for="pe-range-defaultBodyTypes">Дефолтні типи статури</label>
-      <textarea id="pe-range-defaultBodyTypes" class="pe-input pe-stage" data-range="defaultBodyTypes" rows="6" spellcheck="false" placeholder="Один тип на рядок"></textarea>
-    </div>
-  `;
-  return stagesHtml + bodyTypesHtml;
+  return stagesHtml;
 }
 
 function rangesFieldsHtml() {

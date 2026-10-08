@@ -78,7 +78,7 @@ export async function listPacks() {
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.title.localeCompare(b.title, 'uk'));
 }
 
-// Конфіг дефолтного пака — основа для config нового пака: рушій вимагає default_stages, age_range, height_range тощо
+// Конфіг дефолтного пака — основа для config нового пака: рушій вимагає default_stages, age_range, height_settings тощо
 export async function getDefaultPackConfig() {
   const { data, error } = await supabase
     .from('packs').select('config').eq('id', DEFAULT_PACK_ID).single();

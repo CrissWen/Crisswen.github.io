@@ -97,10 +97,10 @@ export function buildCardRows(texts, extraMeta = {}, cataclysms = []) {
 // Чисті функції (без DOM і стану сторінки): контролер pack-editor.js передає їм дані форми й отримує готовий результат.
 
 // Ключі збігаються з packs.config.default_stages, які читає ігровий рушій (підписи для UI — у editor-ui.js)
-export const STAGE_KEYS = ['profession', 'hobby', 'health'];
+export const STAGE_KEYS = ['profession', 'hobby', 'health', 'body_type'];
 
 // Діапазони віку/зросту: підстава для НОВОГО пака, якщо в самому дефолтному паку раптом щось відсутнє (див. rangesFromConfig)
-export const RANGE_DEFAULTS = { ageMin: 16, ageMax: 85, heightMin: 150, heightMax: 210, heightMode: 'base', defaultBodyTypes: 'Хрупкое\nХудое\nАтлетическое\nКрепкое\nПолное\nОжирение-слабое\nОжирение-сильное' };
+export const RANGE_DEFAULTS = { ageMin: 16, ageMax: 85, heightMin: 150, heightMax: 210, heightMode: 'base' };
 
 const RESERVED_TITLES = ['default', 'дефолт']; // дзеркало перевірки в RPC save_personal_pack
 
@@ -139,33 +139,27 @@ export function stagesTextFromConfig(config) {
 export function rangesFromConfig(config, fallback) {
   const age = config?.age_range || {};
   const heightSet = config?.height_settings || {};
-  const legacyHeight = config?.height_range || {};
-  const heightMin = heightSet.min ?? legacyHeight.min ?? fallback.heightMin;
-  const heightMax = heightSet.max ?? legacyHeight.max ?? fallback.heightMax;
-  
-  const bodyTypes = config?.default_body_types;
 
   return {
     ageMin:    String(age.min ?? fallback.ageMin),
     ageMax:    String(age.max ?? fallback.ageMax),
     heightMode: String(heightSet.mode ?? fallback.heightMode ?? 'base'),
-    heightMin: String(heightMin),
-    heightMax: String(heightMax),
-    defaultBodyTypes: Array.isArray(bodyTypes) ? bodyTypes.join('\n') : (fallback.defaultBodyTypes || '')
+    heightMin: String(heightSet.min ?? fallback.heightMin),
+    heightMax: String(heightSet.max ?? fallback.heightMax)
   };
 }
 
 // 3.4: фінальний config для збереження. Основа — конфіг дефолтного пака, поверх нього конфіг самого пака,
 // а default_stages перекриваються стадіями з форми. Порожнє поле стадій = лишається те, що було (стадії дефолтного пака).
-// stages — { [key]: string } (текст textarea), ranges — { ageMin, ageMax, heightMin, heightMax, heightMode, defaultBodyTypes } (рядки).
+// stages — { [key]: string } (текст textarea), ranges — { ageMin, ageMax, heightMin, heightMax, heightMode } (рядки).
 export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = {}, ranges }) {
   const stageLists = {};
   for (const key of STAGE_KEYS) {
     const lines = parseLines(stages[key]);
     if (lines.length) stageLists[key] = lines;
   }
-  const bodyTypesLines = parseLines(ranges.defaultBodyTypes || '');
-  return {
+  
+  const finalConfig = {
     ...defaultConfig,
     ...packConfig,
     age_range: {
@@ -177,13 +171,19 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
       min: parseInt(ranges.heightMin, 10),
       max: parseInt(ranges.heightMax, 10)
     },
-    default_body_types: bodyTypesLines.length > 0 ? bodyTypesLines : (defaultConfig.default_body_types || []),
     default_stages: {
       ...(defaultConfig.default_stages || {}),
       ...(packConfig.default_stages || {}),
       ...stageLists
     }
   };
+
+  // Видаляємо легасі костиль з конфіга (height_range), якщо він туди потрапив з packConfig / defaultConfig
+  // (А default_body_types видаляємо, бо тепер це стадія body_type)
+  delete finalConfig.height_range;
+  delete finalConfig.default_body_types;
+
+  return finalConfig;
 }
 
 // Нормалізований вигляд форми для порівняння: зайві пробіли та порожні рядки змінами не вважаються

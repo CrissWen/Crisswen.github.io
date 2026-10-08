@@ -1037,10 +1037,17 @@ export async function initPackEditor() {
   });
 
   $('pe-stages').addEventListener('input', e => {
-    const field = e.target.closest('[data-stage]');
-    if (!field) return;
-    state.form.stages[field.dataset.stage] = field.value;
-    updateButtons();
+    const stageField = e.target.closest('[data-stage]');
+    if (stageField) {
+      state.form.stages[stageField.dataset.stage] = stageField.value;
+      updateButtons();
+      return;
+    }
+    const rangeField = e.target.closest('[data-range]');
+    if (rangeField) {
+      state.form.ranges[rangeField.dataset.range] = rangeField.value;
+      updateButtons();
+    }
   });
 
 
@@ -1151,7 +1158,7 @@ export async function initPackEditor() {
       return;
     }
 
-    // Конфіг дефолтного пака потрібен в обох режимах: без нього не зібрати повний config (age_range, height_range...)
+    // Конфіг дефолтного пака потрібен в обох режимах: без нього не зібрати повний config (age_range, height_settings...)
     state.defaultConfig = await getDefaultPackConfig();
     state.baseStages = stagesTextFromConfig(state.defaultConfig);
     state.baseRanges = rangesFromConfig(state.defaultConfig, RANGE_DEFAULTS);
