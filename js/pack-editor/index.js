@@ -216,7 +216,7 @@ function onSearchKeydown(e) {
 // Стрілки ↑/↓ ходять по рядках результатів (або по списку катаклізмів), Esc / ↑ з першого рядка повертає в поле пошуку
 function onSearchListKeydown(e) {
   const btn = e.target.closest('button');
-  if (!btn || !state.searchQuery) return;
+  if (!btn) return;
   if (e.key === 'Escape') {
     ui.focusSearchInput();
     return;
@@ -371,7 +371,7 @@ function startCataEdit(index) {
   ui.fillCataFields(cataFieldStrings(item));
   ui.showCataError('');
   setCataMode(index);
-  // ui.scrollCataFormIntoView();
+  $(ui.CATA_FIELDS.name)?.focus({ preventScroll: true });
 }
 
 function onCataListClick(e) {
@@ -522,6 +522,7 @@ function startDynEdit(index, card) {
   if (err) err.hidden = true;
   setDynMode(index);
   $('pe-dynamic-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  $('pe-dyn-name')?.focus({ preventScroll: true });
 }
 
 function resetDynForm() {
@@ -554,6 +555,7 @@ function applyDynChange({ scrollToEnd = false } = {}) {
 
 function submitDyn() {
   const data = readDynRaw();
+  const isEdit = state.dynEditIndex >= 0;
   if (!data.value) {
     const err = $('pe-dyn-error');
     err.textContent = 'Назва обов\'язкова';
@@ -633,7 +635,7 @@ function submitDyn() {
   if (state.newDynIndex >= 0) {
     state.newDynIndex = -1;
   }
-  showGlobalToast(state.dynEditIndex >= 0 ? 'Картку оновлено' : 'Картку додано');
+  showGlobalToast(isEdit ? 'Картку оновлено' : 'Картку додано');
   $('pe-dyn-name')?.focus();
 }
 
@@ -749,12 +751,14 @@ async function handleClear(btn) {
   state.form = blankForm();
   state.extraMeta = {}; // очищені картки не мають підтягувати стару додаткову meta, якщо автор введе ту саму назву заново
   syncFieldsFromForm();
+  showGlobalToast('Форму очищено');
 }
 
 async function handleReset(btn) {
   if (!(await confirmAction('скасувати зміни', btn))) return;
   state.form = cloneForm(state.initialForm);
   syncFieldsFromForm();
+  showGlobalToast('Зміни скасовано');
 }
 
 async function handleExit(btn) {
@@ -1014,6 +1018,38 @@ export async function initPackEditor() {
   document.getElementById('pe-root')?.addEventListener('click', e => {
     if (!e.target.closest('.pe-combo')) {
       document.querySelectorAll('.pe-combo__dropdown').forEach(d => d.hidden = true);
+    }
+  });
+
+  document.getElementById('pe-root')?.addEventListener('keydown', e => {
+    if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+      e.preventDefault();
+      
+      const ZONES = [
+        () => document.querySelector('.pe-char-menu-item.is-active') || document.querySelector('.pe-char-menu-item'),
+        () => document.getElementById('pe-search'),
+        () => {
+          const list = document.getElementById('pe-cata-list');
+          if (list && !list.hidden) {
+            return list.querySelector('.is-selected') || list.querySelector('[data-cata-index]');
+          }
+          const cards = document.getElementById('pe-cards');
+          return (cards && !cards.hidden) ? cards : null;
+        },
+        () => {
+          const dynForm = document.getElementById('pe-dynamic-form');
+          if (dynForm && !dynForm.hidden) return document.getElementById('pe-dyn-name');
+          const cataForm = document.getElementById('pe-cata');
+          if (cataForm && !cataForm.hidden) return document.getElementById('pe-cata-name');
+          return null;
+        }
+      ];
+      
+      const idx = Number(e.key) - 1;
+      const el = ZONES[idx]();
+      if (el) {
+        el.focus({ preventScroll: true });
+      }
     }
   });
 
