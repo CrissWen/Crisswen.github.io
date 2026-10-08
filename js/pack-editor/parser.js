@@ -59,6 +59,14 @@ export function parseCardLine(category, line) {
         else if (key === 'opp') meta.opposite = val;
         else if (key === 'age') meta.custom_age = val;
         else if (key === 'action_type') meta.action_type = val;
+        else if (key === 'no_height') meta.has_no_height = val;
+        else if (key === 'exact_height') meta.exact_height = val;
+        else if (key === 'height_min') { meta.height_min = Number(val); meta.custom_height_mode = 'range'; }
+        else if (key === 'height_max') { meta.height_max = Number(val); meta.custom_height_mode = 'range'; }
+        else if (key === 'desc') meta.description = val;
+        else if (key === 'timer') meta.timer_minutes = Number(val);
+        else if (key === 'stay') meta.stay_time_months = Number(val);
+        else if (key === 'pop') meta.population = Number(val);
       };
 
       for (let i = 0; i < props.length; i++) {
@@ -114,6 +122,14 @@ export function cardToLine(category, value, meta) {
   if (meta?.opposite !== undefined) props.push(`opp: ${meta.opposite === null ? 'null' : `"${meta.opposite}"`}`);
   if (meta?.custom_age !== undefined) props.push(`age: "${meta.custom_age}"`);
   if (meta?.action_type !== undefined) props.push(`action_type: "${meta.action_type}"`);
+  if (meta?.has_no_height !== undefined) props.push(`no_height: ${meta.has_no_height}`);
+  if (meta?.exact_height !== undefined) props.push(`exact_height: ${meta.exact_height}`);
+  if (meta?.height_min !== undefined) props.push(`height_min: ${meta.height_min}`);
+  if (meta?.height_max !== undefined) props.push(`height_max: ${meta.height_max}`);
+  if (meta?.description !== undefined) props.push(`desc: "${meta.description}"`);
+  if (meta?.timer_minutes !== undefined) props.push(`timer: ${meta.timer_minutes}`);
+  if (meta?.stay_time_months !== undefined) props.push(`stay: ${meta.stay_time_months}`);
+  if (meta?.population !== undefined) props.push(`pop: ${meta.population}`);
   
   if (props.length > 0) {
     text += ` {${props.join(', ')}}`;

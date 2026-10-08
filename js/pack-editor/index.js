@@ -771,6 +771,19 @@ async function handleSave(btn) {
   }
 
   // 3.3: рядки масового вводу → [{ pool_type, category, value, meta }] (розбір тексту — pack-parser.js)
+  // Якщо ми в LLM-режимі на вкладці Катаклізмів, треба синхронізувати текст у масив перед збереженням
+  if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm') {
+    const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
+    state.form.cataclysms = parsed.map(c => ({
+      name: c.value,
+      description: c.meta.description || '',
+      timer_minutes: c.meta.timer_minutes || 0,
+      stay_time_months: c.meta.stay_time_months || null,
+      population: c.meta.population || null,
+      extra: c.meta.extra || {}
+    })).filter(c => c.name);
+  }
+
   const cards = buildCardRows(state.form.texts, state.extraMeta, state.form.cataclysms);
   if (cards.length > MAX_PACK_CARDS) {
     showGlobalToast(`Забагато характеристик: ${cards.length}. Максимум — ${MAX_PACK_CARDS}`);
@@ -983,6 +996,29 @@ export async function initPackEditor() {
   $('pe-llm-mode')?.addEventListener('change', e => {
     state.viewMode = e.target.checked ? 'llm' : 'visual';
     ui.setLlmCopyVisible(e.target.checked); // кнопка копіювання з'являється лише в режимі LLM
+    
+    // Синхронізація Cataclysms при перемиканні режимів
+    if (state.activeCategory === 'cataclysm') {
+      if (state.viewMode === 'visual') {
+        const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
+        state.form.cataclysms = parsed.map(c => ({
+          name: c.value,
+          description: c.meta.description || '',
+          timer_minutes: c.meta.timer_minutes || 0,
+          stay_time_months: c.meta.stay_time_months || null,
+          population: c.meta.population || null,
+          extra: c.meta.extra || {}
+        })).filter(c => c.name);
+      } else {
+        state.form.texts.cataclysm = state.form.cataclysms.map(c => cardToLine('cataclysm', c.name, {
+          description: c.description,
+          timer_minutes: c.timer_minutes,
+          stay_time_months: c.stay_time_months,
+          population: c.population
+        })).join('\n');
+      }
+    }
+    
     ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
     renderList();
     renderSearch();
