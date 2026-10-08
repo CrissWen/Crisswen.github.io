@@ -628,21 +628,23 @@
     width: 250px;
     border-bottom: none;
     border-right: 1px solid var(--metal);
+    align-self: stretch;
+  }
+  .pe-char-sidebar-inner {
     position: sticky;
     top: 60px;
-    align-self: flex-start;
     max-height: calc(100vh - 60px);
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--metal-lt) transparent;
   }
-  .pe-char-sidebar::-webkit-scrollbar {
+  .pe-char-sidebar-inner::-webkit-scrollbar {
     width: 6px;
   }
-  .pe-char-sidebar::-webkit-scrollbar-track {
+  .pe-char-sidebar-inner::-webkit-scrollbar-track {
     background: transparent;
   }
-  .pe-char-sidebar::-webkit-scrollbar-thumb {
+  .pe-char-sidebar-inner::-webkit-scrollbar-thumb {
     background: var(--metal-lt);
     border-radius: 3px;
   }

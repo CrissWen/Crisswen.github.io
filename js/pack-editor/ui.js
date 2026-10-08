@@ -124,11 +124,13 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
 
       <div class="block pe-char-block">
         <div class="pe-char-sidebar">
-          <div class="pe-char-sidebar__header">
-            <h3 class="pe-char-sidebar__title">Категорії та статистика</h3>
-            <p id="pe-summary-total" class="pe-summary__total"></p>
+          <div class="pe-char-sidebar-inner">
+            <div class="pe-char-sidebar__header">
+              <h3 class="pe-char-sidebar__title">Категорії та статистика</h3>
+              <p id="pe-summary-total" class="pe-summary__total"></p>
+            </div>
+            <div id="pe-chips" class="pe-char-menu"></div>
           </div>
-          <div id="pe-chips" class="pe-char-menu"></div>
         </div>
 
         <div class="pe-char-main">
