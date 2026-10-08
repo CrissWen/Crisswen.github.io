@@ -87,7 +87,6 @@ function categoryCounts() {
 }
 
 const renderSummary = () => ui.renderSummary(categoryCounts(), activeCategory);
-const updateCategoryOptionLabels = () => ui.updateCategoryOptionLabels(categoryCounts());
 const updateButtons = () => ui.updateButtons({ dirty: isDirty(), empty: isFormEmpty() });
 
 function updateCardsMeta() {
@@ -122,7 +121,7 @@ function syncFieldsFromForm() {
   ui.fillFields(form);
   ui.showTitleError('');
   ui.updateDescCounter();
-  updateCategoryOptionLabels();
+  
   resetCataForm();
   selectCategory(activeCategory);
   updateButtons();
@@ -332,7 +331,7 @@ function applyCataChange({ scrollToEnd = false } = {}) {
   if (scrollToEnd) ui.scrollCataListToEnd();
   renderSearch();
   updateCardsMeta();
-  updateCategoryOptionLabels();
+  
   renderSummary();
   updateButtons();
 }
@@ -550,7 +549,7 @@ function applyDynChange({ scrollToEnd = false } = {}) {
   if (scrollToEnd) $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
   renderSearch();
   updateCardsMeta();
-  updateCategoryOptionLabels();
+  
   renderSummary();
   updateButtons();
 }
@@ -880,7 +879,7 @@ export async function initPackEditor() {
     updateButtons();
   });
 
-  $('pe-category').addEventListener('change', e => selectCategory(e.target.value));
+  
 
   // Катаклізми: клік по назві у полі-списку відкриває їх у формі, кнопки форми додають/зберігають/видаляють
   $('pe-cata-list').addEventListener('click', onCataListClick);
@@ -930,7 +929,7 @@ export async function initPackEditor() {
     form.texts[activeCategory] = e.target.value;
     renderSearch(); // результати пошуку завжди відображають актуальний текст
     updateCardsMeta();
-    updateCategoryOptionLabels();
+    
     renderSummary();
     updateButtons();
   });
@@ -955,6 +954,7 @@ export async function initPackEditor() {
   });
 
   initSearch();
+
 
   $('pe-actions').addEventListener('click', handleActionsClick);
 
@@ -1044,4 +1044,7 @@ export function cleanupPackEditor() {
   isSaving = false;
   isConfirming = false;
 }
+
+
+
 
