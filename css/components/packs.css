@@ -337,7 +337,7 @@
   border-color:color-mix(in srgb, var(--hazard) 35%, transparent);
 }
 .added-item-row:hover::before,
-.added-item-row:focus-visible::before,
+.added-item-row:focus-visible::before{transform:scaleY(1);transition-delay:.08s;}
 .added-item-row.is-selected::before{transform:scaleY(1);}
 .added-item-row:active{transform:scale(.98);}
 .added-item-row:focus-visible{outline:2px solid var(--accent, var(--hazard));outline-offset:-2px;}
