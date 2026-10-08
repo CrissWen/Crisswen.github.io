@@ -62,6 +62,19 @@ export const CATEGORY_SCHEMAS = {
     fields: [
       { key: 'action_type', type: 'text', label: 'Системна дія (action_type)' }
     ]
+  },
+  body_type: {
+    fields: [
+      { key: 'has_no_height', type: 'checkbox', label: 'Без зросту (зріст не генерується)' },
+      { key: 'custom_height_mode', type: 'select', label: 'Індивідуальний режим зросту', options: [
+        { value: '', label: 'За замовчуванням (з глобального конфігу)' },
+        { value: 'range', label: 'Власний діапазон' },
+        { value: 'exact', label: 'Точне значення' }
+      ] },
+      { key: 'height_min', type: 'text', label: 'Мін. зріст (см, якщо обрано діапазон)' },
+      { key: 'height_max', type: 'text', label: 'Макс. зріст (см, якщо обрано діапазон)' },
+      { key: 'exact_height', type: 'text', label: 'Точний зріст (число або текст, якщо обрано точне значення)' }
+    ]
   }
 };
 

@@ -98,12 +98,34 @@ function selectCategory(category) {
   renderSummary();
 }
 
+function updateGlobalRangesState() {
+  const modeEl = $('pe-range-heightMode');
+  if (!modeEl) return;
+  const mode = modeEl.value;
+  const isCustom = mode === 'custom';
+  
+  const minEl = $('pe-range-heightMin');
+  const maxEl = $('pe-range-heightMax');
+  
+  if (minEl) {
+    minEl.disabled = !isCustom;
+    minEl.closest('.pe-field').style.display = isCustom ? '' : 'none';
+    if (!isCustom) minEl.value = '150';
+  }
+  if (maxEl) {
+    maxEl.disabled = !isCustom;
+    maxEl.closest('.pe-field').style.display = isCustom ? '' : 'none';
+    if (!isCustom) maxEl.value = '210';
+  }
+}
+
 // Повністю перемальовує значення полів зі стану (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 function syncFieldsFromForm() {
   ui.fillFields(state.form);
   ui.showTitleError('');
   ui.updateDescCounter();
   
+  updateGlobalRangesState();
   resetCataForm();
   selectCategory(state.activeCategory);
   updateButtons();
@@ -219,6 +241,19 @@ function onSearchListKeydown(e) {
   if (!btn) return;
   if (e.key === 'Escape') {
     ui.focusSearchInput();
+    return;
+  }
+  if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    const dynForm = document.getElementById('pe-dynamic-form');
+    if (dynForm && !dynForm.hidden) {
+      document.getElementById('pe-dyn-name')?.focus({ preventScroll: true });
+    } else {
+      const cataForm = document.getElementById('pe-cata');
+      if (cataForm && !cataForm.hidden) {
+        document.getElementById('pe-cata-name')?.focus({ preventScroll: true });
+      }
+    }
     return;
   }
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -516,11 +551,52 @@ function setDynMode(index) {
   renderList();
 }
 
+function updateDynFormState() {
+  if (state.activeCategory !== 'body_type') return;
+  const noHeight = $('pe-dyn-has_no_height')?.checked;
+  const mode = $('pe-dyn-custom_height_mode')?.value;
+  
+  const toggleField = (key, enabled) => {
+    const el = $(`pe-dyn-${key}`);
+    if (el) {
+      el.disabled = !enabled;
+      el.closest('.pe-field').style.display = enabled ? '' : 'none';
+      if (!enabled) {
+        if (el.type === 'checkbox') el.checked = false;
+        else el.value = '';
+      }
+    }
+  };
+
+  if (noHeight) {
+    toggleField('custom_height_mode', false);
+    toggleField('height_min', false);
+    toggleField('height_max', false);
+    toggleField('exact_height', false);
+  } else {
+    toggleField('custom_height_mode', true);
+    if (mode === 'range') {
+      toggleField('height_min', true);
+      toggleField('height_max', true);
+      toggleField('exact_height', false);
+    } else if (mode === 'exact') {
+      toggleField('height_min', false);
+      toggleField('height_max', false);
+      toggleField('exact_height', true);
+    } else {
+      toggleField('height_min', false);
+      toggleField('height_max', false);
+      toggleField('exact_height', false);
+    }
+  }
+}
+
 function startDynEdit(index, card) {
   fillDynFields(card);
   const err = $('pe-dyn-error');
   if (err) err.hidden = true;
   setDynMode(index);
+  updateDynFormState();
   $('pe-dynamic-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   $('pe-dyn-name')?.focus({ preventScroll: true });
 }
@@ -540,6 +616,7 @@ function resetDynForm() {
   const err = $('pe-dyn-error');
   if (err) err.hidden = true;
   setDynMode(-1);
+  updateDynFormState();
 }
 
 function applyDynChange({ scrollToEnd = false } = {}) {
@@ -908,6 +985,9 @@ export async function initPackEditor() {
   $('pe-cata').addEventListener('input', handleCataInput);
   
   $('pe-dynamic-form').addEventListener('click', handleDynClick);
+  $('pe-dynamic-form').addEventListener('change', e => {
+    updateDynFormState();
+  });
   $('pe-dynamic-form').addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
       e.preventDefault();
@@ -963,10 +1043,19 @@ export async function initPackEditor() {
     updateButtons();
   });
 
+
   $('pe-ranges').addEventListener('input', e => {
     const field = e.target.closest('[data-range]');
     if (!field) return;
+    if (field.id === 'pe-range-heightMode') {
+      updateGlobalRangesState();
+    }
     state.form.ranges[field.dataset.range] = field.value;
+    // For min/max, update state in case they were changed automatically by mode switch
+    if (field.id === 'pe-range-heightMode') {
+      state.form.ranges['heightMin'] = $('pe-range-heightMin').value;
+      state.form.ranges['heightMax'] = $('pe-range-heightMax').value;
+    }
     updateButtons();
   });
 
@@ -1022,7 +1111,7 @@ export async function initPackEditor() {
   });
 
   document.getElementById('pe-root')?.addEventListener('keydown', e => {
-    if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+    if (e.ctrlKey && e.shiftKey && ['1', '2', '3', '4'].includes(e.key)) {
       e.preventDefault();
       
       const ZONES = [

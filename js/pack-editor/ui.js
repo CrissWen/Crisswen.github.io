@@ -62,11 +62,40 @@ function stageFieldsHtml() {
 }
 
 function rangesFieldsHtml() {
-  return RANGE_FIELDS.map(({ key, label, min, max }) => `
+  const ageHtml = `
     <div class="pe-field">
-      <label class="pe-label" for="pe-range-${key}">${esc(label)}</label>
-      <input id="pe-range-${key}" class="pe-input" type="number" data-range="${key}" min="${min}" max="${max}" step="1">
-    </div>`).join('');
+      <label class="pe-label" for="pe-range-ageMin">Мін. вік</label>
+      <input id="pe-range-ageMin" class="pe-input" type="number" data-range="ageMin" min="1" max="120" step="1">
+    </div>
+    <div class="pe-field">
+      <label class="pe-label" for="pe-range-ageMax">Макс. вік</label>
+      <input id="pe-range-ageMax" class="pe-input" type="number" data-range="ageMax" min="1" max="120" step="1">
+    </div>
+  `;
+  const heightHtml = `
+    <div class="pe-field">
+      <label class="pe-label" for="pe-range-heightMode">Режим зросту</label>
+      <select id="pe-range-heightMode" class="pe-input" data-range="heightMode">
+        <option value="base">Стандартний (150-210)</option>
+        <option value="custom">Кастомний</option>
+      </select>
+    </div>
+    <div class="pe-field">
+      <label class="pe-label" for="pe-range-heightMin">Мін. зріст</label>
+      <input id="pe-range-heightMin" class="pe-input" type="number" data-range="heightMin" min="50" max="300" step="1">
+    </div>
+    <div class="pe-field">
+      <label class="pe-label" for="pe-range-heightMax">Макс. зріст</label>
+      <input id="pe-range-heightMax" class="pe-input" type="number" data-range="heightMax" min="50" max="300" step="1">
+    </div>
+  `;
+  const bodyTypesHtml = `
+    <div class="pe-field" style="grid-column: 1 / -1;">
+      <label class="pe-label" for="pe-range-defaultBodyTypes">Дефолтні типи статури (по одному на рядок)</label>
+      <textarea id="pe-range-defaultBodyTypes" class="pe-input pe-desc" rows="4" data-range="defaultBodyTypes" placeholder="Хрупкое&#10;Худое"></textarea>
+    </div>
+  `;
+  return ageHtml + heightHtml + bodyTypesHtml;
 }
 
 // Розмітка всієї сторінки. isEdit — редагування існуючого пака, isDefaultEdit — редагування базового пака (лише адмін)
@@ -430,6 +459,14 @@ export function renderDynamicFormFields(schema) {
             </button>
             <div id="pe-dyn-${f.key}-list" class="pe-combo__dropdown" hidden></div>
           </div>
+        </div>`;
+    } else if (f.type === 'select') {
+      return `
+        <div class="pe-field">
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
+          <select id="pe-dyn-${f.key}" class="pe-input" data-dyn-key="${f.key}">
+            ${f.options.map(opt => `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('')}
+          </select>
         </div>`;
     } else {
       return `

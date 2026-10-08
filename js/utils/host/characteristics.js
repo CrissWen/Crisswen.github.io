@@ -1,6 +1,6 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
-import { randInt, pickCard, pickStage } from '../random.js';
+import { randInt, pickCard, pickStage, pickFromStrings } from '../random.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
 
@@ -15,10 +15,36 @@ export function drawCharacteristic(charType, pools) {
     case 'gender':
       return { value: card.value, is_revealed: false };
     case 'body': {
-      const range = pools.config?.height_range;
+      let bodyTypeVal = card.value;
+      let heightVal = null;
+      let hasNoHeight = false;
+
+      if (pools.character.body_type && pools.character.body_type.length > 0) {
+        bodyTypeVal = card.value;
+        hasNoHeight = card.meta?.has_no_height;
+      } else if (pools.config?.default_body_types && pools.config.default_body_types.length > 0) {
+        bodyTypeVal = pickFromStrings(pools.config.default_body_types, card.value);
+      } else if (pools.config?.default_stages?.body_type) {
+        bodyTypeVal = pickFromStrings(pools.config.default_stages.body_type, card.value);
+      }
+
+      if (!hasNoHeight) {
+        if (card.meta?.exact_height) {
+          heightVal = Number(card.meta.exact_height) || card.meta.exact_height;
+        } else if (card.meta?.custom_height_mode === 'range') {
+          const min = card.meta.height_min ?? pools.config?.height_settings?.min ?? pools.config?.height_range?.min ?? 150;
+          const max = card.meta.height_max ?? pools.config?.height_settings?.max ?? pools.config?.height_range?.max ?? 210;
+          heightVal = randInt(min, max);
+        } else {
+          const min = pools.config?.height_settings?.min ?? pools.config?.height_range?.min ?? 150;
+          const max = pools.config?.height_settings?.max ?? pools.config?.height_range?.max ?? 210;
+          heightVal = randInt(min, max);
+        }
+      }
+
       return {
-        type: card.value,
-        height_cm: range ? randInt(range.min, range.max) : 170,
+        type: bodyTypeVal,
+        height_cm: heightVal,
         is_revealed: false
       };
     }
