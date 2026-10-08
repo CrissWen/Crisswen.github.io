@@ -138,6 +138,24 @@
 .pe-desc{resize:vertical;min-height:76px;}
 .pe-cards{resize:vertical;min-height:280px;font-family:var(--mono);font-size:13.5px;}
 .pe-select{cursor:pointer;}
+/* Список «Категорія»: підсвічування пункту під курсором у Chrome/Edge системне (синє) і звичайним CSS не змінюється.
+   appearance: base-select дає перефарбувати його змінними теми; у старих браузерах нічого не змінюється. Тільки кольори. */
+@supports (appearance: base-select) {
+  .pe-select,
+  .pe-select::picker(select){appearance:base-select;}
+  .pe-select::picker-icon{color:var(--text-mute);}
+  .pe-select::picker(select){
+    background:linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+    border-color:var(--metal-lt);
+  }
+  .pe-select option,
+  .pe-select optgroup{background:transparent;color:var(--text);}
+  .pe-select option:checked{background:color-mix(in srgb, var(--accent) 28%, transparent);color:var(--text);}
+  .pe-select option:hover,
+  .pe-select option:focus-visible{background:var(--accent);color:var(--bg);}
+  .pe-select option::checkmark{color:var(--accent);}
+  .pe-select option:hover::checkmark{color:var(--bg);}
+}
 .pe-counter{align-self:flex-end;font-family:var(--mono);font-size:12px;color:var(--text-mute);}
 .pe-error{margin:0;font-size:13px;color:var(--danger);}
 .pe-error[hidden]{display:none;}
@@ -554,7 +572,8 @@
   top: 100%; left: 0; right: 0;
   z-index: 100;
   margin-top: 4px;
-  background: var(--bg, #112240);
+  /* Темовий фон: --panel-2 (у деяких тем напівпрозорий) накладається на суцільний --bg */
+  background: linear-gradient(var(--panel-2), var(--panel-2)), var(--bg, #112240);
   border: 1px solid var(--metal-lt);
   border-radius: var(--radius-sm);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
