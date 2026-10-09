@@ -286,6 +286,14 @@ export async function initPackEditor() {
 
   window.addEventListener('beforeunload', onBeforeUnload);
 
+  ui.setStageReorderCallback(key => {
+    const text = ui.gatherStageText(key);
+    state.form.stages[key] = text;
+    const ta = document.querySelector(`[data-stage-ta="${key}"]`);
+    if (ta) ta.value = text;
+    updateButtons();
+  });
+
   $('pe-title').addEventListener('input', e => {
     state.form.title = e.target.value;
     ui.showTitleError('');
@@ -671,6 +679,7 @@ export async function initPackEditor() {
 
 export function cleanupPackEditor() {
   window.removeEventListener('beforeunload', onBeforeUnload);
+  ui.destroyStageSortables();
   state.isSaving = false;
   state.isConfirming = false;
 }

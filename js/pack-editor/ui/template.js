@@ -16,6 +16,7 @@ export function stageRowHtml(key, entry) {
     const m = total % 12;
     return `
       <div class="pe-stage-row pe-stage-row--card${newClass}">
+        <div class="pe-stage-handle pe-stage-handle--card" title="Перетягніть для зміни порядку" aria-label="Перетягнути"></div>
         <input type="text" class="pe-input pe-stage-name" value="${esc(name || '')}" placeholder="${isNew ? 'Нова стадія...' : 'Назва'}">
         <div class="pe-stage-time-group">
           <div class="pe-stage-time-row pe-stage-from-wrap">
@@ -45,6 +46,7 @@ export function stageRowHtml(key, entry) {
 
   return `
     <div class="pe-stage-row pe-stage-row--simple${newClass}">
+      <span class="pe-stage-handle pe-stage-handle--simple" title="Перетягніть для зміни порядку" aria-label="Перетягнути">⋮⋮</span>
       <input type="text" class="pe-input pe-stage-name" value="${esc(name || '')}" placeholder="${isNew ? 'Нове значення...' : 'Назва'}">
       <button class="pe-stage-del" tabindex="-1" title="Видалити">✕</button>
     </div>

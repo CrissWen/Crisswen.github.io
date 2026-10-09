@@ -234,7 +234,7 @@
   flex-direction:column;
   align-items:stretch;
   gap:10px;
-  padding:12px 38px 12px 14px;
+  padding:12px 38px 12px 26px;
   background:var(--panel);
   border:1px solid var(--metal-lt);
   border-radius:var(--radius-sm);
@@ -246,6 +246,86 @@
 .pe-stage-row--card .pe-stage-del{
   position:absolute;top:6px;right:6px;
   width:30px;height:30px;
+}
+
+/* Ручки перетягування (Drag and drop) */
+.pe-stage-handle--card{
+  position:absolute;left:0;top:0;bottom:0;width:16px;
+  background:color-mix(in srgb, var(--metal-lt) 80%, transparent);
+  border-top-left-radius:calc(var(--radius-sm) - 1px);
+  border-bottom-left-radius:calc(var(--radius-sm) - 1px);
+  cursor:grab;
+  transition:background-color .2s ease, width .15s ease;
+  user-select:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.pe-stage-handle--card::after{
+  content:"";
+  width:3px;
+  height:24px;
+  border-left:2px dotted var(--text-mute);
+  opacity:0.55;
+  transition:opacity .2s ease, border-color .2s ease;
+}
+.pe-stage-handle--card:hover{
+  background:var(--hazard);
+  width:18px;
+}
+.pe-stage-handle--card:hover::after{
+  opacity:1;
+  border-color:#000;
+}
+.pe-stage-handle--card:active{
+  cursor:grabbing;
+  background:var(--hazard);
+}
+
+.pe-stage-handle--simple{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:34px;flex-shrink:0;
+  color:var(--text-mute);font-size:16px;line-height:1;
+  cursor:grab;user-select:none;
+  transition:color .2s ease;
+}
+.pe-stage-handle--simple:hover{
+  color:var(--hazard);
+}
+.pe-stage-handle--simple:active{
+  cursor:grabbing;
+  color:var(--hazard);
+}
+
+.pe-stage-row--new .pe-stage-handle{
+  display:none !important;
+}
+
+/* Стан перетягування (SortableJS) */
+.pe-stage-row.sortable-ghost{
+  opacity:0.35;
+  background:color-mix(in srgb, var(--hazard) 15%, transparent) !important;
+  border:1px dashed var(--hazard) !important;
+}
+.pe-stage-row.sortable-chosen{
+  box-shadow:0 6px 20px rgba(0,0,0,0.5);
+}
+.pe-stage-row.sortable-drag{
+  cursor:grabbing !important;
+}
+.pe-stage-row.sortable-fallback{
+  opacity:0.95 !important;
+  box-shadow:0 12px 32px rgba(0,0,0,0.65) !important;
+  pointer-events:none !important;
+  z-index:10005 !important;
+  background:var(--panel) !important;
+  border-color:var(--hazard) !important;
+}
+
+body.is-stage-dragging,
+body.is-stage-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
 }
 
 /* Порожній рядок для нового запису (нестворений/чернетка) */
