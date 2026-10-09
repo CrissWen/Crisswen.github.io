@@ -10,6 +10,7 @@ export class EditorState {
     this.initialForm = null;
     this.activeCategory = null;
     this.viewMode = 'visual';
+    this.stagesViewMode = 'visual';
     this.dynEditIndex = -1;
     this.newDynIndex = -1;
     this.isSaving = false;

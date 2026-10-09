@@ -1,6 +1,7 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
 import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, splitNameExplanation } from './parser.js';
-import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
+import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
+import { getStagePrompt } from './prompts/stage-prompts.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
@@ -105,6 +106,7 @@ function selectCategory(category) {
 // Повністю перемальовує значення полів зі стану (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 function syncFieldsFromForm() {
   ui.fillFields(state.form);
+  ui.setStagesViewMode(state.stagesViewMode);
   ui.showTitleError('');
   ui.updateDescCounter();
   
@@ -272,6 +274,7 @@ export async function initPackEditor() {
   state.form = blankForm();
   state.initialForm = cloneForm(state.form);
   state.activeCategory = ALL_PACK_CATEGORIES[0].category;
+  state.stagesViewMode = 'visual';
   state.isSaving = false;
   state.isConfirming = false;
   state.allowLeave = false;
@@ -389,7 +392,40 @@ export async function initPackEditor() {
     if (chip) selectCategory(chip.dataset.chip);
   });
 
+  $('pe-stages-llm')?.addEventListener('change', e => {
+    const isLlm = e.target.checked;
+    state.stagesViewMode = isLlm ? 'llm' : 'visual';
+
+    if (isLlm) {
+      STAGE_KEYS.forEach(key => {
+        const text = ui.gatherStageText(key);
+        state.form.stages[key] = text;
+        const ta = document.querySelector(`[data-stage-ta="${key}"]`);
+        if (ta) ta.value = text;
+      });
+      ui.setStagesViewMode('llm');
+    } else {
+      STAGE_KEYS.forEach(key => {
+        const ta = document.querySelector(`[data-stage-ta="${key}"]`);
+        if (ta) {
+          state.form.stages[key] = ta.value;
+        }
+        ui.renderStageList(key, state.form.stages[key] || '');
+      });
+      ui.setStagesViewMode('visual');
+    }
+    updateButtons();
+  });
+
   $('pe-stages').addEventListener('input', e => {
+    const ta = e.target.closest('[data-stage-ta]');
+    if (ta) {
+      const key = ta.dataset.stageTa;
+      state.form.stages[key] = ta.value;
+      updateButtons();
+      return;
+    }
+
     const stageGroup = e.target.closest('[data-stage-list]');
     if (stageGroup) {
       const key = stageGroup.dataset.stageList;
@@ -447,6 +483,23 @@ export async function initPackEditor() {
   });
 
   $('pe-stages').addEventListener('click', async e => {
+    const copyBtn = e.target.closest('[data-stage-copy]');
+    if (copyBtn) {
+      const key = copyBtn.dataset.stageCopy;
+      const prompt = getStagePrompt(key);
+      if (prompt) {
+        try {
+          await navigator.clipboard.writeText(prompt);
+          showGlobalToast('Промпт для LLM скопійовано');
+        } catch (err) {
+          showGlobalToast('Не вдалося скопіювати промпт');
+        }
+      } else {
+        showGlobalToast('Промпт для цієї стадії відсутній');
+      }
+      return;
+    }
+
     const addBtn = e.target.closest('[data-stage-add]');
     if (addBtn) {
       const key = addBtn.dataset.stageAdd;

@@ -53,9 +53,15 @@ export function stageRowHtml(key, entry) {
 
 function stageFieldsHtml() {
   return STAGE_FIELDS.map(({ key, label }) => `
-    <div class="pe-stage-group">
-      <label class="pe-label">${esc(label)}</label>
+    <div class="pe-stage-group" data-stage-group="${key}">
+      <div class="pe-stage-group-head">
+        <label class="pe-label">${esc(label)}</label>
+        <button type="button" class="pk-btn pk-btn--ghost pe-stage-copy-btn" data-stage-copy="${key}" title="Скопіювати промпт для LLM" aria-label="Скопіювати промпт для LLM">
+          <svg class="pe-stage-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
       <div class="pe-stage-list pe-input" data-stage-list="${key}"></div>
+      <textarea class="pe-input pe-stage-textarea" data-stage-ta="${key}" placeholder="Введіть стадії..." hidden></textarea>
       <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
     </div>`).join('');
 }
@@ -260,7 +266,14 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
       </div>
 
       <div class="block">
-        <div class="block-head"><h2>Стадії</h2></div>
+        <div class="block-head pe-stages-head">
+          <h2>Стадії</h2>
+          <label class="pe-check" title="Режим LLM (робота з чистим текстом)">
+            <input type="checkbox" id="pe-stages-llm" class="pe-check__input">
+            <span class="pe-check__box" aria-hidden="true"></span>
+            <span class="pe-check__text">Режим LLM</span>
+          </label>
+        </div>
         <div class="block-body pe-body">
           <p class="pe-hint">
             Стадії діють на весь пак: для кожної професії, хобі та хвороби гра випадково обирає одне зі значень.

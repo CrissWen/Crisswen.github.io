@@ -291,11 +291,36 @@ export function gatherStageText(key) {
   }).join('\n');
 }
 
+export function setStagesViewMode(mode) {
+  const isLlm = mode === 'llm';
+  const stagesContainer = $('pe-stages');
+  if (stagesContainer) {
+    stagesContainer.classList.toggle('is-llm-mode', isLlm);
+  }
+  const llmCheckbox = $('pe-stages-llm');
+  if (llmCheckbox) {
+    llmCheckbox.checked = isLlm;
+  }
+
+  STAGE_KEYS.forEach(key => {
+    const list = document.querySelector(`[data-stage-list="${key}"]`);
+    const ta = document.querySelector(`[data-stage-ta="${key}"]`);
+    const note = list?.parentElement?.querySelector('.pe-stage-note');
+    if (list) list.hidden = isLlm;
+    if (ta) ta.hidden = !isLlm;
+    if (note) note.hidden = isLlm;
+  });
+}
+
 // Повністю перемальовує значення полів зі стану форми (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 export function fillFields(form) {
   $('pe-title').value = form.title;
   $('pe-desc').value = form.description;
-  STAGE_KEYS.forEach(key => renderStageList(key, form.stages[key] || ''));
+  STAGE_KEYS.forEach(key => {
+    renderStageList(key, form.stages[key] || '');
+    const ta = document.querySelector(`[data-stage-ta="${key}"]`);
+    if (ta) ta.value = form.stages[key] || '';
+  });
   document.querySelectorAll('[data-range]').forEach(el => { el.value = form.ranges[el.dataset.range] ?? ''; });
 }
 

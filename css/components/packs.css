@@ -168,9 +168,31 @@
 .pe-error[hidden]{display:none;}
 
 /* Блок стадій */
+.pe-stages-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.pe-stages-head .pe-check{min-height:auto;}
 .pe-hint{margin:0;font-size:13px;line-height:1.5;color:var(--text-mute);}
 .pe-stages{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
 .pe-stage-group{display:flex;flex-direction:column;gap:8px;}
+.pe-stage-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;}
+.pe-stage-group-head .pe-label{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pe-stage-copy-btn{
+  display:none;align-items:center;justify-content:center;
+  width:26px;height:26px;padding:0;
+  border-radius:var(--radius-sm);
+  flex-shrink:0;
+}
+.pe-stage-copy-icon{width:15px;height:15px;flex-shrink:0;}
+.pe-stages.is-llm-mode .pe-stage-copy-btn{display:inline-flex;}
+
+.pe-stage-textarea{
+  height:380px;min-height:380px;box-sizing:border-box;resize:vertical;
+  font-family:var(--mono);font-size:13.5px;line-height:1.5;
+  white-space:pre;overflow-wrap:normal;overflow-x:auto;
+  scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
+}
+.pe-stage-textarea::-webkit-scrollbar{width:6px;}
+.pe-stage-textarea::-webkit-scrollbar-track{background:transparent;}
+.pe-stage-textarea::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
 .pe-stage-list{
   display:flex;flex-direction:column;gap:8px;padding:12px;
   height:380px;min-height:380px;box-sizing:border-box;overflow-y:auto;
@@ -179,6 +201,15 @@
 .pe-stage-list::-webkit-scrollbar{width:6px;}
 .pe-stage-list::-webkit-scrollbar-track{background:transparent;}
 .pe-stage-list::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+.pe-stage-list[hidden],
+.pe-stage-textarea[hidden],
+.pe-stage-note[hidden]{display:none !important;}
+
+.pe-stages.is-llm-mode .pe-stage-list,
+.pe-stages.is-llm-mode .pe-stage-note{display:none !important;}
+
+.pe-stages.is-llm-mode .pe-stage-textarea{display:block;}
+.pe-stages:not(.is-llm-mode) .pe-stage-textarea{display:none !important;}
 
 .pe-stage-row{
   display:flex;align-items:center;gap:8px;width:100%;

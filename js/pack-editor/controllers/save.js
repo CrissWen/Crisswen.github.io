@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { DEFAULT_PACK_ID, savePack } from '../../services/packs-store.js';
 import {
   validateTitle, validateRanges, buildCardRows, buildPackConfig,
-  MAX_PACK_CARDS, normalizeForm
+  MAX_PACK_CARDS, normalizeForm, STAGE_KEYS
 } from '../payload.js';
 import { parseCards } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
@@ -56,6 +56,18 @@ export async function handleSave(btn) {
   if (dynDraftPending()) {
     showGlobalToast('У формі характеристики є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
     return;
+  }
+
+  // Синхронізуємо стадії перед збереженням
+  if (state.stagesViewMode === 'llm') {
+    STAGE_KEYS.forEach(k => {
+      const ta = document.querySelector(`[data-stage-ta="${k}"]`);
+      if (ta) state.form.stages[k] = ta.value;
+    });
+  } else {
+    STAGE_KEYS.forEach(k => {
+      state.form.stages[k] = ui.gatherStageText(k);
+    });
   }
 
   // Якщо ми в LLM-режимі на вкладці Катаклізмів, треба синхронізувати текст у масив перед збереженням
