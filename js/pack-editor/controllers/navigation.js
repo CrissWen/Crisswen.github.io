@@ -1,6 +1,6 @@
-import { state } from './state.js';
-import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
-import { normalizeForm } from './payload.js';
+import { state } from '../state.js';
+import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
+import { normalizeForm } from '../payload.js';
 
 const UNSAVED_NOTE = 'Усі незбережені зміни будуть втрачені';
 

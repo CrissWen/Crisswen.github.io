@@ -1,16 +1,24 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
-import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, joinNameExplanation, splitNameExplanation } from './parser.js';
-import {
-  buildCardRows, MAX_PACK_CARDS, RANGE_DEFAULTS,
-  validateTitle, validateRanges, stagesTextFromConfig, rangesFromConfig, buildPackConfig, normalizeForm,
-  cataclysmNamesText, cataFieldStrings, hasCataDraft, validateCataclysmInput
-} from './payload.js';
-import { tokenize, cataMatches, collectSearchResults } from './search.js';
-import { getPack, savePack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
-import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
+import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, splitNameExplanation } from './parser.js';
+import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
+import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import * as ui from './ui/index.js';
 import { $ } from './ui/helpers.js';
+import {
+  getPackIdFromHash, isDirty, confirmAction, goToList, onBeforeUnload,
+  syncCataText, cataDraftPending, renderCataList, setCataMode, resetCataForm,
+  applyCataChange, submitCata, startCataEdit, deleteCata, handleCataClick,
+  handleCataInput, setCataChangeHandler,
+  getDynamicCards, dynDraftPending, readDynRaw, fillDynFields, setDynMode,
+  updateDynFormState, startDynEdit, resetDynForm, applyDynChange, submitDyn,
+  deleteDyn, handleDynClick, updateComboDropdown, setDynamicOrchestrator,
+  searchTokens, cataFilterActive, renderSearch, setSearchQuery,
+  openTextResult, openCataResult, onSearchResultClick, onSearchKeydown,
+  onSearchListKeydown, initSearch, setSearchOrchestrator,
+  isFormEmpty, buildConfig, handleSave, handleClear, handleReset,
+  handleExit, handleActionsClick, setSaveOrchestrator
+} from './controllers/index.js';
 
 // ===== Сторінка "Редактор пака" (#/pack-editor, редагування — #/pack-editor?id=<uuid>) =====
 // Це контролер: стан сторінки, валідація, обробники подій і координація
@@ -42,17 +50,12 @@ function cloneForm(f) {
   };
 }
 
-function getPackIdFromHash() {
-  return new URLSearchParams(window.location.hash.split('?')[1] || '').get('id');
-}
-
-// ----- Допоміжні -----
-// Зайві пробіли та порожні рядки змінами не вважаються (нормалізація — pack-payload.js)
-const isDirty = () => normalizeForm(state.form) !== normalizeForm(state.initialForm);
-const isFormEmpty = () => normalizeForm(state.form) === normalizeForm(blankForm());
-
-// Фінальний config для збереження (логіка злиття — buildPackConfig у pack-payload.js)
-const buildConfig = () => buildPackConfig({ defaultConfig: state.defaultConfig, packConfig: state.packConfig, stages: state.form.stages, ranges: state.form.ranges });
+// Підключення координатора збереження
+setSaveOrchestrator({
+  blankForm,
+  cloneForm,
+  syncFieldsFromForm: () => syncFieldsFromForm()
+});
 
 // ----- Розмітка -----
 export function renderPackEditor() {
@@ -109,200 +112,38 @@ function syncFieldsFromForm() {
   updateButtons();
 }
 
-// ----- Пошук по характеристиках -----
-// Один рядок пошуку на всі категорії (логіка збігів — pack-search.js). Дві поведінки залежно від того, де шукаємо:
-//  • категорія "Катаклізм" (лише активна): фільтрується сам список катаклізмів (renderCataList) за назвою й описом;
-//  • решта (текстові категорії, або будь-яка, якщо увімкнено "У всіх категоріях"): під полем будується список знайдених рядків.
-// Клік по результату перемикає категорію, виділяє рядок у textarea (або відкриває катаклізм у формі).
-const searchTokens = () => tokenize(state.searchQuery);
+// Підключення координатора пошуку
+setSearchOrchestrator({
+  selectCategory,
+  renderList,
+  getDynamicCards: () => getDynamicCards(),
+  dynDraftPending: () => dynDraftPending(),
+  startDynEdit: (idx, card) => startDynEdit(idx, card)
+});
 
-// Фільтр самого списку катаклізмів діє, лише коли шукаємо в активній категорії "Катаклізм"
-const cataFilterActive = () => state.activeCategory === 'cataclysm' && !state.searchAll && searchTokens().length > 0;
-
-// Перемальовує панель результатів, лічильник і кнопку "×" за станом (state.searchQuery / state.searchAll / state.activeCategory / state.form)
-function renderSearch() {
-  const tokens = searchTokens();
-  const view = { query: state.searchQuery, tokens, searchAll: state.searchAll };
-
-  if (!tokens.length) {
-    ui.paintSearch({ ...view, mode: 'idle' });
-    return;
-  }
-
-  // Катаклізми в активній категорії: фільтрується сам список, окрема панель не потрібна
-  if (cataFilterActive()) {
-    ui.paintSearch({ ...view, mode: 'cata-filter', cataCount: state.form.cataclysms.filter(c => cataMatches(c, tokens)).length });
-    return;
-  }
-
-  const categories = state.searchAll ? ALL_PACK_CATEGORIES : ALL_PACK_CATEGORIES.filter(c => c.category === state.activeCategory);
-  const { results, total } = collectSearchResults({ categories, texts: state.form.texts, cataclysms: state.form.cataclysms, tokens });
-  ui.paintSearch({ ...view, mode: 'results', results, total });
-}
-
-function setSearchQuery(value, { focus = false } = {}) {
-  state.searchQuery = value;
-  ui.setSearchInput(value);
+// Підключення координатора змін катаклізмів
+setCataChangeHandler(({ scrollToEnd = false } = {}) => {
   renderList();
+  if (scrollToEnd) ui.scrollCataListToEnd();
   renderSearch();
-  if (focus) ui.focusSearchInput();
-}
+  updateCardsMeta();
+  renderSummary();
+  updateButtons();
+});
 
-// Результат-рядок: переходимо в його категорію, виділяємо рядок у textarea й прокручуємо до нього
-function openTextResult(category, lineIndex) {
-  if (category !== state.activeCategory) selectCategory(category);
-
-  if (state.viewMode === 'visual' && CATEGORY_SCHEMAS[category]) {
-    const cards = getDynamicCards();
-    if (!cards[lineIndex]) {
-      showGlobalToast('Рядок змінився — виберіть результат ще раз');
-      renderSearch();
-      return;
-    }
-    if (typeof dynDraftPending === 'function' && dynDraftPending()) {
-      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
-      return;
-    }
-    startDynEdit(lineIndex, cards[lineIndex]);
-  } else {
-    if (!ui.selectCardsLine(lineIndex)) {
-      showGlobalToast('Рядок змінився — виберіть результат ще раз');
-      renderSearch();
-    }
-  }
-}
-
-// Результат-катаклізм: відкриваємо його у формі (з тим самим захистом від втрати незбереженого, що й у кліку по списку)
-function openCataResult(index) {
-  if (state.activeCategory !== 'cataclysm') selectCategory('cataclysm');
-  if (!state.form.cataclysms[index]) return;
-  if (index !== state.cataEditIndex) {
-    if (cataDraftPending()) {
-      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
-      // ui.scrollCataFormIntoView();
-      return;
-    }
-    startCataEdit(index);
-    return;
-  }
-  // ui.scrollCataFormIntoView();
-}
-
-function onSearchResultClick(e) {
-  const row = e.target.closest('.pe-result');
-  if (!row) return;
-  if (row.dataset.resCata !== undefined) openCataResult(Number(row.dataset.resCata));
-  else openTextResult(row.dataset.resCat, Number(row.dataset.resLine));
-}
-
-function onSearchKeydown(e) {
-  if (e.key === 'Escape') {
-    if (state.searchQuery) {
-      e.preventDefault();
-      setSearchQuery('');
-    }
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    ui.firstSearchTargetEl(cataFilterActive())?.click();
-  } else if (e.key === 'ArrowDown') {
-    const target = ui.firstSearchTargetEl(cataFilterActive());
-    if (target) {
-      e.preventDefault();
-      target.focus();
-    }
-  }
-}
-
-// Стрілки ↑/↓ ходять по рядках результатів (або по списку катаклізмів), Esc / ↑ з першого рядка повертає в поле пошуку
-function onSearchListKeydown(e) {
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  if (e.key === 'Escape') {
-    ui.focusSearchInput();
-    return;
-  }
-  if (e.key === 'ArrowRight') {
-    e.preventDefault();
-    const dynForm = document.getElementById('pe-dynamic-form');
-    if (dynForm && !dynForm.hidden) {
-      document.getElementById('pe-dyn-name')?.focus({ preventScroll: true });
-    } else {
-      const cataForm = document.getElementById('pe-cata');
-      if (cataForm && !cataForm.hidden) {
-        document.getElementById('pe-cata-name')?.focus({ preventScroll: true });
-      }
-    }
-    return;
-  }
-  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-  e.preventDefault();
-  const moved = ui.focusSiblingRow(btn, e.key === 'ArrowDown' ? 1 : -1);
-  if (!moved && e.key === 'ArrowUp') ui.focusSearchInput();
-}
-
-function initSearch() {
-  ui.initSearchControls({ query: state.searchQuery, all: state.searchAll });
-  const searchInput = $('pe-search');
-  searchInput.addEventListener('input', e => setSearchQuery(e.target.value));
-  searchInput.addEventListener('keydown', onSearchKeydown);
-  $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }));
-
-  // Клік мишею/тапом по «×» або чекбоксу всередині поля не має відбирати фокус у поля вводу: інакше воно на мить втрачає
-  // фокус (зникає світіння рамки, тьмяніє лупа), а потім фокус стрибає назад — це й було миготінням.
-  // preventDefault на mousedown лишає фокус в інпуті (сам click і перемикання чекбокса працюють як раніше).
-  // Деякі браузери при кліку по label усе одно переводять фокус на чекбокс, тому після change повертаємо його в поле.
-  // Клавіатурна навігація (Tab / Space) не зачеплена: прапорець виставляється лише від миші.
-  let searchHadFocus = false;
-  document.querySelector('.pe-search__inside')?.addEventListener('mousedown', e => {
-    searchHadFocus = document.activeElement === searchInput;
-    if (!searchHadFocus) return;
-    e.preventDefault();
-    // Прапорець скидаємо одразу після відпускання кнопки (click і change спрацьовують до цього таймера), навіть якщо курсор зсунули повз
-    window.addEventListener('mouseup', () => setTimeout(() => { searchHadFocus = false; }), { once: true });
-  });
-
-  $('pe-search-all').addEventListener('change', e => {
-    state.searchAll = e.target.checked;
-    renderList();
-    renderSearch();
-    if (searchHadFocus) searchInput.focus({ preventScroll: true }); // курсор лишається там, де був
-  });
-  const results = $('pe-search-results');
-  results.addEventListener('click', onSearchResultClick);
-  results.addEventListener('keydown', onSearchListKeydown);
-  $('pe-cata-list').addEventListener('keydown', onSearchListKeydown);
-}
-
-// ----- Катаклізми: список рядків (.added-item-row) + форма під ним -----
-// Джерело істини — state.form.cataclysms (записи з pack-payload.js). Текст у textarea лише відображає їхні назви (по одній на рядок),
-// тому змінити катаклізм можна лише через форму: клік по назві → поля заповнюються → "Зберегти зміни" або "Видалити".
-
-// Текст списку (назви по одній на рядок) усередині state.form.texts.cataclysm: з нього читаються лічильники, підсумок і трекінг змін
-function syncCataText(f = state.form) {
-  f.texts.cataclysm = cataclysmNamesText(f.cataclysms);
-}
-
-// Чи є у формі дані, які ще не потрапили в список (новий катаклізм або незбережені правки існуючого).
-// Захист від втрати: без нього "Оновити пак" або клік по іншому катаклізму мовчки відкинули б заповнене.
-const cataDraftPending = () => hasCataDraft(ui.readCataRaw(), state.form.cataclysms[state.cataEditIndex], state.cataEditIndex >= 0);
-
-function renderCataList() {
-  ui.renderCataList({
-    cataclysms: state.form.cataclysms,
-    editIndex: state.cataEditIndex,
-    newIndex: state.newCataIndex,
-    tokens: cataFilterActive() ? searchTokens() : []
-  });
-}
-
-function getDynamicCards() {
-  if (state.activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[state.activeCategory]) return [];
-  return parseCards(state.form.texts[state.activeCategory] || '', state.activeCategory, state.extraMeta);
-}
+// Підключення координатора динамічних карток
+setDynamicOrchestrator(({ scrollToEnd = false } = {}) => {
+  renderList();
+  if (scrollToEnd) $('pe-cata-list')?.lastElementChild?.scrollIntoView({ block: 'nearest' });
+  renderSearch();
+  updateCardsMeta();
+  renderSummary();
+  updateButtons();
+});
 
 function renderList() {
   if (state.activeCategory === 'cataclysm') {
-    renderCataList();
+    renderCataList(cataFilterActive() ? searchTokens() : []);
   } else if (CATEGORY_SCHEMAS[state.activeCategory] && state.viewMode === 'visual') {
     const cards = getDynamicCards();
     ui.renderCataList({
@@ -327,71 +168,6 @@ function renderList() {
   }
 }
 
-// Режим форми: -1 — додавання нового, ≥ 0 — редагування існуючого
-function setCataMode(index) {
-  state.cataEditIndex = index;
-  ui.paintCataMode(index >= 0 ? state.form.cataclysms[index] : null);
-  renderList();
-}
-
-// Очищає поля і повертає форму в режим "додати"
-function resetCataForm() {
-  ui.clearCataFields();
-  ui.showCataError('');
-  setCataMode(-1);
-}
-
-// Після будь-якої зміни списку: перемальовуємо поле-список, лічильники, підсумок і стан кнопок "Скасувати зміни"/"Очистити все"
-function applyCataChange({ scrollToEnd = false } = {}) {
-  syncCataText();
-  renderList();
-  if (scrollToEnd) ui.scrollCataListToEnd();
-  renderSearch();
-  updateCardsMeta();
-  
-  renderSummary();
-  updateButtons();
-}
-
-// "Додати" / "Зберегти зміни" — залежно від режиму форми. Після успіху дані з’являються в полі-списку, а поля форми очищаються.
-function submitCata() {
-  const result = validateCataclysmInput(ui.readCataRaw(), { cataclysms: state.form.cataclysms, editIndex: state.cataEditIndex });
-  if (result.error) {
-    ui.showCataError(result.error, result.field);
-    return;
-  }
-
-  const existing = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
-  if (existing) {
-    // Додаткова meta цього катаклізму, якої форма не показує, лишається правою
-    state.form.cataclysms[state.cataEditIndex] = { ...result.item, extra: existing.extra || {} };
-  } else {
-    state.form.cataclysms.push(result.item);
-  }
-
-  applyCataChange();
-  resetCataForm();
-
-  // Новий рядок з’являється з анімацією: клас is-new діє лише на цей рендер (далі перемальовки його вже не мають)
-  if (!existing) {
-    state.newCataIndex = state.form.cataclysms.length - 1;
-    renderList();
-    state.newCataIndex = -1;
-    ui.scrollCataListToEnd();
-  }
-  showGlobalToast(existing ? 'Катаклізм оновлено' : 'Катаклізм додано');
-  $(ui.CATA_FIELDS.name)?.focus();
-}
-
-// Клік по назві у списку → поля форми заповнюються даними цього катаклізму
-function startCataEdit(index) {
-  const item = state.form.cataclysms[index];
-  if (!item) return;
-  ui.fillCataFields(cataFieldStrings(item));
-  ui.showCataError('');
-  setCataMode(index);
-  $(ui.CATA_FIELDS.name)?.focus({ preventScroll: true });
-}
 
 function onCataListClick(e) {
   const row = e.target.closest('[data-cata-index]');
@@ -416,472 +192,11 @@ function onCataListClick(e) {
   }
 }
 
-async function deleteCata(btn) {
-  const item = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
-  if (!item || state.isConfirming) return;
-
-  state.isConfirming = true;
-  let confirmed = false;
-  try {
-    confirmed = await showPackConfirm(`Чи точно хочете видалити катаклізм "${oneLine(item.name)}"?`, btn, { confirmLabel: 'Видалити' });
-  } finally {
-    state.isConfirming = false;
-  }
-  if (!confirmed) return;
-
-  // Після await індекс міг змінитися (наприклад, "Очистити все"), тому шукаємо запис за посиланням
-  const index = state.form.cataclysms.indexOf(item);
-  if (index < 0) return;
-  state.form.cataclysms.splice(index, 1);
-
-  applyCataChange();
-  resetCataForm();
-  showGlobalToast('Катаклізм видалено');
-}
-
-function handleCataClick(e) {
-  const btn = e.target.closest('[data-cata-action]');
-  if (!btn || btn.disabled) return;
-
-  switch (btn.dataset.cataAction) {
-    case 'submit': submitCata(); break;
-    case 'cancel': resetCataForm(); break;
-    case 'delete': deleteCata(btn); break;
-  }
-}
-
-// Числові поля приймають лише цифри (і при вставці "50 000" → 50000); правка поля прибирає попередню помилку
-function handleCataInput(e) {
-  ui.sanitizeCataNumericInput(e.target);
-  if (ui.isCataErrorVisible()) ui.showCataError('');
-}
 
 
-// ----- Динамічні форми -----
 
-function dynDraftPending() {
-  if (state.activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[state.activeCategory] || state.viewMode !== 'visual') return false;
-  const current = readDynRaw();
-  if (!current.value && Object.values(current).every(v => !v || (Array.isArray(v) && !v.length))) return false;
-  
-  if (state.dynEditIndex < 0) return true;
-  
-  const cards = getDynamicCards();
-  const item = cards[state.dynEditIndex];
-  if (!item) return false;
-  
-  // Фобія: порівнюємо зклеєне "Назва - Пояснення" з збереженим value (обидва нормалізуємо), інакше картка завжди виглядала б "зміненою"
-  const withExplanation = hasExplanationField(state.activeCategory);
-  const savedValue = withExplanation
-    ? (s => joinNameExplanation(s.name, s.explanation))(splitNameExplanation(item.value))
-    : item.value;
-  const currentValue = withExplanation ? joinNameExplanation(current.value, current.explanation) : current.value;
-  if (currentValue !== savedValue) return true;
-  for (const f of CATEGORY_SCHEMAS[state.activeCategory].fields) {
-    if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище (у meta цей ключ не зберігається)
-    const v1 = current[f.key];
-    const v2 = item.meta[f.key];
-    if (f.type === 'checkbox') {
-      if (Boolean(v1) !== Boolean(v2)) return true;
-    } else if (f.type === 'list') {
-      if ((v1 || []).join('\n') !== (v2 || []).join('\n')) return true;
-    } else {
-      if ((v1 || '') !== (v2 || '')) return true;
-    }
-  }
-  return false;
-}
 
-function readDynRaw() {
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
-  if (!schema) return {};
-  const data = {};
-  data.value = $('pe-dyn-name').value.trim();
-  for (const f of schema.fields) {
-    const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
-    if (el) {
-      if (f.type === 'checkbox') data[f.key] = el.checked;
-      else if (f.type === 'list') data[f.key] = parseLines(el.value);
-      else data[f.key] = el.value.trim();
-    }
-  }
-  return data;
-}
 
-function fillDynFields(card) {
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
-  if (!schema) return;
-  const split = hasExplanationField(state.activeCategory) ? splitNameExplanation(card.value) : null;
-  $('pe-dyn-name').value = split ? split.name : card.value;
-  for (const f of schema.fields) {
-    const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
-    if (el) {
-      const val = split && f.key === 'explanation' ? split.explanation : card.meta[f.key];
-      if (f.type === 'checkbox') el.checked = Boolean(val);
-      else if (f.type === 'list') el.value = Array.isArray(val) ? val.join('\n') : '';
-      else el.value = val || '';
-    }
-  }
-}
-
-function setDynMode(index) {
-  state.dynEditIndex = index;
-  const cards = getDynamicCards();
-  const item = index >= 0 ? cards[index] : null;
-  const submitBtn = document.querySelector('[data-dyn-action="submit"]');
-  if (submitBtn) submitBtn.textContent = item ? 'Зберегти зміни' : 'Додати';
-  
-  const cancelBtn = document.querySelector('[data-dyn-action="cancel"]');
-  if (cancelBtn) cancelBtn.hidden = !item;
-  
-  const deleteBtn = document.querySelector('[data-dyn-action="delete"]');
-  if (deleteBtn) deleteBtn.hidden = !item;
-  
-  const modeEl = $('pe-dyn-mode');
-  if (modeEl) modeEl.textContent = item ? `Редагування: "${oneLine(item.value)}"` : 'Нова картка';
-  
-  renderList();
-}
-
-function updateDynFormState() {
-  if (state.activeCategory !== 'body_type') return;
-  const noHeight = $('pe-dyn-has_no_height')?.checked;
-  const mode = $('pe-dyn-custom_height_mode')?.value;
-  
-  const toggleField = (key, enabled) => {
-    const el = $(`pe-dyn-${key}`);
-    if (el) {
-      el.disabled = !enabled;
-      el.closest('.pe-field').style.display = enabled ? '' : 'none';
-      if (!enabled) {
-        if (el.type === 'checkbox') el.checked = false;
-        else el.value = '';
-      }
-    }
-  };
-
-  if (noHeight) {
-    toggleField('custom_height_mode', false);
-    toggleField('height_min', false);
-    toggleField('height_max', false);
-    toggleField('exact_height', false);
-  } else {
-    toggleField('custom_height_mode', true);
-    if (mode === 'range') {
-      toggleField('height_min', true);
-      toggleField('height_max', true);
-      toggleField('exact_height', false);
-    } else if (mode === 'exact') {
-      toggleField('height_min', false);
-      toggleField('height_max', false);
-      toggleField('exact_height', true);
-    } else {
-      toggleField('height_min', false);
-      toggleField('height_max', false);
-      toggleField('exact_height', false);
-    }
-  }
-}
-
-function startDynEdit(index, card) {
-  fillDynFields(card);
-  const err = $('pe-dyn-error');
-  if (err) err.hidden = true;
-  setDynMode(index);
-  updateDynFormState();
-  $('pe-dynamic-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  $('pe-dyn-name')?.focus({ preventScroll: true });
-}
-
-function resetDynForm() {
-  $('pe-dyn-name').value = '';
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
-  if (schema) {
-    for (const f of schema.fields) {
-      const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
-      if (el) {
-        if (f.type === 'checkbox') el.checked = false;
-        else el.value = '';
-      }
-    }
-  }
-  const err = $('pe-dyn-error');
-  if (err) err.hidden = true;
-  setDynMode(-1);
-  updateDynFormState();
-}
-
-function applyDynChange({ scrollToEnd = false } = {}) {
-  ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
-  renderList();
-  if (scrollToEnd) $('pe-cata-list').lastElementChild?.scrollIntoView({ block: 'nearest' });
-  renderSearch();
-  updateCardsMeta();
-  
-  renderSummary();
-  updateButtons();
-}
-
-function submitDyn() {
-  const data = readDynRaw();
-  const isEdit = state.dynEditIndex >= 0;
-  if (!data.value) {
-    const err = $('pe-dyn-error');
-    err.textContent = 'Назва обов\'язкова';
-    err.hidden = false;
-    $('pe-dyn-name').focus();
-    return;
-  }
-  
-  const cards = getDynamicCards();
-  const meta = { ...data };
-  delete meta.value;
-
-  // Фобія: "Назва" + "Пояснення" → один рядок "Назва - Пояснення" (це й йде в value у Supabase). Порожнє пояснення — лише назва, без дефіса.
-  // Пояснення не додаємо в meta, бо воно вже входить у зклеєний value.
-  const withExplanation = hasExplanationField(state.activeCategory);
-  const storedValue = withExplanation ? joinNameExplanation(data.value, data.explanation) : data.value;
-  if (withExplanation) delete meta.explanation;
-  
-  for (const k of Object.keys(meta)) {
-    if (meta[k] === '' || (Array.isArray(meta[k]) && meta[k].length === 0)) {
-      delete meta[k];
-    }
-  }
-
-  // Поле action_type тимчасово приховане з форми (categories.js), тому readDynRaw його не читає і не помиляється (селектор не знаходить елемент).
-  // У новій картці ключа просто немає (не null і не "": null записався би як рядок "null" у cardToLine).
-  // При редагуванні існуючої картки meta замінюється цілком, так що вже збережене значення повертаємо вручну, щоб воно не зникло.
-  // (Коли поле повернуть у форму — цей блок можна закоментувати.)
-  if (state.dynEditIndex >= 0 && state.activeCategory === 'special_ability') {
-    const prevAction = cards[state.dynEditIndex]?.meta?.action_type;
-    if (prevAction !== undefined && prevAction !== null && prevAction !== '') meta.action_type = prevAction;
-  }
-
-    let oldOpposite = null;
-    if (state.activeCategory === 'gender') {
-      if (state.dynEditIndex >= 0) oldOpposite = cards[state.dynEditIndex].meta.opposite;
-      const targetName = meta.opposite;
-      const currentName = data.value;
-      if (targetName) {
-        if (targetName === currentName) {
-          const err = document.getElementById('pe-dyn-error');
-          err.textContent = "Стать не може бути протилежною сама собі.";
-          err.hidden = false;
-          return;
-        }
-        let targetIndex = cards.findIndex(c => c.value === targetName);
-        if (targetIndex >= 0) {
-          const targetOpposite = cards[targetIndex].meta.opposite;
-          if (targetOpposite && targetOpposite !== currentName) {
-            const err = document.getElementById('pe-dyn-error');
-            err.textContent = `Стать "${targetName}" вже має протилежну стать "${targetOpposite}".`;
-            err.hidden = false;
-            return;
-          }
-        }
-      }
-    }
-
-  
-  if (state.dynEditIndex >= 0) {
-    cards[state.dynEditIndex] = { value: storedValue, meta };
-  } else {
-    cards.push({ value: storedValue, meta });
-    state.newDynIndex = cards.length - 1;
-  }
-
-    if (state.activeCategory === 'gender') {
-      const targetName = meta.opposite;
-      const currentName = data.value;
-      if (oldOpposite && oldOpposite !== targetName) {
-        let oldIndex = cards.findIndex(c => c.value === oldOpposite);
-        if (oldIndex >= 0 && cards[oldIndex].meta.opposite === currentName) {
-          delete cards[oldIndex].meta.opposite;
-        }
-      }
-      if (targetName) {
-        let targetIndex = cards.findIndex(c => c.value === targetName);
-        if (targetIndex >= 0) {
-          cards[targetIndex].meta.opposite = currentName;
-        } else {
-          cards.push({ value: targetName, meta: { opposite: currentName } });
-        }
-      }
-    }
-
-  
-  state.form.texts[state.activeCategory] = cards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
-  
-  applyDynChange({ scrollToEnd: state.newDynIndex >= 0 });
-  resetDynForm();
-  
-  if (state.newDynIndex >= 0) {
-    state.newDynIndex = -1;
-  }
-  showGlobalToast(isEdit ? 'Картку оновлено' : 'Картку додано');
-  $('pe-dyn-name')?.focus();
-}
-
-async function deleteDyn(btn) {
-  if (state.dynEditIndex < 0 || state.isConfirming) return;
-  const cards = getDynamicCards();
-  const item = cards[state.dynEditIndex];
-  
-  state.isConfirming = true;
-  let confirmed = false;
-  try {
-    confirmed = await showPackConfirm(`Чи точно хочете видалити картку "${oneLine(item.value)}"?`, btn, { confirmLabel: 'Видалити' });
-  } finally {
-    state.isConfirming = false;
-  }
-  if (!confirmed) return;
-
-  cards.splice(state.dynEditIndex, 1);
-  state.form.texts[state.activeCategory] = cards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
-  
-  applyDynChange();
-  resetDynForm();
-  showGlobalToast('Картку видалено');
-}
-
-function handleDynClick(e) {
-  const btn = e.target.closest('[data-dyn-action]');
-  if (!btn || btn.disabled) return;
-  switch (btn.dataset.dynAction) {
-    case 'submit': submitDyn(); break;
-    case 'cancel': resetDynForm(); break;
-    case 'delete': deleteDyn(btn); break;
-  }
-}
-
-// ----- Дії -----
-async function confirmAction(actionLabel, anchor) {
-  if (state.isConfirming) return false;
-  state.isConfirming = true;
-  try {
-    return await showPackConfirm(`Чи точно хочете ${actionLabel}? ${UNSAVED_NOTE}`, anchor, { confirmLabel: 'Підтвердити' });
-  } finally {
-    state.isConfirming = false;
-  }
-}
-
-function goToList() {
-  state.allowLeave = true;
-  window.location.hash = '#/packs';
-}
-
-async function handleSave(btn) {
-  if (state.isSaving) return;
-
-  const title = state.form.title.trim();
-  const error = validateTitle(title, { isDefaultPack: state.packId === DEFAULT_PACK_ID });
-  if (error) {
-    ui.showTitleError(error);
-    ui.focusTitle();
-    return;
-  }
-
-  const rangeError = validateRanges(state.form.ranges);
-  if (rangeError) {
-    showGlobalToast(rangeError);
-    return;
-  }
-
-  // Заповнену, але не додану форму катаклізму не зберігаємо мовчки разом з паком — автор має спочатку натиснути "Додати" або "Скасувати"
-  if (cataDraftPending()) {
-    showGlobalToast('У формі катаклізму є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
-    return;
-  }
-  
-  if (typeof dynDraftPending === 'function' && dynDraftPending()) {
-    showGlobalToast('У формі характеристики є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
-    return;
-  }
-
-  // 3.3: рядки масового вводу → [{ pool_type, category, value, meta }] (розбір тексту — pack-parser.js)
-  // Якщо ми в LLM-режимі на вкладці Катаклізмів, треба синхронізувати текст у масив перед збереженням
-  if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm') {
-    const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
-    state.form.cataclysms = parsed.map(c => ({
-      name: c.value,
-      description: c.meta.description || '',
-      timer_minutes: c.meta.timer_minutes || 0,
-      stay_time_months: c.meta.stay_time_months || null,
-      population: c.meta.population || null,
-      extra: c.meta.extra || {}
-    })).filter(c => c.name);
-  }
-
-  const cards = buildCardRows(state.form.texts, state.extraMeta, state.form.cataclysms);
-  if (cards.length > MAX_PACK_CARDS) {
-    showGlobalToast(`Забагато характеристик: ${cards.length}. Максимум — ${MAX_PACK_CARDS}`);
-    return;
-  }
-
-  const isEdit = Boolean(state.packId);
-  const originalLabel = btn.textContent;
-  state.isSaving = true;
-  ui.setButtonState(btn, { disabled: true, text: 'Збереження...' });
-
-  try {
-    await savePack({
-      id: state.packId,
-      title,
-      description: state.form.description.trim(),
-      config: buildConfig(),
-      cards
-    });
-    showGlobalToast(isEdit ? 'Пак оновлено' : 'Пак створено');
-    goToList();
-  } catch (err) {
-    console.error('Не вдалося зберегти пак:', err);
-    showGlobalToast(err.message || 'Не вдалося зберегти пак');
-    ui.setButtonState(btn, { disabled: false, text: originalLabel });
-  } finally {
-    state.isSaving = false;
-  }
-}
-
-async function handleClear(btn) {
-  if (!(await confirmAction('очистити все', btn))) return;
-  state.form = blankForm();
-  state.extraMeta = {}; // очищені картки не мають підтягувати стару додаткову meta, якщо автор введе ту саму назву заново
-  syncFieldsFromForm();
-  showGlobalToast('Форму очищено');
-}
-
-async function handleReset(btn) {
-  if (!(await confirmAction('скасувати зміни', btn))) return;
-  state.form = cloneForm(state.initialForm);
-  syncFieldsFromForm();
-  showGlobalToast('Зміни скасовано');
-}
-
-async function handleExit(btn) {
-  // Без змін питати нема про що: попередження "зміни будуть втрачені" було б неправдою
-  if (isDirty() && !(await confirmAction(btn.textContent.trim().toLowerCase(), btn))) return;
-  goToList();
-}
-
-function handleActionsClick(e) {
-  const btn = e.target.closest('[data-action]');
-  if (!btn || btn.disabled) return;
-
-  switch (btn.dataset.action) {
-    case 'save':  handleSave(btn); break;
-    case 'clear': handleClear(btn); break;
-    case 'reset': handleReset(btn); break;
-    case 'exit':  handleExit(btn); break;
-  }
-}
-
-function onBeforeUnload(e) {
-  if (!state.allowLeave && isDirty()) {
-    e.preventDefault();
-    e.returnValue = ''; // потрібно для Chrome
-  }
-}
 
 // ----- Ініціалізація -----
 async function loadPackIntoForm(id) {
@@ -926,24 +241,6 @@ async function loadPackIntoForm(id) {
 }
 
 
-function updateComboDropdown(input, forceShowAll = false) {
-  const list = input.parentElement.querySelector('.pe-combo__dropdown');
-  if (!list) return;
-  const cards = getDynamicCards();
-  const nameEl = document.getElementById('pe-dyn-name');
-  const currentName = nameEl ? nameEl.value : '';
-  let options = cards.map(c => c.value);
-  if (currentName) options = options.filter(o => o !== currentName);
-  
-  const filter = forceShowAll ? '' : input.value.toLowerCase();
-  const filtered = options.filter(o => o.toLowerCase().includes(filter));
-  
-  if (filtered.length === 0) {
-    list.innerHTML = '<div class="pe-combo__empty">Введіть нове значення</div>';
-  } else {
-    list.innerHTML = filtered.map(o => `<div class="pe-combo__item" data-val="${o.replace(/"/g, '&quot;')}">${o.replace(/</g, '&lt;')}</div>`).join('');
-  }
-}
 
 function debounce(func, wait) {
   let timeout;
