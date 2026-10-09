@@ -3,7 +3,7 @@ import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from '../categories.js';
 import { tokenize, cataMatches, collectSearchResults } from '../search.js';
 import { cataDraftPending, startCataEdit } from './cataclysm.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
-import * as ui from '../ui/index.js';
+import * as ui from '../ui/ui.js';
 import { $ } from '../ui/helpers.js';
 
 let orchestrator = {

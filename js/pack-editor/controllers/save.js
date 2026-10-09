@@ -6,7 +6,7 @@ import {
 } from '../payload.js';
 import { parseCards } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
-import * as ui from '../ui/index.js';
+import * as ui from '../ui/ui.js';
 import { cataDraftPending } from './cataclysm.js';
 import { dynDraftPending } from './dynamic.js';
 import { isDirty, confirmAction, goToList } from './navigation.js';

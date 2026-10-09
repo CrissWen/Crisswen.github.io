@@ -3,7 +3,7 @@ import { cataclysmNamesText, cataFieldStrings, hasCataDraft, validateCataclysmIn
 import { oneLine } from '../parser.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
-import * as ui from '../ui/index.js';
+import * as ui from '../ui/ui.js';
 import { $ } from '../ui/helpers.js';
 
 // Коллбек оновлення зовнішнього UI (renderList, renderSearch, лічильники)

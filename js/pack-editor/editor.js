@@ -3,7 +3,7 @@ import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, split
 import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
-import * as ui from './ui/index.js';
+import * as ui from './ui/ui.js';
 import { $ } from './ui/helpers.js';
 import {
   getPackIdFromHash, isDirty, confirmAction, goToList, onBeforeUnload,
@@ -18,7 +18,7 @@ import {
   onSearchListKeydown, initSearch, setSearchOrchestrator,
   isFormEmpty, buildConfig, handleSave, handleClear, handleReset,
   handleExit, handleActionsClick, setSaveOrchestrator
-} from './controllers/index.js';
+} from './controllers/controllers.js';
 
 // ===== Сторінка "Редактор пака" (#/pack-editor, редагування — #/pack-editor?id=<uuid>) =====
 // Це контролер: стан сторінки, валідація, обробники подій і координація
