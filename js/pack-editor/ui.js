@@ -716,7 +716,7 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   list.innerHTML = rows.map(({ c, i }) => {
     const selected = i === editIndex;
     const isNew = i === newIndex;
-    const descHtml = c.description ? `<span style="opacity:0.7"> - ${highlightHtml(oneLine(c.description), tokens)}</span>` : '';
+    const descHtml = (category !== 'cataclysm' && c.description) ? `<span style="opacity:0.7"> - ${highlightHtml(oneLine(c.description), tokens)}</span>` : '';
     return `
       <button type="button" class="added-item-row${selected ? ' is-selected' : ''}${isNew ? ' is-new' : ''}" data-cata-index="${i}" aria-pressed="${selected}">
         <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}${descHtml}</span>
