@@ -456,6 +456,21 @@ export async function initPackEditor() {
     }
   });
 
+  $('pe-stages').addEventListener('keydown', e => {
+    // При натисканні на Пробіл у полі року перескакуємо на місяць того ж рядка
+    if ((e.key === ' ' || e.code === 'Space') && e.target.dataset.type === 'y') {
+      e.preventDefault();
+      const row = e.target.closest('.pe-stage-row');
+      const mInput = row?.querySelector('[data-type="m"]');
+      if (mInput) {
+        mInput.focus();
+        mInput.select();
+      }
+    } else if (e.key === 'Enter' && e.target.classList.contains('pe-time-val')) {
+      e.target.blur();
+    }
+  });
+
   $('pe-stages').addEventListener('focusin', e => {
     if (e.target.classList.contains('pe-time-val') && e.target.value === '0') {
       e.target.value = '';
@@ -463,15 +478,63 @@ export async function initPackEditor() {
   });
 
   $('pe-stages').addEventListener('focusout', e => {
-    if (e.target.classList.contains('pe-time-val') && e.target.value.trim() === '') {
+    if (!e.target.classList.contains('pe-time-val')) return;
+
+    if (e.target.value.trim() === '') {
       e.target.value = '0';
-      const stageGroup = e.target.closest('[data-stage-list]');
-      if (stageGroup) {
-        const key = stageGroup.dataset.stageList;
-        state.form.stages[key] = ui.gatherStageText(key);
-        updateButtons();
+    }
+
+    const row = e.target.closest('.pe-stage-row');
+    const stageGroup = e.target.closest('[data-stage-list]');
+    if (!stageGroup || !row) return;
+
+    // Якщо фокус перейшов на інше поле часу в межах того ж рядка (наприклад, з року на місяць) — не додаємо до повного виходу з рядка
+    if (e.relatedTarget && e.relatedTarget.closest('.pe-stage-row') === row && e.relatedTarget.classList.contains('pe-time-val')) {
+      return;
+    }
+
+    const key = stageGroup.dataset.stageList;
+
+    // Якщо введено максимальний стаж <= мінімального ("від"), додаємо введене значення до мінімального
+    const yInput = row.querySelector('[data-type="y"]');
+    const mInput = row.querySelector('[data-type="m"]');
+    const minYInput = row.querySelector('[data-type="min-y"]');
+    const minMInput = row.querySelector('[data-type="min-m"]');
+
+    if (yInput && mInput && minYInput && minMInput) {
+      const fromWrap = row.querySelector('.pe-stage-from-wrap');
+      const hasMin = fromWrap && fromWrap.style.display !== 'none';
+      if (hasMin) {
+        const y = parseInt(yInput.value, 10) || 0;
+        const m = parseInt(mInput.value, 10) || 0;
+        const enteredMonths = y * 12 + m;
+
+        const minY = parseInt(minYInput.value, 10) || 0;
+        const minM = parseInt(minMInput.value, 10) || 0;
+        const minMonths = minY * 12 + minM;
+
+        if (enteredMonths > 0 && enteredMonths <= minMonths) {
+          const newTotal = minMonths + enteredMonths;
+          yInput.value = Math.floor(newTotal / 12);
+          mInput.value = newTotal % 12;
+        } else if (m >= 12) {
+          // Нормалізація, якщо в місяцях ввели >= 12
+          yInput.value = Math.floor(enteredMonths / 12);
+          mInput.value = enteredMonths % 12;
+        }
+      } else {
+        const y = parseInt(yInput.value, 10) || 0;
+        const m = parseInt(mInput.value, 10) || 0;
+        if (m >= 12) {
+          const total = y * 12 + m;
+          yInput.value = Math.floor(total / 12);
+          mInput.value = total % 12;
+        }
       }
     }
+
+    state.form.stages[key] = ui.gatherStageText(key);
+    updateButtons();
   });
 
   $('pe-stages').addEventListener('change', e => {

@@ -185,7 +185,7 @@
 .pe-stages.is-llm-mode .pe-stage-copy-btn{display:inline-flex;}
 
 .pe-stage-textarea{
-  height:380px;min-height:380px;box-sizing:border-box;resize:vertical;
+  height:380px;min-height:220px;box-sizing:border-box;resize:vertical;
   font-family:var(--mono);font-size:13.5px;line-height:1.5;
   white-space:pre;overflow-wrap:normal;overflow-x:auto;
   scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
@@ -193,9 +193,11 @@
 .pe-stage-textarea::-webkit-scrollbar{width:6px;}
 .pe-stage-textarea::-webkit-scrollbar-track{background:transparent;}
 .pe-stage-textarea::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+
 .pe-stage-list{
   display:flex;flex-direction:column;gap:8px;padding:12px;
-  height:380px;min-height:380px;box-sizing:border-box;overflow-y:auto;
+  height:380px;min-height:220px;box-sizing:border-box;overflow-y:auto;
+  resize:vertical;
   scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
 }
 .pe-stage-list::-webkit-scrollbar{width:6px;}

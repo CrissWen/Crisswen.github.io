@@ -221,7 +221,7 @@ export function updateStageListVisuals(key) {
         fromWrap.style.display = 'none';
       } else {
         fromWrap.style.display = 'flex';
-        const minMonths = prevMax + 1;
+        const minMonths = prevMax;
         const minY = Math.floor(minMonths / 12);
         const minM = minMonths % 12;
         const minYEl = row.querySelector('[data-type="min-y"]');
@@ -307,6 +307,13 @@ export function setStagesViewMode(mode) {
     const list = document.querySelector(`[data-stage-list="${key}"]`);
     const ta = document.querySelector(`[data-stage-ta="${key}"]`);
     const note = list?.parentElement?.querySelector('.pe-stage-note');
+    if (list && ta) {
+      if (isLlm && list.style.height) {
+        ta.style.height = list.style.height;
+      } else if (!isLlm && ta.style.height) {
+        list.style.height = ta.style.height;
+      }
+    }
     if (list) list.hidden = isLlm;
     if (ta) ta.hidden = !isLlm;
     if (note) note.hidden = isLlm;
