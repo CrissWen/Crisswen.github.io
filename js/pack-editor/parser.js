@@ -49,7 +49,20 @@ export function parseCardLine(category, line) {
     // Шукаємо стадії в кінці рядка
     const stagesMatch = value.match(/\[(.*?)\]\s*$/);
     if (stagesMatch) {
-      meta.stages = stagesMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+      const rawStages = stagesMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+      if (['profession', 'hobby'].includes(category)) {
+        meta.stages = rawStages.map(s => {
+          const colonIdx = s.lastIndexOf(':');
+          if (colonIdx > 0) {
+            const name = s.slice(0, colonIdx).trim();
+            const months = parseInt(s.slice(colonIdx + 1).trim(), 10);
+            if (!isNaN(months)) return { name, up_to_months: months };
+          }
+          return { name: s };
+        });
+      } else {
+        meta.stages = rawStages;
+      }
       value = value.substring(0, stagesMatch.index).trim();
       matched = true;
     }
@@ -162,7 +175,16 @@ export function cardToLine(category, value, meta) {
 
   // Додаємо стадії
   if (Array.isArray(meta?.stages) && meta.stages.length > 0) {
-    text += ` [${meta.stages.join(', ')}]`;
+    const formatted = meta.stages.map(s => {
+      if (typeof s === 'object' && s !== null) {
+        const cleanName = String(s.name ?? '').replace(/:\s*null\s*$/i, '').trim();
+        return (s.up_to_months !== undefined && s.up_to_months !== null) ? `${cleanName}: ${s.up_to_months}` : cleanName;
+      }
+      return String(s).replace(/:\s*null\s*$/i, '').trim();
+    }).filter(Boolean);
+    if (formatted.length > 0) {
+      text += ` [${formatted.join(', ')}]`;
+    }
   }
 
   return text;

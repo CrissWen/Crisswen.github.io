@@ -4,14 +4,60 @@ import { TITLE_MAX, DESC_MAX, STAGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from '.
 
 const TEXTAREA_PLACEHOLDER = 'Введіть характеристики стовпчиком. Кожна нова характеристика — з нового рядка (клавіша Enter)';
 
+export function stageRowHtml(key, entry) {
+  const isTime = ['profession', 'hobby'].includes(key);
+  const name = typeof entry === 'object' ? entry.name : entry;
+  const isNew = !name;
+  const newClass = isNew ? ' pe-stage-row--new' : '';
+
+  if (isTime) {
+    const total = entry.up_to_months || 0;
+    const y = Math.floor(total / 12);
+    const m = total % 12;
+    return `
+      <div class="pe-stage-row pe-stage-row--card${newClass}">
+        <input type="text" class="pe-input pe-stage-name" value="${esc(name || '')}" placeholder="${isNew ? 'Нова стадія...' : 'Назва'}">
+        <div class="pe-stage-time-group">
+          <div class="pe-stage-time-row pe-stage-from-wrap">
+            <span class="pe-stage-text">від</span>
+            <div class="pe-time-field is-disabled">
+              <input type="number" class="pe-time-val" data-type="min-y" value="0" disabled>
+              <span class="pe-time-unit">р</span>
+              <input type="number" class="pe-time-val" data-type="min-m" value="0" disabled>
+              <span class="pe-time-unit">м</span>
+            </div>
+          </div>
+          <div class="pe-stage-time-row pe-stage-to-wrap">
+            <span class="pe-stage-text pe-stage-to-text">до</span>
+            <div class="pe-time-field">
+              <input type="number" class="pe-time-val" data-type="y" value="${y}" min="0">
+              <span class="pe-time-unit">р</span>
+              <input type="number" class="pe-time-val" data-type="m" value="${m}" min="0" max="11">
+              <span class="pe-time-unit">м</span>
+            </div>
+            <span class="pe-stage-text pe-stage-more-text" style="display:none;">і більше</span>
+          </div>
+        </div>
+        <button class="pe-stage-del" tabindex="-1" title="Видалити">✕</button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="pe-stage-row pe-stage-row--simple${newClass}">
+      <input type="text" class="pe-input pe-stage-name" value="${esc(name || '')}" placeholder="${isNew ? 'Нове значення...' : 'Назва'}">
+      <button class="pe-stage-del" tabindex="-1" title="Видалити">✕</button>
+    </div>
+  `;
+}
+
 function stageFieldsHtml() {
-  const stagesHtml = STAGE_FIELDS.map(({ key, label }) => `
-    <div class="pe-field">
-      <label class="pe-label" for="pe-stage-${key}">${esc(label)}</label>
-      <textarea id="pe-stage-${key}" class="pe-input pe-stage" data-stage="${key}" rows="6" spellcheck="false" placeholder="Одна стадія/варіант на рядок"></textarea>
+  return STAGE_FIELDS.map(({ key, label }) => `
+    <div class="pe-stage-group">
+      <label class="pe-label">${esc(label)}</label>
+      <div class="pe-stage-list pe-input" data-stage-list="${key}"></div>
+      <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
     </div>`).join('');
-    
-  return stagesHtml;
 }
 
 function rangesFieldsHtml() {

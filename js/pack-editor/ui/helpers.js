@@ -1,7 +1,9 @@
 import { esc } from '../../utils/escape-html.js';
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from '../categories.js';
-import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
+import { CATACLYSM_LIMITS, STAGE_KEYS, OBJECT_STAGE_KEYS, parseStageEntry } from '../payload.js';
+import { parseLines } from '../parser.js';
 import { renderDynamicFormFields } from './dynamic.js';
+import { stageRowHtml } from './template.js';
 
 // ===== UI редактора паків: загальні хелпери DOM =====
 // Усі функції отримують дані аргументами й нічого не знають про стан сторінки.
@@ -193,11 +195,107 @@ export function updateDynamicNameField(category) {
   if (newEl && currentValue) newEl.value = currentValue;
 }
 
+export function updateStageListVisuals(key) {
+  const container = document.querySelector(`[data-stage-list="${key}"]`);
+  if (!container) return;
+  const rows = [...container.querySelectorAll('.pe-stage-row')];
+  if (!rows.length) return;
+
+  const isTime = OBJECT_STAGE_KEYS.includes(key);
+  if (!isTime) return;
+
+  let prevMax = 0;
+
+  rows.forEach((row, index) => {
+    const isLast = index === rows.length - 1;
+    const isFirst = index === 0;
+    
+    const fromWrap = row.querySelector('.pe-stage-from-wrap');
+    const toWrap = row.querySelector('.pe-stage-to-wrap');
+    const toText = row.querySelector('.pe-stage-to-text');
+    const moreText = row.querySelector('.pe-stage-more-text');
+    
+    if (fromWrap) {
+      if (isFirst) {
+        fromWrap.style.display = 'none';
+      } else {
+        fromWrap.style.display = 'flex';
+        const minMonths = prevMax + 1;
+        const minY = Math.floor(minMonths / 12);
+        const minM = minMonths % 12;
+        const minYEl = row.querySelector('[data-type="min-y"]');
+        const minMEl = row.querySelector('[data-type="min-m"]');
+        if (minYEl) minYEl.value = minY;
+        if (minMEl) minMEl.value = minM;
+      }
+    }
+    
+    if (toWrap) {
+      const timeField = toWrap.querySelector('.pe-time-field');
+      if (isLast) {
+        if (timeField) timeField.style.display = 'none';
+        if (toText) toText.style.display = 'none';
+        if (moreText) moreText.style.display = isFirst ? 'none' : 'inline';
+        toWrap.style.display = isFirst ? 'none' : 'flex';
+      } else {
+        if (timeField) timeField.style.display = 'inline-flex';
+        if (toText) toText.style.display = 'inline';
+        if (moreText) moreText.style.display = 'none';
+        toWrap.style.display = 'flex';
+      }
+    }
+    
+    if (toWrap && toWrap.style.display !== 'none') {
+      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+      const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
+      prevMax = y * 12 + m;
+    }
+  });
+}
+
+export function renderStageList(key, textValue) {
+  const container = document.querySelector(`[data-stage-list="${key}"]`);
+  if (!container) return;
+  const lines = parseLines(textValue);
+  let html = lines.map(line => {
+    const entry = parseStageEntry(key, line);
+    return stageRowHtml(key, entry);
+  }).join('');
+  // Always include one empty row at the bottom (database-like insertion)
+  html += stageRowHtml(key, { name: '' });
+  container.innerHTML = html;
+  updateStageListVisuals(key);
+}
+
+export function gatherStageText(key) {
+  updateStageListVisuals(key);
+  const container = document.querySelector(`[data-stage-list="${key}"]`);
+  if (!container) return '';
+  const rows = [...container.querySelectorAll('.pe-stage-row')];
+  
+  // Filter out rows without a name (e.g. the trailing empty database row)
+  const validRows = rows.filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
+
+  return validRows.map((row, index) => {
+    const isLast = index === validRows.length - 1;
+    const name = row.querySelector('.pe-stage-name').value.trim();
+    if (OBJECT_STAGE_KEYS.includes(key)) {
+      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+      const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
+      const total = y * 12 + m;
+      if (total > 0 && !isLast) {
+        return `${name}: ${total}`;
+      }
+    }
+    return name;
+  }).join('\n');
+}
+
 // Повністю перемальовує значення полів зі стану форми (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 export function fillFields(form) {
   $('pe-title').value = form.title;
   $('pe-desc').value = form.description;
-  document.querySelectorAll('[data-stage]').forEach(el => { el.value = form.stages[el.dataset.stage] || ''; });
+  STAGE_KEYS.forEach(key => renderStageList(key, form.stages[key] || ''));
   document.querySelectorAll('[data-range]').forEach(el => { el.value = form.ranges[el.dataset.range] ?? ''; });
 }
 

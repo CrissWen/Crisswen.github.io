@@ -3,6 +3,7 @@ import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, split
 import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
+import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import * as ui from './ui/ui.js';
 import { $ } from './ui/helpers.js';
 import {
@@ -389,16 +390,103 @@ export async function initPackEditor() {
   });
 
   $('pe-stages').addEventListener('input', e => {
-    const stageField = e.target.closest('[data-stage]');
-    if (stageField) {
-      state.form.stages[stageField.dataset.stage] = stageField.value;
+    const stageGroup = e.target.closest('[data-stage-list]');
+    if (stageGroup) {
+      const key = stageGroup.dataset.stageList;
+
+      // Database-like auto insertion: if typing in the last row, append a new empty row
+      const rows = [...stageGroup.querySelectorAll('.pe-stage-row')];
+      const lastRow = rows[rows.length - 1];
+      if (lastRow) {
+        const lastName = lastRow.querySelector('.pe-stage-name')?.value?.trim();
+        if (lastName) {
+          lastRow.classList.remove('pe-stage-row--new');
+          const nameInput = lastRow.querySelector('.pe-stage-name');
+          if (nameInput) nameInput.placeholder = 'Назва';
+          stageGroup.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
+        }
+      }
+
+      state.form.stages[key] = ui.gatherStageText(key);
       updateButtons();
-      return;
     }
-    const rangeField = e.target.closest('[data-range]');
-    if (rangeField) {
-      state.form.ranges[rangeField.dataset.range] = rangeField.value;
+  });
+
+  $('pe-stages').addEventListener('focusin', e => {
+    if (e.target.classList.contains('pe-time-val') && e.target.value === '0') {
+      e.target.value = '';
+    }
+  });
+
+  $('pe-stages').addEventListener('focusout', e => {
+    if (e.target.classList.contains('pe-time-val') && e.target.value.trim() === '') {
+      e.target.value = '0';
+      const stageGroup = e.target.closest('[data-stage-list]');
+      if (stageGroup) {
+        const key = stageGroup.dataset.stageList;
+        state.form.stages[key] = ui.gatherStageText(key);
+        updateButtons();
+      }
+    }
+  });
+
+  $('pe-stages').addEventListener('change', e => {
+    const stageGroup = e.target.closest('[data-stage-list]');
+    if (stageGroup) {
+      const key = stageGroup.dataset.stageList;
+      // Clean up extra empty rows at the end if any
+      const rows = [...stageGroup.querySelectorAll('.pe-stage-row')];
+      let i = rows.length - 1;
+      while (i > 0 && !rows[i].querySelector('.pe-stage-name')?.value?.trim() && !rows[i - 1].querySelector('.pe-stage-name')?.value?.trim()) {
+        rows[i].remove();
+        i--;
+      }
+      state.form.stages[key] = ui.gatherStageText(key);
       updateButtons();
+    }
+  });
+
+  $('pe-stages').addEventListener('click', async e => {
+    const addBtn = e.target.closest('[data-stage-add]');
+    if (addBtn) {
+      const key = addBtn.dataset.stageAdd;
+      const list = document.querySelector(`[data-stage-list="${key}"]`);
+      if (list) {
+        list.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
+        state.form.stages[key] = ui.gatherStageText(key);
+        updateButtons();
+      }
+    }
+    const delBtn = e.target.closest('.pe-stage-del');
+    if (delBtn) {
+      const row = delBtn.closest('.pe-stage-row');
+      const list = row.closest('[data-stage-list]');
+      if (list && row) {
+        const key = list.dataset.stageList;
+        const rows = [...list.querySelectorAll('.pe-stage-row')];
+        const isLastRow = row === rows[rows.length - 1];
+        const name = row.querySelector('.pe-stage-name')?.value?.trim();
+        if (isLastRow && !name) {
+          return;
+        }
+
+        if (name) {
+          const confirmed = await showPackConfirm(`Чи точно хочете видалити стадію "${oneLine(name)}"?`, delBtn, { confirmLabel: 'Видалити' });
+          if (!confirmed) return;
+        }
+
+        row.remove();
+
+        // Ensure there is always at least one empty row at the bottom
+        const remaining = [...list.querySelectorAll('.pe-stage-row')];
+        const lastRemaining = remaining[remaining.length - 1];
+        if (!lastRemaining || lastRemaining.querySelector('.pe-stage-name')?.value?.trim()) {
+          list.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
+        }
+
+        state.form.stages[key] = ui.gatherStageText(key);
+        updateButtons();
+      }
     }
   });
 

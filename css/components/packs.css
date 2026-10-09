@@ -169,8 +169,180 @@
 
 /* Блок стадій */
 .pe-hint{margin:0;font-size:13px;line-height:1.5;color:var(--text-mute);}
-.pe-stages{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
-.pe-stage{resize:vertical;min-height:170px;font-family:var(--mono);font-size:13.5px;}
+.pe-stages{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+.pe-stage-group{display:flex;flex-direction:column;gap:8px;}
+.pe-stage-list{
+  display:flex;flex-direction:column;gap:8px;padding:12px;
+  height:380px;min-height:380px;box-sizing:border-box;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
+}
+.pe-stage-list::-webkit-scrollbar{width:6px;}
+.pe-stage-list::-webkit-scrollbar-track{background:transparent;}
+.pe-stage-list::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+
+.pe-stage-row{
+  display:flex;align-items:center;gap:8px;width:100%;
+}
+.pe-stage-row--simple{
+  padding:0;
+  background:transparent;
+  border:none;
+}
+.pe-stage-row--simple .pe-stage-name{
+  flex:1;
+}
+.pe-stage-row--simple .pe-stage-del{
+  position:static;
+  flex-shrink:0;
+  width:34px;height:34px;
+}
+
+.pe-stage-row--card{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+  padding:12px 38px 12px 14px;
+  background:var(--panel);
+  border:1px solid var(--metal-lt);
+  border-radius:var(--radius-sm);
+  box-sizing:border-box;
+}
+.pe-stage-row--card .pe-stage-name{
+  width:100%;
+}
+.pe-stage-row--card .pe-stage-del{
+  position:absolute;top:6px;right:6px;
+  width:30px;height:30px;
+}
+
+/* Порожній рядок для нового запису (нестворений/чернетка) */
+.pe-stage-row--new{
+  opacity:0.65;
+  transition:opacity .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pe-stage-row--new:hover,
+.pe-stage-row--new:focus-within{
+  opacity:1;
+}
+.pe-stage-row--card.pe-stage-row--new{
+  background:color-mix(in srgb, var(--panel-2) 40%, transparent);
+  border:1px dashed var(--metal);
+}
+.pe-stage-row--card.pe-stage-row--new:focus-within{
+  border-style:solid;
+  border-color:var(--accent);
+  background:var(--panel);
+}
+.pe-stage-row--simple.pe-stage-row--new .pe-stage-name{
+  background:color-mix(in srgb, var(--panel-2) 40%, transparent);
+  border:1px dashed var(--metal);
+}
+.pe-stage-row--simple.pe-stage-row--new .pe-stage-name:focus{
+  border-style:solid;
+  border-color:var(--accent);
+  background:var(--panel-2);
+}
+.pe-stage-row--new .pe-stage-del{
+  display:none;
+}
+
+.pe-stage-name{font-family:var(--body);font-size:13.5px;}
+.pe-stage-text{font-size:13px;color:var(--text-mute);white-space:nowrap;}
+
+/* "від" і "до" у два рядки */
+.pe-stage-time-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.pe-stage-time-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.pe-stage-time-row .pe-stage-text{
+  width:26px;
+  flex-shrink:0;
+}
+
+/* Об'єднане поле року й місяця в один контрол */
+.pe-time-field{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:var(--panel-2);
+  border:1px solid var(--metal-lt);
+  border-radius:var(--radius-sm);
+  height:34px;
+  padding:0 8px;
+  box-sizing:border-box;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.pe-time-field:hover:not(.is-disabled):not(:focus-within){
+  border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));
+}
+.pe-time-field:focus-within{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.pe-time-field.is-disabled{
+  opacity:0.65;
+  background:color-mix(in srgb, var(--panel-2) 60%, var(--bg));
+  cursor:not-allowed;
+}
+.pe-time-val{
+  width:36px;
+  height:100%;
+  border:none;
+  background:transparent;
+  color:var(--text);
+  font-family:var(--body);
+  font-size:13px;
+  text-align:center;
+  padding:0;
+  outline:none;
+  box-sizing:border-box;
+  -moz-appearance:textfield;
+}
+.pe-time-val::-webkit-outer-spin-button,
+.pe-time-val::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+.pe-time-val:focus::placeholder{
+  color:transparent;
+}
+.pe-time-val:disabled{
+  cursor:not-allowed;
+  color:var(--text-mute);
+}
+.pe-time-unit{
+  font-size:12px;
+  font-weight:600;
+  color:var(--text-mute);
+  user-select:none;
+  margin-right:2px;
+}
+
+.pe-stage-note{
+  margin:4px 0 0;
+  font-size:12px;
+  color:var(--text-mute);
+  font-style:italic;
+  line-height:1.4;
+}
+
+.pe-stage-del{
+  padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:18px;line-height:1;color:var(--danger);
+  border:none;background:transparent;
+  border-radius:6px;cursor:pointer;
+  transition:all .15s ease;
+}
+.pe-stage-del:hover{background:color-mix(in srgb, var(--danger) 15%, transparent);}
 
 .pe-summary{
   display:flex;flex-direction:column;gap:10px;

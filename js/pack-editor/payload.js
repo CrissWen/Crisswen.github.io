@@ -124,12 +124,54 @@ export function validateRanges(r) {
   return '';
 }
 
-// Стадії з конфігу пака (масиви рядків) → текст для textarea: { [key]: string }
+export const OBJECT_STAGE_KEYS = ['profession', 'hobby'];
+
+export function parseStageEntry(key, line) {
+  if (!OBJECT_STAGE_KEYS.includes(key)) {
+    return line;
+  }
+  const cleanLine = line.trim();
+  const colonIdx = cleanLine.lastIndexOf(':');
+  if (colonIdx > 0) {
+    const rawName = cleanLine.slice(0, colonIdx).trim();
+    const monthsStr = cleanLine.slice(colonIdx + 1).trim();
+    if (monthsStr.toLowerCase() === 'null') {
+      const name = rawName.replace(/:\s*null\s*$/i, '').trim();
+      return { name, up_to_months: null };
+    }
+    const months = parseInt(monthsStr, 10);
+    if (!isNaN(months)) {
+      const name = rawName.replace(/:\s*null\s*$/i, '').trim();
+      return { name, up_to_months: months };
+    }
+  }
+  const name = cleanLine.replace(/:\s*null\s*$/i, '').trim();
+  return { name, up_to_months: null };
+}
+
+// Стадії з конфігу пака → текст для textarea: { [key]: string }
 export function stagesTextFromConfig(config) {
   const text = {};
   for (const key of STAGE_KEYS) {
     const list = config?.default_stages?.[key];
-    text[key] = Array.isArray(list) ? list.filter(s => typeof s === 'string').join('\n') : '';
+    if (!Array.isArray(list)) {
+      text[key] = '';
+      continue;
+    }
+    text[key] = list
+      .map(s => {
+        if (typeof s === 'string') return s.replace(/:\s*null\s*$/i, '').trim();
+        if (s && typeof s === 'object') {
+          const name = String(s.name ?? '').replace(/:\s*null\s*$/i, '').trim();
+          if (name && s.up_to_months !== undefined && s.up_to_months !== null) {
+            return `${name}: ${s.up_to_months}`;
+          }
+          if (name) return name;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
   }
   return text;
 }
@@ -155,7 +197,9 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
   const stageLists = {};
   for (const key of STAGE_KEYS) {
     const lines = parseLines(stages[key]);
-    if (lines.length) stageLists[key] = lines;
+    if (lines.length) {
+      stageLists[key] = lines.map(line => parseStageEntry(key, line));
+    }
   }
   
   const finalConfig = {
