@@ -1049,6 +1049,18 @@ export async function initPackEditor() {
     }
     
     ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
+    
+    if (state.viewMode === 'visual' && state.activeCategory !== 'cataclysm' && state.dynEditIndex >= 0) {
+      const cards = getDynamicCards();
+      if (cards[state.dynEditIndex]) {
+        fillDynFields(cards[state.dynEditIndex]);
+        updateDynFormState();
+      } else {
+        resetDynForm();
+        setDynMode(-1);
+      }
+    }
+    
     renderList();
     renderSearch();
     updateCardsMeta();
