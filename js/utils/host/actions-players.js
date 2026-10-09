@@ -26,7 +26,7 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
       rerollGenderAndAge(pState[id], pools);
       return;
     }
-    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools));
+    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools, { age: pState[id].age?.value }));
   });
 
   setHostEvent(bState, `Ведучий змінив характеристику «${labelOf(charType)}» ${targetPhrase(pState, targetId)}`);
@@ -177,7 +177,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
     const existing = realCards(p[charCategory]);
     // Нова картка успадковує стан відкриття групи, щоб не "випадати" з відображення
     const revealed = existing.length ? !!existing[0].is_revealed : false;
-    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools);
+    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools, { age: p.age?.value });
     p[charCategory] = [...existing, ...fresh.map(x => ({ ...x, is_revealed: revealed }))];
   });
 

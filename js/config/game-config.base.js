@@ -26,6 +26,11 @@ export const gameConfigBase = {
   // щоб запис у базі не розростався (js/utils/log-writer.js → pushLog)
   maxLogEntries: 100,
 
+  // Вік, з якого може починатися стаж професії/хобі (ранні роки життя без стажу). Стаж гравця в місяцях
+  // генерується від 0 до (вік − experienceStartAge) × 12, тож 30-річний має не більше 14 років стажу.
+  // Працює, коли default_stages.profession / .hobby пака задані як { name, up_to_months } (js/utils/experience.js).
+  experienceStartAge: 16,
+
   // Шанс (0..1), що здоров'я гравця одразу згенерується як "Ідеально здоровий" (без хвороби й стадії)
   perfectHealthChance: 0.20,
 

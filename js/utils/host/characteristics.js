@@ -1,15 +1,18 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
 import { randInt, pickCard, pickStage } from '../random.js';
+import { rollExperience } from '../experience.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
 
-export function drawCharacteristic(charType, pools) {
+// ctx.age — вік гравця, якому видається картка: він обмежує стаж професії/хобі у місяцях (без віку — без обмеження за віком).
+export function drawCharacteristic(charType, pools, ctx = {}) {
   const meta = CHAR_TYPE_MAP[charType];
   if (!meta) throw new Error('Невідомий тип характеристики: ' + charType);
 
   const card = pickCard(pools.character[meta.category]);
   const defaultStages = pools.config?.default_stages?.[meta.stagesKey];
+  const startAge = getGameConfigSync().experienceStartAge;
 
   switch (charType) {
     case 'gender':
@@ -23,9 +26,9 @@ export function drawCharacteristic(charType, pools) {
       };
     }
     case 'professions':
-      return [{ title: card.value, ability: card.meta?.ability || '', stage: pickStage(card, defaultStages), is_revealed: false }];
+      return [{ title: card.value, ability: card.meta?.ability || '', ...rollExperience('profession', card, pools.config, ctx.age, startAge), is_revealed: false }];
     case 'hobbies':
-      return [{ title: card.value, stage: pickStage(card, defaultStages), is_revealed: false }];
+      return [{ title: card.value, ...rollExperience('hobby', card, pools.config, ctx.age, startAge), is_revealed: false }];
     case 'health':
       return [{ disease: card.value, severity: pickStage(card, defaultStages), is_revealed: false }];
     case 'traits':

@@ -1,5 +1,6 @@
 import { getGameConfig } from '../config/config-manager.js';
 import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray } from './random.js';
+import { rollExperience } from './experience.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -206,7 +207,8 @@ export async function generateGameState(playersList, pack, config) {
         { 
           title: profItem.value, 
           ability: profItem.meta.ability || "", 
-          stage: pickStage(profItem, config.default_stages.profession),
+          // Стадія стажу: місяці генеруються за віком, назва береться з порогів up_to_months (js/utils/experience.js)
+          ...rollExperience('profession', profItem, config, ageVal, bc.experienceStartAge),
           is_revealed: false 
         }
       ],
@@ -216,7 +218,7 @@ export async function generateGameState(playersList, pack, config) {
       ],
       
       hobbies: [
-        { title: hobbyItem.value, stage: pickStage(hobbyItem, config.default_stages.hobby), is_revealed: false }
+        { title: hobbyItem.value, ...rollExperience('hobby', hobbyItem, config, ageVal, bc.experienceStartAge), is_revealed: false }
       ],
       
       traits: [

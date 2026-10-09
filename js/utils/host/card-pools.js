@@ -1,4 +1,5 @@
 import { supabase } from '../../services/supabase.js';
+import { getStageNames } from '../experience.js';
 
 // ===== Пул карток пака (pack_cards) =====
 // poolCache — стан модуля: пул вантажиться один раз за сесію, далі віддається з кешу.
@@ -32,9 +33,10 @@ export async function loadPools() {
 export async function getStageOptions() {
   const pools = await loadPools();
   const stages = pools.config?.default_stages || {};
+  // У випадаючі списки йдуть лише назви: професія/хобі можуть бути масивом об'єктів { name, up_to_months } або старим масивом рядків
   return {
-    profession: stages.profession || [],
-    hobby: stages.hobby || [],
-    health: stages.health || []
+    profession: getStageNames(stages.profession),
+    hobby: getStageNames(stages.hobby),
+    health: getStageNames(stages.health)
   };
 }
