@@ -376,23 +376,78 @@ export async function initPackEditor() {
     }
   });
 
+function handleStageKeydown(e) {
+  const row = e.target.closest('.pe-stage-row');
+  if (!row) return;
+
+  const isY = e.target.dataset.type === 'y';
+  const isM = e.target.dataset.type === 'm';
+  const isName = e.target.classList.contains('pe-stage-name');
+  const isSpace = e.key === ' ' || e.code === 'Space';
+  const isEnter = e.key === 'Enter';
+
+  // У полі року: Пробіл або Enter перескакує на місяць
+  if (isY && (isSpace || isEnter)) {
+    e.preventDefault();
+    const mInput = row.querySelector('[data-type="m"]');
+    if (mInput) {
+      mInput.focus();
+      mInput.select();
+    }
+    return;
+  }
+
+  // У полі місяця: Пробіл або Enter перескакує на наступне поле цифр або назву наступної стадії
+  if (isM && (isSpace || isEnter)) {
+    e.preventDefault();
+    const nextRow = row.nextElementSibling;
+    if (nextRow && nextRow.classList.contains('pe-stage-row')) {
+      const nextTimeField = nextRow.querySelector('.pe-stage-to-wrap .pe-time-field');
+      const nextY = nextRow.querySelector('[data-type="y"]');
+      if (nextTimeField && nextTimeField.style.display !== 'none' && nextY) {
+        nextY.focus();
+        nextY.select();
+      } else {
+        const nextName = nextRow.querySelector('.pe-stage-name');
+        if (nextName) {
+          nextName.focus();
+          nextName.select();
+        }
+      }
+    } else {
+      e.target.blur();
+    }
+    return;
+  }
+
+  // У назві стадії: Enter переходить до цифр цього рядка (якщо є) або до наступної стадії
+  if (isName && isEnter) {
+    e.preventDefault();
+    const timeField = row.querySelector('.pe-stage-to-wrap .pe-time-field');
+    const yInput = row.querySelector('[data-type="y"]');
+    if (timeField && timeField.style.display !== 'none' && yInput) {
+      yInput.focus();
+      yInput.select();
+    } else {
+      const nextRow = row.nextElementSibling;
+      if (nextRow && nextRow.classList.contains('pe-stage-row')) {
+        const nextName = nextRow.querySelector('.pe-stage-name');
+        if (nextName) {
+          nextName.focus();
+          nextName.select();
+        }
+      } else {
+        e.target.blur();
+      }
+    }
+    return;
+  }
+}
+
   $('pe-dynamic-form').addEventListener('keydown', e => {
     const stageContainer = e.target.closest('[data-dyn-stage-list]');
     if (stageContainer) {
-      if ((e.key === ' ' || e.code === 'Space') && e.target.dataset.type === 'y') {
-        e.preventDefault();
-        const row = e.target.closest('.pe-stage-row');
-        const mInput = row?.querySelector('[data-type="m"]');
-        if (mInput) {
-          mInput.focus();
-          mInput.select();
-        }
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (e.target.classList.contains('pe-time-val')) {
-          e.target.blur();
-        }
-      }
+      handleStageKeydown(e);
       return;
     }
 
@@ -403,8 +458,12 @@ export async function initPackEditor() {
   });
 
   $('pe-dynamic-form').addEventListener('focusin', e => {
-    if (e.target.classList.contains('pe-time-val') && e.target.value === '0') {
-      e.target.value = '';
+    if (e.target.classList.contains('pe-time-val')) {
+      if (e.target.value === '0') {
+        e.target.value = '';
+      } else {
+        e.target.select();
+      }
     }
   });
 
@@ -597,23 +656,19 @@ export async function initPackEditor() {
   });
 
   $('pe-stages').addEventListener('keydown', e => {
-    // При натисканні на Пробіл у полі року перескакуємо на місяць того ж рядка
-    if ((e.key === ' ' || e.code === 'Space') && e.target.dataset.type === 'y') {
-      e.preventDefault();
-      const row = e.target.closest('.pe-stage-row');
-      const mInput = row?.querySelector('[data-type="m"]');
-      if (mInput) {
-        mInput.focus();
-        mInput.select();
-      }
-    } else if (e.key === 'Enter' && e.target.classList.contains('pe-time-val')) {
-      e.target.blur();
+    const stageContainer = e.target.closest('[data-stage-list]');
+    if (stageContainer) {
+      handleStageKeydown(e);
     }
   });
 
   $('pe-stages').addEventListener('focusin', e => {
-    if (e.target.classList.contains('pe-time-val') && e.target.value === '0') {
-      e.target.value = '';
+    if (e.target.classList.contains('pe-time-val')) {
+      if (e.target.value === '0') {
+        e.target.value = '';
+      } else {
+        e.target.select();
+      }
     }
   });
 
