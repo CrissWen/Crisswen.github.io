@@ -44,6 +44,12 @@ export function renderDynamicFormFields(schema) {
             ${f.options.map(opt => `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('')}
           </select>
         </div>`;
+    } else if (f.type === 'textarea' || f.key === 'explanation' || f.key === 'ability' || f.key === 'description') {
+      return `
+        <div class="pe-field">
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
+          <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc pe-input--name" rows="2" data-dyn-key="${f.key}" placeholder="Введіть ${esc(f.label).toLowerCase()}"></textarea>
+        </div>`;
     } else {
       return `
         <div class="pe-field">

@@ -1,5 +1,5 @@
 import { esc } from '../../utils/escape-html.js';
-import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from '../categories.js';
+import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from '../categories.js';
 import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
 import { renderDynamicFormFields } from './dynamic.js';
 
@@ -151,6 +151,7 @@ export function showCategory({ category, text, viewMode = "visual" }) {
     } else {
       $('pe-cata').hidden = true;
       $('pe-dynamic-form').hidden = false;
+      updateDynamicNameField(category);
       renderDynamicFormFields(schema);
     }
   } else {
@@ -164,6 +165,32 @@ export function showCategory({ category, text, viewMode = "visual" }) {
   if (formCol) formCol.hidden = !isVisual;
   
   $("pe-cards").scrollTop = 0;
+}
+
+const MULTILINE_NAME_CATEGORIES = ['special_ability', 'backpack', 'large_inventory'];
+
+export function updateDynamicNameField(category) {
+  const container = $('pe-dyn-name-wrap');
+  if (!container) return;
+  const currentEl = $('pe-dyn-name');
+  const currentValue = currentEl ? currentEl.value : '';
+  const isMultiline = POOL_TYPE_BY_CATEGORY[category] === 'bunker' || MULTILINE_NAME_CATEGORIES.includes(category);
+  
+  if (isMultiline) {
+    if (currentEl && currentEl.tagName.toLowerCase() === 'textarea') return;
+    container.innerHTML = `
+      <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
+      <textarea id="pe-dyn-name" class="pe-input pe-desc pe-input--name" rows="3" placeholder="Введіть назву"></textarea>
+    `;
+  } else {
+    if (currentEl && currentEl.tagName.toLowerCase() === 'input') return;
+    container.innerHTML = `
+      <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
+      <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
+    `;
+  }
+  const newEl = $('pe-dyn-name');
+  if (newEl && currentValue) newEl.value = currentValue;
 }
 
 // Повністю перемальовує значення полів зі стану форми (після "Очистити все" / "Скасувати зміни" / завантаження пака)

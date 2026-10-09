@@ -57,13 +57,13 @@ export function readDynRaw() {
   const schema = CATEGORY_SCHEMAS[state.activeCategory];
   if (!schema) return {};
   const data = {};
-  data.value = $('pe-dyn-name').value.trim();
+  data.value = oneLine($('pe-dyn-name').value);
   for (const f of schema.fields) {
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
       if (f.type === 'checkbox') data[f.key] = el.checked;
       else if (f.type === 'list') data[f.key] = parseLines(el.value);
-      else data[f.key] = el.value.trim();
+      else data[f.key] = oneLine(el.value);
     }
   }
   return data;

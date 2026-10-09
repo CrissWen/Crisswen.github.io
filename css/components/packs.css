@@ -135,8 +135,12 @@
 .pe-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);}
 .pe-input:focus::placeholder{opacity:.55;}
 .pe-input.is-invalid{border-color:var(--danger);}
-.pe-desc{resize:vertical;min-height:76px;}
-.pe-cards{resize:vertical;min-height:280px;font-family:var(--mono);font-size:13.5px;;scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;}
+.pe-desc{resize:vertical;min-height:76px;overflow-wrap:anywhere;word-break:break-word;scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;}
+.pe-input--name{min-height:72px;height:72px;line-height:1.4;}
+.pe-desc::-webkit-scrollbar{width:6px;}
+.pe-desc::-webkit-scrollbar-track{background:transparent;}
+.pe-desc::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+.pe-cards{resize:vertical;min-height:280px;font-family:var(--mono);font-size:13.5px;scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;}
 .pe-cards::-webkit-scrollbar{width:6px;}
 .pe-cards::-webkit-scrollbar-track{background:transparent;}
 .pe-cards::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
@@ -581,6 +585,18 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   max-height: 200px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal-lt) transparent;
+}
+.pe-combo__dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.pe-combo__dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pe-combo__dropdown::-webkit-scrollbar-thumb {
+  background: var(--metal-lt);
+  border-radius: 3px;
 }
 .pe-combo__item {
   padding: 8px 12px;
@@ -775,6 +791,18 @@
   border: 1px solid var(--metal-lt);
   border-radius: var(--radius);
   padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal-lt) transparent;
+}
+.pe-side-form::-webkit-scrollbar {
+  width: 6px;
+}
+.pe-side-form::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pe-side-form::-webkit-scrollbar-thumb {
+  background: var(--metal-lt);
+  border-radius: 3px;
 }
 .pe-side-form__head {
   margin-bottom: 16px;

@@ -306,14 +306,14 @@ export async function initPackEditor() {
     updateDynFormState();
   });
   $('pe-dynamic-form').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+    if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || (e.target.id === 'pe-dyn-name' && !e.shiftKey))) {
       e.preventDefault();
       submitDyn();
     }
   });
 
   $('pe-cata').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+    if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || (e.target.id === 'pe-cata-name' && !e.shiftKey))) {
       e.preventDefault();
       submitCata();
     }

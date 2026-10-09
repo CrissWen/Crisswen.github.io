@@ -162,7 +162,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                 <p class="pe-hint">Заповніть поля та натисніть "Додати".</p>
                 <div class="pe-field">
                   <label class="pe-label" for="pe-cata-name">Назва катаклізму <span class="pe-required" title="Обов'язкове поле">*</span></label>
-                  <input id="pe-cata-name" class="pe-input" type="text" maxlength="${CATACLYSM_LIMITS.nameMax}" autocomplete="off" placeholder="Напр.: Повстання штучного інтелекту">
+                  <textarea id="pe-cata-name" class="pe-input pe-desc pe-input--name" rows="3" maxlength="${CATACLYSM_LIMITS.nameMax}" placeholder="Напр.: Повстання штучного інтелекту"></textarea>
                 </div>
                 <div class="pe-field">
                   <label class="pe-label" for="pe-cata-desc">Опис</label>
@@ -196,7 +196,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   <h3 class="pe-side-form__title">НОВА КАРТКА</h3>
                   <p class="pe-side-form__subtitle" id="pe-dyn-category-label">Створення у категорію</p>
                 </div>
-                <div class="pe-field">
+                <div class="pe-field" id="pe-dyn-name-wrap">
                   <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
                   <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
                 </div>
