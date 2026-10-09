@@ -1,6 +1,6 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
 import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, splitNameExplanation } from './parser.js';
-import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
+import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, parseStageEntry } from './payload.js';
 import { getStagePrompt } from './prompts/stage-prompts.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
@@ -313,15 +313,155 @@ export async function initPackEditor() {
   $('pe-cata').addEventListener('click', handleCataClick);
   $('pe-cata').addEventListener('input', handleCataInput);
   
-  $('pe-dynamic-form').addEventListener('click', handleDynClick);
+  $('pe-dynamic-form').addEventListener('click', e => {
+    handleDynClick(e);
+
+    const delBtn = e.target.closest('.pe-stage-del');
+    if (delBtn) {
+      const row = delBtn.closest('.pe-stage-row');
+      const container = row?.closest('[data-dyn-stage-list]');
+      if (container && row) {
+        const key = container.dataset.dynStageList;
+        const rows = [...container.querySelectorAll('.pe-stage-row')];
+        const isLastRow = row === rows[rows.length - 1];
+        if (isLastRow) {
+          const nameInput = row.querySelector('.pe-stage-name');
+          if (nameInput) nameInput.value = '';
+        } else {
+          row.remove();
+        }
+        ui.updateStageListVisuals(key, container);
+      }
+    }
+  });
+
+  $('pe-dynamic-form').addEventListener('input', e => {
+    const stageContainer = e.target.closest('[data-dyn-stage-list]');
+    if (stageContainer) {
+      const key = stageContainer.dataset.dynStageList;
+      const rows = [...stageContainer.querySelectorAll('.pe-stage-row')];
+      const lastRow = rows[rows.length - 1];
+      if (lastRow) {
+        const lastName = lastRow.querySelector('.pe-stage-name')?.value?.trim();
+        if (lastName) {
+          lastRow.classList.remove('pe-stage-row--new');
+          const nameInput = lastRow.querySelector('.pe-stage-name');
+          if (nameInput) nameInput.placeholder = 'Назва';
+          stageContainer.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
+        }
+      }
+      ui.updateStageListVisuals(key, stageContainer);
+    }
+  });
+
   $('pe-dynamic-form').addEventListener('change', e => {
     updateDynFormState();
+
+    if (e.target.matches('[data-dyn-custom-stages]')) {
+      const isCustom = e.target.checked;
+      const wrap = $('pe-dyn-stages-wrap');
+      if (wrap) wrap.hidden = !isCustom;
+      if (isCustom) {
+        const current = ui.gatherDynStageList(state.activeCategory);
+        if (!current.length) {
+          const rawText = state.form.stages[state.activeCategory] || '';
+          const lines = parseLines(rawText);
+          const entries = lines.map(line => parseStageEntry(state.activeCategory, line));
+          ui.renderDynStageList(state.activeCategory, entries);
+        }
+        ui.initDynStageSortable(state.activeCategory);
+      } else {
+        ui.destroyDynStageSortable();
+      }
+    }
   });
+
   $('pe-dynamic-form').addEventListener('keydown', e => {
+    const stageContainer = e.target.closest('[data-dyn-stage-list]');
+    if (stageContainer) {
+      if ((e.key === ' ' || e.code === 'Space') && e.target.dataset.type === 'y') {
+        e.preventDefault();
+        const row = e.target.closest('.pe-stage-row');
+        const mInput = row?.querySelector('[data-type="m"]');
+        if (mInput) {
+          mInput.focus();
+          mInput.select();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (e.target.classList.contains('pe-time-val')) {
+          e.target.blur();
+        }
+      }
+      return;
+    }
+
     if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || (e.target.id === 'pe-dyn-name' && !e.shiftKey))) {
       e.preventDefault();
       submitDyn();
     }
+  });
+
+  $('pe-dynamic-form').addEventListener('focusin', e => {
+    if (e.target.classList.contains('pe-time-val') && e.target.value === '0') {
+      e.target.value = '';
+    }
+  });
+
+  $('pe-dynamic-form').addEventListener('focusout', e => {
+    if (!e.target.classList.contains('pe-time-val')) return;
+
+    if (e.target.value.trim() === '') {
+      e.target.value = '0';
+    }
+
+    const row = e.target.closest('.pe-stage-row');
+    const stageContainer = e.target.closest('[data-dyn-stage-list]');
+    if (!stageContainer || !row) return;
+
+    if (e.relatedTarget && e.relatedTarget.closest('.pe-stage-row') === row && e.relatedTarget.classList.contains('pe-time-val')) {
+      return;
+    }
+
+    const key = stageContainer.dataset.dynStageList;
+
+    const yInput = row.querySelector('[data-type="y"]');
+    const mInput = row.querySelector('[data-type="m"]');
+    const minYInput = row.querySelector('[data-type="min-y"]');
+    const minMInput = row.querySelector('[data-type="min-m"]');
+
+    if (yInput && mInput && minYInput && minMInput) {
+      const fromWrap = row.querySelector('.pe-stage-from-wrap');
+      const hasMin = fromWrap && fromWrap.style.display !== 'none';
+      if (hasMin) {
+        const y = parseInt(yInput.value, 10) || 0;
+        const m = parseInt(mInput.value, 10) || 0;
+        const enteredMonths = y * 12 + m;
+
+        const minY = parseInt(minYInput.value, 10) || 0;
+        const minM = parseInt(minMInput.value, 10) || 0;
+        const minMonths = minY * 12 + minM;
+
+        if (enteredMonths > 0 && enteredMonths <= minMonths) {
+          const newTotal = minMonths + enteredMonths;
+          yInput.value = Math.floor(newTotal / 12);
+          mInput.value = newTotal % 12;
+        } else if (m >= 12) {
+          yInput.value = Math.floor(enteredMonths / 12);
+          mInput.value = enteredMonths % 12;
+        }
+      } else {
+        const y = parseInt(yInput.value, 10) || 0;
+        const m = parseInt(mInput.value, 10) || 0;
+        if (m >= 12) {
+          const total = y * 12 + m;
+          yInput.value = Math.floor(total / 12);
+          mInput.value = total % 12;
+        }
+      }
+    }
+
+    ui.updateStageListVisuals(key, stageContainer);
   });
 
   $('pe-cata').addEventListener('keydown', e => {

@@ -156,6 +156,10 @@ export function showCategory({ category, text, viewMode = "visual" }) {
       $('pe-dynamic-form').hidden = false;
       updateDynamicNameField(category);
       renderDynamicFormFields(schema);
+      if (category === 'health') {
+        renderDynStageList('health', []);
+        initDynStageSortable('health');
+      }
     }
   } else {
     $('pe-cards').hidden = false;
@@ -196,8 +200,10 @@ export function updateDynamicNameField(category) {
   if (newEl && currentValue) newEl.value = currentValue;
 }
 
-export function updateStageListVisuals(key) {
-  const container = document.querySelector(`[data-stage-list="${key}"]`);
+export function updateStageListVisuals(key, container = null) {
+  if (!container) {
+    container = document.querySelector(`[data-stage-list="${key}"]`);
+  }
   if (!container) return;
   const rows = [...container.querySelectorAll('.pe-stage-row')];
   if (!rows.length) return;
@@ -265,7 +271,40 @@ export function renderStageList(key, textValue) {
   // Always include one empty row at the bottom (database-like insertion)
   html += stageRowHtml(key, { name: '' });
   container.innerHTML = html;
-  updateStageListVisuals(key);
+  updateStageListVisuals(key, container);
+}
+
+export function renderDynStageList(key, entries = []) {
+  const container = document.querySelector(`[data-dyn-stage-list="${key}"]`);
+  if (!container) return;
+  let html = (entries || []).map(entry => stageRowHtml(key, entry)).join('');
+  html += stageRowHtml(key, { name: '' });
+  container.innerHTML = html;
+  updateStageListVisuals(key, container);
+}
+
+export function gatherDynStageList(key) {
+  const container = document.querySelector(`[data-dyn-stage-list="${key}"]`);
+  if (!container) return [];
+  updateStageListVisuals(key, container);
+  const rows = [...container.querySelectorAll('.pe-stage-row')];
+  const validRows = rows.filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
+
+  if (key === 'health') {
+    return validRows.map(row => row.querySelector('.pe-stage-name').value.trim());
+  }
+
+  return validRows.map((row, index) => {
+    const isLast = index === validRows.length - 1;
+    const name = row.querySelector('.pe-stage-name').value.trim();
+    if (OBJECT_STAGE_KEYS.includes(key) && !isLast) {
+      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+      const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
+      const total = y * 12 + m;
+      return { name, up_to_months: total };
+    }
+    return { name };
+  });
 }
 
 export function gatherStageText(key) {
@@ -426,6 +465,7 @@ export function destroyStageSortables() {
     try { s.destroy(); } catch (_) {}
   });
   sortableInstances = {};
+  destroyDynStageSortable();
 }
 
 export function initStageSortables(onStageReordered) {
@@ -522,6 +562,99 @@ export function initStageSortables(onStageReordered) {
         }
       }
     });
+  });
+}
+
+let dynSortableInstance = null;
+
+export function destroyDynStageSortable() {
+  if (dynSortableInstance) {
+    try { dynSortableInstance.destroy(); } catch (_) {}
+    dynSortableInstance = null;
+  }
+}
+
+export function initDynStageSortable(key, onReordered = null) {
+  const container = document.querySelector(`[data-dyn-stage-list="${key}"]`);
+  if (!container) return;
+
+  destroyDynStageSortable();
+
+  const isObjectStage = OBJECT_STAGE_KEYS.includes(key);
+  let savedSlotTimes = [];
+
+  dynSortableInstance = new Sortable(container, {
+    animation: 150,
+    handle: '.pe-stage-handle',
+    filter: '.pe-stage-row--new',
+    preventOnFilter: false,
+    forceFallback: true,
+    fallbackOnBody: true,
+    fallbackClass: 'sortable-fallback',
+    fallbackTolerance: 2,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    scroll: false,
+    swapThreshold: isObjectStage ? 0.55 : 0.7,
+    invertSwap: isObjectStage,
+    direction: 'vertical',
+    onMove: function(evt) {
+      if (evt.related && evt.related.classList.contains('pe-stage-row--new')) {
+        return -1;
+      }
+      return true;
+    },
+    onStart: function() {
+      document.body.classList.add('is-stage-dragging');
+      activeDragContainer = container;
+      activeDragSens = 140;
+      lastPointerEvent = null;
+      window.addEventListener('pointermove', onDragPointerMove, { capture: true, passive: true });
+      window.addEventListener('mousemove', onDragPointerMove, { capture: true, passive: true });
+      window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
+      window.addEventListener('wheel', handleWheelDuringDrag, { passive: false, capture: true });
+      startAutoScroll();
+
+      if (OBJECT_STAGE_KEYS.includes(key)) {
+        const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
+        savedSlotTimes = validRows.map(row => ({
+          y: row.querySelector('[data-type="y"]')?.value ?? '0',
+          m: row.querySelector('[data-type="m"]')?.value ?? '0'
+        }));
+      }
+    },
+    onEnd: function() {
+      document.body.classList.remove('is-stage-dragging');
+      stopAutoScroll();
+      window.removeEventListener('pointermove', onDragPointerMove, { capture: true });
+      window.removeEventListener('mousemove', onDragPointerMove, { capture: true });
+      window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
+      activeDragContainer = null;
+      lastPointerEvent = null;
+
+      const newRow = container.querySelector('.pe-stage-row--new');
+      if (newRow && container.lastElementChild !== newRow) {
+        container.appendChild(newRow);
+      }
+
+      if (OBJECT_STAGE_KEYS.includes(key) && savedSlotTimes.length) {
+        const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
+        validRows.forEach((row, idx) => {
+          if (savedSlotTimes[idx]) {
+            const yInput = row.querySelector('[data-type="y"]');
+            const mInput = row.querySelector('[data-type="m"]');
+            if (yInput) yInput.value = savedSlotTimes[idx].y;
+            if (mInput) mInput.value = savedSlotTimes[idx].m;
+          }
+        });
+      }
+
+      updateStageListVisuals(key, container);
+      if (typeof onReordered === 'function') {
+        onReordered(key);
+      }
+    }
   });
 }
 

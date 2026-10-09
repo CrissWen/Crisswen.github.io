@@ -1,5 +1,6 @@
 import { esc } from '../../utils/escape-html.js';
 import { $ } from './helpers.js';
+import { state } from '../state.js';
 
 export function renderDynamicFormFields(schema) {
   const container = $('pe-dyn-fields');
@@ -9,6 +10,30 @@ export function renderDynamicFormFields(schema) {
   }
   
   container.innerHTML = schema.fields.map(f => {
+    if (f.key === 'stages') {
+      if (state.activeCategory === 'health') {
+        return `
+          <div class="pe-field">
+            <label class="pe-label">Стадії стану здоров'я</label>
+            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="health"></div>
+            <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
+          </div>`;
+      } else if (['profession', 'hobby'].includes(state.activeCategory)) {
+        return `
+          <div class="pe-field pe-dyn-field-checkbox">
+            <label class="pe-check" for="pe-dyn-custom-stages-toggle">
+              <input id="pe-dyn-custom-stages-toggle" class="pe-check__input" type="checkbox" data-dyn-custom-stages>
+              <span class="pe-check__box" aria-hidden="true"></span>
+              <span class="pe-check__text">Власні стадії для цієї картки</span>
+            </label>
+          </div>
+          <div id="pe-dyn-stages-wrap" class="pe-dyn-stages-wrap" hidden>
+            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="${state.activeCategory}"></div>
+            <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
+          </div>`;
+      }
+    }
+
     if (f.type === 'checkbox') {
       return `
         <div class="pe-field pe-dyn-field-checkbox">

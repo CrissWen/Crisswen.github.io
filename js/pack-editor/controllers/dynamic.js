@@ -7,7 +7,9 @@ import {
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
-import { $ } from '../ui/helpers.js';
+import {
+  $, renderDynStageList, gatherDynStageList, initDynStageSortable, destroyDynStageSortable
+} from '../ui/helpers.js';
 
 let onDynamicChange = null;
 
@@ -42,6 +44,12 @@ export function dynDraftPending() {
     if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище
     const v1 = current[f.key];
     const v2 = item.meta[f.key];
+    if (f.key === 'stages') {
+      const s1 = JSON.stringify(v1 || null);
+      const s2 = JSON.stringify(v2 || null);
+      if (s1 !== s2) return true;
+      continue;
+    }
     if (f.type === 'checkbox') {
       if (Boolean(v1) !== Boolean(v2)) return true;
     } else if (f.type === 'list') {
@@ -59,6 +67,21 @@ export function readDynRaw() {
   const data = {};
   data.value = oneLine($('pe-dyn-name').value);
   for (const f of schema.fields) {
+    if (f.key === 'stages') {
+      if (state.activeCategory === 'health') {
+        const list = gatherDynStageList('health');
+        data.stages = list.length > 0 ? list : undefined;
+      } else if (['profession', 'hobby'].includes(state.activeCategory)) {
+        const isCustom = $('pe-dyn-custom-stages-toggle')?.checked;
+        if (isCustom) {
+          const list = gatherDynStageList(state.activeCategory);
+          data.stages = list.length > 0 ? list : undefined;
+        } else {
+          data.stages = undefined;
+        }
+      }
+      continue;
+    }
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
       if (f.type === 'checkbox') data[f.key] = el.checked;
@@ -75,6 +98,27 @@ export function fillDynFields(card) {
   const split = hasExplanationField(state.activeCategory) ? splitNameExplanation(card.value) : null;
   $('pe-dyn-name').value = split ? split.name : card.value;
   for (const f of schema.fields) {
+    if (f.key === 'stages') {
+      if (state.activeCategory === 'health') {
+        renderDynStageList('health', card.meta?.stages || []);
+        initDynStageSortable('health');
+      } else if (['profession', 'hobby'].includes(state.activeCategory)) {
+        const hasCustom = Array.isArray(card.meta?.stages) && card.meta.stages.length > 0;
+        const toggle = $('pe-dyn-custom-stages-toggle');
+        const wrap = $('pe-dyn-stages-wrap');
+        if (toggle) toggle.checked = hasCustom;
+        if (wrap) wrap.hidden = !hasCustom;
+        if (hasCustom) {
+          renderDynStageList(state.activeCategory, card.meta.stages);
+          initDynStageSortable(state.activeCategory);
+        } else {
+          const container = document.querySelector(`[data-dyn-stage-list="${state.activeCategory}"]`);
+          if (container) container.innerHTML = '';
+          destroyDynStageSortable();
+        }
+      }
+      continue;
+    }
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
       const val = split && f.key === 'explanation' ? split.explanation : card.meta[f.key];
@@ -159,6 +203,21 @@ export function resetDynForm() {
   const schema = CATEGORY_SCHEMAS[state.activeCategory];
   if (schema) {
     for (const f of schema.fields) {
+      if (f.key === 'stages') {
+        if (state.activeCategory === 'health') {
+          renderDynStageList('health', []);
+          initDynStageSortable('health');
+        } else if (['profession', 'hobby'].includes(state.activeCategory)) {
+          const toggle = $('pe-dyn-custom-stages-toggle');
+          const wrap = $('pe-dyn-stages-wrap');
+          if (toggle) toggle.checked = false;
+          if (wrap) wrap.hidden = true;
+          const container = document.querySelector(`[data-dyn-stage-list="${state.activeCategory}"]`);
+          if (container) container.innerHTML = '';
+          destroyDynStageSortable();
+        }
+        continue;
+      }
       const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
       if (el) {
         if (f.type === 'checkbox') el.checked = false;

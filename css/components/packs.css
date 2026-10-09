@@ -203,6 +203,21 @@
 .pe-stage-list::-webkit-scrollbar{width:6px;}
 .pe-stage-list::-webkit-scrollbar-track{background:transparent;}
 .pe-stage-list::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:3px;}
+
+.pe-stage-list--dyn{
+  height:240px;min-height:160px;max-height:480px;
+  padding:8px;gap:6px;resize:vertical;box-sizing:border-box;
+}
+.pe-stage-list--dyn .pe-stage-row--card{
+  padding:10px 34px 10px 22px;gap:8px;
+}
+.pe-dyn-stages-wrap{
+  display:flex;flex-direction:column;gap:4px;
+}
+.pe-dyn-stages-wrap[hidden]{
+  display:none !important;
+}
+
 .pe-stage-list[hidden],
 .pe-stage-textarea[hidden],
 .pe-stage-note[hidden]{display:none !important;}
