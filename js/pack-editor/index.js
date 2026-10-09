@@ -9,8 +9,8 @@ import { tokenize, cataMatches, collectSearchResults } from './search.js';
 import { getPack, savePack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
-import * as ui from './ui.js';
-import { $ } from './ui.js';
+import * as ui from './ui/index.js';
+import { $ } from './ui/helpers.js';
 
 // ===== Сторінка "Редактор пака" (#/pack-editor, редагування — #/pack-editor?id=<uuid>) =====
 // Це контролер: стан сторінки, валідація, обробники подій і координація
