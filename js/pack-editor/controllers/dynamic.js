@@ -4,6 +4,7 @@ import {
   parseLines, oneLine, parseCards, cardToLine,
   hasExplanationField, joinNameExplanation, splitNameExplanation
 } from '../parser.js';
+import { OBJECT_STAGE_KEYS, validateStageEntries } from '../payload.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
@@ -248,6 +249,22 @@ export function submitDyn() {
     $('pe-dyn-name').focus();
     return;
   }
+
+  if (OBJECT_STAGE_KEYS.includes(state.activeCategory) && data.stages) {
+    const stageErr = validateStageEntries(state.activeCategory, data.stages);
+    if (stageErr) {
+      const err = $('pe-dyn-error');
+      if (err) {
+        err.textContent = stageErr;
+        err.hidden = false;
+      }
+      showGlobalToast(stageErr);
+      return;
+    }
+  }
+
+  const err = $('pe-dyn-error');
+  if (err) err.hidden = true;
   
   const cards = getDynamicCards();
   const meta = { ...data };

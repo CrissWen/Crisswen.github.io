@@ -2,7 +2,8 @@ import { state } from '../state.js';
 import { DEFAULT_PACK_ID, savePack } from '../../services/packs-store.js';
 import {
   validateTitle, validateRanges, buildCardRows, buildPackConfig,
-  MAX_PACK_CARDS, normalizeForm, STAGE_KEYS
+  MAX_PACK_CARDS, normalizeForm, STAGE_KEYS, OBJECT_STAGE_KEYS,
+  validateStageText, validateStageEntries
 } from '../payload.js';
 import { parseCards } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
@@ -70,6 +71,15 @@ export async function handleSave(btn) {
     });
   }
 
+  // Перевірка коректності проміжних стадій у глобальних налаштуваннях
+  for (const k of OBJECT_STAGE_KEYS) {
+    const stageErr = validateStageText(k, state.form.stages[k] || '');
+    if (stageErr) {
+      showGlobalToast(stageErr);
+      return;
+    }
+  }
+
   // Якщо ми в LLM-режимі на вкладці Катаклізмів, треба синхронізувати текст у масив перед збереженням
   if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm') {
     const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
@@ -84,6 +94,16 @@ export async function handleSave(btn) {
   }
 
   const cards = buildCardRows(state.form.texts, state.extraMeta, state.form.cataclysms);
+  for (const c of cards) {
+    if (OBJECT_STAGE_KEYS.includes(c.category) && Array.isArray(c.meta?.stages)) {
+      const cardStageErr = validateStageEntries(c.category, c.meta.stages);
+      if (cardStageErr) {
+        showGlobalToast(`У картці "${c.value}": ${cardStageErr}`);
+        return;
+      }
+    }
+  }
+
   if (cards.length > MAX_PACK_CARDS) {
     showGlobalToast(`Забагато характеристик: ${cards.length}. Максимум — ${MAX_PACK_CARDS}`);
     return;

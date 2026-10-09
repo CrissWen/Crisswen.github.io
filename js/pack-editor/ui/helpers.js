@@ -202,7 +202,8 @@ export function updateDynamicNameField(category) {
 
 export function updateStageListVisuals(key, container = null) {
   if (!container) {
-    container = document.querySelector(`[data-stage-list="${key}"]`);
+    container = document.querySelector(`[data-stage-list="${key}"]`) ||
+                document.querySelector(`[data-dyn-stage-list="${key}"]`);
   }
   if (!container) return;
   const rows = [...container.querySelectorAll('.pe-stage-row')];
@@ -211,51 +212,90 @@ export function updateStageListVisuals(key, container = null) {
   const isTime = OBJECT_STAGE_KEYS.includes(key);
   if (!isTime) return;
 
+  const validRows = rows.filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
+
   let prevMax = 0;
 
-  rows.forEach((row, index) => {
-    const isLast = index === rows.length - 1;
+  validRows.forEach((row, index) => {
     const isFirst = index === 0;
-    
+    const isLast = index === validRows.length - 1;
+
     const fromWrap = row.querySelector('.pe-stage-from-wrap');
     const toWrap = row.querySelector('.pe-stage-to-wrap');
     const toText = row.querySelector('.pe-stage-to-text');
     const moreText = row.querySelector('.pe-stage-more-text');
-    
+    const timeField = toWrap?.querySelector('.pe-time-field');
+
     if (fromWrap) {
       if (isFirst) {
         fromWrap.style.display = 'none';
       } else {
         fromWrap.style.display = 'flex';
-        const minMonths = prevMax;
-        const minY = Math.floor(minMonths / 12);
-        const minM = minMonths % 12;
+        const minY = Math.floor(prevMax / 12);
+        const minM = prevMax % 12;
         const minYEl = row.querySelector('[data-type="min-y"]');
         const minMEl = row.querySelector('[data-type="min-m"]');
         if (minYEl) minYEl.value = minY;
         if (minMEl) minMEl.value = minM;
       }
     }
-    
+
     if (toWrap) {
-      const timeField = toWrap.querySelector('.pe-time-field');
       if (isLast) {
-        if (timeField) timeField.style.display = 'none';
+        if (timeField) {
+          timeField.style.display = 'none';
+          timeField.classList.remove('is-warning');
+          timeField.removeAttribute('title');
+        }
         if (toText) toText.style.display = 'none';
         if (moreText) moreText.style.display = isFirst ? 'none' : 'inline';
         toWrap.style.display = isFirst ? 'none' : 'flex';
+        row.classList.remove('is-warning');
       } else {
         if (timeField) timeField.style.display = 'inline-flex';
         if (toText) toText.style.display = 'inline';
         if (moreText) moreText.style.display = 'none';
         toWrap.style.display = 'flex';
+
+        const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+        const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
+        const endMonths = y * 12 + m;
+
+        const isInvalid = endMonths <= prevMax;
+        if (isInvalid) {
+          row.classList.add('is-warning');
+          if (timeField) {
+            timeField.classList.add('is-warning');
+            timeField.title = 'Вкажіть кінцевий період (має бути більшим за початковий)';
+          }
+        } else {
+          row.classList.remove('is-warning');
+          if (timeField) {
+            timeField.classList.remove('is-warning');
+            timeField.removeAttribute('title');
+          }
+        }
+
+        prevMax = endMonths > prevMax ? endMonths : prevMax;
       }
     }
-    
-    if (toWrap && toWrap.style.display !== 'none') {
-      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
-      const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
-      prevMax = y * 12 + m;
+  });
+
+  const emptyRows = rows.filter(row => !row.querySelector('.pe-stage-name')?.value?.trim());
+  emptyRows.forEach(row => {
+    row.classList.remove('is-warning');
+    const timeField = row.querySelector('.pe-time-field');
+    if (timeField) {
+      timeField.classList.remove('is-warning');
+      timeField.removeAttribute('title');
+    }
+    const fromWrap = row.querySelector('.pe-stage-from-wrap');
+    const toWrap = row.querySelector('.pe-stage-to-wrap');
+    if (fromWrap) {
+      fromWrap.style.display = 'none';
+    }
+    if (toWrap) {
+      toWrap.style.display = 'none';
     }
   });
 }
@@ -319,13 +359,11 @@ export function gatherStageText(key) {
   return validRows.map((row, index) => {
     const isLast = index === validRows.length - 1;
     const name = row.querySelector('.pe-stage-name').value.trim();
-    if (OBJECT_STAGE_KEYS.includes(key)) {
+    if (OBJECT_STAGE_KEYS.includes(key) && !isLast) {
       const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
       const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
       const total = y * 12 + m;
-      if (total > 0 && !isLast) {
-        return `${name}: ${total}`;
-      }
+      return `${name}: ${total}`;
     }
     return name;
   }).join('\n');

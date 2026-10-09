@@ -256,6 +256,11 @@
   border:1px solid var(--metal-lt);
   border-radius:var(--radius-sm);
   box-sizing:border-box;
+  transition:border-color .2s ease, background-color .2s ease;
+}
+.pe-stage-row.is-warning{
+  border-color: color-mix(in srgb, var(--hazard) 60%, transparent) !important;
+  background: color-mix(in srgb, var(--hazard) 6%, var(--panel)) !important;
 }
 .pe-stage-row--card .pe-stage-name{
   width:100%;
@@ -414,6 +419,10 @@ body.is-stage-dragging * {
 .pe-time-field:focus-within{
   border-color:var(--accent);
   box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.pe-time-field.is-warning{
+  border-color:var(--hazard) !important;
+  box-shadow:0 0 0 1px var(--hazard) !important;
 }
 .pe-time-field.is-disabled{
   opacity:0.65;

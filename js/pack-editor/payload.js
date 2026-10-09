@@ -149,6 +149,41 @@ export function parseStageEntry(key, line) {
   return { name, up_to_months: null };
 }
 
+export function validateStageEntries(key, entries) {
+  if (!OBJECT_STAGE_KEYS.includes(key)) return '';
+  if (!Array.isArray(entries) || entries.length === 0) return '';
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const name = typeof entry === 'object' ? (entry?.name || '') : String(entry || '');
+    if (!name.trim()) {
+      return `Стадія #${i + 1} не має назви`;
+    }
+  }
+
+  if (entries.length <= 1) return '';
+
+  let prevMax = 0;
+  for (let i = 0; i < entries.length - 1; i++) {
+    const entry = entries[i];
+    const name = typeof entry === 'object' ? (entry?.name || '') : String(entry || '');
+    const upTo = typeof entry === 'object' ? entry?.up_to_months : null;
+    if (upTo === null || upTo === undefined || upTo <= prevMax) {
+      return `У стадії "${name || (i + 1)}" не вказано коректний кінцевий період (має бути більшим за початковий)`;
+    }
+    prevMax = upTo;
+  }
+  return '';
+}
+
+export function validateStageText(key, text) {
+  if (!OBJECT_STAGE_KEYS.includes(key)) return '';
+  const lines = parseLines(text);
+  if (!lines.length) return '';
+  const entries = lines.map(line => parseStageEntry(key, line));
+  return validateStageEntries(key, entries);
+}
+
 // Стадії з конфігу пака → текст для textarea: { [key]: string }
 export function stagesTextFromConfig(config) {
   const text = {};
