@@ -307,6 +307,19 @@ export function validateCataclysmInput(raw, { cataclysms = [], editIndex = -1 } 
 
   if (!raw.name) return { error: 'Вкажіть назву катаклізму', field: 'name' };
 
+  // Обов'язкові поля: Час знаходження та Популяція. field — масив, бо підсвічуємо всі порожні разом.
+  const missing = [];
+  if (String(raw.stay ?? '').trim() === '') missing.push({ field: 'stay', label: 'Час знаходження' });
+  if (String(raw.pop ?? '').trim() === '') missing.push({ field: 'pop', label: 'Популяція' });
+  if (missing.length > 0) {
+    return {
+      error: missing.length === 1
+        ? `Поле «${missing[0].label}» обов'язкове`
+        : `Заповніть обов'язкові поля: ${missing.map(m => m.label).join(', ')}`,
+      field: missing.map(m => m.field)
+    };
+  }
+
   const nameKey = raw.name.toLowerCase();
   const duplicate = cataclysms.some((c, i) => i !== editIndex && String(c.name).trim().toLowerCase() === nameKey);
   if (duplicate) return { error: 'Катаклізм із такою назвою вже є в цьому паку', field: 'name' };
@@ -316,19 +329,14 @@ export function validateCataclysmInput(raw, { cataclysms = [], editIndex = -1 } 
     return { error: `Таймер: ціле число від 0 до ${timerMax} хв (0 — без таймера)`, field: 'timer' };
   }
 
-  let stay = null;
-  if (raw.stay !== '') {
-    stay = Number(raw.stay);
-    if (!Number.isInteger(stay) || stay < 1 || stay > stayMax) {
-      return { error: `Час перебування: від 1 до ${stayMax} міс. (або залиште поле порожнім)`, field: 'stay' };
-    }
+  const stay = Number(raw.stay);
+  if (!Number.isInteger(stay) || stay < 1 || stay > stayMax) {
+    return { error: `Час знаходження: ціле число від 1 до ${stayMax} міс.`, field: 'stay' };
   }
 
-  let population = null;
-  if (raw.pop !== '') {
-    const n = Number(raw.pop);
-    if (!Number.isSafeInteger(n)) return { error: 'Популяція: лише цифри', field: 'pop' };
-    population = n > 0 ? n : null; // 0 = "невідомо", як і порожнє поле
+  const population = Number(raw.pop);
+  if (!Number.isSafeInteger(population) || population < 1) {
+    return { error: 'Популяція: ціле число від 1', field: 'pop' };
   }
 
   return { item: { name: raw.name, description: raw.desc, timer_minutes: timer, stay_time_months: stay, population, extra: {} } };

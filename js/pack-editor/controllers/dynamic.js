@@ -193,6 +193,7 @@ export function startDynEdit(index, card) {
   fillDynFields(card);
   const err = $('pe-dyn-error');
   if (err) err.hidden = true;
+  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
   setDynMode(index);
   updateDynFormState();
   $('pe-dynamic-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -228,6 +229,7 @@ export function resetDynForm() {
   }
   const err = $('pe-dyn-error');
   if (err) err.hidden = true;
+  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
   setDynMode(-1);
   updateDynFormState();
 }
@@ -242,11 +244,27 @@ export function applyDynChange({ scrollToEnd = false } = {}) {
 export function submitDyn() {
   const data = readDynRaw();
   const isEdit = state.dynEditIndex >= 0;
-  if (!data.value) {
+  // Обов'язкові поля: назва + поля схеми з required (Хобі — Пояснення, Професія — Вміння).
+  // Перевірка йде ДО будь-яких змін стану й запитів до Supabase.
+  const missing = [];
+  if (String(data.value ?? '').trim() === '') missing.push({ el: $('pe-dyn-name'), label: 'Назва' });
+  for (const f of CATEGORY_SCHEMAS[state.activeCategory]?.fields || []) {
+    if (!f.required) continue;
+    if (String(data[f.key] ?? '').trim() === '') {
+      missing.push({ el: document.querySelector(`[data-dyn-key="${f.key}"]`), label: f.label });
+    }
+  }
+  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  if (missing.length > 0) {
+    missing.forEach(m => m.el?.classList.add('is-invalid'));
     const err = $('pe-dyn-error');
-    err.textContent = 'Назва обов\'язкова';
-    err.hidden = false;
-    $('pe-dyn-name').focus();
+    if (err) {
+      err.textContent = missing.length === 1
+        ? `Поле «${missing[0].label}» обов'язкове`
+        : `Заповніть обов'язкові поля: ${missing.map(m => m.label).join(', ')}`;
+      err.hidden = false;
+    }
+    missing[0].el?.focus();
     return;
   }
 

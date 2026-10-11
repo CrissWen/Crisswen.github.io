@@ -25,10 +25,11 @@ export function showCataError(message, key) {
   el.textContent = message || '';
   el.hidden = !message;
   Object.values(CATA_FIELDS).forEach(id => $(id).classList.remove('is-invalid'));
+  // key — одне поле або масив (кілька незаповнених обов'язкових): підсвічуємо всі, фокус — на перше
   if (message && key) {
-    const field = $(CATA_FIELDS[key]);
-    field.classList.add('is-invalid');
-    field.focus();
+    const keys = Array.isArray(key) ? key : [key];
+    keys.forEach(k => $(CATA_FIELDS[k]).classList.add('is-invalid'));
+    $(CATA_FIELDS[keys[0]]).focus();
   }
 }
 

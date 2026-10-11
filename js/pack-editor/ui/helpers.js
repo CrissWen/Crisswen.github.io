@@ -23,7 +23,7 @@ export function placeholderFor(category) {
   return TEXTAREA_PLACEHOLDER;
 }
 
-const STAGE_LABELS = { profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби', body_type: 'Дефолтні типи статури' };
+const STAGE_LABELS = { profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби', body_type: 'Типи статури' };
 export const STAGE_FIELDS = STAGE_KEYS.map(key => ({ key, label: STAGE_LABELS[key] }));
 
 export const RANGE_FIELDS = [

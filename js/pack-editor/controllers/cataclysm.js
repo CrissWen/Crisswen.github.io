@@ -133,6 +133,9 @@ export function handleCataClick(e) {
 // Числові поля приймають лише цифри; правка поля прибирає попередню помилку
 export function handleCataInput(e) {
   ui.sanitizeCataNumericInput(e.target);
-  if (ui.isCataErrorVisible()) ui.showCataError('');
+  if (!ui.isCataErrorVisible()) return;
+  // Прибираємо рамку лише з поля, що редагується; помилку ховаємо, коли не лишилося підсвічених.
+  e.target.classList.remove('is-invalid');
+  if (!document.querySelector('#pe-cata .is-invalid')) ui.showCataError('');
 }
 

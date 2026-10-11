@@ -62,7 +62,7 @@ export const CATEGORY_SCHEMAS = {
   },
   profession: {
     fields: [
-      { key: 'ability', type: 'text', label: 'Унікальне вміння' },
+      { key: 'ability', type: 'text', label: 'Вміння', required: true },
       { key: 'stages', type: 'list', label: 'Власні стадії (по одній на рядок)' }
     ]
   },
@@ -96,10 +96,10 @@ export const CATEGORY_SCHEMAS = {
       { key: 'exact_height', type: 'text', label: 'Точний зріст (число або текст, якщо обрано точне значення)' }
     ]
   },
-  // Фобія: у формі два поля ("Назва" + "Пояснення"), у БД — один рядок "Назва - Пояснення" (зклеює submitDyn через joinNameExplanation)
+  // Фобія: у формі два поля ("Назва" + "Пояснення", обов'язкове), у БД — один рядок "Назва - Пояснення" (зклеює submitDyn через joinNameExplanation)
   phobia: {
     fields: [
-      { key: 'explanation', type: 'text', label: 'Пояснення' }
+      { key: 'explanation', type: 'text', label: 'Пояснення', required: true }
     ]
   },
   trait: { fields: [] },

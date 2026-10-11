@@ -336,6 +336,14 @@ export async function initPackEditor() {
   });
 
   $('pe-dynamic-form').addEventListener('input', e => {
+    // Почали вводити в підсвічене поле — прибираємо червону рамку; коли не лишилося незаповнених — ховаємо помилку.
+    if (e.target.classList?.contains('is-invalid') && e.target.value.trim() !== '') {
+      e.target.classList.remove('is-invalid');
+      if (!$('pe-dynamic-form').querySelector('.is-invalid')) {
+        const dynErr = $('pe-dyn-error');
+        if (dynErr) dynErr.hidden = true;
+      }
+    }
     const stageContainer = e.target.closest('[data-dyn-stage-list]');
     if (stageContainer) {
       const key = stageContainer.dataset.dynStageList;

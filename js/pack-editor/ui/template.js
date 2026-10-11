@@ -228,11 +228,11 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                     <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30">
                   </div>
                   <div class="pe-field">
-                    <label class="pe-label" for="pe-cata-stay">Час (міс.)</label>
+                    <label class="pe-label" for="pe-cata-stay">Час знаходження (міс.) <span class="pe-required" title="Обов'язкове поле">*</span></label>
                     <input id="pe-cata-stay" class="pe-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Напр.: 6">
                   </div>
                   <div class="pe-field">
-                    <label class="pe-label" for="pe-cata-pop">Популяція</label>
+                    <label class="pe-label" for="pe-cata-pop">Популяція <span class="pe-required" title="Обов'язкове поле">*</span></label>
                     <input id="pe-cata-pop" class="pe-input" type="text" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="Напр.: 5000">
                   </div>
                 </div>

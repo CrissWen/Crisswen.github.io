@@ -2,6 +2,9 @@ import { esc } from '../../utils/escape-html.js';
 import { $ } from './helpers.js';
 import { state } from '../state.js';
 
+// Червона зірочка для обов'язкових полів схеми (той самий вигляд, що й біля "Назва")
+const reqMark = f => (f.required ? ` <span class="pe-required" title="Обов'язкове поле">*</span>` : '');
+
 export function renderDynamicFormFields(schema) {
   const container = $('pe-dyn-fields');
   if (!schema || !schema.fields) {
@@ -72,13 +75,13 @@ export function renderDynamicFormFields(schema) {
     } else if (f.type === 'textarea' || f.key === 'explanation' || f.key === 'ability' || f.key === 'description') {
       return `
         <div class="pe-field">
-          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
           <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc pe-input--name" rows="2" data-dyn-key="${f.key}" placeholder="Введіть ${esc(f.label).toLowerCase()}"></textarea>
         </div>`;
     } else {
       return `
         <div class="pe-field">
-          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
+          <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
           <input id="pe-dyn-${f.key}" class="pe-input" type="text" data-dyn-key="${f.key}" autocomplete="off" placeholder="Введіть ${esc(f.label).toLowerCase()}">
         </div>`;
     }
