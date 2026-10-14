@@ -34,6 +34,43 @@ export function splitNameExplanation(value) {
   return { name: text.slice(0, at).trim(), explanation: text.slice(at + PART_SEPARATOR.length).trim() };
 }
 
+const parseBool = val => val === true || val === 'true';
+const parseNullable = val => (val === null || val === 'null' || val === 'none' ? null : val);
+const parseNumOrStr = val => {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : val;
+};
+
+const PROP_SETTERS = {
+  rep: (meta, val) => { meta.can_reproduce = parseBool(val); },
+  opp: (meta, val) => { meta.opposite = parseNullable(val); },
+  age: (meta, val) => { meta.custom_age = val; },
+  action_type: (meta, val) => { meta.action_type = val; },
+  no_height: (meta, val) => { if (parseBool(val)) meta.has_no_height = true; },
+  exact_height: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
+  min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
+  max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+  desc: (meta, val) => { meta.description = val; },
+  timer: (meta, val) => { meta.timer_minutes = Number(val); },
+  stay: (meta, val) => { meta.stay_time_months = Number(val); },
+  pop: (meta, val) => { meta.population = Number(val); }
+};
+
+export function parsePropsString(propsStr) {
+  const regex = /(\w+)\s*:\s*("(?:[^"\\]|\\.)*"|'[^']*'|[^,}]+)/g;
+  let match;
+  const props = {};
+  while ((match = regex.exec(propsStr)) !== null) {
+    const key = match[1];
+    let val = match[2].trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1).replace(/\\"/g, '"');
+    }
+    props[key] = val;
+  }
+  return props;
+}
+
 // Один рядок тексту → { value, meta }.
 // Підтримує компактний синтаксис (LLM-режим):
 // - Стадії у квадратних дужках: [стадія 1, стадія 2]
@@ -67,58 +104,13 @@ export function parseCardLine(category, line) {
       matched = true;
     }
     
-    // Шукаємо прапорці в кінці рядка
+    // Шукаємо прапорці в кінці рядка: {key: val, ...}
     const propsMatch = value.match(/\{(.*?)\}\s*$/);
     if (propsMatch) {
-      const propsStr = propsMatch[1];
-      // Розбиваємо "rep: false, age: Без віку" на частини
-      // Щоб не розбити по комі всередині тексту, ми використовуємо простий split і склеюємо назад, 
-      // але для LLM-режиму зазвичай коми всередині значень не використовуються.
-      // Надійніше розбивати регуляркою, що ігнорує коми в лапках, але для простоти припустимо що коми в значеннях рідкісні.
-      const props = propsStr.split(',');
-      let currentProp = '';
-      
-      const processProp = (pStr) => {
-        const [k, ...vParts] = pStr.split(':');
-        if (!k || !vParts.length) return;
-        const key = k.trim();
-        let val = vParts.join(':').trim().replace(/^["'](.*)["']$/, '$1'); // видаляємо лапки
-        
-        if (val === 'true') val = true;
-        else if (val === 'false') val = false;
-        else if (val === 'null' || val === 'none') val = null;
-
-        if (key === 'rep') meta.can_reproduce = val;
-        else if (key === 'opp') meta.opposite = val;
-        else if (key === 'age') meta.custom_age = val;
-        else if (key === 'action_type') meta.action_type = val;
-        else if (key === 'no_height') {
-          if (val === true || val === 'true') meta.has_no_height = true;
-        }
-        else if (key === 'exact_height') meta.exact_height = isNaN(Number(val)) ? val : Number(val);
-        else if (key === 'min') {
-          meta.range = meta.range || {};
-          meta.range.min = Number(val);
-        }
-        else if (key === 'max') {
-          meta.range = meta.range || {};
-          meta.range.max = Number(val);
-        }
-        else if (key === 'desc') meta.description = val;
-        else if (key === 'timer') meta.timer_minutes = Number(val);
-        else if (key === 'stay') meta.stay_time_months = Number(val);
-        else if (key === 'pop') meta.population = Number(val);
-      };
-
-      for (let i = 0; i < props.length; i++) {
-        // Простий евристичний парсер, який склеює значення, якщо в них була кома
-        currentProp += (currentProp ? ',' : '') + props[i];
-        if ((currentProp.match(/"/g) || []).length % 2 === 0) {
-          processProp(currentProp);
-          currentProp = '';
-        }
+      const parsed = parsePropsString(propsMatch[1]);
+      for (const [key, val] of Object.entries(parsed)) {
+        PROP_SETTERS[key]?.(meta, val);
       }
-      
       value = value.substring(0, propsMatch.index).trim();
       matched = true;
     }
