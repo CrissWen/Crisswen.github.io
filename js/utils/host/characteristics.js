@@ -29,9 +29,9 @@ export function drawCharacteristic(charType, pools) {
       if (!hasNoHeight) {
         if (card.meta?.exact_height) {
           heightVal = Number(card.meta.exact_height) || card.meta.exact_height;
-        } else if (card.meta?.custom_height_mode === 'range') {
-          const min = card.meta.height_min ?? pools.config?.height_range?.min ?? 150;
-          const max = card.meta.height_max ?? pools.config?.height_range?.max ?? 210;
+        } else if (card.meta?.range) {
+          const min = card.meta.range.min ?? pools.config?.height_range?.min ?? 150;
+          const max = card.meta.range.max ?? pools.config?.height_range?.max ?? 210;
           heightVal = randInt(min, max);
         } else {
           const min = pools.config?.height_range?.min ?? 150;

@@ -41,10 +41,24 @@ export function dynDraftPending() {
     : item.value;
   const currentValue = withExplanation ? joinNameExplanation(current.value, current.explanation) : current.value;
   if (currentValue !== savedValue) return true;
+  const isBody = state.activeCategory === 'body_type';
   for (const f of CATEGORY_SCHEMAS[state.activeCategory].fields) {
     if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище
     const v1 = current[f.key];
-    const v2 = item.meta[f.key];
+    let v2 = item.meta[f.key];
+    if (isBody) {
+      if (f.key === 'has_no_height') {
+        v2 = Boolean(item.meta?.has_no_height);
+      } else if (f.key === 'custom_height_mode') {
+        v2 = item.meta?.has_no_height ? '' : (item.meta?.range ? 'range' : (item.meta?.exact_height !== undefined ? 'exact' : ''));
+      } else if (f.key === 'height_min') {
+        v2 = item.meta?.range?.min !== undefined ? String(item.meta.range.min) : '';
+      } else if (f.key === 'height_max') {
+        v2 = item.meta?.range?.max !== undefined ? String(item.meta.range.max) : '';
+      } else if (f.key === 'exact_height') {
+        v2 = item.meta?.exact_height !== undefined ? String(item.meta.exact_height) : '';
+      }
+    }
     if (f.key === 'stages') {
       const s1 = JSON.stringify(v1 || null);
       const s2 = JSON.stringify(v2 || null);
@@ -122,7 +136,20 @@ export function fillDynFields(card) {
     }
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
-      const val = split && f.key === 'explanation' ? split.explanation : card.meta[f.key];
+      let val = split && f.key === 'explanation' ? split.explanation : card.meta[f.key];
+      if (state.activeCategory === 'body_type') {
+        if (f.key === 'has_no_height') {
+          val = Boolean(card.meta?.has_no_height);
+        } else if (f.key === 'custom_height_mode') {
+          val = card.meta?.has_no_height ? '' : (card.meta?.range ? 'range' : (card.meta?.exact_height !== undefined ? 'exact' : ''));
+        } else if (f.key === 'height_min') {
+          val = card.meta?.range?.min ?? '';
+        } else if (f.key === 'height_max') {
+          val = card.meta?.range?.max ?? '';
+        } else if (f.key === 'exact_height') {
+          val = card.meta?.exact_height ?? '';
+        }
+      }
       if (f.type === 'checkbox') el.checked = Boolean(val);
       else if (f.type === 'list') el.value = Array.isArray(val) ? val.join('\n') : '';
       else el.value = val || '';
@@ -292,6 +319,59 @@ export function submitDyn() {
   const withExplanation = hasExplanationField(state.activeCategory);
   const storedValue = withExplanation ? joinNameExplanation(data.value, data.explanation) : data.value;
   if (withExplanation) delete meta.explanation;
+
+  if (state.activeCategory === 'body_type') {
+    delete meta.custom_height_mode;
+    delete meta.height_min;
+    delete meta.height_max;
+    delete meta.exact_height;
+    delete meta.range;
+
+    if (data.has_no_height) {
+      meta.has_no_height = true;
+    } else {
+      delete meta.has_no_height;
+      const mode = data.custom_height_mode;
+      if (mode === 'range') {
+        const minRaw = String(data.height_min ?? '').trim();
+        const maxRaw = String(data.height_max ?? '').trim();
+        const minNum = parseInt(minRaw, 10);
+        const maxNum = parseInt(maxRaw, 10);
+        if (!minRaw || !maxRaw || isNaN(minNum) || isNaN(maxNum) || minNum <= 0 || maxNum <= 0) {
+          const err = $('pe-dyn-error');
+          if (err) {
+            err.textContent = 'Вкажіть коректні додатні числа для мінімального та максимального зросту';
+            err.hidden = false;
+          }
+          if (!minRaw || isNaN(minNum) || minNum <= 0) $('pe-dyn-height_min')?.focus();
+          else $('pe-dyn-height_max')?.focus();
+          return;
+        }
+        if (minNum > maxNum) {
+          const err = $('pe-dyn-error');
+          if (err) {
+            err.textContent = 'Мінімальний зріст не може перевищувати максимальний';
+            err.hidden = false;
+          }
+          $('pe-dyn-height_min')?.focus();
+          return;
+        }
+        meta.range = { min: minNum, max: maxNum };
+      } else if (mode === 'exact') {
+        const exactRaw = String(data.exact_height ?? '').trim();
+        if (!exactRaw) {
+          const err = $('pe-dyn-error');
+          if (err) {
+            err.textContent = 'Вкажіть точний зріст';
+            err.hidden = false;
+          }
+          $('pe-dyn-exact_height')?.focus();
+          return;
+        }
+        meta.exact_height = isNaN(Number(exactRaw)) ? exactRaw : Number(exactRaw);
+      }
+    }
+  }
   
   for (const k of Object.keys(meta)) {
     if (meta[k] === '' || (Array.isArray(meta[k]) && meta[k].length === 0)) {

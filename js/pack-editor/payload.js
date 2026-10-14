@@ -71,6 +71,11 @@ export function extraMetaOf(category, meta) {
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null;
   const extra = { ...meta };
   if (category === 'profession') delete extra.ability;
+  if (category === 'body_type') {
+    delete extra.has_no_height;
+    delete extra.range;
+    delete extra.exact_height;
+  }
   return Object.keys(extra).length ? extra : null;
 }
 

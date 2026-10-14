@@ -92,10 +92,18 @@ export function parseCardLine(category, line) {
         else if (key === 'opp') meta.opposite = val;
         else if (key === 'age') meta.custom_age = val;
         else if (key === 'action_type') meta.action_type = val;
-        else if (key === 'no_height') meta.has_no_height = val;
-        else if (key === 'exact_height') meta.exact_height = val;
-        else if (key === 'height_min') { meta.height_min = Number(val); meta.custom_height_mode = 'range'; }
-        else if (key === 'height_max') { meta.height_max = Number(val); meta.custom_height_mode = 'range'; }
+        else if (key === 'no_height') {
+          if (val === true || val === 'true') meta.has_no_height = true;
+        }
+        else if (key === 'exact_height') meta.exact_height = isNaN(Number(val)) ? val : Number(val);
+        else if (key === 'min') {
+          meta.range = meta.range || {};
+          meta.range.min = Number(val);
+        }
+        else if (key === 'max') {
+          meta.range = meta.range || {};
+          meta.range.max = Number(val);
+        }
         else if (key === 'desc') meta.description = val;
         else if (key === 'timer') meta.timer_minutes = Number(val);
         else if (key === 'stay') meta.stay_time_months = Number(val);
@@ -160,10 +168,10 @@ export function cardToLine(category, value, meta) {
   if (meta?.opposite !== undefined) props.push(`opp: ${meta.opposite === null ? 'null' : `"${meta.opposite}"`}`);
   if (meta?.custom_age !== undefined) props.push(`age: "${meta.custom_age}"`);
   if (meta?.action_type !== undefined) props.push(`action_type: "${meta.action_type}"`);
-  if (meta?.has_no_height !== undefined) props.push(`no_height: ${meta.has_no_height}`);
-  if (meta?.exact_height !== undefined) props.push(`exact_height: ${meta.exact_height}`);
-  if (meta?.height_min !== undefined) props.push(`height_min: ${meta.height_min}`);
-  if (meta?.height_max !== undefined) props.push(`height_max: ${meta.height_max}`);
+  if (meta?.has_no_height === true) props.push('no_height: true');
+  if (meta?.exact_height !== undefined && meta?.exact_height !== '') props.push(`exact_height: ${meta.exact_height}`);
+  if (meta?.range?.min !== undefined) props.push(`min: ${meta.range.min}`);
+  if (meta?.range?.max !== undefined) props.push(`max: ${meta.range.max}`);
   if (meta?.description !== undefined) props.push(`desc: "${meta.description}"`);
   if (meta?.timer_minutes !== undefined) props.push(`timer: ${meta.timer_minutes}`);
   if (meta?.stay_time_months !== undefined) props.push(`stay: ${meta.stay_time_months}`);
