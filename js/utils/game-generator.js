@@ -1,6 +1,6 @@
 import { getGameConfig } from '../config/config-manager.js';
-import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray } from './random.js';
-import { rollExperience } from './experience.js';
+import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray, generateHeight } from './random.js';
+import { rollExperience, getMonthStages, serializeScale } from './experience.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -140,6 +140,15 @@ export async function generateGameState(playersList, pack, config) {
     bunkerState.cataclysm_timer_end = Date.now() + cataclysmTimerMinutes * 60 * 1000;
   }
 
+  // Шкала стадій пака для підказок таблиці (tooltip): зберігаємо в кімнаті, щоб всі гравці бачили пороги саме цього пака.
+  // Типи без шкали за місяцями в об'єкт не потрапляють (підказка не показується).
+  const stageScales = {};
+  ['profession', 'hobby'].forEach(type => {
+    const scale = getMonthStages(type, config);
+    if (scale.length) stageScales[type] = serializeScale(scale);
+  });
+  if (Object.keys(stageScales).length) bunkerState.stage_scales = stageScales;
+
   const c = pack.character || {};
   const playersState = {};
 
@@ -169,12 +178,16 @@ export async function generateGameState(playersList, pack, config) {
     const isChildfree = config.allow_childfree ? (rollChance(bc.childfreeChance)) : false;
 
     let bodyTypeVal = "Тілобудова невідома";
+    let bodyMeta = {};
     if (c.body_type && c.body_type.length > 0) {
-      bodyTypeVal = pickCard(c.body_type).value;
+      const bodyCard = pickCard(c.body_type);
+      bodyTypeVal = bodyCard.value;
+      bodyMeta = bodyCard.meta || {};
     } else if (config.default_stages && config.default_stages.body_type) {
       bodyTypeVal = pickFromStrings(config.default_stages.body_type, "Тілобудова невідома");
     }
-    const heightVal = randInt(config.height_range.min, config.height_range.max);
+    // Зріст враховує meta статури (has_no_height / exact_height / height_min-max / range), інакше — глобальний діапазон паку
+    const heightVal = generateHeight(bodyMeta, config.height_range);
 
     let healthDisease = "Хвороба невідома";
     let healthStage = "Невідома стадія";
@@ -185,7 +198,9 @@ export async function generateGameState(playersList, pack, config) {
     } else {
       const healthItem = pickCard(c.health, "Хвороба невідома");
       healthDisease = healthItem.value;
-      healthStage = pickStage(healthItem, config.default_stages.health);
+      // Стадії хвороби: спочатку meta.stages картки, інакше default_stages.health (рядки або об'єкти — pickStage бере лише name, up_to_months не чіпає).
+      // ?. — пак без default_stages не валить старт гри (буде «Невідома стадія»)
+      healthStage = pickStage(healthItem, config.default_stages?.health);
     }
 
     const profItem = drawCard('professions', c.profession);
@@ -218,7 +233,7 @@ export async function generateGameState(playersList, pack, config) {
       ],
       
       hobbies: [
-        { title: hobbyItem.value, ...rollExperience('hobby', hobbyItem, config, ageVal, bc.experienceStartAge), is_revealed: false }
+        { title: hobbyItem.value, description: hobbyItem.meta?.description || "", ability: hobbyItem.meta?.ability || "", ...rollExperience('hobby', hobbyItem, config, ageVal, bc.experienceStartAge), is_revealed: false }
       ],
       
       traits: [

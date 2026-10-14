@@ -1,3 +1,5 @@
+import { describeScale } from '../../utils/experience.js';
+
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
@@ -42,7 +44,9 @@ function renderSafeTooltip(popup, rawTooltip) {
 // aliveCount / totalCount — лічильник "Живі / Всі" у заголовку (#bunker-candidates-count).
 // Якщо не передано, лічильник рахується по масиву players (старa поведінка).
 // isHost — лише ведучий бачить кнопку "Вигнати" / "Повернути" (players[i].id, players[i].isKicked).
-export function playersTable(columns, players, aliveCount, totalCount, isHost) {
+// stageScales — bunker_state.stage_scales ({ profession?: [...], hobby?: [...] }): шкала стадій пака для підказок.
+// undefined (стара кімната без шкали) → запасний захардкоджений текст; об'єкт без потрібного типу → підказки немає.
+export function playersTable(columns, players, aliveCount, totalCount, isHost, stageScales) {
   columns = columns || ["Стать", "Статура", "Риса характеру", "Професія", "Здоров'я", "Хобі / Захоплення", "Фобія / Страх", "Великий багаж", "Рюкзак", "Додаткові відомості"];
   players = players || [
     { name: "Олена", cells: ["Жіноча", "Струнка", "Емпатія", "Хірург", "Астма (легка)", "Гра на гітарі", "Клаустрофобія", "Намет", "Аптечка", "Має карту"] }
@@ -50,7 +54,17 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
 
   const getTooltip = (colName) => {
     const lowerCol = colName.toLowerCase();
-    
+
+    if (stageScales && typeof stageScales === 'object') {
+      const type = (lowerCol.includes("професія") || lowerCol.includes("профессия")) ? 'profession'
+        : (lowerCol.includes("хобі") || lowerCol.includes("захоплення")) ? 'hobby' : null;
+      const lines = type ? describeScale(stageScales[type]) : [];
+      if (!lines.length) return '';
+      // esc двічі: один раз для атрибута, другий — щоб renderSafeTooltip не видав назву за HTML
+      const text = lines.map(l => esc(esc(l))).join(';<br>') + '.';
+      return `<span class="info-icon" data-tooltip="${text}">i</span>`;
+    }
+
     if (lowerCol.includes("професія") || lowerCol.includes("профессия")) {
       // Ховаємо текст у data-tooltip, жодних вкладених блоків
       return `

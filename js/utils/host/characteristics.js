@@ -1,6 +1,6 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
-import { randInt, pickCard, pickStage } from '../random.js';
+import { randInt, pickCard, pickStage, generateHeight } from '../random.js';
 import { rollExperience } from '../experience.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
@@ -17,18 +17,17 @@ export function drawCharacteristic(charType, pools, ctx = {}) {
   switch (charType) {
     case 'gender':
       return { value: card.value, is_revealed: false };
-    case 'body': {
-      const range = pools.config?.height_range;
+    case 'body':
+      // Зріст перераховується за meta нової статури (так само, як при старті гри)
       return {
         type: card.value,
-        height_cm: range ? randInt(range.min, range.max) : 170,
+        height_cm: generateHeight(card.meta, pools.config?.height_range),
         is_revealed: false
       };
-    }
     case 'professions':
       return [{ title: card.value, ability: card.meta?.ability || '', ...rollExperience('profession', card, pools.config, ctx.age, startAge), is_revealed: false }];
     case 'hobbies':
-      return [{ title: card.value, ...rollExperience('hobby', card, pools.config, ctx.age, startAge), is_revealed: false }];
+      return [{ title: card.value, description: card.meta?.description || '', ability: card.meta?.ability || '', ...rollExperience('hobby', card, pools.config, ctx.age, startAge), is_revealed: false }];
     case 'health':
       return [{ disease: card.value, severity: pickStage(card, defaultStages), is_revealed: false }];
     case 'traits':

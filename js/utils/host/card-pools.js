@@ -30,13 +30,35 @@ export async function loadPools() {
 }
 
 // Стадії (стаж професії, ступінь хвороби, рівень хобі) для випадаючих списків панелі
-export async function getStageOptions() {
+// Де в players_state лежить картка гравця і яке поле містить її назву (збігається з pack_cards.value)
+const PLAYER_CARD_FIELDS = {
+  profession: { field: 'professions', titleKey: 'title' },
+  hobby:      { field: 'hobbies',     titleKey: 'title' },
+  health:     { field: 'health',      titleKey: 'disease' }
+};
+
+// player — запис гравця з players_state (або null/undefined, напр. «Для всіх»: тоді лише стандартні стадії).
+// Список стадій індивідуальний: default_stages + meta.stages ЛИШЕ тієї картки, якою зараз володіє гравець
+// (changeExperience/changeDiseaseSeverity змінюють саме першу картку слота, тому дивимось на неї).
+export async function getStageOptions(player = null) {
   const pools = await loadPools();
   const stages = pools.config?.default_stages || {};
-  // У випадаючі списки йдуть лише назви: професія/хобі можуть бути масивом об'єктів { name, up_to_months } або старим масивом рядків
+  // У випадаючі списки йдуть лише назви: стадії можуть бути масивом об'єктів { name, up_to_months } або старим масивом рядків (getStageNames)
+  const build = (key) => {
+    const names = [...getStageNames(stages[key])];
+    const { field, titleKey } = PLAYER_CARD_FIELDS[key];
+    const owned = player?.[field];
+    const current = Array.isArray(owned) ? owned.find(c => c && !c.isEmpty) : (owned && !owned.isEmpty ? owned : null);
+    const title = current?.[titleKey];
+    if (title) {
+      const poolCard = (pools.character?.[key] || []).find(c => c.value === title);
+      names.push(...getStageNames(poolCard?.meta?.stages));
+    }
+    return [...new Set(names)]; // без дублікатів, стандартні їдуть першими
+  };
   return {
-    profession: getStageNames(stages.profession),
-    hobby: getStageNames(stages.hobby),
-    health: getStageNames(stages.health)
+    profession: build('profession'),
+    hobby: build('hobby'),
+    health: build('health')
   };
 }

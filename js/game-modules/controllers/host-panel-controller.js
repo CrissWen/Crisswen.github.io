@@ -50,13 +50,31 @@ export function syncHostPanel(roomData, isHost, ctx) {
     document.body.insertAdjacentHTML('beforeend', renderHostPanel(hostPanelData(roomData, ctx)));
     root = getHostPanelRoot();
     bindHostEvents(root, ctx);
-    HostActions.getStageOptions()
-      .then(stages => fillStageOptions(getHostPanelRoot(), stages))
-      .catch(err => console.error('Не вдалося завантажити стадії:', err));
   }
 
   refreshHostPanel(root, hostPanelData(roomData, ctx));
+  // Після refreshHostPanel (списки гравців уже заповнені): стадії залежать від вибраного гравця та його поточних карток,
+  // тож перераховуємо при кожному оновленні кімнати (реролл картки, обмін, крадіжка...). Незмінний список DOM не чіпає.
+  refreshStageSelects(root, roomData);
   HostActions.syncTimerAutoStop?.(ctx.getRoomCode(), roomData.bunker_state);
+}
+
+// Стадії в кожному акордеоні (професія, хвороба, лікування) формуються під гравця, вибраного в ЦЬОМУ акордеоні.
+// «Для всіх» / невідомий id → player = null → лише стандартні стадії з default_stages.
+async function refreshStageSelects(root, roomData, onlyScope = null) {
+  const players = roomData?.players_state || {};
+  const scopes = onlyScope ? [onlyScope] : [...root.querySelectorAll('.hp-acc-body')];
+  for (const scope of scopes) {
+    if (!scope.querySelector('select[data-stages]')) continue;
+    const targetId = scope.querySelector('[data-field="target"]')?.value;
+    const token = (scope._stageReq = (scope._stageReq || 0) + 1); // відповідь, що запізнилась, не затирає свіжішу
+    try {
+      const stages = await HostActions.getStageOptions(players[targetId] || null);
+      if (scope._stageReq === token) fillStageOptions(scope, stages);
+    } catch (err) {
+      console.error('Не вдалося завантажити стадії:', err);
+    }
+  }
 }
 
 // Таблиця дій: data-action кнопки -> що викликати (run), що показати в тості (ok) і що зробити після (after).
@@ -204,6 +222,11 @@ function bindHostEvents(root, ctx) {
 
   // "Змінити параметр бункера": інтерфейс залежить від обраного параметра та дії (див. applyBunkerParamUI)
   root.addEventListener('change', (e) => {
+    // Інший гравець у акордеоні зі стадіями → миттєво перемальовуємо його <select> зі стадіями
+    if (e.target.matches('select[data-field="target"]')) {
+      const scope = e.target.closest('.hp-acc-body');
+      if (scope) refreshStageSelects(root, ctx.getRoomState(), scope);
+    }
     if (e.target.closest('#bunker-item-action')) applyBunkerItemActionUI(root, ctx);
     else if (e.target.closest('[data-field="bunkerField"]')) applyBunkerParamUI(root, ctx);
   });
