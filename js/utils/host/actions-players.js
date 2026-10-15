@@ -15,7 +15,7 @@ import {
 export async function changeCharacteristic(roomCode, targetId, charType) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools();
+  const pools = await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -71,7 +71,7 @@ export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
 export async function invertGender(roomCode, targetId) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools();
+  const pools = await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -166,7 +166,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
   const custom = String(customText || '').trim();
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = custom ? null : await loadPools();
+  const pools = custom ? null : await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 

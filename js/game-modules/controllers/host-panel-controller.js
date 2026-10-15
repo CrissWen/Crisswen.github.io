@@ -69,7 +69,7 @@ async function refreshStageSelects(root, roomData, onlyScope = null) {
     const targetId = scope.querySelector('[data-field="target"]')?.value;
     const token = (scope._stageReq = (scope._stageReq || 0) + 1); // відповідь, що запізнилась, не затирає свіжішу
     try {
-      const stages = await HostActions.getStageOptions(players[targetId] || null);
+      const stages = await HostActions.getStageOptions(players[targetId] || null, roomData?.selected_pack_id);
       if (scope._stageReq === token) fillStageOptions(scope, stages);
     } catch (err) {
       console.error('Не вдалося завантажити стадії:', err);
