@@ -34,7 +34,7 @@ export async function changeBunker(roomCode, field, customValue) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   if (!value) {
-    const pools = await loadPools(room.selected_pack_id);
+    const pools = await loadPools();
     value = await randomBunkerFieldValue(field, pools.bunker, bState);
     if (!value) throw new Error('Для цього параметра немає варіантів у пулі карток — введіть значення вручну');
   }
@@ -87,7 +87,7 @@ export async function changeBunkerItems(roomCode, action, value) {
 export async function changeCataclysm(roomCode) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools(room.selected_pack_id);
+  const pools = await loadPools();
   const bState = room.bunker_state || {};
   const card = pickCard(pools.bunker.cataclysm, 'Невідомий катаклізм');
   // Скільки хвилин відведено новому катаклізму на відлік (0/відсутнє — без таймера)
@@ -95,8 +95,7 @@ export async function changeCataclysm(roomCode) {
   bState.cataclysm = {
     text: card.value,
     description: card.meta?.description || '',
-    timer_minutes: timerMinutes,
-    population: card.meta?.population || 'Невідомо' // так само, як у generateGameState: інакше після зміни катаклізму населення зникло б з дошки
+    timer_minutes: timerMinutes
   };
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.

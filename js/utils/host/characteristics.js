@@ -1,55 +1,33 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
-import { randInt, pickCard, pickStage, pickFromStrings } from '../random.js';
+import { randInt, pickCard, pickStage, generateHeight } from '../random.js';
+import { rollExperience } from '../experience.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
 
-export function drawCharacteristic(charType, pools) {
+// ctx.age — вік гравця, якому видається картка: він обмежує стаж професії/хобі у місяцях (без віку — без обмеження за віком).
+export function drawCharacteristic(charType, pools, ctx = {}) {
   const meta = CHAR_TYPE_MAP[charType];
   if (!meta) throw new Error('Невідомий тип характеристики: ' + charType);
 
   const card = pickCard(pools.character[meta.category]);
   const defaultStages = pools.config?.default_stages?.[meta.stagesKey];
+  const startAge = getGameConfigSync().experienceStartAge;
 
   switch (charType) {
     case 'gender':
       return { value: card.value, is_revealed: false };
-    case 'body': {
-      let bodyTypeVal = card.value;
-      let heightVal = null;
-      let hasNoHeight = false;
-
-      if (pools.character.body_type && pools.character.body_type.length > 0) {
-        bodyTypeVal = card.value;
-        hasNoHeight = card.meta?.has_no_height;
-      } else if (pools.config?.default_stages?.body_type) {
-        bodyTypeVal = pickFromStrings(pools.config.default_stages.body_type, card.value);
-      }
-
-      if (!hasNoHeight) {
-        if (card.meta?.exact_height) {
-          heightVal = Number(card.meta.exact_height) || card.meta.exact_height;
-        } else if (card.meta?.range) {
-          const min = card.meta.range.min ?? pools.config?.height_range?.min ?? 150;
-          const max = card.meta.range.max ?? pools.config?.height_range?.max ?? 210;
-          heightVal = randInt(min, max);
-        } else {
-          const min = pools.config?.height_range?.min ?? 150;
-          const max = pools.config?.height_range?.max ?? 210;
-          heightVal = randInt(min, max);
-        }
-      }
-
+    case 'body':
+      // Зріст перераховується за meta нової статури (так само, як при старті гри)
       return {
-        type: bodyTypeVal,
-        height_cm: heightVal,
+        type: card.value,
+        height_cm: generateHeight(card.meta, pools.config?.height_range),
         is_revealed: false
       };
-    }
     case 'professions':
-      return [{ title: card.value, ability: card.meta?.ability || '', stage: pickStage(card, defaultStages), is_revealed: false }];
+      return [{ title: card.value, ability: card.meta?.ability || '', ...rollExperience('profession', card, pools.config, ctx.age, startAge), is_revealed: false }];
     case 'hobbies':
-      return [{ title: card.value, stage: pickStage(card, defaultStages), is_revealed: false }];
+      return [{ title: card.value, description: card.meta?.description || '', ability: card.meta?.ability || '', ...rollExperience('hobby', card, pools.config, ctx.age, startAge), is_revealed: false }];
     case 'health':
       return [{ disease: card.value, severity: pickStage(card, defaultStages), is_revealed: false }];
     case 'traits':

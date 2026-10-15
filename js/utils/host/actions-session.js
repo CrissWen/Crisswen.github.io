@@ -81,6 +81,16 @@ export async function toggleKickPlayer(roomCode, playerId) {
   const wasKicked = !!pState[playerId].is_kicked;
   pState[playerId].is_kicked = !wasKicked;
 
+  // Якщо гравця вигнали посеред активного голосування — прибираємо його голос і всі голоси проти нього,
+  // щоб вигнаний не впливав на підсумок (і не потрапив у таблицю результатів).
+  if (!wasKicked && bState.voting?.isActive && bState.voting.votes) {
+    const cleaned = {};
+    Object.entries(bState.voting.votes).forEach(([voterId, candidateId]) => {
+      if (voterId !== playerId && candidateId !== playerId) cleaned[voterId] = candidateId;
+    });
+    bState.voting = { ...bState.voting, votes: cleaned };
+  }
+
   setHostEvent(bState, wasKicked
     ? `Ведучий повернув гравця ${nameOf(pState, playerId)}`
     : `Ведучий вигнав гравця ${nameOf(pState, playerId)}`);

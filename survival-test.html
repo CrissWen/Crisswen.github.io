@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Оцінка виживання бункера</title>
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Share+Tech+Mono&family=VT323&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Окрема сторінка: не чіпає SPA-роутер (js/app.js) і не залежить від Supabase.
+       Палітра береться з тієї ж теми, яку гравець обрав у грі (ключ localStorage 'bunker-theme'). -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link id="theme-stylesheet" rel="stylesheet" href="css/themes/theme-classic.css">
+  <script>
+    // Той самий синхронний вибір теми, що й у index.html (js/utils/theme-manager.js — єдине джерело правди для ключа).
+    (function () {
+      try {
+        var t = localStorage.getItem('bunker-theme');
+        if (t === 'stalker' || t === 'fallout' || t === 'cyberpunk' || t === 'cryo' || t === 'patriot') {
+          document.getElementById('theme-stylesheet').href = 'css/themes/theme-' + t + '.css';
+        }
+      } catch (e) { /* localStorage недоступний — лишається тема за замовчуванням */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/components/survival-test.css">
+</head>
+<body>
+  <!-- Хедер — копія #global-header з index.html (посилання ведуть в SPA через index.html#/...).
+       Ім'я та аватар підставляє js/pages/survival-test-header.js. Тримати в синхроні з index.html. -->
+  <header class="main-header" id="global-header">
+    <a href="index.html#/lobby" class="header-logo">
+      <img src="icons/favicon.png" alt="Лого" class="header-logo-icon">
+      БУНКЕР
+    </a>
+
+    <a href="index.html#/profile" class="header-profile-link" id="header-profile-link" style="display: none;">
+      <span class="header-user-avatar" id="header-user-avatar">?</span>
+      <span class="header-user-name" id="header-user-name">Завантаження...</span>
+    </a>
+  </header>
+
+  <main class="st-wrap">
+    <h1 class="st-title">Оцінка виживання бункера</h1>
+    <div id="survival-test"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="js/pages/survival-test-header.js"></script>
+  <script type="module" src="js/pages/survival-test.js"></script>
+</body>
+</html>

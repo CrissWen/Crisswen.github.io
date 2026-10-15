@@ -222,13 +222,13 @@ function renderActiveGame(roomData, container) {
     safe('Катаклізм', () => cataclysm(vm.cataclysmData)),
     safe('Бункер', () => bunkerInfo(vm.bunkerData)),
     isSpectator ? '' : safe('Мої характеристики', () => playerCharacteristics({ ownerName: vm.myData.name, characteristics: vm.myData.characteristics, abilities: vm.myData.abilities })),
-    safe('Гравці', () => playersTable(vm.columns.length ? vm.columns : ["Очікування роздачі..."], vm.tableRows, vm.alivePlayers, vm.totalPlayers, isHost)),
+    safe('Гравці', () => playersTable(vm.columns.length ? vm.columns : ["Очікування роздачі..."], vm.tableRows, vm.alivePlayers, vm.totalPlayers, isHost, bState.stage_scales)),
     safe('Спец. можливості', () => specialAbilitiesTable(vm.parsedAbilities)), // isKicked уже в кожному елементі
     safe('Голосування', () => votingSection({
       voting: bState.voting,
       players: vm.votingPlayers,
       myId: currentUserId,
-      amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false
+      amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false && !pState[currentUserId]?.is_kicked
     })),
     // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
     safe('Особисті замітки', () => personalNotes()),

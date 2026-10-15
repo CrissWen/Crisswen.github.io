@@ -46,7 +46,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
 
     // Помилка парсингу одного гравця не повинна ламати весь стіл
     try {
-      const flatPlayer = mapPlayerState(rawPlayer);
+      const flatPlayer = mapPlayerState(rawPlayer, bState.stage_scales);
       flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
 
       parsedAbilities.push({
@@ -80,7 +80,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
   let myData = { name: pState[currentUserId]?.name || 'Глядач', characteristics: [], abilities: [] };
   try {
     if (pState[currentUserId] && pState[currentUserId].gender) {
-      myData = mapPlayerState(pState[currentUserId]);
+      myData = mapPlayerState(pState[currentUserId], bState.stage_scales);
     }
   } catch (err) {
     console.error('Не вдалося розібрати власні характеристики:', err);
@@ -90,7 +90,8 @@ export function buildBoardViewModel(roomData, currentUserId) {
   const votingPlayers = Object.entries(pState).map(([id, p]) => ({
     id,
     name: p.name || 'Гравець',
-    alive: p.is_alive !== false
+    // Вигнаний (is_kicked) не голосує і не може бути кандидатом — так само, як і вибулий (is_alive === false)
+    alive: p.is_alive !== false && !p.is_kicked
   }));
 
   return {

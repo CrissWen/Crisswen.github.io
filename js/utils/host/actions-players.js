@@ -15,7 +15,7 @@ import {
 export async function changeCharacteristic(roomCode, targetId, charType) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools(room.selected_pack_id);
+  const pools = await loadPools();
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -26,7 +26,7 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
       rerollGenderAndAge(pState[id], pools);
       return;
     }
-    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools));
+    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools, { age: pState[id].age?.value }));
   });
 
   setHostEvent(bState, `Ведучий змінив характеристику «${labelOf(charType)}» ${targetPhrase(pState, targetId)}`);
@@ -71,7 +71,7 @@ export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
 export async function invertGender(roomCode, targetId) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools(room.selected_pack_id);
+  const pools = await loadPools();
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -166,7 +166,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
   const custom = String(customText || '').trim();
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = custom ? null : await loadPools(room.selected_pack_id);
+  const pools = custom ? null : await loadPools();
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -177,7 +177,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
     const existing = realCards(p[charCategory]);
     // Нова картка успадковує стан відкриття групи, щоб не "випадати" з відображення
     const revealed = existing.length ? !!existing[0].is_revealed : false;
-    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools);
+    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools, { age: p.age?.value });
     p[charCategory] = [...existing, ...fresh.map(x => ({ ...x, is_revealed: revealed }))];
   });
 

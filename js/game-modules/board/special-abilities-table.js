@@ -1,3 +1,9 @@
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.
 export function specialAbilitiesTable (players) {
@@ -9,14 +15,15 @@ export function specialAbilitiesTable (players) {
   ];
 
   const cellHtml = (val) =>
-    val ? `<span class="cell-value">${val}</span>` : `<span class="cell-empty"></span>`;
+    val ? `<span class="cell-value">${esc(val)}</span>` : `<span class="cell-empty"></span>`;
 
   const rows = players
     .map((p) => {
       const rowClass = p.isKicked ? 'kicked-player' : '';
+      const firstLetter = p.name ? p.name[0] : '';
       return `
-        <tr data-player="${p.name}" class="${rowClass}">
-          <td class="player-cell"><span class="avatar">${p.name[0]}</span>${p.name}</td>
+        <tr data-player="${esc(p.name)}" class="${rowClass}">
+          <td class="player-cell"><span class="avatar">${esc(firstLetter)}</span>${esc(p.name)}</td>
           <td data-col-label="Спец можливість №1">${cellHtml(p.ability1)}</td>
           <td data-col-label="Спец можливість №2">${cellHtml(p.ability2)}</td>
         </tr>`;

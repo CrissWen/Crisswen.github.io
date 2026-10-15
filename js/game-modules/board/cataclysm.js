@@ -1,4 +1,8 @@
-import { esc } from '../../utils/escape-html.js';
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
 
 export function cataclysm(data) {
   if (!data) {
@@ -41,7 +45,7 @@ export function cataclysm(data) {
       <div class="block-body">
         <div class="cataclysm-row">
           <div class="cataclysm-main">
-            <div class="cataclysm-icon">${(data.icon || "☢").replace(/\uFE0F/g, '\uFE0E')}</div>
+            <div class="cataclysm-icon">${esc((data.icon || "☢").replace(/\uFE0F/g, '\uFE0E'))}</div>
             <div class="cataclysm-content">
               <p class="cataclysm-title">${esc(data.title)}</p>
               <p class="cataclysm-desc">${esc(data.desc)}</p>

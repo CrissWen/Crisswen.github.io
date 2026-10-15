@@ -5,6 +5,12 @@
 // Спец можливості показані окремим підблоком нижче основних характеристик,
 // їх завжди рівно 2.
 
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 export function playerCharacteristics(data) {
   data = data || {
     ownerName: "Олена",
@@ -24,9 +30,9 @@ export function playerCharacteristics(data) {
   const ownerName = data.ownerName || "Гравець";
 
 const renderItem = (c, i, extraClass) => `
-      <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-dbkey="${c.dbKey || ''}" data-idx="${c.index !== undefined ? c.index : ''}">
+      <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-dbkey="${esc(c.dbKey || '')}" data-idx="${c.index !== undefined ? esc(c.index) : ''}">
         <div class="char-text">
-          <span class="char-label">${c.label}</span>
+          <span class="char-label">${esc(c.label)}</span>
           <span class="char-value">${c.value}</span>
         </div>
         <button type="button" class="char-lock" aria-label="Показати або приховати">
@@ -40,7 +46,7 @@ const renderItem = (c, i, extraClass) => `
   const abilityItems = data.abilities.map((c, i) => renderItem(c, i, "ability-item")).join("");
 
   return `
-    <section class="block" id="block-player-characteristics" data-owner="${ownerName}">
+    <section class="block" id="block-player-characteristics" data-owner="${esc(ownerName)}">
       <div class="block-head">
         <h2>Твої характеристики</h2>
       </div>
