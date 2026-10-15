@@ -57,7 +57,16 @@ export const CATEGORY_SCHEMAS = {
     fields: [
       { key: 'can_reproduce', type: 'checkbox', label: 'Здатен до репродукції', default: true },
       { key: 'opposite', type: 'datalist', label: 'Протилежна стать (для обміну)' },
-      { key: 'custom_age', type: 'text', label: 'Перевизначений вік (напр. "Без віку")' }
+      { key: 'has_no_age', type: 'checkbox', label: 'Без віку (вік не генерується)' },
+      { key: 'custom_age_mode', type: 'select', label: 'Індивідуальний режим віку', options: [
+        { value: '', label: 'За замовчуванням' },
+        { value: 'range_and_stages', label: 'Власний діапазон та стадії' },
+        { value: 'no_age', label: 'Без віку' }
+      ] },
+      { key: 'custom_age', type: 'text', label: 'Текст замість віку (напр. "Без віку")' },
+      { key: 'age_min', type: 'text', label: 'Мін. вік (якщо обрано власний діапазон)' },
+      { key: 'age_max', type: 'text', label: 'Макс. вік (якщо обрано власний діапазон)' },
+      { key: 'stages', type: 'list', label: 'Власні вікові стадії' }
     ]
   },
   profession: {

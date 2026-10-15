@@ -97,6 +97,7 @@ function selectCategory(category) {
   
   resetCataForm();
   resetDynForm();
+  updateDynFormState();
   
   renderSearch();
   updateCardsMeta();
@@ -526,6 +527,16 @@ function handleStageKeydown(e) {
           mInput.value = total % 12;
         }
       }
+    } else if (yInput && minYInput) {
+      const fromWrap = row.querySelector('.pe-stage-from-wrap');
+      const hasMin = fromWrap && fromWrap.style.display !== 'none';
+      if (hasMin) {
+        const y = parseInt(yInput.value, 10) || 0;
+        const minY = parseInt(minYInput.value, 10) || 0;
+        if (y > 0 && y <= minY) {
+          yInput.value = minY + y;
+        }
+      }
     }
 
     ui.updateStageListVisuals(key, stageContainer);
@@ -566,14 +577,19 @@ function handleStageKeydown(e) {
     
     ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
     
-    if (state.viewMode === 'visual' && state.activeCategory !== 'cataclysm' && state.dynEditIndex >= 0) {
-      const cards = getDynamicCards();
-      if (cards[state.dynEditIndex]) {
-        fillDynFields(cards[state.dynEditIndex]);
-        updateDynFormState();
+    if (state.viewMode === 'visual' && state.activeCategory !== 'cataclysm') {
+      if (state.dynEditIndex >= 0) {
+        const cards = getDynamicCards();
+        if (cards[state.dynEditIndex]) {
+          fillDynFields(cards[state.dynEditIndex]);
+          updateDynFormState();
+        } else {
+          resetDynForm();
+          setDynMode(-1);
+          updateDynFormState();
+        }
       } else {
-        resetDynForm();
-        setDynMode(-1);
+        updateDynFormState();
       }
     }
     
@@ -732,6 +748,16 @@ function handleStageKeydown(e) {
           const total = y * 12 + m;
           yInput.value = Math.floor(total / 12);
           mInput.value = total % 12;
+        }
+      }
+    } else if (yInput && minYInput) {
+      const fromWrap = row.querySelector('.pe-stage-from-wrap');
+      const hasMin = fromWrap && fromWrap.style.display !== 'none';
+      if (hasMin) {
+        const y = parseInt(yInput.value, 10) || 0;
+        const minY = parseInt(minYInput.value, 10) || 0;
+        if (y > 0 && y <= minY) {
+          yInput.value = minY + y;
         }
       }
     }

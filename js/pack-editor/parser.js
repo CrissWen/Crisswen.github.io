@@ -45,6 +45,9 @@ const PROP_SETTERS = {
   rep: (meta, val) => { meta.can_reproduce = parseBool(val); },
   opp: (meta, val) => { meta.opposite = parseNullable(val); },
   age: (meta, val) => { meta.custom_age = val; },
+  no_age: (meta, val) => { if (parseBool(val)) meta.has_no_age = true; },
+  age_min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
+  age_max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
   action_type: (meta, val) => { meta.action_type = val; },
   no_height: (meta, val) => { if (parseBool(val)) meta.has_no_height = true; },
   exact_height: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
@@ -96,6 +99,16 @@ export function parseCardLine(category, line) {
             if (!isNaN(months)) return { name, up_to_months: months };
           }
           return { name: s };
+        });
+      } else if (category === 'gender') {
+        meta.stages = rawStages.map(s => {
+          const colonIdx = s.lastIndexOf(':');
+          if (colonIdx > 0) {
+            const name = s.slice(0, colonIdx).trim();
+            const age = parseInt(s.slice(colonIdx + 1).trim(), 10);
+            if (!isNaN(age)) return { name, up_to_age: age };
+          }
+          return { name: s, up_to_age: null };
         });
       } else {
         meta.stages = rawStages;
@@ -158,12 +171,19 @@ export function cardToLine(category, value, meta) {
   const props = [];
   if (meta?.can_reproduce !== undefined) props.push(`rep: ${meta.can_reproduce}`);
   if (meta?.opposite !== undefined) props.push(`opp: ${meta.opposite === null ? 'null' : `"${meta.opposite}"`}`);
-  if (meta?.custom_age !== undefined) props.push(`age: "${meta.custom_age}"`);
+  if (meta?.has_no_age === true) props.push('no_age: true');
+  if (meta?.custom_age !== undefined && (!meta.has_no_age || meta.custom_age !== 'Без віку')) props.push(`age: "${meta.custom_age}"`);
+  if (category === 'gender') {
+    if (meta?.range?.min !== undefined) props.push(`age_min: ${meta.range.min}`);
+    if (meta?.range?.max !== undefined) props.push(`age_max: ${meta.range.max}`);
+  }
   if (meta?.action_type !== undefined) props.push(`action_type: "${meta.action_type}"`);
   if (meta?.has_no_height === true) props.push('no_height: true');
   if (meta?.exact_height !== undefined && meta?.exact_height !== '') props.push(`exact_height: ${meta.exact_height}`);
-  if (meta?.range?.min !== undefined) props.push(`min: ${meta.range.min}`);
-  if (meta?.range?.max !== undefined) props.push(`max: ${meta.range.max}`);
+  if (category !== 'gender') {
+    if (meta?.range?.min !== undefined) props.push(`min: ${meta.range.min}`);
+    if (meta?.range?.max !== undefined) props.push(`max: ${meta.range.max}`);
+  }
   if (meta?.description !== undefined) props.push(`desc: "${meta.description}"`);
   if (meta?.timer_minutes !== undefined) props.push(`timer: ${meta.timer_minutes}`);
   if (meta?.stay_time_months !== undefined) props.push(`stay: ${meta.stay_time_months}`);
@@ -178,7 +198,8 @@ export function cardToLine(category, value, meta) {
     const formatted = meta.stages.map(s => {
       if (typeof s === 'object' && s !== null) {
         const cleanName = String(s.name ?? '').replace(/:\s*null\s*$/i, '').trim();
-        return (s.up_to_months !== undefined && s.up_to_months !== null) ? `${cleanName}: ${s.up_to_months}` : cleanName;
+        const limit = s.up_to_age !== undefined ? s.up_to_age : s.up_to_months;
+        return (limit !== undefined && limit !== null) ? `${cleanName}: ${limit}` : cleanName;
       }
       return String(s).replace(/:\s*null\s*$/i, '').trim();
     }).filter(Boolean);

@@ -226,6 +226,7 @@
 
 /* Кнопка вигнання гравця з лобі (хост-режим) */
 .lobby-kick-btn {
+  color: var(--danger);
   opacity: 1; /* Завжди видно на мобільних (де hover: none) */
   transition: opacity 0.2s ease, transform 0.2s ease;
 }

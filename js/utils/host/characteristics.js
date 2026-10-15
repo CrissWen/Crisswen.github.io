@@ -58,13 +58,20 @@ export function withReveal(oldVal, newVal) {
   return { ...newVal, is_revealed: wasRevealed };
 }
 
-// Вік для нової статі: якщо в meta статі є custom_age (напр. "Без віку" у Кіборга) — беремо його,
-// інакше випадкове число в межах config.age_range пака (або defaultAgeRange з конфігу балансу, якщо у пака діапазону немає).
-function generateAge(genderCard, config) {
-  const custom = genderCard?.meta?.custom_age;
-  if (custom) return custom;
+// Вік для нової статі: якщо в meta статі є custom_age чи has_no_age — беремо його,
+// якщо є власний діапазон — беремо з нього, інакше з глобального config.age_range.
+export function generateAge(genderCard, config) {
+  const meta = genderCard?.meta || {};
+  if (meta.has_no_age === true || meta.custom_age_mode === 'no_age') {
+    return meta.custom_age || 'Без віку';
+  }
+  if (meta.custom_age && !meta.range && !meta.age_range && !meta.age_min && !meta.age_max) {
+    return meta.custom_age;
+  }
   const range = config?.age_range || getGameConfigSync().defaultAgeRange;
-  return randInt(range.min, range.max);
+  const min = meta.range?.min ?? meta.age_range?.min ?? meta.age_min ?? range.min;
+  const max = meta.range?.max ?? meta.age_range?.max ?? meta.age_max ?? range.max;
+  return randInt(Math.min(min, max), Math.max(min, max));
 }
 
 // Нова стать і новий вік одним махом. Обидва поля успадковують стан "відкрито/закрито" старої статі
@@ -75,7 +82,15 @@ export function rerollGenderAndAge(player, pools, excludeCurrent = false, update
   const card = pickCard(others.length ? others : all, 'Стать невідома');
   const wasRevealed = !!player.gender?.is_revealed;
 
-  player.gender = { value: card.value, is_revealed: wasRevealed };
+  const genderObj = { value: card.value, is_revealed: wasRevealed };
+  if (card.meta?.has_no_age === true || card.meta?.custom_age_mode === 'no_age') {
+    genderObj.has_no_age = true;
+  }
+  if (Array.isArray(card.meta?.stages) && card.meta.stages.length > 0) {
+    genderObj.custom_stages = card.meta.stages;
+  }
+
+  player.gender = genderObj;
   if (updateAge) {
     player.age = { value: generateAge(card, pools.config), is_revealed: wasRevealed };
   }
@@ -85,7 +100,15 @@ export function rerollGenderAndAge(player, pools, excludeCurrent = false, update
 // Стан "відкрито/закрито" старої статі успадковують і стать, і вік.
 export function applyGenderCard(player, card, config, updateAge = true) {
   const wasRevealed = !!player.gender?.is_revealed;
-  player.gender = { value: card.value, is_revealed: wasRevealed };
+  const genderObj = { value: card.value, is_revealed: wasRevealed };
+  if (card.meta?.has_no_age === true || card.meta?.custom_age_mode === 'no_age') {
+    genderObj.has_no_age = true;
+  }
+  if (Array.isArray(card.meta?.stages) && card.meta.stages.length > 0) {
+    genderObj.custom_stages = card.meta.stages;
+  }
+
+  player.gender = genderObj;
   if (updateAge) {
     player.age = { value: generateAge(card, config), is_revealed: wasRevealed };
   }

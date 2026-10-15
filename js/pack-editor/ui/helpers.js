@@ -4,6 +4,7 @@ import { CATACLYSM_LIMITS, STAGE_KEYS, OBJECT_STAGE_KEYS, parseStageEntry } from
 import { parseLines } from '../parser.js';
 import { renderDynamicFormFields } from './dynamic.js';
 import { stageRowHtml } from './template.js';
+import { state } from '../state.js';
 import Sortable from '../../vendor/sortable.esm.js';
 
 // ===== UI редактора паків: загальні хелпери DOM =====
@@ -23,7 +24,7 @@ export function placeholderFor(category) {
   return TEXTAREA_PLACEHOLDER;
 }
 
-const STAGE_LABELS = { profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби', body_type: 'Типи статури' };
+const STAGE_LABELS = { age_categories: 'Вікові категорії', profession: 'Стаж професії', hobby: 'Рівень хобі', health: 'Ступінь хвороби', body_type: 'Типи статури' };
 export const STAGE_FIELDS = STAGE_KEYS.map(key => ({ key, label: STAGE_LABELS[key] }));
 
 export const RANGE_FIELDS = [
@@ -159,6 +160,11 @@ export function showCategory({ category, text, viewMode = "visual" }) {
       if (category === 'health') {
         renderDynStageList('health', []);
         initDynStageSortable('health');
+      } else if (category === 'gender') {
+        const rawText = state.form?.stages?.['age_categories'] || '';
+        const lines = parseLines(rawText);
+        const entries = lines.map(line => parseStageEntry('age_categories', line));
+        renderDynStageList('gender', entries);
       }
     }
   } else {
@@ -206,11 +212,26 @@ export function updateStageListVisuals(key, container = null) {
                 document.querySelector(`[data-dyn-stage-list="${key}"]`);
   }
   if (!container) return;
-  const rows = [...container.querySelectorAll('.pe-stage-row')];
-  if (!rows.length) return;
 
-  const isTime = OBJECT_STAGE_KEYS.includes(key);
-  if (!isTime) return;
+  const isTime = ['profession', 'hobby'].includes(key);
+  const isAge = ['age_categories', 'gender'].includes(key);
+  if (!isTime && !isAge) return;
+
+  // Always guarantee at least one empty row at the bottom for adding new entries
+  let rows = [...container.querySelectorAll('.pe-stage-row')];
+  const lastRow = rows[rows.length - 1];
+  if (!lastRow || lastRow.querySelector('.pe-stage-name')?.value?.trim()) {
+    container.insertAdjacentHTML('beforeend', stageRowHtml(key, { name: '' }));
+    rows = [...container.querySelectorAll('.pe-stage-row')];
+  }
+
+  // Remove duplicate trailing empty rows if more than one exists
+  const emptyRows = rows.filter(row => !row.querySelector('.pe-stage-name')?.value?.trim());
+  while (emptyRows.length > 1) {
+    const extra = emptyRows.pop();
+    extra.remove();
+    rows = [...container.querySelectorAll('.pe-stage-row')];
+  }
 
   const validRows = rows.filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
 
@@ -231,12 +252,16 @@ export function updateStageListVisuals(key, container = null) {
         fromWrap.style.display = 'none';
       } else {
         fromWrap.style.display = 'flex';
-        const minY = Math.floor(prevMax / 12);
-        const minM = prevMax % 12;
         const minYEl = row.querySelector('[data-type="min-y"]');
         const minMEl = row.querySelector('[data-type="min-m"]');
-        if (minYEl) minYEl.value = minY;
-        if (minMEl) minMEl.value = minM;
+        if (isTime) {
+          const minY = Math.floor(prevMax / 12);
+          const minM = prevMax % 12;
+          if (minYEl) minYEl.value = minY;
+          if (minMEl) minMEl.value = minM;
+        } else if (isAge) {
+          if (minYEl) minYEl.value = prevMax;
+        }
       }
     }
 
@@ -257,11 +282,16 @@ export function updateStageListVisuals(key, container = null) {
         if (moreText) moreText.style.display = 'none';
         toWrap.style.display = 'flex';
 
-        const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
-        const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
-        const endMonths = y * 12 + m;
+        let endLimit = 0;
+        if (isTime) {
+          const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+          const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
+          endLimit = y * 12 + m;
+        } else if (isAge) {
+          endLimit = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+        }
 
-        const isInvalid = endMonths <= prevMax;
+        const isInvalid = endLimit <= prevMax;
         if (isInvalid) {
           row.classList.add('is-warning');
           if (timeField) {
@@ -276,13 +306,13 @@ export function updateStageListVisuals(key, container = null) {
           }
         }
 
-        prevMax = endMonths > prevMax ? endMonths : prevMax;
+        prevMax = endLimit > prevMax ? endLimit : prevMax;
       }
     }
   });
 
-  const emptyRows = rows.filter(row => !row.querySelector('.pe-stage-name')?.value?.trim());
-  emptyRows.forEach(row => {
+  const trailingEmptyRows = rows.filter(row => !row.querySelector('.pe-stage-name')?.value?.trim());
+  trailingEmptyRows.forEach(row => {
     row.classList.remove('is-warning');
     const timeField = row.querySelector('.pe-time-field');
     if (timeField) {
@@ -334,6 +364,18 @@ export function gatherDynStageList(key) {
     return validRows.map(row => row.querySelector('.pe-stage-name').value.trim());
   }
 
+  if (key === 'gender') {
+    return validRows.map((row, index) => {
+      const isLast = index === validRows.length - 1;
+      const name = row.querySelector('.pe-stage-name').value.trim();
+      if (!isLast) {
+        const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+        return { name, up_to_age: y };
+      }
+      return { name, up_to_age: null };
+    });
+  }
+
   return validRows.map((row, index) => {
     const isLast = index === validRows.length - 1;
     const name = row.querySelector('.pe-stage-name').value.trim();
@@ -359,11 +401,15 @@ export function gatherStageText(key) {
   return validRows.map((row, index) => {
     const isLast = index === validRows.length - 1;
     const name = row.querySelector('.pe-stage-name').value.trim();
-    if (OBJECT_STAGE_KEYS.includes(key) && !isLast) {
+    if (['profession', 'hobby'].includes(key) && !isLast) {
       const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
       const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
       const total = y * 12 + m;
       return `${name}: ${total}`;
+    }
+    if (['age_categories', 'gender'].includes(key) && !isLast) {
+      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+      return `${name}: ${y}`;
     }
     return name;
   }).join('\n');

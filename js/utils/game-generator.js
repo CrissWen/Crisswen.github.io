@@ -150,6 +150,11 @@ export async function generateGameState(playersList, pack, config) {
   });
   if (Object.keys(stageScales).length) bunkerState.stage_scales = stageScales;
 
+  // Вікові категорії пака: зберігаємо в bunkerState, якщо вони визначені в конфігу пака
+  if (Array.isArray(config?.age_categories) && config.age_categories.length > 0) {
+    bunkerState.age_categories = config.age_categories;
+  }
+
   const c = pack.character || {};
   const playersState = {};
 
@@ -172,10 +177,25 @@ export async function generateGameState(playersList, pack, config) {
 
   playersList.forEach(player => {
     const genderItem = pickCard(c.gender, "Стать невідома");
-    let ageVal = randInt(config.age_range.min, config.age_range.max);
-    
-    if (genderItem.meta && genderItem.meta.custom_age) {
-      ageVal = genderItem.meta.custom_age;
+    const genderMeta = genderItem.meta || {};
+
+    let ageVal;
+    if (genderMeta.has_no_age === true || genderMeta.custom_age_mode === 'no_age') {
+      ageVal = genderMeta.custom_age || "Без віку";
+    } else if (genderMeta.custom_age && !genderMeta.range && !genderMeta.age_range && !genderMeta.age_min && !genderMeta.age_max) {
+      ageVal = genderMeta.custom_age;
+    } else {
+      const min = genderMeta.range?.min ?? genderMeta.age_range?.min ?? genderMeta.age_min ?? config.age_range?.min ?? 16;
+      const max = genderMeta.range?.max ?? genderMeta.age_range?.max ?? genderMeta.age_max ?? config.age_range?.max ?? 85;
+      ageVal = randInt(Math.min(min, max), Math.max(min, max));
+    }
+
+    const genderObj = { value: genderItem.value, is_revealed: false };
+    if (genderMeta.has_no_age === true || genderMeta.custom_age_mode === 'no_age') {
+      genderObj.has_no_age = true;
+    }
+    if (Array.isArray(genderMeta.stages) && genderMeta.stages.length > 0) {
+      genderObj.custom_stages = genderMeta.stages;
     }
     const isChildfree = config.allow_childfree ? (rollChance(bc.childfreeChance)) : false;
 
@@ -214,7 +234,7 @@ export async function generateGameState(playersList, pack, config) {
       name: player.name,
       is_alive: true,
       
-      gender: { value: genderItem.value, is_revealed: false },
+      gender: genderObj,
       age: { value: ageVal, is_revealed: false },
       childfree: { value: isChildfree, is_revealed: false },
       

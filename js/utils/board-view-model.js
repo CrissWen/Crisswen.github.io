@@ -46,7 +46,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
 
     // Помилка парсингу одного гравця не повинна ламати весь стіл
     try {
-      const flatPlayer = mapPlayerState(rawPlayer, bState.stage_scales);
+      const flatPlayer = mapPlayerState(rawPlayer, bState.stage_scales, bState.age_categories);
       flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
 
       parsedAbilities.push({
@@ -80,7 +80,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
   let myData = { name: pState[currentUserId]?.name || 'Глядач', characteristics: [], abilities: [] };
   try {
     if (pState[currentUserId] && pState[currentUserId].gender) {
-      myData = mapPlayerState(pState[currentUserId], bState.stage_scales);
+      myData = mapPlayerState(pState[currentUserId], bState.stage_scales, bState.age_categories);
     }
   } catch (err) {
     console.error('Не вдалося розібрати власні характеристики:', err);
