@@ -175,7 +175,8 @@ function updateGameBoard(roomData, container) {
       maxPlayers: bc.maxPlayersInLobby,
       selectedPackId: roomData.selected_pack_id,
       selectedPackTitle: roomData.selected_pack_title,
-      packOptions: isHost ? getPackOptions() : null
+      packOptions: isHost ? getPackOptions() : null,
+      myId: currentUserId
     });
 
     if (isHost) {
@@ -259,6 +260,14 @@ function handleRoomUpdate(patch) {
   const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
 
   localRoomState = mergeRoomState(localRoomState, patch);
+
+  // Якщо гра ще не почалася, і нас видалили з players_state, значить нас вигнали з лобі
+  const isGameStartedNow = Object.keys(localRoomState.bunker_state || {}).length > 0;
+  if (!isGameStartedNow && localRoomState.host_id !== currentUserId && !localRoomState.players_state?.[currentUserId]) {
+    alert('Вас вигнали з кімнати.');
+    window.location.hash = '#/lobby';
+    return;
+  }
 
   // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
   if (localRoomState.status === 'closed') {
@@ -387,6 +396,23 @@ async function handleGlobalClick(e) {
   const kickBtn = e.target.closest('[data-kick-id]');
   if (kickBtn) {
     await handleKickToggle(kickBtn);
+    return;
+  }
+
+  const lobbyKickBtn = e.target.closest('[data-lobby-kick]');
+  if (lobbyKickBtn) {
+    if (isKickInFlight) return;
+    isKickInFlight = true;
+    lobbyKickBtn.style.pointerEvents = 'none';
+    try {
+      await HostActions.kickPlayerFromLobby(currentRoomCode, lobbyKickBtn.dataset.lobbyKick);
+    } catch (err) {
+      console.error('Не вдалося вигнати гравця з лобі:', err);
+      showGlobalToast(err.message || 'Не вдалося виконати дію');
+    } finally {
+      isKickInFlight = false;
+      lobbyKickBtn.style.pointerEvents = '';
+    }
     return;
   }
 
