@@ -2,6 +2,7 @@ import {
   CHARACTERISTIC_TYPES,
   EXTRA_CHARACTERISTIC_TYPES,
   BUNKER_FIELDS,
+  DELETABLE_CHARACTERISTICS,
   HEAL_PERFECT
 } from '../../utils/host-actions.js';
 
@@ -41,6 +42,10 @@ const PLAYER_SELECT_MODES = {
 const charTypeOptions = () => optionsHtml(CHARACTERISTIC_TYPES.map(c => ({ value: c.key, label: c.label })));
 const extraTypeOptions = () => optionsHtml(EXTRA_CHARACTERISTIC_TYPES.map(c => ({ value: c.key, label: c.label })));
 const bunkerFieldOptions = () => optionsHtml(BUNKER_FIELDS.map(f => ({ value: f.key, label: f.label })));
+// Список для «Видалити характеристику»: заглушка без значення + усі поля з DELETABLE_CHARACTERISTICS (ключ = поле в players_state).
+const deletableOptions = () =>
+  '<option value="" disabled selected>Оберіть характеристику...</option>' +
+  optionsHtml(DELETABLE_CHARACTERISTICS.map(c => ({ value: c.key, label: c.label })));
 
 function acc(title, body) {
   return `
@@ -140,9 +145,14 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Змінити на випадкову', 'changeCharacteristic')}
             `)}
 
-            ${acc('Змінити стаж професії', `
+            ${acc('Змінити стаж', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Стаж', `<select class="hp-select" data-field="level" data-stages="profession"></select>`)}
+              ${field('Характеристика', `<select class="hp-select" data-field="expType">
+                <option value="profession" selected>Професія</option>
+                <option value="hobby">Хобі</option>
+              </select>`)}
+              <label class="hp-field" data-exp-sub="profession"><span>Стаж</span><select class="hp-select" data-field="levelProf" data-stages="profession"></select></label>
+              <label class="hp-field" data-exp-sub="hobby" style="display:none"><span>Стаж</span><select class="hp-select" data-field="levelHobby" data-stages="hobby"></select></label>
               ${actionBtn('Застосувати', 'changeExperience')}
             `)}
 
@@ -158,9 +168,13 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Застосувати', 'changeBodyType')}
             `)}
 
-            ${acc('Змінити стать на протилежну', `
+            ${acc('Змінити стать', `
               ${field('Гравець', playersSelect('all'))}
-              ${actionBtn('Змінити стать', 'invertGender')}
+              ${field('На конкретну', `<select class="hp-select" data-field="genderValue" data-stages="gender"></select>`)}
+              <div class="hp-row hp-row-stack hp-mt">
+                ${actionBtn('Застосувати', 'setGender')}
+                ${actionBtn('На протилежну', 'invertGender')}
+              </div>
             `)}
 
             ${acc('Обмінятися характеристиками', `
@@ -177,9 +191,15 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Вкрасти', 'stealCharacteristic')}
             `)}
 
-            ${acc('Лікувати', `
+            ${acc('Лікувати / Зробити', `
               ${field('Гравець', playersSelect('all'))}
-              ${actionBtn('Вилікувати', 'healPlayer')}
+              ${field('Дія', `<select class="hp-select" data-field="healAction">
+                <option value="perfect" selected>Зробити ідеально здоровим</option>
+                <option value="makeChildfree">Зробити чайлдфрі</option>
+                <option value="cureChildfree">Вилікувати чайлдфрі</option>
+                <option value="curePhobia">Вилікувати фобію</option>
+              </select>`)}
+              ${actionBtn('Застосувати', 'healMake')}
             `)}
 
             ${acc('Додати доп. характеристику', `
@@ -189,12 +209,10 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
               ${actionBtn('Додати', 'addExtraCharacteristic')}
             `)}
 
-            ${acc('Видалити інвентар', `
+            ${acc('Видалити характеристику', `
               ${field('Гравець', playersSelect('all'))}
-              <div class="hp-row hp-row-stack">
-                ${actionBtn('Видалити крупний інвентар', 'deleteInventory', 'data-arg="large_inventory"')}
-                ${actionBtn('Видалити рюкзак', 'deleteInventory', 'data-arg="backpack"')}
-              </div>
+              ${field('Характеристика', `<select class="hp-select" id="charToDelete" data-field="charKey">${deletableOptions()}</select>`)}
+              ${actionBtn('Видалити', 'deleteCharacteristic')}
             `)}
 
             ${acc('Зсув характеристик', `
