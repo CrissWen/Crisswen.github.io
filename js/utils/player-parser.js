@@ -1,4 +1,4 @@
-import { describeScale } from './experience.js';
+import { describeScale, getMonthScale } from './experience.js';
 
 function getAgeCategory(age) {
   const num = Number(age);
@@ -42,11 +42,13 @@ function formatBody(d) {
   return `${type}, ${esc(h)}`;
 }
 
-// Рядок шкали для конкретної стадії («Стажер – від 3 місяців до 1 року») зі шкали пака bunker_state.stage_scales.
-// Немає шкали (стара кімната, рядкові стадії) або стадії в ній немає → ''.
-function stageHint(stageScales, type, stage) {
-  if (!stage || !stageScales || !stageScales[type]) return '';
-  return describeScale(stageScales[type]).find(line => line.startsWith(`${stage} – `)) || '';
+// Рядок шкали для конкретної стадії («Стажер – від 3 місяців до 1 року») ЛИШЕ якщо картка має власну кастомну шкалу стадій.
+// Стандартні стадії з дефолт-пулу підказку в тултіпі не показують.
+function customStageHint(card) {
+  if (!card?.stage) return '';
+  const scale = card.custom_scale || (Array.isArray(card.stages) ? getMonthScale(card.stages) : null);
+  if (!scale || !scale.length) return '';
+  return describeScale(scale).find(line => line === card.stage || line.startsWith(`${card.stage} – `)) || '';
 }
 
 // Текст з meta картки: лише реальний рядок (без «undefined»/«null» і пробілів по краях), інакше ''
@@ -121,32 +123,33 @@ export function mapPlayerState(rawPlayer, stageScales = null) {
     const stage = esc(d.stage);
     let profText = stage ? `${title} (${stage})` : title;
 
-    // Вміння беремо лише якщо воно є реальним текстом: без meta.ability — лише назва (і стадія), без «undefined» і зайвих знаків.
     const ability = cleanText(d.ability);
-    if (ability) {
-      profText += infoIcon([
-        { title: 'Унікальна здібність:', text: ability },
-        { title: 'Стадія:', text: stageHint(stageScales, 'profession', d.stage) }
-      ]);
+    const stageText = customStageHint(d);
+    if (ability || stageText) {
+      const sections = [];
+      if (ability) sections.push({ title: 'Унікальна здібність:', text: ability });
+      if (stageText) sections.push({ title: 'Стадія:', text: stageText });
+      profText += infoIcon(sections);
     }
 
     return profText;
   });
   add('health', "Здоров'я", d => (d.disease === "Ідеально здоровий" || !d.severity) ? esc(d.disease) : `${esc(d.disease)} (${esc(d.severity)})`);
   // Хобі: «Назва (стадія)», без стадії (ручна картка ведучого) — лише назва, без «()».
-  // Значок «i» з'являється, лише якщо у meta хобі є опис або здібність; рядок шкали стадії додається під ними.
+  // Значок «i» показується, якщо у meta хобі є опис, здібність або власна кастомна шкала стадій.
   add('hobbies', 'Хобі/Навички', d => {
     const title = esc(d.title);
     const stage = esc(d.stage);
     const hobbyText = stage ? `${title} (${stage})` : title;
     const description = cleanText(d.description);
     const ability = cleanText(d.ability);
-    if (!description && !ability) return hobbyText;
-    return hobbyText + infoIcon([
-      { title: 'Опис:', text: description },
-      { title: 'Особливість:', text: ability },
-      { title: 'Стадія:', text: stageHint(stageScales, 'hobby', d.stage) }
-    ]);
+    const stageText = customStageHint(d);
+    if (!description && !ability && !stageText) return hobbyText;
+    const sections = [];
+    if (description) sections.push({ title: 'Опис:', text: description });
+    if (ability) sections.push({ title: 'Особливість:', text: ability });
+    if (stageText) sections.push({ title: 'Стадія:', text: stageText });
+    return hobbyText + infoIcon(sections);
   });
   add('phobias', 'Фобія', d => esc(d.value));
   add('large_inventory', 'Крупний інвентар', d => esc(d.item));

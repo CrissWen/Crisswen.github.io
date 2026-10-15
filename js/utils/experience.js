@@ -107,9 +107,21 @@ export const generateExperienceMonths = (type, config, age, startAge = DEFAULT_E
 export function rollExperience(type, card, config, age, startAge = DEFAULT_EXPERIENCE_START_AGE) {
   const cardStages = card?.meta?.stages;
   const hasCardStages = Array.isArray(cardStages) && cardStages.length > 0;
-  const scale = hasCardStages ? getMonthScale(cardStages) : getMonthStages(type, config);
-  if (scale.length) {
-    return { stage: stageNameByMonths(scale, generateMonthsForScale(scale, age, startAge)) };
+
+  if (hasCardStages) {
+    const cardScale = getMonthScale(cardStages);
+    if (cardScale.length) {
+      return {
+        stage: stageNameByMonths(cardScale, generateMonthsForScale(cardScale, age, startAge)),
+        custom_scale: serializeScale(cardScale)
+      };
+    }
+    return { stage: pickStage(card || {}, config?.default_stages?.[type]) };
+  }
+
+  const defaultScale = getMonthStages(type, config);
+  if (defaultScale.length) {
+    return { stage: stageNameByMonths(defaultScale, generateMonthsForScale(defaultScale, age, startAge)) };
   }
   return { stage: pickStage(card || {}, config?.default_stages?.[type]) };
 }
