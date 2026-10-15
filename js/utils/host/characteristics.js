@@ -69,14 +69,26 @@ function generateAge(genderCard, config) {
 
 // Нова стать і новий вік одним махом. Обидва поля успадковують стан "відкрито/закрито" старої статі
 // (game.js також розкриває/ховає age разом із gender). excludeCurrent — не випадати тій самій статі.
-export function rerollGenderAndAge(player, pools, excludeCurrent = false) {
+export function rerollGenderAndAge(player, pools, excludeCurrent = false, updateAge = true) {
   const all = pools.character.gender || [];
   const others = excludeCurrent ? all.filter(c => c.value !== player.gender?.value) : all;
   const card = pickCard(others.length ? others : all, 'Стать невідома');
   const wasRevealed = !!player.gender?.is_revealed;
 
   player.gender = { value: card.value, is_revealed: wasRevealed };
-  player.age = { value: generateAge(card, pools.config), is_revealed: wasRevealed };
+  if (updateAge) {
+    player.age = { value: generateAge(card, pools.config), is_revealed: wasRevealed };
+  }
+}
+
+// Виставляє конкретну (обрану ведучим) стать і перегенеровує вік під неї (як у rerollGenderAndAge, але без випадкового вибору).
+// Стан "відкрито/закрито" старої статі успадковують і стать, і вік.
+export function applyGenderCard(player, card, config, updateAge = true) {
+  const wasRevealed = !!player.gender?.is_revealed;
+  player.gender = { value: card.value, is_revealed: wasRevealed };
+  if (updateAge) {
+    player.age = { value: generateAge(card, config), is_revealed: wasRevealed };
+  }
 }
 
 // Картка з тексту, який ведучий ввів вручну: { value, meta: {}, is_revealed: false }.

@@ -29,9 +29,9 @@ function nameOf(players, id) {
 }
 
 // Таблиця на 3 колонки: кандидат / хто голосував (через кому) / % від живих гравців.
-// Кандидати з 0 голосів не виводяться. aliveCount — ЗНАМЕННИК відсотка: живі гравці НА МОМЕНТ рендеру
-// (а не на момент голосування) — так відсоток лишається коректним, навіть якщо хтось вибув між голосуванням і переглядом.
-function resultsTableHtml(votes, players, aliveCount) {
+// Кандидати з 0 голосів не виводяться. totalVoters — ЗНАМЕННИК відсотка: живі гравці на момент ЗАВЕРШЕННЯ голосування
+// (або поточна кількість живих як фолбек).
+function resultsTableHtml(votes, players, totalVoters) {
   const tally = {};
   Object.entries(votes).forEach(([voterId, candidateId]) => {
     (tally[candidateId] ||= []).push(voterId);
@@ -40,7 +40,7 @@ function resultsTableHtml(votes, players, aliveCount) {
   const rows = Object.entries(tally)
     .sort((a, b) => b[1].length - a[1].length)
     .map(([candidateId, voterIds]) => {
-      const percent = aliveCount > 0 ? Math.round((voterIds.length / aliveCount) * 100) : 0;
+      const percent = totalVoters > 0 ? Math.round((voterIds.length / totalVoters) * 100) : 0;
       return `
         <tr>
           <td>${esc(nameOf(players, candidateId))}</td>
@@ -105,7 +105,8 @@ export function votingSection({ voting, players = [], myId, amAlive }) {
 
   // 1. Завершено — результати бачать усі, незалежно від amAlive
   if (!isActive && hasVotes) {
-    return resultsTableHtml(votes, players, aliveList.length);
+    const totalVoters = voting.totalVoters || aliveList.length;
+    return resultsTableHtml(votes, players, totalVoters);
   }
 
   // 2./5. Не активне (і ще не було голосів) або гравець вибув — порожня секція (id лишається в DOM)

@@ -98,6 +98,7 @@ const PLAYER_CARD_FIELDS = {
 // player — запис гравця з players_state (або null/undefined, напр. «Для всіх»: тоді лише стандартні стадії).
 // Список стадій індивідуальний: default_stages + meta.stages ЛИШЕ тієї картки, якою зараз володіє гравець
 // (changeExperience/changeDiseaseSeverity змінюють саме першу картку слота, тому дивимось на неї).
+// gender — усі варіанти статі з пака (для дії "Змінити стать" в блоці "Лікувати / Зробити"). Вони теж заповнюються через data-stages.
 export async function getStageOptions(player = null, packId = null) {
   const pools = await loadPools(packId);
   const stages = pools.config?.default_stages || {};
@@ -114,9 +115,12 @@ export async function getStageOptions(player = null, packId = null) {
     }
     return [...new Set(names)]; // без дублікатів, стандартні їдуть першими
   };
+  const bodyTypeStages = getStageNames(stages.body_type);
   return {
     profession: build('profession'),
     hobby: build('hobby'),
-    health: build('health')
+    health: build('health'),
+    body_type: bodyTypeStages.length ? bodyTypeStages : (pools.character?.body_type || []).map(c => c.value),
+    gender: (pools.character?.gender || []).map(c => c.value)
   };
 }

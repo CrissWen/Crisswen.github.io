@@ -1,6 +1,6 @@
 function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  return String(str ?? '').replace(/[&<>"]/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
   ));
 }
 
@@ -14,16 +14,20 @@ export function specialAbilitiesTable (players) {
     { name: "Богдан", ability1: "Погляд у колоду дій", ability2: null }
   ];
 
-  const cellHtml = (val) =>
-    val ? `<span class="cell-value">${esc(val)}</span>` : `<span class="cell-empty"></span>`;
+  const cellHtml = (val) => {
+    if (!val) return '<span class="cell-empty"></span>';
+    const cleanVal = String(val).replace(/&amp;#39;|&amp;apos;/g, "'").replace(/&#39;|&apos;/g, "'");
+    return `<span class="cell-value">${esc(cleanVal)}</span>`;
+  };
 
   const rows = players
     .map((p) => {
       const rowClass = p.isKicked ? 'kicked-player' : '';
-      const firstLetter = p.name ? p.name[0] : '';
+      const cleanName = String(p.name ?? '').replace(/&amp;#39;|&amp;apos;/g, "'").replace(/&#39;|&apos;/g, "'");
+      const firstLetter = cleanName ? cleanName[0] : '';
       return `
-        <tr data-player="${esc(p.name)}" class="${rowClass}">
-          <td class="player-cell"><span class="avatar">${esc(firstLetter)}</span>${esc(p.name)}</td>
+        <tr data-player="${esc(cleanName)}" class="${rowClass}">
+          <td class="player-cell"><span class="avatar">${esc(firstLetter)}</span>${esc(cleanName)}</td>
           <td data-col-label="Спец можливість №1">${cellHtml(p.ability1)}</td>
           <td data-col-label="Спец можливість №2">${cellHtml(p.ability2)}</td>
         </tr>`;

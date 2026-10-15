@@ -32,7 +32,17 @@ export async function finishVoting(roomCode) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   if (!bState.voting?.isActive) return;
-  bState.voting = { ...bState.voting, isActive: false };
+
+  const pState = room.players_state || {};
+  let totalVoters = 0;
+  for (const id in pState) {
+    const p = pState[id];
+    if (p && p.is_alive !== false && !p.is_kicked) {
+      totalVoters++;
+    }
+  }
+
+  bState.voting = { ...bState.voting, isActive: false, totalVoters };
   await saveRoom(roomCode, { bunker_state: bState });
 }
 

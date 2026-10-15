@@ -161,7 +161,8 @@ export async function generateGameState(playersList, pack, config) {
     backpacks: shuffleArray(c.backpack),
     large_inventory: shuffleArray(c.large_inventory),
     extra_info: shuffleArray(c.extra_info),
-    abilities: shuffleArray(c.special_ability)
+    abilities: shuffleArray(c.special_ability),
+    healths: shuffleArray(c.health)
   };
 
   const drawCard = (deckName, fallbackArray) => {
@@ -197,7 +198,7 @@ export async function generateGameState(playersList, pack, config) {
       healthDisease = "Ідеально здоровий";
       healthStage = null; 
     } else {
-      const healthItem = pickCard(c.health, "Хвороба невідома");
+      const healthItem = drawCard('healths', c.health);
       healthDisease = healthItem.value;
       // Стадії хвороби: спочатку meta.stages картки, інакше default_stages.health (рядки або об'єкти — pickStage бере лише name, up_to_months не чіпає).
       // ?. — пак без default_stages не валить старт гри (буде «Невідома стадія»)
