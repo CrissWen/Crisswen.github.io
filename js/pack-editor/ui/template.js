@@ -6,12 +6,13 @@ const TEXTAREA_PLACEHOLDER = 'Введіть характеристики сто
 
 export function stageRowHtml(key, entry) {
   const isTime = ['profession', 'hobby'].includes(key);
+  const isAge = ['age_categories', 'gender'].includes(key);
   const name = typeof entry === 'object' ? entry.name : entry;
   const isNew = !name;
   const newClass = isNew ? ' pe-stage-row--new' : '';
 
   if (isTime) {
-    const total = entry.up_to_months || 0;
+    const total = entry?.up_to_months || 0;
     const y = Math.floor(total / 12);
     const m = total % 12;
     return `
@@ -35,6 +36,36 @@ export function stageRowHtml(key, entry) {
               <span class="pe-time-unit">р</span>
               <input type="number" class="pe-time-val" data-type="m" value="${m}" min="0" max="11">
               <span class="pe-time-unit">м</span>
+            </div>
+            <span class="pe-stage-text pe-stage-more-text" style="display:none;">і більше</span>
+          </div>
+        </div>
+        <button class="pe-stage-del" tabindex="-1" title="Видалити">✕</button>
+      </div>
+    `;
+  }
+
+  if (isAge) {
+    const y = entry?.up_to_age !== undefined && entry.up_to_age !== null
+      ? entry.up_to_age
+      : (entry?.up_to_months !== undefined && entry.up_to_months !== null ? Math.floor(entry.up_to_months / 12) : 0);
+    return `
+      <div class="pe-stage-row pe-stage-row--card${newClass}">
+        <div class="pe-stage-handle pe-stage-handle--card" title="Перетягніть для зміни порядку" aria-label="Перетягнути"></div>
+        <input type="text" class="pe-input pe-stage-name" value="${esc(name || '')}" placeholder="${isNew ? 'Нова стадія...' : 'Назва'}">
+        <div class="pe-stage-time-group">
+          <div class="pe-stage-time-row pe-stage-from-wrap">
+            <span class="pe-stage-text">від</span>
+            <div class="pe-time-field is-disabled">
+              <input type="number" class="pe-time-val" data-type="min-y" value="0" disabled>
+              <span class="pe-time-unit">р</span>
+            </div>
+          </div>
+          <div class="pe-stage-time-row pe-stage-to-wrap">
+            <span class="pe-stage-text pe-stage-to-text">до</span>
+            <div class="pe-time-field">
+              <input type="number" class="pe-time-val" data-type="y" value="${y}" min="0">
+              <span class="pe-time-unit">р</span>
             </div>
             <span class="pe-stage-text pe-stage-more-text" style="display:none;">і більше</span>
           </div>

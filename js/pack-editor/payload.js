@@ -76,6 +76,14 @@ export function extraMetaOf(category, meta) {
     delete extra.range;
     delete extra.exact_height;
   }
+  if (category === 'gender') {
+    delete extra.can_reproduce;
+    delete extra.opposite;
+    delete extra.has_no_age;
+    delete extra.custom_age;
+    delete extra.range;
+    delete extra.stages;
+  }
   return Object.keys(extra).length ? extra : null;
 }
 
@@ -102,7 +110,8 @@ export function buildCardRows(texts, extraMeta = {}, cataclysms = []) {
 // Чисті функції (без DOM і стану сторінки): контролер pack-editor.js передає їм дані форми й отримує готовий результат.
 
 // Ключі збігаються з packs.config.default_stages, які читає ігровий рушій (підписи для UI — у editor-ui.js)
-export const STAGE_KEYS = ['profession', 'hobby', 'health', 'body_type'];
+// age_categories — кореневе поле packs.config, але в UI редагується поряд зі стадіями
+export const STAGE_KEYS = ['age_categories', 'profession', 'hobby', 'health', 'body_type'];
 
 // Діапазони віку/зросту: підстава для НОВОГО пака, якщо в самому дефолтному паку раптом щось відсутнє (див. rangesFromConfig)
 export const RANGE_DEFAULTS = { ageMin: 16, ageMax: 85, heightMin: 150, heightMax: 210, heightMode: 'base' };
@@ -129,29 +138,30 @@ export function validateRanges(r) {
   return '';
 }
 
-export const OBJECT_STAGE_KEYS = ['profession', 'hobby'];
+export const OBJECT_STAGE_KEYS = ['age_categories', 'profession', 'hobby', 'gender'];
 
 export function parseStageEntry(key, line) {
   if (!OBJECT_STAGE_KEYS.includes(key)) {
     return line;
   }
+  const isAge = ['age_categories', 'gender'].includes(key);
   const cleanLine = line.trim();
   const colonIdx = cleanLine.lastIndexOf(':');
   if (colonIdx > 0) {
     const rawName = cleanLine.slice(0, colonIdx).trim();
-    const monthsStr = cleanLine.slice(colonIdx + 1).trim();
-    if (monthsStr.toLowerCase() === 'null') {
+    const valStr = cleanLine.slice(colonIdx + 1).trim();
+    if (valStr.toLowerCase() === 'null') {
       const name = rawName.replace(/:\s*null\s*$/i, '').trim();
-      return { name, up_to_months: null };
+      return isAge ? { name, up_to_age: null } : { name, up_to_months: null };
     }
-    const months = parseInt(monthsStr, 10);
-    if (!isNaN(months)) {
+    const val = parseInt(valStr, 10);
+    if (!isNaN(val)) {
       const name = rawName.replace(/:\s*null\s*$/i, '').trim();
-      return { name, up_to_months: months };
+      return isAge ? { name, up_to_age: val } : { name, up_to_months: val };
     }
   }
   const name = cleanLine.replace(/:\s*null\s*$/i, '').trim();
-  return { name, up_to_months: null };
+  return isAge ? { name, up_to_age: null } : { name, up_to_months: null };
 }
 
 export function validateStageEntries(key, entries) {
@@ -172,7 +182,7 @@ export function validateStageEntries(key, entries) {
   for (let i = 0; i < entries.length - 1; i++) {
     const entry = entries[i];
     const name = typeof entry === 'object' ? (entry?.name || '') : String(entry || '');
-    const upTo = typeof entry === 'object' ? entry?.up_to_months : null;
+    const upTo = typeof entry === 'object' ? (entry?.up_to_age ?? entry?.up_to_months) : null;
     if (upTo === null || upTo === undefined || upTo <= prevMax) {
       return `У стадії "${name || (i + 1)}" не вказано коректний кінцевий період (має бути більшим за початковий)`;
     }
@@ -193,7 +203,7 @@ export function validateStageText(key, text) {
 export function stagesTextFromConfig(config) {
   const text = {};
   for (const key of STAGE_KEYS) {
-    const list = config?.default_stages?.[key];
+    const list = key === 'age_categories' ? config?.age_categories : config?.default_stages?.[key];
     if (!Array.isArray(list)) {
       text[key] = '';
       continue;
@@ -203,8 +213,9 @@ export function stagesTextFromConfig(config) {
         if (typeof s === 'string') return s.replace(/:\s*null\s*$/i, '').trim();
         if (s && typeof s === 'object') {
           const name = String(s.name ?? '').replace(/:\s*null\s*$/i, '').trim();
-          if (name && s.up_to_months !== undefined && s.up_to_months !== null) {
-            return `${name}: ${s.up_to_months}`;
+          const limit = s.up_to_age !== undefined ? s.up_to_age : s.up_to_months;
+          if (name && limit !== undefined && limit !== null) {
+            return `${name}: ${limit}`;
           }
           if (name) return name;
         }
@@ -241,10 +252,14 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
       stageLists[key] = lines.map(line => parseStageEntry(key, line));
     }
   }
+
+  const ageCategories = stageLists.age_categories || packConfig.age_categories || defaultConfig.age_categories || null;
+  delete stageLists.age_categories;
   
   const finalConfig = {
     ...defaultConfig,
     ...packConfig,
+    ...(ageCategories ? { age_categories: ageCategories } : {}),
     age_range: {
       min: parseInt(ranges.ageMin, 10),
       max: parseInt(ranges.ageMax, 10)
@@ -261,6 +276,7 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
   };
 
   // Видаляємо помилково додані поля, якщо вони туди потрапили
+  delete finalConfig.default_stages?.age_categories;
   delete finalConfig.height_settings;
   delete finalConfig.default_body_types;
 

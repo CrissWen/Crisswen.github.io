@@ -34,27 +34,38 @@ export function renderDynamicFormFields(schema) {
             <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="${state.activeCategory}"></div>
             <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
           </div>`;
+      } else if (state.activeCategory === 'gender') {
+        return `
+          <div id="pe-dyn-gender-stages-wrap" class="pe-dyn-stages-wrap" hidden>
+            <label class="pe-label">Власні вікові стадії (категорії)</label>
+            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="gender"></div>
+            <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
+          </div>`;
       }
     }
 
+    const isConditional = ['custom_age', 'age_min', 'age_max', 'height_min', 'height_max', 'exact_height'].includes(f.key);
+    const hiddenStyle = isConditional ? ' style="display: none;"' : '';
+
     if (f.type === 'checkbox') {
+      const isChecked = f.default ? ' checked' : '';
       return `
-        <div class="pe-field pe-dyn-field-checkbox">
+        <div class="pe-field pe-dyn-field-checkbox"${hiddenStyle}>
           <label class="pe-check" for="pe-dyn-${f.key}">
-            <input id="pe-dyn-${f.key}" class="pe-check__input" type="checkbox" data-dyn-key="${f.key}">
+            <input id="pe-dyn-${f.key}" class="pe-check__input" type="checkbox" data-dyn-key="${f.key}"${isChecked}>
             <span class="pe-check__box" aria-hidden="true"></span>
             <span class="pe-check__text">${esc(f.label)}</span>
           </label>
         </div>`;
     } else if (f.type === 'list') {
       return `
-        <div class="pe-field">
+        <div class="pe-field"${hiddenStyle}>
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
           <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc" rows="3" data-dyn-key="${f.key}" placeholder="По одній стадії на рядок"></textarea>
         </div>`;
     } else if (f.type === 'datalist') {
       return `
-        <div class="pe-field">
+        <div class="pe-field"${hiddenStyle}>
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
           <div class="pe-combo">
             <input id="pe-dyn-${f.key}" class="pe-input pe-combo__input" type="text" data-dyn-key="${f.key}" autocomplete="off" placeholder="Виберіть або введіть нове">
@@ -66,7 +77,7 @@ export function renderDynamicFormFields(schema) {
         </div>`;
     } else if (f.type === 'select') {
       return `
-        <div class="pe-field">
+        <div class="pe-field"${hiddenStyle}>
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
           <select id="pe-dyn-${f.key}" class="pe-input" data-dyn-key="${f.key}">
             ${f.options.map(opt => `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('')}
@@ -74,13 +85,13 @@ export function renderDynamicFormFields(schema) {
         </div>`;
     } else if (f.type === 'textarea' || f.key === 'explanation' || f.key === 'ability' || f.key === 'description') {
       return `
-        <div class="pe-field">
+        <div class="pe-field"${hiddenStyle}>
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
           <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc pe-input--name" rows="2" data-dyn-key="${f.key}" placeholder="Введіть ${esc(f.label).toLowerCase()}"></textarea>
         </div>`;
     } else {
       return `
-        <div class="pe-field">
+        <div class="pe-field"${hiddenStyle}>
           <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
           <input id="pe-dyn-${f.key}" class="pe-input" type="text" data-dyn-key="${f.key}" autocomplete="off" placeholder="Введіть ${esc(f.label).toLowerCase()}">
         </div>`;

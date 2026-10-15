@@ -42,6 +42,7 @@ export function dynDraftPending() {
   const currentValue = withExplanation ? joinNameExplanation(current.value, current.explanation) : current.value;
   if (currentValue !== savedValue) return true;
   const isBody = state.activeCategory === 'body_type';
+  const isGender = state.activeCategory === 'gender';
   for (const f of CATEGORY_SCHEMAS[state.activeCategory].fields) {
     if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище
     const v1 = current[f.key];
@@ -57,6 +58,19 @@ export function dynDraftPending() {
         v2 = item.meta?.range?.max !== undefined ? String(item.meta.range.max) : '';
       } else if (f.key === 'exact_height') {
         v2 = item.meta?.exact_height !== undefined ? String(item.meta.exact_height) : '';
+      }
+    }
+    if (isGender) {
+      if (f.key === 'has_no_age') {
+        v2 = Boolean(item.meta?.has_no_age);
+      } else if (f.key === 'custom_age_mode') {
+        v2 = item.meta?.has_no_age ? 'no_age' : ((item.meta?.range || (item.meta?.stages && item.meta.stages.length > 0)) ? 'range_and_stages' : (item.meta?.custom_age ? 'no_age' : ''));
+      } else if (f.key === 'age_min') {
+        v2 = item.meta?.range?.min !== undefined ? String(item.meta.range.min) : '';
+      } else if (f.key === 'age_max') {
+        v2 = item.meta?.range?.max !== undefined ? String(item.meta.range.max) : '';
+      } else if (f.key === 'custom_age') {
+        v2 = item.meta?.custom_age !== undefined ? String(item.meta.custom_age) : '';
       }
     }
     if (f.key === 'stages') {
@@ -90,6 +104,15 @@ export function readDynRaw() {
         const isCustom = $('pe-dyn-custom-stages-toggle')?.checked;
         if (isCustom) {
           const list = gatherDynStageList(state.activeCategory);
+          data.stages = list.length > 0 ? list : undefined;
+        } else {
+          data.stages = undefined;
+        }
+      } else if (state.activeCategory === 'gender') {
+        const mode = $('pe-dyn-custom_age_mode')?.value;
+        const noAge = $('pe-dyn-has_no_age')?.checked;
+        if (!noAge && mode === 'range_and_stages') {
+          const list = gatherDynStageList('gender');
           data.stages = list.length > 0 ? list : undefined;
         } else {
           data.stages = undefined;
@@ -131,6 +154,20 @@ export function fillDynFields(card) {
           if (container) container.innerHTML = '';
           destroyDynStageSortable();
         }
+      } else if (state.activeCategory === 'gender') {
+        const hasCustom = Array.isArray(card.meta?.stages) && card.meta.stages.length > 0;
+        const wrap = $('pe-dyn-gender-stages-wrap');
+        if (wrap) wrap.hidden = !hasCustom;
+        if (hasCustom) {
+          renderDynStageList('gender', card.meta.stages);
+          initDynStageSortable('gender');
+        } else {
+          const rawText = state.form.stages['age_categories'] || '';
+          const lines = parseLines(rawText);
+          const entries = lines.map(line => parseStageEntry('age_categories', line));
+          renderDynStageList('gender', entries);
+          destroyDynStageSortable();
+        }
       }
       continue;
     }
@@ -148,6 +185,19 @@ export function fillDynFields(card) {
           val = card.meta?.range?.max ?? '';
         } else if (f.key === 'exact_height') {
           val = card.meta?.exact_height ?? '';
+        }
+      }
+      if (state.activeCategory === 'gender') {
+        if (f.key === 'has_no_age') {
+          val = Boolean(card.meta?.has_no_age);
+        } else if (f.key === 'custom_age_mode') {
+          val = card.meta?.has_no_age ? 'no_age' : ((card.meta?.range || (card.meta?.stages && card.meta.stages.length > 0)) ? 'range_and_stages' : (card.meta?.custom_age ? 'no_age' : ''));
+        } else if (f.key === 'age_min') {
+          val = card.meta?.range?.min ?? '';
+        } else if (f.key === 'age_max') {
+          val = card.meta?.range?.max ?? '';
+        } else if (f.key === 'custom_age') {
+          val = card.meta?.custom_age ?? '';
         }
       }
       if (f.type === 'checkbox') el.checked = Boolean(val);
@@ -177,10 +227,6 @@ export function setDynMode(index) {
 }
 
 export function updateDynFormState() {
-  if (state.activeCategory !== 'body_type') return;
-  const noHeight = $('pe-dyn-has_no_height')?.checked;
-  const mode = $('pe-dyn-custom_height_mode')?.value;
-  
   const toggleField = (key, enabled) => {
     const el = $(`pe-dyn-${key}`);
     if (el) {
@@ -193,25 +239,81 @@ export function updateDynFormState() {
     }
   };
 
-  if (noHeight) {
-    toggleField('custom_height_mode', false);
-    toggleField('height_min', false);
-    toggleField('height_max', false);
-    toggleField('exact_height', false);
-  } else {
-    toggleField('custom_height_mode', true);
-    if (mode === 'range') {
-      toggleField('height_min', true);
-      toggleField('height_max', true);
-      toggleField('exact_height', false);
-    } else if (mode === 'exact') {
+  if (state.activeCategory === 'body_type') {
+    const noHeight = $('pe-dyn-has_no_height')?.checked;
+    const mode = $('pe-dyn-custom_height_mode')?.value;
+
+    if (noHeight) {
+      toggleField('custom_height_mode', false);
       toggleField('height_min', false);
       toggleField('height_max', false);
-      toggleField('exact_height', true);
+      toggleField('exact_height', false);
     } else {
-      toggleField('height_min', false);
-      toggleField('height_max', false);
-      toggleField('exact_height', false);
+      toggleField('custom_height_mode', true);
+      if (mode === 'range') {
+        toggleField('height_min', true);
+        toggleField('height_max', true);
+        toggleField('exact_height', false);
+      } else if (mode === 'exact') {
+        toggleField('height_min', false);
+        toggleField('height_max', false);
+        toggleField('exact_height', true);
+      } else {
+        toggleField('height_min', false);
+        toggleField('height_max', false);
+        toggleField('exact_height', false);
+      }
+    }
+  } else if (state.activeCategory === 'gender') {
+    const noAge = $('pe-dyn-has_no_age')?.checked;
+    const modeEl = $('pe-dyn-custom_age_mode');
+    let mode = modeEl?.value;
+    const stagesWrap = $('pe-dyn-gender-stages-wrap');
+
+    if (noAge) {
+      if (modeEl) {
+        modeEl.value = 'no_age';
+        modeEl.disabled = true;
+        modeEl.closest('.pe-field').style.display = 'none';
+      }
+      toggleField('custom_age', true);
+      toggleField('age_min', false);
+      toggleField('age_max', false);
+      if (stagesWrap) stagesWrap.hidden = true;
+      destroyDynStageSortable();
+    } else {
+      if (modeEl) {
+        modeEl.disabled = false;
+        modeEl.closest('.pe-field').style.display = '';
+      }
+      if (mode === 'no_age') {
+        toggleField('custom_age', true);
+        toggleField('age_min', false);
+        toggleField('age_max', false);
+        if (stagesWrap) stagesWrap.hidden = true;
+        destroyDynStageSortable();
+      } else if (mode === 'range_and_stages') {
+        toggleField('custom_age', false);
+        toggleField('age_min', true);
+        toggleField('age_max', true);
+        if (stagesWrap) stagesWrap.hidden = false;
+        const current = gatherDynStageList('gender');
+        if (!current.length) {
+          const rawText = state.form.stages['age_categories'] || '';
+          const lines = parseLines(rawText);
+          const entries = lines.map(line => parseStageEntry('age_categories', line));
+          renderDynStageList('gender', entries);
+        } else {
+          updateStageListVisuals('gender');
+        }
+        initDynStageSortable('gender');
+      } else {
+        toggleField('custom_age', false);
+        toggleField('age_min', false);
+        toggleField('age_max', false);
+        if (stagesWrap) stagesWrap.hidden = true;
+        destroyDynStageSortable();
+      }
     }
   }
 }
@@ -244,12 +346,20 @@ export function resetDynForm() {
           const container = document.querySelector(`[data-dyn-stage-list="${state.activeCategory}"]`);
           if (container) container.innerHTML = '';
           destroyDynStageSortable();
+        } else if (state.activeCategory === 'gender') {
+          const wrap = $('pe-dyn-gender-stages-wrap');
+          if (wrap) wrap.hidden = true;
+          const rawText = state.form.stages['age_categories'] || '';
+          const lines = parseLines(rawText);
+          const entries = lines.map(line => parseStageEntry('age_categories', line));
+          renderDynStageList('gender', entries);
+          destroyDynStageSortable();
         }
         continue;
       }
       const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
       if (el) {
-        if (f.type === 'checkbox') el.checked = false;
+        if (f.type === 'checkbox') el.checked = Boolean(f.default);
         else el.value = '';
       }
     }
@@ -369,6 +479,54 @@ export function submitDyn() {
           return;
         }
         meta.exact_height = isNaN(Number(exactRaw)) ? exactRaw : Number(exactRaw);
+      }
+    }
+  }
+
+  if (state.activeCategory === 'gender') {
+    delete meta.custom_age_mode;
+    delete meta.age_min;
+    delete meta.age_max;
+    delete meta.range;
+
+    const noAge = Boolean(data.has_no_age || data.custom_age_mode === 'no_age');
+    if (noAge) {
+      meta.has_no_age = true;
+      meta.custom_age = (data.custom_age && data.custom_age.trim()) ? data.custom_age.trim() : 'Без віку';
+      delete meta.stages;
+    } else {
+      delete meta.has_no_age;
+      delete meta.custom_age;
+      const mode = data.custom_age_mode;
+      if (mode === 'range_and_stages') {
+        const minRaw = String(data.age_min ?? '').trim();
+        const maxRaw = String(data.age_max ?? '').trim();
+        if (minRaw || maxRaw) {
+          const minNum = parseInt(minRaw, 10);
+          const maxNum = parseInt(maxRaw, 10);
+          if (isNaN(minNum) || isNaN(maxNum) || minNum <= 0 || maxNum <= 0) {
+            const err = $('pe-dyn-error');
+            if (err) {
+              err.textContent = 'Вкажіть коректні додатні числа для мінімального та максимального віку';
+              err.hidden = false;
+            }
+            if (isNaN(minNum) || minNum <= 0) $('pe-dyn-age_min')?.focus();
+            else $('pe-dyn-age_max')?.focus();
+            return;
+          }
+          if (minNum > maxNum) {
+            const err = $('pe-dyn-error');
+            if (err) {
+              err.textContent = 'Мінімальний вік не може перевищувати максимальний';
+              err.hidden = false;
+            }
+            $('pe-dyn-age_min')?.focus();
+            return;
+          }
+          meta.range = { min: minNum, max: maxNum };
+        }
+      } else {
+        delete meta.stages;
       }
     }
   }

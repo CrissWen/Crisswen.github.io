@@ -1,11 +1,26 @@
 import { describeScale, getMonthScale } from './experience.js';
 
-function getAgeCategory(age) {
+export function getAgeCategory(age, categories) {
   const num = Number(age);
-  if (isNaN(num)) return "";
-  if (num >= 16 && num <= 34) return " (Молодий)";
-  if (num >= 35 && num <= 59) return " (Дорослий)";
-  if (num >= 60) return " (Похилий)";
+  if (!Number.isFinite(num)) return "";
+  if (!Array.isArray(categories) || categories.length === 0) return "";
+
+  for (const cat of categories) {
+    if (!cat || typeof cat === 'string') continue;
+    const limit = cat.up_to_age !== undefined ? cat.up_to_age : (cat.up_to_months !== undefined ? Math.floor(cat.up_to_months / 12) : cat.limit);
+    if (limit === null || limit === undefined) {
+      return ` (${cat.name})`;
+    }
+    const numLimit = Number(limit);
+    if (Number.isFinite(numLimit) && num <= numLimit) {
+      return ` (${cat.name})`;
+    }
+  }
+
+  const last = categories[categories.length - 1];
+  if (last && typeof last === 'object' && last.name) {
+    return ` (${last.name})`;
+  }
   return "";
 }
 
@@ -68,7 +83,8 @@ function infoIcon(sections) {
 }
 
 // stageScales (необов'язково) — bunker_state.stage_scales: з ним тултіп професії показує ще й проміжок стадії гравця.
-export function mapPlayerState(rawPlayer, stageScales = null) {
+// ageCategories (необов'язково) — bunker_state.age_categories: шкала вікових категорій для відображення в тексті статі.
+export function mapPlayerState(rawPlayer, stageScales = null, ageCategories = null) {
   const chars = [];
 
   const add = (key, label, formatFunc) => {
@@ -95,13 +111,24 @@ export function mapPlayerState(rawPlayer, stageScales = null) {
   };
 
   if (rawPlayer.gender) {
-
     let ageStr = "";
 
-    if (rawPlayer.age && rawPlayer.age.value !== undefined) {
+    const cardCategories = rawPlayer.gender.custom_stages || rawPlayer.gender.stages || rawPlayer.gender.custom_scale;
+    const effectiveCategories = (Array.isArray(cardCategories) && cardCategories.length > 0)
+      ? cardCategories
+      : (Array.isArray(ageCategories) ? ageCategories : null);
+
+    if (rawPlayer.age && rawPlayer.age.value !== undefined && rawPlayer.age.value !== null && String(rawPlayer.age.value).trim() !== '') {
       const val = rawPlayer.age.value;
-      const cat = getAgeCategory(val);
-      ageStr = isNaN(Number(val)) ? `, ${val}` : `, ${val} р.${cat}`;
+      const num = Number(val);
+      if (Number.isFinite(num)) {
+        const cat = getAgeCategory(num, effectiveCategories);
+        ageStr = `, ${num} р.${cat}`;
+      } else {
+        ageStr = `, ${val}`;
+      }
+    } else if (rawPlayer.gender.has_no_age) {
+      ageStr = `, Без віку`;
     }
 
     const childfreeData = rawPlayer.is_childfree || rawPlayer.childfree;
