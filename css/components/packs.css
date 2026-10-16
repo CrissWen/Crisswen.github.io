@@ -1166,29 +1166,14 @@ body.is-stage-dragging * {
   flex-direction: column;
 }
 .pe-char-list-col .pe-cards {
-  height: 480px;
-  min-height: 280px;
+  height: 560px;
+  min-height: 300px;
   resize: vertical;
 }
 .pe-char-list-col .pe-cata-list {
-  height: 480px;
-  min-height: 280px;
+  height: 600px;
+  min-height: 300px;
   max-height: none;
   resize: vertical;
   overflow: auto;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
