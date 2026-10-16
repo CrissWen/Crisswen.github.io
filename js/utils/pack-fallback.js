@@ -48,6 +48,27 @@ export function buildMinimalRequirements() {
   return one;
 }
 
+// Категорії, де власних карток менше, ніж треба для повної гри на playersCount гравців (тобто гра добиратиме з дефолтного пака).
+// cards — рядки { pool_type, category } (buildCardRows). Правила ті самі, що в buildRequirements, тож підказка редактора
+// збігається з реальним добором. Повертає [{ poolType, category, label, have, need }] у порядку редактора.
+export function findShortCategories(cards, playersCount, bc) {
+  const have = {};
+  for (const card of cards || []) {
+    const key = `${card.pool_type}:${card.category}`;
+    have[key] = (have[key] || 0) + 1;
+  }
+
+  const req = buildRequirements(playersCount, bc);
+  const short = [];
+  for (const { poolType, category, label } of ALL_PACK_CATEGORIES) {
+    const need = req[poolType]?.[category];
+    if (!need) continue;
+    const count = have[`${poolType}:${category}`] || 0;
+    if (count < need) short.push({ poolType, category, label, have: count, need });
+  }
+  return short;
+}
+
 const normalize = value => String(value ?? '').trim().toLowerCase();
 const isBlank = v => v == null || (Array.isArray(v) && v.length === 0);
 
