@@ -1,5 +1,5 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
-import { parseLines, oneLine, parseCards, cardToLine, hasExplanationField, splitNameExplanation } from './parser.js';
+import { parseLines, oneLine, hasExplanationField, splitNameExplanation } from './parser.js';
 import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, parseStageEntry } from './payload.js';
 import { getStagePrompt } from './prompts/stage-prompts.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
@@ -13,7 +13,8 @@ import * as ui from './ui/ui.js';
 import { $ } from './ui/helpers.js';
 import {
   getPackIdFromHash, isDirty, confirmAction, goToList, onBeforeUnload,
-  syncCataText, cataDraftPending, renderCataList, setCataMode, resetCataForm,
+  syncCataText, syncCataclysmsFromLlmText, syncCataclysmsToLlmText,
+  cataDraftPending, renderCataList, setCataMode, resetCataForm,
   applyCataChange, submitCata, startCataEdit, deleteCata, handleCataClick,
   handleCataInput, setCataChangeHandler,
   getDynamicCards, dynDraftPending, readDynRaw, fillDynFields, setDynMode,
@@ -118,7 +119,7 @@ function selectCategory(category) {
   renderSummary();
 }
 
-// Повністю перемальовує значення полів зі стану (після "Очистити все" / "Скасувати зміни" / завантаження пака)
+// Повністю перемальовує значення полів зі станом (після "Очистити все" / "Скасувати зміни" / завантаження пака)
 function syncFieldsFromForm() {
   ui.fillFields(state.form);
   ui.setStagesViewMode(state.stagesViewMode);
@@ -177,12 +178,6 @@ function renderList() {
       tokens: state.searchAll && !cataFilterActive() ? searchTokens() : [],
       category: state.activeCategory
     });
-    if (state.activeCategory === 'gender') {
-      const datalist = document.getElementById('pe-dyn-opposite-list');
-      if (datalist) {
-        datalist.innerHTML = cards.map(c => '<option value="' + c.value.replace(/"/g, '&quot;') + '">').join('');
-      }
-    }
   }
 }
 
@@ -328,8 +323,41 @@ export async function initPackEditor() {
   $('pe-cata').addEventListener('click', handleCataClick);
   $('pe-cata').addEventListener('input', handleCataInput);
   
+  async function copyPromptToClipboard(prompt, emptyMsg) {
+    if (!prompt) {
+      showGlobalToast(emptyMsg);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(prompt);
+      showGlobalToast('Промпт для LLM скопійовано');
+    } catch {
+      showGlobalToast('Не вдалося скопіювати промпт');
+    }
+  }
+
   $('pe-dynamic-form').addEventListener('click', e => {
     handleDynClick(e);
+
+    const toggle = e.target.closest('.pe-combo__toggle');
+    if (toggle) {
+      const input = toggle.parentElement.querySelector('.pe-combo__input');
+      const list = toggle.parentElement.querySelector('.pe-combo__dropdown');
+      list.hidden = !list.hidden;
+      if (!list.hidden) {
+        updateComboDropdown(input, true);
+        input.focus();
+      }
+      return;
+    }
+
+    const item = e.target.closest('.pe-combo__item');
+    if (item) {
+      const input = item.closest('.pe-combo').querySelector('.pe-combo__input');
+      input.value = item.dataset.val;
+      item.closest('.pe-combo__dropdown').hidden = true;
+      return;
+    }
 
     const delBtn = e.target.closest('.pe-stage-del');
     if (delBtn) {
@@ -359,20 +387,17 @@ export async function initPackEditor() {
         if (dynErr) dynErr.hidden = true;
       }
     }
+
+    if (e.target.classList.contains('pe-combo__input')) {
+      const list = e.target.parentElement.querySelector('.pe-combo__dropdown');
+      list.hidden = false;
+      updateComboDropdown(e.target);
+    }
+
     const stageContainer = e.target.closest('[data-dyn-stage-list]');
     if (stageContainer) {
       const key = stageContainer.dataset.dynStageList;
-      const rows = [...stageContainer.querySelectorAll('.pe-stage-row')];
-      const lastRow = rows[rows.length - 1];
-      if (lastRow) {
-        const lastName = lastRow.querySelector('.pe-stage-name')?.value?.trim();
-        if (lastName) {
-          lastRow.classList.remove('pe-stage-row--new');
-          const nameInput = lastRow.querySelector('.pe-stage-name');
-          if (nameInput) nameInput.placeholder = 'Назва';
-          stageContainer.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
-        }
-      }
+      ui.ensureTrailingEmptyStageRow(stageContainer, key);
       ui.updateStageListVisuals(key, stageContainer);
     }
   });
@@ -388,8 +413,7 @@ export async function initPackEditor() {
         const current = ui.gatherDynStageList(state.activeCategory);
         if (!current.length) {
           const rawText = state.form.stages[state.activeCategory] || '';
-          const lines = parseLines(rawText);
-          const entries = lines.map(line => parseStageEntry(state.activeCategory, line));
+          const entries = parseLines(rawText).map(line => parseStageEntry(state.activeCategory, line));
           ui.renderDynStageList(state.activeCategory, entries);
         }
         ui.initDynStageSortable(state.activeCategory);
@@ -399,77 +423,63 @@ export async function initPackEditor() {
     }
   });
 
-function handleStageKeydown(e) {
-  const row = e.target.closest('.pe-stage-row');
-  if (!row) return;
+  function handleStageKeydown(e) {
+    const row = e.target.closest('.pe-stage-row');
+    if (!row) return;
 
-  const isY = e.target.dataset.type === 'y';
-  const isM = e.target.dataset.type === 'm';
-  const isName = e.target.classList.contains('pe-stage-name');
-  const isSpace = e.key === ' ' || e.code === 'Space';
-  const isEnter = e.key === 'Enter';
+    const isY = e.target.dataset.type === 'y';
+    const isM = e.target.dataset.type === 'm';
+    const isName = e.target.classList.contains('pe-stage-name');
+    const isSpace = e.key === ' ' || e.code === 'Space';
+    const isEnter = e.key === 'Enter';
 
-  // У полі року: Пробіл або Enter перескакує на місяць
-  if (isY && (isSpace || isEnter)) {
-    e.preventDefault();
-    const mInput = row.querySelector('[data-type="m"]');
-    if (mInput) {
-      mInput.focus();
-      mInput.select();
-    }
-    return;
-  }
+    const focusInput = el => {
+      if (!el) return false;
+      el.focus();
+      el.select();
+      return true;
+    };
 
-  // У полі місяця: Пробіл або Enter перескакує на наступне поле цифр або назву наступної стадії
-  if (isM && (isSpace || isEnter)) {
-    e.preventDefault();
-    const nextRow = row.nextElementSibling;
-    if (nextRow && nextRow.classList.contains('pe-stage-row')) {
-      const nextTimeField = nextRow.querySelector('.pe-stage-to-wrap .pe-time-field');
-      const nextY = nextRow.querySelector('[data-type="y"]');
-      if (nextTimeField && nextTimeField.style.display !== 'none' && nextY) {
-        nextY.focus();
-        nextY.select();
-      } else {
-        const nextName = nextRow.querySelector('.pe-stage-name');
-        if (nextName) {
-          nextName.focus();
-          nextName.select();
-        }
+    const focusRowTimeOrName = targetRow => {
+      if (!targetRow || !targetRow.classList.contains('pe-stage-row')) return false;
+      const timeField = targetRow.querySelector('.pe-stage-to-wrap .pe-time-field');
+      const yInput = targetRow.querySelector('[data-type="y"]');
+      if (timeField && timeField.style.display !== 'none' && yInput) {
+        return focusInput(yInput);
       }
-    } else {
-      e.target.blur();
-    }
-    return;
-  }
+      return focusInput(targetRow.querySelector('.pe-stage-name'));
+    };
 
-  // У назві стадії: Enter переходить до цифр цього рядка (якщо є) або до наступної стадії
-  if (isName && isEnter) {
-    e.preventDefault();
-    const timeField = row.querySelector('.pe-stage-to-wrap .pe-time-field');
-    const yInput = row.querySelector('[data-type="y"]');
-    if (timeField && timeField.style.display !== 'none' && yInput) {
-      yInput.focus();
-      yInput.select();
-    } else {
-      const nextRow = row.nextElementSibling;
-      if (nextRow && nextRow.classList.contains('pe-stage-row')) {
-        const nextName = nextRow.querySelector('.pe-stage-name');
-        if (nextName) {
-          nextName.focus();
-          nextName.select();
-        }
+    // У полі року: Пробіл або Enter перескакує на місяць
+    if (isY && (isSpace || isEnter)) {
+      e.preventDefault();
+      focusInput(row.querySelector('[data-type="m"]'));
+      return;
+    }
+
+    // У полі місяця: Пробіл або Enter перескакує на наступне поле цифр або назву наступної стадії
+    if (isM && (isSpace || isEnter)) {
+      e.preventDefault();
+      if (!focusRowTimeOrName(row.nextElementSibling)) e.target.blur();
+      return;
+    }
+
+    // У назві стадії: Enter переходить до цифр цього рядка (якщо є) або до наступної стадії
+    if (isName && isEnter) {
+      e.preventDefault();
+      const timeField = row.querySelector('.pe-stage-to-wrap .pe-time-field');
+      const yInput = row.querySelector('[data-type="y"]');
+      if (timeField && timeField.style.display !== 'none' && yInput) {
+        focusInput(yInput);
       } else {
-        e.target.blur();
+        const nextRow = row.nextElementSibling;
+        if (!focusInput(nextRow?.querySelector('.pe-stage-name'))) e.target.blur();
       }
     }
-    return;
   }
-}
 
   $('pe-dynamic-form').addEventListener('keydown', e => {
-    const stageContainer = e.target.closest('[data-dyn-stage-list]');
-    if (stageContainer) {
+    if (e.target.closest('[data-dyn-stage-list]')) {
       handleStageKeydown(e);
       return;
     }
@@ -481,79 +491,19 @@ function handleStageKeydown(e) {
   });
 
   $('pe-dynamic-form').addEventListener('focusin', e => {
-    if (e.target.classList.contains('pe-time-val')) {
-      if (e.target.value === '0') {
-        e.target.value = '';
-      } else {
-        e.target.select();
-      }
+    ui.handleStageTimeFocusIn(e);
+    if (e.target.classList.contains('pe-combo__input')) {
+      const list = e.target.parentElement.querySelector('.pe-combo__dropdown');
+      list.hidden = false;
+      updateComboDropdown(e.target);
     }
   });
 
   $('pe-dynamic-form').addEventListener('focusout', e => {
-    if (!e.target.classList.contains('pe-time-val')) return;
-
-    if (e.target.value.trim() === '') {
-      e.target.value = '0';
-    }
-
-    const row = e.target.closest('.pe-stage-row');
     const stageContainer = e.target.closest('[data-dyn-stage-list]');
-    if (!stageContainer || !row) return;
-
-    if (e.relatedTarget && e.relatedTarget.closest('.pe-stage-row') === row && e.relatedTarget.classList.contains('pe-time-val')) {
-      return;
+    if (ui.normalizeStageRowTimeOnBlur(e, stageContainer)) {
+      ui.updateStageListVisuals(stageContainer.dataset.dynStageList, stageContainer);
     }
-
-    const key = stageContainer.dataset.dynStageList;
-
-    const yInput = row.querySelector('[data-type="y"]');
-    const mInput = row.querySelector('[data-type="m"]');
-    const minYInput = row.querySelector('[data-type="min-y"]');
-    const minMInput = row.querySelector('[data-type="min-m"]');
-
-    if (yInput && mInput && minYInput && minMInput) {
-      const fromWrap = row.querySelector('.pe-stage-from-wrap');
-      const hasMin = fromWrap && fromWrap.style.display !== 'none';
-      if (hasMin) {
-        const y = parseInt(yInput.value, 10) || 0;
-        const m = parseInt(mInput.value, 10) || 0;
-        const enteredMonths = y * 12 + m;
-
-        const minY = parseInt(minYInput.value, 10) || 0;
-        const minM = parseInt(minMInput.value, 10) || 0;
-        const minMonths = minY * 12 + minM;
-
-        if (enteredMonths > 0 && enteredMonths <= minMonths) {
-          const newTotal = minMonths + enteredMonths;
-          yInput.value = Math.floor(newTotal / 12);
-          mInput.value = newTotal % 12;
-        } else if (m >= 12) {
-          yInput.value = Math.floor(enteredMonths / 12);
-          mInput.value = enteredMonths % 12;
-        }
-      } else {
-        const y = parseInt(yInput.value, 10) || 0;
-        const m = parseInt(mInput.value, 10) || 0;
-        if (m >= 12) {
-          const total = y * 12 + m;
-          yInput.value = Math.floor(total / 12);
-          mInput.value = total % 12;
-        }
-      }
-    } else if (yInput && minYInput) {
-      const fromWrap = row.querySelector('.pe-stage-from-wrap');
-      const hasMin = fromWrap && fromWrap.style.display !== 'none';
-      if (hasMin) {
-        const y = parseInt(yInput.value, 10) || 0;
-        const minY = parseInt(minYInput.value, 10) || 0;
-        if (y > 0 && y <= minY) {
-          yInput.value = minY + y;
-        }
-      }
-    }
-
-    ui.updateStageListVisuals(key, stageContainer);
   });
 
   $('pe-cata').addEventListener('keydown', e => {
@@ -562,72 +512,42 @@ function handleStageKeydown(e) {
       submitCata();
     }
   });
-  
+
   $('pe-llm-mode')?.addEventListener('change', e => {
     state.viewMode = e.target.checked ? 'llm' : 'visual';
-    ui.setLlmCopyVisible(e.target.checked); // кнопка копіювання з'являється лише в режимі LLM
-    
-    // Синхронізація Cataclysms при перемиканні режимів
+    ui.setLlmCopyVisible(e.target.checked);
+
     if (state.activeCategory === 'cataclysm') {
-      if (state.viewMode === 'visual') {
-        const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
-        state.form.cataclysms = parsed.map(c => ({
-          name: c.value,
-          description: c.meta.description || '',
-          timer_minutes: c.meta.timer_minutes || 0,
-          stay_time_months: c.meta.stay_time_months || null,
-          population: c.meta.population || null,
-          extra: c.meta.extra || {}
-        })).filter(c => c.name);
-      } else {
-        state.form.texts.cataclysm = state.form.cataclysms.map(c => cardToLine('cataclysm', c.name, {
-          description: c.description,
-          timer_minutes: c.timer_minutes,
-          stay_time_months: c.stay_time_months,
-          population: c.population
-        })).join('\n');
-      }
+      if (state.viewMode === 'visual') syncCataclysmsFromLlmText();
+      else syncCataclysmsToLlmText();
     }
-    
+
     ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
-    
+
     if (state.viewMode === 'visual' && state.activeCategory !== 'cataclysm') {
       if (state.dynEditIndex >= 0) {
         const cards = getDynamicCards();
         if (cards[state.dynEditIndex]) {
           fillDynFields(cards[state.dynEditIndex]);
-          updateDynFormState();
         } else {
           resetDynForm();
           setDynMode(-1);
-          updateDynFormState();
         }
-      } else {
-        updateDynFormState();
       }
+      updateDynFormState();
     }
-    
+
     renderList();
     renderSearch();
     updateCardsMeta();
   });
-  
-  $('pe-llm-copy')?.addEventListener('click', async () => {
-    const prompt = getPromptForCategory(state.activeCategory);
-    if (prompt) {
-      try {
-        await navigator.clipboard.writeText(prompt);
-        showGlobalToast('Промпт для LLM скопійовано');
-      } catch (err) {
-        showGlobalToast('Не вдалося скопіювати промпт');
-      }
-    } else {
-      showGlobalToast('Промпт для цієї категорії відсутній');
-    }
-  });
+
+  $('pe-llm-copy')?.addEventListener('click', () =>
+    copyPromptToClipboard(getPromptForCategory(state.activeCategory), 'Промпт для цієї категорії відсутній')
+  );
 
   $('pe-cards').addEventListener('input', e => {
-    if (state.activeCategory === 'cataclysm') return; // список катаклізмів не редагується текстом
+    if (state.activeCategory === 'cataclysm') return;
     state.form.texts[state.activeCategory] = e.target.value;
     debouncedCardUpdates();
   });
@@ -641,32 +561,25 @@ function handleStageKeydown(e) {
     const isLlm = e.target.checked;
     state.stagesViewMode = isLlm ? 'llm' : 'visual';
 
-    if (isLlm) {
-      STAGE_KEYS.forEach(key => {
+    STAGE_KEYS.forEach(key => {
+      const ta = document.querySelector(`[data-stage-ta="${key}"]`);
+      if (isLlm) {
         const text = ui.gatherStageText(key);
         state.form.stages[key] = text;
-        const ta = document.querySelector(`[data-stage-ta="${key}"]`);
         if (ta) ta.value = text;
-      });
-      ui.setStagesViewMode('llm');
-    } else {
-      STAGE_KEYS.forEach(key => {
-        const ta = document.querySelector(`[data-stage-ta="${key}"]`);
-        if (ta) {
-          state.form.stages[key] = ta.value;
-        }
+      } else {
+        if (ta) state.form.stages[key] = ta.value;
         ui.renderStageList(key, state.form.stages[key] || '');
-      });
-      ui.setStagesViewMode('visual');
-    }
+      }
+    });
+    ui.setStagesViewMode(state.stagesViewMode);
     updateButtons();
   });
 
   $('pe-stages').addEventListener('input', e => {
     const ta = e.target.closest('[data-stage-ta]');
     if (ta) {
-      const key = ta.dataset.stageTa;
-      state.form.stages[key] = ta.value;
+      state.form.stages[ta.dataset.stageTa] = ta.value;
       updateButtons();
       return;
     }
@@ -674,117 +587,33 @@ function handleStageKeydown(e) {
     const stageGroup = e.target.closest('[data-stage-list]');
     if (stageGroup) {
       const key = stageGroup.dataset.stageList;
-
-      // Database-like auto insertion: if typing in the last row, append a new empty row
-      const rows = [...stageGroup.querySelectorAll('.pe-stage-row')];
-      const lastRow = rows[rows.length - 1];
-      if (lastRow) {
-        const lastName = lastRow.querySelector('.pe-stage-name')?.value?.trim();
-        if (lastName) {
-          lastRow.classList.remove('pe-stage-row--new');
-          const nameInput = lastRow.querySelector('.pe-stage-name');
-          if (nameInput) nameInput.placeholder = 'Назва';
-          stageGroup.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
-        }
-      }
-
+      ui.ensureTrailingEmptyStageRow(stageGroup, key);
       state.form.stages[key] = ui.gatherStageText(key);
       updateButtons();
     }
   });
 
   $('pe-stages').addEventListener('keydown', e => {
-    const stageContainer = e.target.closest('[data-stage-list]');
-    if (stageContainer) {
+    if (e.target.closest('[data-stage-list]')) {
       handleStageKeydown(e);
     }
   });
 
-  $('pe-stages').addEventListener('focusin', e => {
-    if (e.target.classList.contains('pe-time-val')) {
-      if (e.target.value === '0') {
-        e.target.value = '';
-      } else {
-        e.target.select();
-      }
-    }
-  });
+  $('pe-stages').addEventListener('focusin', ui.handleStageTimeFocusIn);
 
   $('pe-stages').addEventListener('focusout', e => {
-    if (!e.target.classList.contains('pe-time-val')) return;
-
-    if (e.target.value.trim() === '') {
-      e.target.value = '0';
-    }
-
-    const row = e.target.closest('.pe-stage-row');
     const stageGroup = e.target.closest('[data-stage-list]');
-    if (!stageGroup || !row) return;
-
-    // Якщо фокус перейшов на інше поле часу в межах того ж рядка (наприклад, з року на місяць) — не додаємо до повного виходу з рядка
-    if (e.relatedTarget && e.relatedTarget.closest('.pe-stage-row') === row && e.relatedTarget.classList.contains('pe-time-val')) {
-      return;
+    if (ui.normalizeStageRowTimeOnBlur(e, stageGroup)) {
+      const key = stageGroup.dataset.stageList;
+      state.form.stages[key] = ui.gatherStageText(key);
+      updateButtons();
     }
-
-    const key = stageGroup.dataset.stageList;
-
-    // Якщо введено максимальний стаж <= мінімального ("від"), додаємо введене значення до мінімального
-    const yInput = row.querySelector('[data-type="y"]');
-    const mInput = row.querySelector('[data-type="m"]');
-    const minYInput = row.querySelector('[data-type="min-y"]');
-    const minMInput = row.querySelector('[data-type="min-m"]');
-
-    if (yInput && mInput && minYInput && minMInput) {
-      const fromWrap = row.querySelector('.pe-stage-from-wrap');
-      const hasMin = fromWrap && fromWrap.style.display !== 'none';
-      if (hasMin) {
-        const y = parseInt(yInput.value, 10) || 0;
-        const m = parseInt(mInput.value, 10) || 0;
-        const enteredMonths = y * 12 + m;
-
-        const minY = parseInt(minYInput.value, 10) || 0;
-        const minM = parseInt(minMInput.value, 10) || 0;
-        const minMonths = minY * 12 + minM;
-
-        if (enteredMonths > 0 && enteredMonths <= minMonths) {
-          const newTotal = minMonths + enteredMonths;
-          yInput.value = Math.floor(newTotal / 12);
-          mInput.value = newTotal % 12;
-        } else if (m >= 12) {
-          // Нормалізація, якщо в місяцях ввели >= 12
-          yInput.value = Math.floor(enteredMonths / 12);
-          mInput.value = enteredMonths % 12;
-        }
-      } else {
-        const y = parseInt(yInput.value, 10) || 0;
-        const m = parseInt(mInput.value, 10) || 0;
-        if (m >= 12) {
-          const total = y * 12 + m;
-          yInput.value = Math.floor(total / 12);
-          mInput.value = total % 12;
-        }
-      }
-    } else if (yInput && minYInput) {
-      const fromWrap = row.querySelector('.pe-stage-from-wrap');
-      const hasMin = fromWrap && fromWrap.style.display !== 'none';
-      if (hasMin) {
-        const y = parseInt(yInput.value, 10) || 0;
-        const minY = parseInt(minYInput.value, 10) || 0;
-        if (y > 0 && y <= minY) {
-          yInput.value = minY + y;
-        }
-      }
-    }
-
-    state.form.stages[key] = ui.gatherStageText(key);
-    updateButtons();
   });
 
   $('pe-stages').addEventListener('change', e => {
     const stageGroup = e.target.closest('[data-stage-list]');
     if (stageGroup) {
       const key = stageGroup.dataset.stageList;
-      // Clean up extra empty rows at the end if any
       const rows = [...stageGroup.querySelectorAll('.pe-stage-row')];
       let i = rows.length - 1;
       while (i > 0 && !rows[i].querySelector('.pe-stage-name')?.value?.trim() && !rows[i - 1].querySelector('.pe-stage-name')?.value?.trim()) {
@@ -799,18 +628,7 @@ function handleStageKeydown(e) {
   $('pe-stages').addEventListener('click', async e => {
     const copyBtn = e.target.closest('[data-stage-copy]');
     if (copyBtn) {
-      const key = copyBtn.dataset.stageCopy;
-      const prompt = getStagePrompt(key);
-      if (prompt) {
-        try {
-          await navigator.clipboard.writeText(prompt);
-          showGlobalToast('Промпт для LLM скопійовано');
-        } catch (err) {
-          showGlobalToast('Не вдалося скопіювати промпт');
-        }
-      } else {
-        showGlobalToast('Промпт для цієї стадії відсутній');
-      }
+      await copyPromptToClipboard(getStagePrompt(copyBtn.dataset.stageCopy), 'Промпт для цієї стадії відсутній');
       return;
     }
 
@@ -824,18 +642,17 @@ function handleStageKeydown(e) {
         updateButtons();
       }
     }
+
     const delBtn = e.target.closest('.pe-stage-del');
     if (delBtn) {
       const row = delBtn.closest('.pe-stage-row');
-      const list = row.closest('[data-stage-list]');
+      const list = row?.closest('[data-stage-list]');
       if (list && row) {
         const key = list.dataset.stageList;
         const rows = [...list.querySelectorAll('.pe-stage-row')];
         const isLastRow = row === rows[rows.length - 1];
         const name = row.querySelector('.pe-stage-name')?.value?.trim();
-        if (isLastRow && !name) {
-          return;
-        }
+        if (isLastRow && !name) return;
 
         if (name) {
           const confirmed = await showPackConfirm(`Чи точно хочете видалити стадію "${oneLine(name)}"?`, delBtn, { confirmLabel: 'Видалити' });
@@ -843,20 +660,11 @@ function handleStageKeydown(e) {
         }
 
         row.remove();
-
-        // Ensure there is always at least one empty row at the bottom
-        const remaining = [...list.querySelectorAll('.pe-stage-row')];
-        const lastRemaining = remaining[remaining.length - 1];
-        if (!lastRemaining || lastRemaining.querySelector('.pe-stage-name')?.value?.trim()) {
-          list.insertAdjacentHTML('beforeend', ui.stageRowHtml(key, { name: '' }));
-        }
-
         state.form.stages[key] = ui.gatherStageText(key);
         updateButtons();
       }
     }
   });
-
 
   $('pe-ranges').addEventListener('input', e => {
     const field = e.target.closest('[data-range]');
@@ -868,52 +676,11 @@ function handleStageKeydown(e) {
   initSearch();
   initTips();
 
-
   $('pe-actions').addEventListener('click', handleActionsClick);
 
-  const dynForm = document.getElementById('pe-dynamic-form');
-  if (dynForm) {
-    dynForm.addEventListener('input', e => {
-      if (e.target.classList.contains('pe-combo__input')) {
-        const list = e.target.parentElement.querySelector('.pe-combo__dropdown');
-        list.hidden = false;
-        updateComboDropdown(e.target);
-      }
-    });
-
-    dynForm.addEventListener('focusin', e => {
-      if (e.target.classList.contains('pe-combo__input')) {
-        const list = e.target.parentElement.querySelector('.pe-combo__dropdown');
-        list.hidden = false;
-        updateComboDropdown(e.target);
-      }
-    });
-
-    dynForm.addEventListener('click', e => {
-      const toggle = e.target.closest('.pe-combo__toggle');
-      if (toggle) {
-        const input = toggle.parentElement.querySelector('.pe-combo__input');
-        const list = toggle.parentElement.querySelector('.pe-combo__dropdown');
-        list.hidden = !list.hidden;
-        if (!list.hidden) {
-          updateComboDropdown(input, true);
-          input.focus();
-        }
-        return;
-      }
-      
-      const item = e.target.closest('.pe-combo__item');
-      if (item) {
-        const input = item.closest('.pe-combo').querySelector('.pe-combo__input');
-        input.value = item.dataset.val;
-        item.closest('.pe-combo__dropdown').hidden = true;
-      }
-    });
-  }
-
-  document.getElementById('pe-root')?.addEventListener('click', e => {
+  $('pe-root')?.addEventListener('click', e => {
     if (!e.target.closest('.pe-combo')) {
-      document.querySelectorAll('.pe-combo__dropdown').forEach(d => d.hidden = true);
+      document.querySelectorAll('.pe-combo__dropdown').forEach(d => { d.hidden = true; });
     }
   });
 

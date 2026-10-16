@@ -5,13 +5,12 @@ import {
   MAX_PACK_CARDS, normalizeForm, STAGE_KEYS, OBJECT_STAGE_KEYS,
   validateStageText, validateStageEntries
 } from '../payload.js';
-import { parseCards } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { showPackNotice, isPackNoticeMuted, setPackNoticeMuted } from '../../game-modules/overlays/pack-notice.js';
 import { findShortCategories } from '../../utils/pack-fallback.js';
 import { getGameConfigSync } from '../../config/config-manager.js';
 import * as ui from '../ui/ui.js';
-import { cataDraftPending } from './cataclysm.js';
+import { cataDraftPending, syncCataclysmsFromLlmText } from './cataclysm.js';
 import { dynDraftPending } from './dynamic.js';
 import { isDirty, confirmAction, goToList } from './navigation.js';
 
@@ -64,23 +63,21 @@ export async function handleSave(btn) {
     showGlobalToast('У формі катаклізму є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
     return;
   }
-  
+
   if (dynDraftPending()) {
     showGlobalToast('У формі характеристики є незбережені дані — натисніть "Додати" / "Зберегти зміни" або "Скасувати"');
     return;
   }
 
   // Синхронізуємо стадії перед збереженням
-  if (state.stagesViewMode === 'llm') {
-    STAGE_KEYS.forEach(k => {
+  STAGE_KEYS.forEach(k => {
+    if (state.stagesViewMode === 'llm') {
       const ta = document.querySelector(`[data-stage-ta="${k}"]`);
       if (ta) state.form.stages[k] = ta.value;
-    });
-  } else {
-    STAGE_KEYS.forEach(k => {
+    } else {
       state.form.stages[k] = ui.gatherStageText(k);
-    });
-  }
+    }
+  });
 
   // Перевірка коректності проміжних стадій у глобальних налаштуваннях
   for (const k of OBJECT_STAGE_KEYS) {
@@ -93,15 +90,7 @@ export async function handleSave(btn) {
 
   // Якщо ми в LLM-режимі на вкладці Катаклізмів, треба синхронізувати текст у масив перед збереженням
   if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm') {
-    const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
-    state.form.cataclysms = parsed.map(c => ({
-      name: c.value,
-      description: c.meta.description || '',
-      timer_minutes: c.meta.timer_minutes || 0,
-      stay_time_months: c.meta.stay_time_months || null,
-      population: c.meta.population || null,
-      extra: c.meta.extra || {}
-    })).filter(c => c.name);
+    syncCataclysmsFromLlmText();
   }
 
   const cards = buildCardRows(state.form.texts, state.extraMeta, state.form.cataclysms);
@@ -174,15 +163,17 @@ export async function handleExit(btn) {
   goToList();
 }
 
+const SAVE_ACTIONS = {
+  save: btn => handleSave(btn),
+  clear: btn => handleClear(btn),
+  reset: btn => handleReset(btn),
+  exit: btn => handleExit(btn)
+};
+
 export function handleActionsClick(e) {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
-
-  switch (btn.dataset.action) {
-    case 'save':  handleSave(btn); break;
-    case 'clear': handleClear(btn); break;
-    case 'reset': handleReset(btn); break;
-    case 'exit':  handleExit(btn); break;
-  }
+  SAVE_ACTIONS[btn.dataset.action]?.(btn);
 }
+
 

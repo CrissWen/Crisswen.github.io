@@ -1,6 +1,6 @@
 import { esc } from '../../utils/escape-html.js';
 import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
-import { TITLE_MAX, DESC_MAX, STAGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
+import { TITLE_MAX, DESC_MAX, STAGE_FIELDS, RANGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
 
 const TEXTAREA_PLACEHOLDER = 'Введіть характеристики стовпчиком. Кожна нова характеристика — з нового рядка (клавіша Enter)';
 
@@ -100,27 +100,11 @@ function stageFieldsHtml() {
 }
 
 function rangesFieldsHtml() {
-  const ageHtml = `
+  return RANGE_FIELDS.map(({ key, label, min, max }) => `
     <div class="pe-field">
-      <label class="pe-label" for="pe-range-ageMin">Мін. вік</label>
-      <input id="pe-range-ageMin" class="pe-input" type="number" data-range="ageMin" min="1" max="120" step="1">
-    </div>
-    <div class="pe-field">
-      <label class="pe-label" for="pe-range-ageMax">Макс. вік</label>
-      <input id="pe-range-ageMax" class="pe-input" type="number" data-range="ageMax" min="1" max="120" step="1">
-    </div>
-  `;
-  const heightHtml = `
-    <div class="pe-field">
-      <label class="pe-label" for="pe-range-heightMin">Мін. зріст</label>
-      <input id="pe-range-heightMin" class="pe-input" type="number" data-range="heightMin" min="50" max="300" step="1">
-    </div>
-    <div class="pe-field">
-      <label class="pe-label" for="pe-range-heightMax">Макс. зріст</label>
-      <input id="pe-range-heightMax" class="pe-input" type="number" data-range="heightMax" min="50" max="300" step="1">
-    </div>
-  `;
-  return ageHtml + heightHtml;
+      <label class="pe-label" for="pe-range-${key}">${esc(label)}</label>
+      <input id="pe-range-${key}" class="pe-input" type="number" data-range="${key}" min="${min}" max="${max}" step="1">
+    </div>`).join('');
 }
 
 // Розмітка всієї сторінки. isEdit — редагування існуючого пака, isDefaultEdit — редагування базового пака (лише адмін)

@@ -1,5 +1,10 @@
 import { ALL_PACK_CATEGORIES } from './categories.js';
-import { parseCards, parseLines, oneLine } from './parser.js';
+import {
+  parseCards, parseLines, oneLine,
+  OBJECT_STAGE_KEYS, parseStageEntry, formatStageEntry
+} from './parser.js';
+
+export { OBJECT_STAGE_KEYS, parseStageEntry, formatStageEntry };
 
 // ===== Збирання payload для RPC save_personal_pack / save_default_pack =====
 // Чисті функції без DOM і мережі. Розбір тексту редактора на картки — у pack-parser.js.
@@ -64,25 +69,20 @@ export function cataclysmToRow(item) {
 }
 
 // ===== Решта категорій =====
+const EDITABLE_META_KEYS = {
+  profession: ['ability'],
+  body_type: ['has_no_height', 'range', 'exact_height'],
+  gender: ['can_reproduce', 'opposite', 'has_no_age', 'custom_age', 'range', 'stages']
+};
+
 // Те, що у meta картки не відображається в текстовому рядку редактора (cardToLine цього не записує): наприклад
-// custom_age статі, stages хвороби. getPack зберігає їх окремо, а buildCardRows повертає їх назад при збереженні —
+// stages хвороби. getPack зберігає їх окремо, а buildCardRows повертає їх назад при збереженні —
 // інакше "Оновити пак" стирав би їх. Повертає null, якщо додаткових полів немає. Катаклізми сюди не потрапляють (див. вище).
 export function extraMetaOf(category, meta) {
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null;
   const extra = { ...meta };
-  if (category === 'profession') delete extra.ability;
-  if (category === 'body_type') {
-    delete extra.has_no_height;
-    delete extra.range;
-    delete extra.exact_height;
-  }
-  if (category === 'gender') {
-    delete extra.can_reproduce;
-    delete extra.opposite;
-    delete extra.has_no_age;
-    delete extra.custom_age;
-    delete extra.range;
-    delete extra.stages;
+  for (const key of EDITABLE_META_KEYS[category] || []) {
+    delete extra[key];
   }
   return Object.keys(extra).length ? extra : null;
 }
@@ -138,32 +138,6 @@ export function validateRanges(r) {
   return '';
 }
 
-export const OBJECT_STAGE_KEYS = ['age_categories', 'profession', 'hobby', 'gender'];
-
-export function parseStageEntry(key, line) {
-  if (!OBJECT_STAGE_KEYS.includes(key)) {
-    return line;
-  }
-  const isAge = ['age_categories', 'gender'].includes(key);
-  const cleanLine = line.trim();
-  const colonIdx = cleanLine.lastIndexOf(':');
-  if (colonIdx > 0) {
-    const rawName = cleanLine.slice(0, colonIdx).trim();
-    const valStr = cleanLine.slice(colonIdx + 1).trim();
-    if (valStr.toLowerCase() === 'null') {
-      const name = rawName.replace(/:\s*null\s*$/i, '').trim();
-      return isAge ? { name, up_to_age: null } : { name, up_to_months: null };
-    }
-    const val = parseInt(valStr, 10);
-    if (!isNaN(val)) {
-      const name = rawName.replace(/:\s*null\s*$/i, '').trim();
-      return isAge ? { name, up_to_age: val } : { name, up_to_months: val };
-    }
-  }
-  const name = cleanLine.replace(/:\s*null\s*$/i, '').trim();
-  return isAge ? { name, up_to_age: null } : { name, up_to_months: null };
-}
-
 export function validateStageEntries(key, entries) {
   if (!OBJECT_STAGE_KEYS.includes(key)) return '';
   if (!Array.isArray(entries) || entries.length === 0) return '';
@@ -204,25 +178,9 @@ export function stagesTextFromConfig(config) {
   const text = {};
   for (const key of STAGE_KEYS) {
     const list = key === 'age_categories' ? config?.age_categories : config?.default_stages?.[key];
-    if (!Array.isArray(list)) {
-      text[key] = '';
-      continue;
-    }
-    text[key] = list
-      .map(s => {
-        if (typeof s === 'string') return s.replace(/:\s*null\s*$/i, '').trim();
-        if (s && typeof s === 'object') {
-          const name = String(s.name ?? '').replace(/:\s*null\s*$/i, '').trim();
-          const limit = s.up_to_age !== undefined ? s.up_to_age : s.up_to_months;
-          if (name && limit !== undefined && limit !== null) {
-            return `${name}: ${limit}`;
-          }
-          if (name) return name;
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
+    text[key] = Array.isArray(list)
+      ? list.map(formatStageEntry).filter(Boolean).join('\n')
+      : '';
   }
   return text;
 }

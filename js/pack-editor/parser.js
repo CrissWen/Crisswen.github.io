@@ -41,6 +41,45 @@ const parseNumOrStr = val => {
   return Number.isFinite(n) ? n : val;
 };
 
+export const OBJECT_STAGE_KEYS = ['age_categories', 'profession', 'hobby', 'gender'];
+
+const cleanStageName = raw => String(raw ?? '').replace(/:\s*null\s*$/i, '').trim();
+
+// Розбір одного рядка стадії ("Стажер: 12" → { name, up_to_months: 12 } або { name, up_to_age: 18 })
+export function parseStageEntry(key, line, { omitNullLimit = false } = {}) {
+  if (!OBJECT_STAGE_KEYS.includes(key)) {
+    return line;
+  }
+  const isAge = ['age_categories', 'gender'].includes(key);
+  const limitKey = isAge ? 'up_to_age' : 'up_to_months';
+  const cleanLine = String(line ?? '').trim();
+  const colonIdx = cleanLine.lastIndexOf(':');
+
+  if (colonIdx > 0) {
+    const name = cleanStageName(cleanLine.slice(0, colonIdx));
+    const valStr = cleanLine.slice(colonIdx + 1).trim();
+    if (valStr.toLowerCase() !== 'null') {
+      const val = parseInt(valStr, 10);
+      if (!isNaN(val)) return { name, [limitKey]: val };
+    }
+    return (!isAge && omitNullLimit) ? { name } : { name, [limitKey]: null };
+  }
+
+  const name = cleanStageName(cleanLine);
+  return (!isAge && omitNullLimit) ? { name } : { name, [limitKey]: null };
+}
+
+// Форматування об'єкта або рядка стадії назад у текстовий вигляд ("Назва: 12" або "Назва")
+export function formatStageEntry(entry) {
+  if (typeof entry === 'object' && entry !== null) {
+    const cleanName = cleanStageName(entry.name);
+    if (!cleanName) return '';
+    const limit = entry.up_to_age !== undefined ? entry.up_to_age : entry.up_to_months;
+    return (limit !== undefined && limit !== null) ? `${cleanName}: ${limit}` : cleanName;
+  }
+  return cleanStageName(entry);
+}
+
 const PROP_SETTERS = {
   rep: (meta, val) => { meta.can_reproduce = parseBool(val); },
   opp: (meta, val) => { meta.opposite = parseNullable(val); },
@@ -58,6 +97,24 @@ const PROP_SETTERS = {
   stay: (meta, val) => { meta.stay_time_months = Number(val); },
   pop: (meta, val) => { meta.population = Number(val); }
 };
+
+const PROP_SERIALIZERS = [
+  m => m.can_reproduce !== undefined && `rep: ${m.can_reproduce}`,
+  m => m.opposite !== undefined && `opp: ${m.opposite === null ? 'null' : `"${m.opposite}"`}`,
+  m => m.has_no_age === true && 'no_age: true',
+  m => m.custom_age !== undefined && (!m.has_no_age || m.custom_age !== 'Без віку') && `age: "${m.custom_age}"`,
+  (m, cat) => cat === 'gender' && m.range?.min !== undefined && `age_min: ${m.range.min}`,
+  (m, cat) => cat === 'gender' && m.range?.max !== undefined && `age_max: ${m.range.max}`,
+  m => m.action_type !== undefined && `action_type: "${m.action_type}"`,
+  m => m.has_no_height === true && 'no_height: true',
+  m => m.exact_height !== undefined && m.exact_height !== '' && `exact_height: ${m.exact_height}`,
+  (m, cat) => cat !== 'gender' && m.range?.min !== undefined && `min: ${m.range.min}`,
+  (m, cat) => cat !== 'gender' && m.range?.max !== undefined && `max: ${m.range.max}`,
+  m => m.description !== undefined && `desc: "${m.description}"`,
+  m => m.timer_minutes !== undefined && `timer: ${m.timer_minutes}`,
+  m => m.stay_time_months !== undefined && `stay: ${m.stay_time_months}`,
+  m => m.population !== undefined && `pop: ${m.population}`
+];
 
 export function parsePropsString(propsStr) {
   const regex = /(\w+)\s*:\s*("(?:[^"\\]|\\.)*"|'[^']*'|[^,}]+)/g;
@@ -90,33 +147,13 @@ export function parseCardLine(category, line) {
     const stagesMatch = value.match(/\[(.*?)\]\s*$/);
     if (stagesMatch) {
       const rawStages = stagesMatch[1].split(',').map(s => s.trim()).filter(Boolean);
-      if (['profession', 'hobby'].includes(category)) {
-        meta.stages = rawStages.map(s => {
-          const colonIdx = s.lastIndexOf(':');
-          if (colonIdx > 0) {
-            const name = s.slice(0, colonIdx).trim();
-            const months = parseInt(s.slice(colonIdx + 1).trim(), 10);
-            if (!isNaN(months)) return { name, up_to_months: months };
-          }
-          return { name: s };
-        });
-      } else if (category === 'gender') {
-        meta.stages = rawStages.map(s => {
-          const colonIdx = s.lastIndexOf(':');
-          if (colonIdx > 0) {
-            const name = s.slice(0, colonIdx).trim();
-            const age = parseInt(s.slice(colonIdx + 1).trim(), 10);
-            if (!isNaN(age)) return { name, up_to_age: age };
-          }
-          return { name: s, up_to_age: null };
-        });
-      } else {
-        meta.stages = rawStages;
-      }
+      meta.stages = OBJECT_STAGE_KEYS.includes(category)
+        ? rawStages.map(s => parseStageEntry(category, s, { omitNullLimit: true }))
+        : rawStages;
       value = value.substring(0, stagesMatch.index).trim();
       matched = true;
     }
-    
+
     // Шукаємо прапорці в кінці рядка: {key: val, ...}
     const propsMatch = value.match(/\{(.*?)\}\s*$/);
     if (propsMatch) {
@@ -127,7 +164,7 @@ export function parseCardLine(category, line) {
       value = value.substring(0, propsMatch.index).trim();
       matched = true;
     }
-    
+
     if (!matched) extracting = false;
   }
 
@@ -167,42 +204,13 @@ export function cardToLine(category, value, meta) {
     text = `${text}${PART_SEPARATOR}${String(meta.ability).trim()}`;
   }
 
-  // Додаємо прапорці
-  const props = [];
-  if (meta?.can_reproduce !== undefined) props.push(`rep: ${meta.can_reproduce}`);
-  if (meta?.opposite !== undefined) props.push(`opp: ${meta.opposite === null ? 'null' : `"${meta.opposite}"`}`);
-  if (meta?.has_no_age === true) props.push('no_age: true');
-  if (meta?.custom_age !== undefined && (!meta.has_no_age || meta.custom_age !== 'Без віку')) props.push(`age: "${meta.custom_age}"`);
-  if (category === 'gender') {
-    if (meta?.range?.min !== undefined) props.push(`age_min: ${meta.range.min}`);
-    if (meta?.range?.max !== undefined) props.push(`age_max: ${meta.range.max}`);
-  }
-  if (meta?.action_type !== undefined) props.push(`action_type: "${meta.action_type}"`);
-  if (meta?.has_no_height === true) props.push('no_height: true');
-  if (meta?.exact_height !== undefined && meta?.exact_height !== '') props.push(`exact_height: ${meta.exact_height}`);
-  if (category !== 'gender') {
-    if (meta?.range?.min !== undefined) props.push(`min: ${meta.range.min}`);
-    if (meta?.range?.max !== undefined) props.push(`max: ${meta.range.max}`);
-  }
-  if (meta?.description !== undefined) props.push(`desc: "${meta.description}"`);
-  if (meta?.timer_minutes !== undefined) props.push(`timer: ${meta.timer_minutes}`);
-  if (meta?.stay_time_months !== undefined) props.push(`stay: ${meta.stay_time_months}`);
-  if (meta?.population !== undefined) props.push(`pop: ${meta.population}`);
-  
+  const props = meta ? PROP_SERIALIZERS.map(fn => fn(meta, category)).filter(Boolean) : [];
   if (props.length > 0) {
     text += ` {${props.join(', ')}}`;
   }
 
-  // Додаємо стадії
   if (Array.isArray(meta?.stages) && meta.stages.length > 0) {
-    const formatted = meta.stages.map(s => {
-      if (typeof s === 'object' && s !== null) {
-        const cleanName = String(s.name ?? '').replace(/:\s*null\s*$/i, '').trim();
-        const limit = s.up_to_age !== undefined ? s.up_to_age : s.up_to_months;
-        return (limit !== undefined && limit !== null) ? `${cleanName}: ${limit}` : cleanName;
-      }
-      return String(s).replace(/:\s*null\s*$/i, '').trim();
-    }).filter(Boolean);
+    const formatted = meta.stages.map(formatStageEntry).filter(Boolean);
     if (formatted.length > 0) {
       text += ` [${formatted.join(', ')}]`;
     }
@@ -210,3 +218,4 @@ export function cardToLine(category, value, meta) {
 
   return text;
 }
+

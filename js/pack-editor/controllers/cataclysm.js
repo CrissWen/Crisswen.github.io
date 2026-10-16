@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { cataclysmNamesText, cataFieldStrings, hasCataDraft, validateCataclysmInput } from '../payload.js';
-import { oneLine } from '../parser.js';
+import { oneLine, parseCards, cardToLine } from '../parser.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
@@ -16,6 +16,27 @@ export function setCataChangeHandler(fn) {
 // Текст списку (назви по одній на рядок) усередині state.form.texts.cataclysm: з нього читаються лічильники, підсумок і трекінг змін
 export function syncCataText(f = state.form) {
   f.texts.cataclysm = cataclysmNamesText(f.cataclysms);
+}
+
+export function syncCataclysmsFromLlmText() {
+  const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
+  state.form.cataclysms = parsed.map(c => ({
+    name: c.value,
+    description: c.meta.description || '',
+    timer_minutes: c.meta.timer_minutes || 0,
+    stay_time_months: c.meta.stay_time_months || null,
+    population: c.meta.population || null,
+    extra: c.meta.extra || {}
+  })).filter(c => c.name);
+}
+
+export function syncCataclysmsToLlmText() {
+  state.form.texts.cataclysm = state.form.cataclysms.map(c => cardToLine('cataclysm', c.name, {
+    description: c.description,
+    timer_minutes: c.timer_minutes,
+    stay_time_months: c.stay_time_months,
+    population: c.population
+  })).join('\n');
 }
 
 // Чи є у формі дані, які ще не потрапили в список (новий катаклізм або незбережені правки існуючого)
@@ -119,15 +140,16 @@ export async function deleteCata(btn) {
   showGlobalToast('Катаклізм видалено');
 }
 
+const CATA_ACTIONS = {
+  submit: () => submitCata(),
+  cancel: () => resetCataForm(),
+  delete: btn => deleteCata(btn)
+};
+
 export function handleCataClick(e) {
   const btn = e.target.closest('[data-cata-action]');
   if (!btn || btn.disabled) return;
-
-  switch (btn.dataset.cataAction) {
-    case 'submit': submitCata(); break;
-    case 'cancel': resetCataForm(); break;
-    case 'delete': deleteCata(btn); break;
-  }
+  CATA_ACTIONS[btn.dataset.cataAction]?.(btn);
 }
 
 // Числові поля приймають лише цифри; правка поля прибирає попередню помилку
@@ -138,4 +160,5 @@ export function handleCataInput(e) {
   e.target.classList.remove('is-invalid');
   if (!document.querySelector('#pe-cata .is-invalid')) ui.showCataError('');
 }
+
 

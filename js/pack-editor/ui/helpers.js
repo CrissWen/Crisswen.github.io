@@ -1,7 +1,7 @@
 import { esc } from '../../utils/escape-html.js';
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from '../categories.js';
 import { CATACLYSM_LIMITS, STAGE_KEYS, OBJECT_STAGE_KEYS, parseStageEntry } from '../payload.js';
-import { parseLines } from '../parser.js';
+import { parseLines, formatStageEntry } from '../parser.js';
 import { renderDynamicFormFields } from './dynamic.js';
 import { stageRowHtml } from './template.js';
 import { state } from '../state.js';
@@ -361,86 +361,122 @@ export function updateStageListVisuals(key, container = null) {
 export function renderStageList(key, textValue) {
   const container = document.querySelector(`[data-stage-list="${key}"]`);
   if (!container) return;
-  const lines = parseLines(textValue);
-  let html = lines.map(line => {
-    const entry = parseStageEntry(key, line);
-    return stageRowHtml(key, entry);
-  }).join('');
-  // Always include one empty row at the bottom (database-like insertion)
-  html += stageRowHtml(key, { name: '' });
-  container.innerHTML = html;
-  updateStageListVisuals(key, container);
+  const entries = parseLines(textValue).map(line => parseStageEntry(key, line));
+  renderStageRowsInto(container, key, entries);
 }
 
 export function renderDynStageList(key, entries = []) {
   const container = document.querySelector(`[data-dyn-stage-list="${key}"]`);
   if (!container) return;
+  renderStageRowsInto(container, key, entries);
+}
+
+function renderStageRowsInto(container, key, entries = []) {
   let html = (entries || []).map(entry => stageRowHtml(key, entry)).join('');
   html += stageRowHtml(key, { name: '' });
   container.innerHTML = html;
   updateStageListVisuals(key, container);
 }
 
-export function gatherDynStageList(key) {
-  const container = document.querySelector(`[data-dyn-stage-list="${key}"]`);
+function gatherStageEntries(container, key) {
   if (!container) return [];
   updateStageListVisuals(key, container);
-  const rows = [...container.querySelectorAll('.pe-stage-row')];
-  const validRows = rows.filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
+  const validRows = [...container.querySelectorAll('.pe-stage-row')]
+    .filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
 
-  if (key === 'health') {
+  if (!OBJECT_STAGE_KEYS.includes(key)) {
     return validRows.map(row => row.querySelector('.pe-stage-name').value.trim());
   }
 
-  if (key === 'gender') {
-    return validRows.map((row, index) => {
-      const isLast = index === validRows.length - 1;
-      const name = row.querySelector('.pe-stage-name').value.trim();
-      if (!isLast) {
-        const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
-        return { name, up_to_age: y };
-      }
-      return { name, up_to_age: null };
-    });
-  }
-
+  const isAge = ['age_categories', 'gender'].includes(key);
   return validRows.map((row, index) => {
     const isLast = index === validRows.length - 1;
     const name = row.querySelector('.pe-stage-name').value.trim();
-    if (OBJECT_STAGE_KEYS.includes(key) && !isLast) {
+    if (isAge) {
+      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
+      return { name, up_to_age: isLast ? null : y };
+    }
+    if (!isLast) {
       const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
       const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
-      const total = y * 12 + m;
-      return { name, up_to_months: total };
+      return { name, up_to_months: y * 12 + m };
     }
     return { name };
   });
 }
 
-export function gatherStageText(key) {
-  updateStageListVisuals(key);
-  const container = document.querySelector(`[data-stage-list="${key}"]`);
-  if (!container) return '';
-  const rows = [...container.querySelectorAll('.pe-stage-row')];
-  
-  // Filter out rows without a name (e.g. the trailing empty database row)
-  const validRows = rows.filter(row => row.querySelector('.pe-stage-name')?.value?.trim());
+export function gatherDynStageList(key) {
+  return gatherStageEntries(document.querySelector(`[data-dyn-stage-list="${key}"]`), key);
+}
 
-  return validRows.map((row, index) => {
-    const isLast = index === validRows.length - 1;
-    const name = row.querySelector('.pe-stage-name').value.trim();
-    if (['profession', 'hobby'].includes(key) && !isLast) {
-      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
-      const m = parseInt(row.querySelector('[data-type="m"]')?.value, 10) || 0;
-      const total = y * 12 + m;
-      return `${name}: ${total}`;
+export function gatherStageText(key) {
+  const container = document.querySelector(`[data-stage-list="${key}"]`);
+  return gatherStageEntries(container, key).map(formatStageEntry).filter(Boolean).join('\n');
+}
+
+export function ensureTrailingEmptyStageRow(container, key) {
+  const rows = [...container.querySelectorAll('.pe-stage-row')];
+  const lastRow = rows[rows.length - 1];
+  if (!lastRow) return;
+  const lastName = lastRow.querySelector('.pe-stage-name')?.value?.trim();
+  if (lastName) {
+    lastRow.classList.remove('pe-stage-row--new');
+    const nameInput = lastRow.querySelector('.pe-stage-name');
+    if (nameInput) nameInput.placeholder = 'Назва';
+    container.insertAdjacentHTML('beforeend', stageRowHtml(key, { name: '' }));
+  }
+}
+
+export function handleStageTimeFocusIn(e) {
+  if (!e.target.classList.contains('pe-time-val')) return;
+  if (e.target.value === '0') e.target.value = '';
+  else e.target.select();
+}
+
+export function normalizeStageRowTimeOnBlur(e, container) {
+  if (!e.target.classList.contains('pe-time-val')) return false;
+  if (e.target.value.trim() === '') e.target.value = '0';
+
+  const row = e.target.closest('.pe-stage-row');
+  if (!container || !row) return false;
+
+  // Якщо фокус перейшов на інше поле часу в межах того ж рядка — не нормалізуємо до повного виходу з рядка
+  if (e.relatedTarget && e.relatedTarget.closest('.pe-stage-row') === row && e.relatedTarget.classList.contains('pe-time-val')) {
+    return false;
+  }
+
+  const yInput = row.querySelector('[data-type="y"]');
+  const mInput = row.querySelector('[data-type="m"]');
+  const minYInput = row.querySelector('[data-type="min-y"]');
+  const minMInput = row.querySelector('[data-type="min-m"]');
+  const fromWrap = row.querySelector('.pe-stage-from-wrap');
+  const hasMin = Boolean(fromWrap && fromWrap.style.display !== 'none');
+
+  if (yInput && mInput && minYInput && minMInput) {
+    const y = parseInt(yInput.value, 10) || 0;
+    const m = parseInt(mInput.value, 10) || 0;
+    const enteredMonths = y * 12 + m;
+    const minMonths = hasMin
+      ? ((parseInt(minYInput.value, 10) || 0) * 12 + (parseInt(minMInput.value, 10) || 0))
+      : 0;
+
+    const finalMonths = (hasMin && enteredMonths > 0 && enteredMonths <= minMonths)
+      ? minMonths + enteredMonths
+      : enteredMonths;
+
+    if (finalMonths !== enteredMonths || m >= 12) {
+      yInput.value = Math.floor(finalMonths / 12);
+      mInput.value = finalMonths % 12;
     }
-    if (['age_categories', 'gender'].includes(key) && !isLast) {
-      const y = parseInt(row.querySelector('[data-type="y"]')?.value, 10) || 0;
-      return `${name}: ${y}`;
+  } else if (yInput && minYInput && hasMin) {
+    const y = parseInt(yInput.value, 10) || 0;
+    const minY = parseInt(minYInput.value, 10) || 0;
+    if (y > 0 && y <= minY) {
+      yInput.value = minY + y;
     }
-    return name;
-  }).join('\n');
+  }
+
+  return true;
 }
 
 export function setStagesViewMode(mode) {
@@ -561,18 +597,94 @@ function handleWheelDuringDrag(e) {
   }
 }
 
+function cleanupDragListeners() {
+  document.body.classList.remove('is-stage-dragging');
+  stopAutoScroll();
+  window.removeEventListener('pointermove', onDragPointerMove, { capture: true });
+  window.removeEventListener('mousemove', onDragPointerMove, { capture: true });
+  window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
+  activeDragContainer = null;
+  lastPointerEvent = null;
+}
+
+function createStageSortable(container, key, { dragSens, onReorder }) {
+  const isObjectStage = OBJECT_STAGE_KEYS.includes(key);
+  let savedSlotTimes = [];
+
+  return new Sortable(container, {
+    animation: 150,
+    handle: '.pe-stage-handle',
+    filter: '.pe-stage-row--new',
+    preventOnFilter: false,
+    forceFallback: true,
+    fallbackOnBody: true,
+    fallbackClass: 'sortable-fallback',
+    fallbackTolerance: 2,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    scroll: false,
+    swapThreshold: isObjectStage ? 0.55 : 0.7,
+    invertSwap: isObjectStage,
+    direction: 'vertical',
+    onMove(evt) {
+      if (evt.related && evt.related.classList.contains('pe-stage-row--new')) {
+        return -1;
+      }
+      return true;
+    },
+    onStart() {
+      document.body.classList.add('is-stage-dragging');
+      activeDragContainer = container;
+      activeDragSens = dragSens;
+      lastPointerEvent = null;
+      window.addEventListener('pointermove', onDragPointerMove, { capture: true, passive: true });
+      window.addEventListener('mousemove', onDragPointerMove, { capture: true, passive: true });
+      window.addEventListener('wheel', handleWheelDuringDrag, { passive: false, capture: true });
+      startAutoScroll();
+
+      if (isObjectStage) {
+        const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
+        savedSlotTimes = validRows.map(row => ({
+          y: row.querySelector('[data-type="y"]')?.value ?? '0',
+          m: row.querySelector('[data-type="m"]')?.value ?? '0'
+        }));
+      }
+    },
+    onEnd() {
+      cleanupDragListeners();
+
+      const newRow = container.querySelector('.pe-stage-row--new');
+      if (newRow && container.lastElementChild !== newRow) {
+        container.appendChild(newRow);
+      }
+
+      if (isObjectStage && savedSlotTimes.length) {
+        const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
+        validRows.forEach((row, idx) => {
+          if (savedSlotTimes[idx]) {
+            const yInput = row.querySelector('[data-type="y"]');
+            const mInput = row.querySelector('[data-type="m"]');
+            if (yInput) yInput.value = savedSlotTimes[idx].y;
+            if (mInput) mInput.value = savedSlotTimes[idx].m;
+          }
+        });
+      }
+
+      updateStageListVisuals(key, container);
+      if (typeof onReorder === 'function') {
+        onReorder(key);
+      }
+    }
+  });
+}
+
 export function setStageReorderCallback(cb) {
   stageReorderCallback = cb;
 }
 
 export function destroyStageSortables() {
-  stopAutoScroll();
-  window.removeEventListener('pointermove', onDragPointerMove, { capture: true });
-  window.removeEventListener('mousemove', onDragPointerMove, { capture: true });
-  window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
-  document.body.classList.remove('is-stage-dragging');
-  activeDragContainer = null;
-  lastPointerEvent = null;
+  cleanupDragListeners();
   Object.values(sortableInstances).forEach(s => {
     try { s.destroy(); } catch (_) {}
   });
@@ -594,85 +706,10 @@ export function initStageSortables(onStageReordered) {
       delete sortableInstances[key];
     }
 
-    let savedSlotTimes = [];
     const isObjectStage = OBJECT_STAGE_KEYS.includes(key);
-
-    sortableInstances[key] = new Sortable(container, {
-      animation: 150,
-      handle: '.pe-stage-handle',
-      filter: '.pe-stage-row--new',
-      preventOnFilter: false,
-      forceFallback: true,
-      fallbackOnBody: true,
-      fallbackClass: 'sortable-fallback',
-      fallbackTolerance: 2,
-      ghostClass: 'sortable-ghost',
-      chosenClass: 'sortable-chosen',
-      dragClass: 'sortable-drag',
-      scroll: false,
-      swapThreshold: isObjectStage ? 0.55 : 0.7,
-      invertSwap: isObjectStage,
-      direction: 'vertical',
-      onMove: function(evt) {
-        // Prevent moving past the empty bottom row
-        if (evt.related && evt.related.classList.contains('pe-stage-row--new')) {
-          return -1;
-        }
-        return true;
-      },
-      onStart: function() {
-        document.body.classList.add('is-stage-dragging');
-        activeDragContainer = container;
-        activeDragSens = isObjectStage ? 220 : 140;
-        lastPointerEvent = null;
-        window.addEventListener('pointermove', onDragPointerMove, { capture: true, passive: true });
-        window.addEventListener('mousemove', onDragPointerMove, { capture: true, passive: true });
-        window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
-        window.addEventListener('wheel', handleWheelDuringDrag, { passive: false, capture: true });
-        startAutoScroll();
-
-        if (OBJECT_STAGE_KEYS.includes(key)) {
-          const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
-          savedSlotTimes = validRows.map(row => ({
-            y: row.querySelector('[data-type="y"]')?.value ?? '0',
-            m: row.querySelector('[data-type="m"]')?.value ?? '0'
-          }));
-        }
-      },
-      onEnd: function() {
-        document.body.classList.remove('is-stage-dragging');
-        stopAutoScroll();
-        window.removeEventListener('pointermove', onDragPointerMove, { capture: true });
-        window.removeEventListener('mousemove', onDragPointerMove, { capture: true });
-        window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
-        activeDragContainer = null;
-        lastPointerEvent = null;
-
-        // Ensure new empty row is always the last child
-        const newRow = container.querySelector('.pe-stage-row--new');
-        if (newRow && container.lastElementChild !== newRow) {
-          container.appendChild(newRow);
-        }
-
-        // Fixed slot times: assign original slot limits to reordered rows
-        if (OBJECT_STAGE_KEYS.includes(key) && savedSlotTimes.length) {
-          const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
-          validRows.forEach((row, idx) => {
-            if (savedSlotTimes[idx]) {
-              const yInput = row.querySelector('[data-type="y"]');
-              const mInput = row.querySelector('[data-type="m"]');
-              if (yInput) yInput.value = savedSlotTimes[idx].y;
-              if (mInput) mInput.value = savedSlotTimes[idx].m;
-            }
-          });
-        }
-
-        updateStageListVisuals(key);
-
-        if (typeof stageReorderCallback === 'function') {
-          stageReorderCallback(key);
-        }
-      }
+    sortableInstances[key] = createStageSortable(container, key, {
+      dragSens: isObjectStage ? 220 : 140,
+      onReorder: k => stageReorderCallback?.(k)
     });
   });
 }
@@ -691,82 +728,9 @@ export function initDynStageSortable(key, onReordered = null) {
   if (!container) return;
 
   destroyDynStageSortable();
-
-  const isObjectStage = OBJECT_STAGE_KEYS.includes(key);
-  let savedSlotTimes = [];
-
-  dynSortableInstance = new Sortable(container, {
-    animation: 150,
-    handle: '.pe-stage-handle',
-    filter: '.pe-stage-row--new',
-    preventOnFilter: false,
-    forceFallback: true,
-    fallbackOnBody: true,
-    fallbackClass: 'sortable-fallback',
-    fallbackTolerance: 2,
-    ghostClass: 'sortable-ghost',
-    chosenClass: 'sortable-chosen',
-    dragClass: 'sortable-drag',
-    scroll: false,
-    swapThreshold: isObjectStage ? 0.55 : 0.7,
-    invertSwap: isObjectStage,
-    direction: 'vertical',
-    onMove: function(evt) {
-      if (evt.related && evt.related.classList.contains('pe-stage-row--new')) {
-        return -1;
-      }
-      return true;
-    },
-    onStart: function() {
-      document.body.classList.add('is-stage-dragging');
-      activeDragContainer = container;
-      activeDragSens = 140;
-      lastPointerEvent = null;
-      window.addEventListener('pointermove', onDragPointerMove, { capture: true, passive: true });
-      window.addEventListener('mousemove', onDragPointerMove, { capture: true, passive: true });
-      window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
-      window.addEventListener('wheel', handleWheelDuringDrag, { passive: false, capture: true });
-      startAutoScroll();
-
-      if (OBJECT_STAGE_KEYS.includes(key)) {
-        const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
-        savedSlotTimes = validRows.map(row => ({
-          y: row.querySelector('[data-type="y"]')?.value ?? '0',
-          m: row.querySelector('[data-type="m"]')?.value ?? '0'
-        }));
-      }
-    },
-    onEnd: function() {
-      document.body.classList.remove('is-stage-dragging');
-      stopAutoScroll();
-      window.removeEventListener('pointermove', onDragPointerMove, { capture: true });
-      window.removeEventListener('mousemove', onDragPointerMove, { capture: true });
-      window.removeEventListener('wheel', handleWheelDuringDrag, { capture: true });
-      activeDragContainer = null;
-      lastPointerEvent = null;
-
-      const newRow = container.querySelector('.pe-stage-row--new');
-      if (newRow && container.lastElementChild !== newRow) {
-        container.appendChild(newRow);
-      }
-
-      if (OBJECT_STAGE_KEYS.includes(key) && savedSlotTimes.length) {
-        const validRows = [...container.querySelectorAll('.pe-stage-row:not(.pe-stage-row--new)')];
-        validRows.forEach((row, idx) => {
-          if (savedSlotTimes[idx]) {
-            const yInput = row.querySelector('[data-type="y"]');
-            const mInput = row.querySelector('[data-type="m"]');
-            if (yInput) yInput.value = savedSlotTimes[idx].y;
-            if (mInput) mInput.value = savedSlotTimes[idx].m;
-          }
-        });
-      }
-
-      updateStageListVisuals(key, container);
-      if (typeof onReordered === 'function') {
-        onReordered(key);
-      }
-    }
+  dynSortableInstance = createStageSortable(container, key, {
+    dragSens: 140,
+    onReorder: onReordered
   });
 }
 
