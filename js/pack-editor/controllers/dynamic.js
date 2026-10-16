@@ -4,12 +4,13 @@ import {
   parseLines, oneLine, parseCards, cardToLine,
   hasExplanationField, joinNameExplanation, splitNameExplanation
 } from '../parser.js';
-import { OBJECT_STAGE_KEYS, validateStageEntries } from '../payload.js';
+import { OBJECT_STAGE_KEYS, validateStageEntries, parseStageEntry } from '../payload.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
 import {
-  $, renderDynStageList, gatherDynStageList, initDynStageSortable, destroyDynStageSortable
+  $, renderDynStageList, gatherDynStageList, initDynStageSortable, destroyDynStageSortable,
+  updateStageListVisuals
 } from '../ui/helpers.js';
 
 let onDynamicChange = null;
