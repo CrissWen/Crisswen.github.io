@@ -1177,22 +1177,6 @@ body.is-stage-dragging * {
   resize: vertical;
   overflow: auto;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ----- Інформаційне вікно про нестачу карток (pack-notice.js) ----- */
 .pk-notice{
   position:fixed;inset:0;z-index:10010;
