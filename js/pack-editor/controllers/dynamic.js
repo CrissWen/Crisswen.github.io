@@ -32,25 +32,8 @@ export function dynDraftPending() {
 
   // Якщо ми в режимі створення нової картки (не редагуємо існуючу):
   if (state.dynEditIndex < 0) {
-    // Якщо введено назву картки — це активний незбережений чернетковий запис
-    if (current.value && current.value.trim() !== '') return true;
-
-    // Якщо назва порожня, перевіряємо, чи автор змінив будь-яке поле від його дефолтного стану
-    for (const f of schema.fields) {
-      if (f.key === 'stages') {
-        if (current.stages && current.stages.length > 0) return true;
-        continue;
-      }
-      const defaultVal = f.default !== undefined ? f.default : (f.type === 'checkbox' ? false : (f.type === 'list' ? [] : ''));
-      if (f.type === 'checkbox') {
-        if (Boolean(current[f.key]) !== Boolean(defaultVal)) return true;
-      } else if (f.type === 'list') {
-        if (Array.isArray(current[f.key]) && current[f.key].length > 0) return true;
-      } else {
-        if (String(current[f.key] ?? '').trim() !== String(defaultVal).trim()) return true;
-      }
-    }
-    return false;
+    // Без введеної назви чернетки немає (навіть якщо чекбокс за замовчуванням true чи змінено інші поля)
+    return Boolean(current.value && current.value.trim() !== '');
   }
   
   const cards = getDynamicCards();
@@ -406,6 +389,7 @@ export function applyDynChange({ scrollToEnd = false } = {}) {
     onDynamicChange({ scrollToEnd });
   }
 }
+
 
 export function submitDyn() {
   const data = readDynRaw();
