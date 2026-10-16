@@ -7,6 +7,9 @@ import {
 } from '../payload.js';
 import { parseCards } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
+import { showPackNotice, isPackNoticeMuted } from '../../game-modules/overlays/pack-notice.js';
+import { findShortCategories } from '../../utils/pack-fallback.js';
+import { getGameConfigSync } from '../../config/config-manager.js';
 import * as ui from '../ui/ui.js';
 import { cataDraftPending } from './cataclysm.js';
 import { dynDraftPending } from './dynamic.js';
@@ -30,6 +33,14 @@ export const buildConfig = () => buildPackConfig({
   stages: state.form.stages,
   ranges: state.form.ranges
 });
+
+// Повертає керування вікном або null, якщо показувати нічого (усе в нормі, базовий пак, вікно вимкнено)
+function showShortageNotice(cards) {
+  if (state.packId === DEFAULT_PACK_ID || isPackNoticeMuted()) return null;
+  const bc = getGameConfigSync() || {};
+  const short = findShortCategories(cards, bc.maxPlayersInLobby || 15, bc);
+  return short.length ? showPackNotice(short) : null;
+}
 
 export async function handleSave(btn) {
   if (state.isSaving) return;
@@ -114,6 +125,9 @@ export async function handleSave(btn) {
   state.isSaving = true;
   ui.setButtonState(btn, { disabled: true, text: 'Збереження...' });
 
+  // Підказка про нестачу карток: для базового пака не потрібна (він сам є джерелом добору), а також якщо її вимкнено
+  const notice = showShortageNotice(cards);
+
   try {
     await savePack({
       id: state.packId,
@@ -123,9 +137,12 @@ export async function handleSave(btn) {
       cards
     });
     showGlobalToast(isEdit ? 'Пак оновлено' : 'Пак створено');
+    // Вікно йшло паралельно зі збереженням; на список переходимо, лише коли користувач його закрив
+    if (notice) await notice.closed;
     goToList();
   } catch (err) {
     console.error('Не вдалося зберегти пак:', err);
+    notice?.close();
     showGlobalToast(err.message || 'Не вдалося зберегти пак');
     ui.setButtonState(btn, { disabled: false, text: originalLabel });
   } finally {

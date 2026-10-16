@@ -1177,3 +1177,55 @@ body.is-stage-dragging * {
   resize: vertical;
   overflow: auto;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ----- Інформаційне вікно про нестачу карток (pack-notice.js) ----- */
+.pk-notice{
+  position:fixed;inset:0;z-index:10010;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  background:rgba(0,0,0,.62);
+  opacity:0;transition:opacity .2s ease;
+  pointer-events:none;
+}
+.pk-notice.is-open{opacity:1;pointer-events:auto;}
+.pk-notice__card{
+  display:flex;flex-direction:column;gap:14px;
+  width:min(440px,100%);max-height:calc(100vh - 32px);padding:20px;
+  background:var(--panel);border:1px solid var(--metal-lt);border-top:3px solid var(--hazard);border-radius:var(--radius);
+  box-shadow:0 18px 48px rgba(0,0,0,.6);
+  transform:translateY(10px) scale(.97);transition:transform .2s ease;
+}
+.pk-notice.is-open .pk-notice__card{transform:none;}
+.pk-notice__title{
+  margin:0;font-family:var(--head);font-weight:600;font-size:22px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--text);
+}
+.pk-notice__text{margin:0;font-size:14px;line-height:1.5;color:var(--text-mute);}
+.pk-notice__list{
+  margin:0;padding:0;list-style:none;overflow-y:auto;
+  border:1px solid var(--metal);border-radius:var(--radius-sm);background:var(--panel-2);
+  scrollbar-width:thin;scrollbar-color:var(--metal-lt) transparent;
+}
+.pk-notice__item{
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:9px 12px;font-size:14px;color:var(--text);
+}
+.pk-notice__item + .pk-notice__item{border-top:1px solid var(--metal);}
+.pk-notice__count{flex:none;font-family:var(--mono);font-size:13px;color:var(--text-mute);}
+.pk-notice__count b{color:var(--hazard);font-weight:700;}
+.pk-notice__foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+
