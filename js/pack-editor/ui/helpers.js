@@ -45,7 +45,14 @@ export const markEditorLoaded = () => $('pe-root').classList.remove('is-loading'
 export const focusTitle = () => $('pe-title').focus();
 
 // ----- Оновлення елементів -----
-export function renderSummary(counts, activeCategory) {
+// Текст підказки для жовтого кружечка «мало карток». info = { have, need } з findShortByCounts
+export function shortageTip({ have, need }) {
+  return `Карток: ${have} з рекомендованих ${need}. Краще додати ще ${need - have} — інакше бракуючі картки гра буде брати з базового пака.`;
+}
+
+// shortage — { [category]: { have, need } } для категорій, де треба показати жовтий кружечок «i» (порожній об’єкт — іконок немає).
+// Хто і коли їх ввімкне — рішає контролер (editor.js); тут лише малюємо.
+export function renderSummary(counts, activeCategory, shortage = {}) {
   const categories = ALL_PACK_CATEGORIES.map(c => ({ ...c, count: counts[c.category] || 0 }));
   const charTotal = categories.filter(c => c.poolType === "character").reduce((sum, c) => sum + c.count, 0);
   const bunkerTotal = categories.filter(c => c.poolType === "bunker").reduce((sum, c) => sum + c.count, 0);
@@ -56,7 +63,13 @@ export function renderSummary(counts, activeCategory) {
 
   const chipsEl = $("pe-chips");
   if (chipsEl) {
-    const renderItem = c => `<button type="button" class="pe-char-menu-item${c.category === activeCategory ? " is-active" : ""}" data-chip="${esc(c.category)}">${esc(c.label)} <span>${c.count > 0 ? `(${c.count})` : ""}</span></button>`;
+    const warnIcon = c => {
+      const info = shortage[c.category];
+      if (!info) return "";
+      const tip = esc(shortageTip(info));
+      return `<i class="pe-warn" role="img" data-tip="${tip}" aria-label="${tip}"></i>`;
+    };
+    const renderItem = c => `<button type="button" class="pe-char-menu-item${c.category === activeCategory ? " is-active" : ""}" data-chip="${esc(c.category)}">${esc(c.label)} <span class="pe-char-menu-item__meta">${c.count > 0 ? `(${c.count})` : ""}${warnIcon(c)}</span></button>`;
       
     const chars = categories.filter(c => c.poolType === "character").map(renderItem).join("");
     const bunkers = categories.filter(c => c.poolType === "bunker").map(renderItem).join("");
@@ -67,6 +80,21 @@ export function renderSummary(counts, activeCategory) {
       <div class="pe-char-menu-heading">Бункер</div>
       ${bunkers}
     `;
+  }
+
+  // Такий же кружечок поряд із заголовком відкритої категорії — тут користувач додає картки і бачить стан наживо
+  const headWarn = $("pe-cat-warn");
+  if (headWarn) {
+    const info = shortage[activeCategory];
+    headWarn.hidden = !info;
+    if (info) {
+      const tip = shortageTip(info);
+      headWarn.dataset.tip = tip;
+      headWarn.setAttribute("aria-label", tip);
+    } else {
+      delete headWarn.dataset.tip;
+      headWarn.removeAttribute("aria-label");
+    }
   }
 }
 

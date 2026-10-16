@@ -5,6 +5,10 @@ import { getStagePrompt } from './prompts/stage-prompts.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
+import { isPackNoticeMuted } from '../game-modules/overlays/pack-notice.js';
+import { findShortByCounts } from '../utils/pack-fallback.js';
+import { getGameConfigSync } from '../config/config-manager.js';
+import { initTips } from './ui/tooltip.js';
 import * as ui from './ui/ui.js';
 import { $ } from './ui/helpers.js';
 import {
@@ -73,7 +77,17 @@ function categoryCounts() {
   return counts;
 }
 
-const renderSummary = () => ui.renderSummary(categoryCounts(), state.activeCategory);
+// Жовті кружечки «мало карток» показуємо лише у особистому паку, для якого користувач при збереженні поставив
+// «Більше не показувати» (статус на пак, див. pack-notice.js). Працюють на тих же порогах, що й вікно, і оновлюються наживо.
+function shortageByCategory(counts) {
+  if (!state.packId || state.packId === DEFAULT_PACK_ID || !isPackNoticeMuted(state.packId)) return {};
+  return Object.fromEntries(findShortByCounts(counts, getGameConfigSync() || {}).map(s => [s.category, s]));
+}
+
+const renderSummary = () => {
+  const counts = categoryCounts();
+  ui.renderSummary(counts, state.activeCategory, shortageByCategory(counts));
+};
 const updateButtons = () => ui.updateButtons({ dirty: isDirty(), empty: isFormEmpty() });
 
 function updateCardsMeta() {
@@ -852,6 +866,7 @@ function handleStageKeydown(e) {
   });
 
   initSearch();
+  initTips();
 
 
   $('pe-actions').addEventListener('click', handleActionsClick);

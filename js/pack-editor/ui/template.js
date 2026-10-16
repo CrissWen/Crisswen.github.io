@@ -190,7 +190,10 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         <div class="pe-char-main">
           <div class="pe-char-header">
             <div class="pe-char-breadcrumbs">Характеристики / <span id="pe-cat-breadcrumb">Стать</span></div>
-            <h2 class="pe-char-title" id="pe-cat-title">Стать</h2>
+            <div class="pe-char-title-row">
+              <h2 class="pe-char-title" id="pe-cat-title">Стать</h2>
+              <i id="pe-cat-warn" class="pe-warn" role="img" hidden></i>
+            </div>
           </div>
 
           <div class="pe-toolbar">

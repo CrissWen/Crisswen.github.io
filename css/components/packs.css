@@ -1034,6 +1034,11 @@ body.is-stage-dragging * {
   color: var(--text-mute);
   font-size: 11.5px;
 }
+.pe-char-menu-item__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .pe-char-menu-item:hover {
   background-color: color-mix(in srgb, var(--text) 8%, transparent);
 }
@@ -1066,6 +1071,12 @@ body.is-stage-dragging * {
   color: var(--text-mute);
   margin-bottom: 4px;
 }
+.pe-char-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pe-char-title-row[hidden], .pe-warn[hidden] { display: none; }
 .pe-char-title {
   margin: 0;
   font-family: var(--head);
@@ -1228,4 +1239,28 @@ body.is-stage-dragging * {
 .pk-notice__count{flex:none;font-family:var(--mono);font-size:13px;color:var(--text-mute);}
 .pk-notice__count b{color:var(--hazard);font-weight:700;}
 .pk-notice__foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+
+/* ----- Жовтий кружечок «i»: у категорії мало карток (лише для пака, де вікно «Більше не показувати» вимкнено) ----- */
+/* Колір фіксований жовтий, а не --hazard: у темах Cyberpunk/Cryo/Patriot --hazard не жовтий і збігається з підсвічуванням активної категорії */
+.pe-warn{
+  display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:15px;height:15px;border-radius:50%;
+  background:#f2c14e;color:#241a00;
+  font:700 10px/1 var(--body);font-style:normal;cursor:help;
+  transition:filter .2s ease;
+}
+.pe-warn::before{content:"i";}
+.pe-warn:hover{filter:brightness(1.12);}
+.pe-char-title-row .pe-warn{width:19px;height:19px;font-size:12px;}
+
+/* Спільна підказка (ui/tooltip.js): fixed, щоб її не обрізала бокова панель; фон — --panel-2 поверх суцільного --bg (у деяких тем --panel-2 напівпрозорий) */
+.pe-tip{
+  position:fixed;z-index:10020;max-width:260px;padding:8px 10px;
+  background:linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  box-shadow:0 8px 22px rgba(0,0,0,.45);
+  color:var(--text);font-family:var(--body);font-size:12.5px;line-height:1.4;
+  opacity:0;pointer-events:none;transition:opacity .15s ease;
+}
+.pe-tip.is-visible{opacity:1;}
 

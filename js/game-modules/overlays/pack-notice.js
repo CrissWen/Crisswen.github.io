@@ -1,10 +1,12 @@
 // Інформаційне вікно редактора паків: після збереження показує категорії, де власних карток менше, ніж потрібно для гри,
 // і пояснює, що решту гра добере з базового пака. На відміну від pack-confirm.js, це модальне вікно на весь екран
 // із затемненим фоном: воно не блокує збереження, а лише інформує.
-// Закривається кнопкою «Закрити», Escape або кліком по фону. Чекбокс «Більше не показувати» зберігається в localStorage.
+// Закривається кнопкою «Закрити», Escape або кліком по фону.
+// Чекбокс «Більше не показувати» не пише в сховище сам: він повертається у closed ({ muted }), а записує його викликач
+// через setPackNoticeMuted(packId, ...): статус прив’язаний до конкретного пака (у нового пака id з’являється лише після збереження).
 
 const NOTICE_ID = 'pack-notice-root';
-const MUTE_KEY = 'pack_notice_muted';
+const MUTE_KEY_PREFIX = 'pack_notice_muted:';
 const CLOSE_MS = 220;
 
 function esc(str) {
@@ -13,18 +15,20 @@ function esc(str) {
   ));
 }
 
-export function isPackNoticeMuted() {
+export function isPackNoticeMuted(packId) {
+  if (!packId) return false;
   try {
-    return localStorage.getItem(MUTE_KEY) === '1';
+    return localStorage.getItem(MUTE_KEY_PREFIX + packId) === '1';
   } catch {
     return false;
   }
 }
 
-function setPackNoticeMuted(muted) {
+export function setPackNoticeMuted(packId, muted) {
+  if (!packId) return;
   try {
-    if (muted) localStorage.setItem(MUTE_KEY, '1');
-    else localStorage.removeItem(MUTE_KEY);
+    if (muted) localStorage.setItem(MUTE_KEY_PREFIX + packId, '1');
+    else localStorage.removeItem(MUTE_KEY_PREFIX + packId);
   } catch {
     // сховище недоступне (приватний режим) — підказка просто показуватиметься знову
   }
@@ -60,8 +64,8 @@ function noticeHtml(short) {
   `;
 }
 
-// showPackNotice(short) -> { closed: Promise<void>, close(): void }
-// short — результат findShortCategories. closed вирішується, коли вікно закрите (будь-яким способом).
+// showPackNotice(short) -> { closed: Promise<{ muted: boolean }>, close(): void }
+// short — результат findShortCategories. closed вирішується, коли вікно закрите (будь-яким способом); muted — чи був відмічений чекбокс.
 export function showPackNotice(short) {
   document.getElementById(NOTICE_ID)?.remove();
   document.body.insertAdjacentHTML('beforeend', noticeHtml(short));
@@ -82,12 +86,12 @@ export function showPackNotice(short) {
   function close() {
     if (settled) return;
     settled = true;
-    setPackNoticeMuted(muteBox.checked);
+    const muted = muteBox.checked;
     document.removeEventListener('keydown', onKeydown);
     root.removeEventListener('click', onClick);
     root.classList.remove('is-open');
     setTimeout(() => root.remove(), CLOSE_MS);
-    resolveClosed();
+    resolveClosed({ muted });
   }
 
   function onKeydown(e) {

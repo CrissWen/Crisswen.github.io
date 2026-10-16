@@ -38,6 +38,30 @@ export function buildRequirements(playersCount, bc) {
   };
 }
 
+// ===== Пороги для вікна «Пак збережено» у редакторі =====
+// Це РЕКОМЕНДОВАНИЙ мінімум для пака, а не потреба гри: buildRequirements (вище) лишається правдою для добору карток з дефолтного пака.
+// Категорії гравця — по 30 карток (крім статури — 1), стать — 2; категорії бункера — по 1, предмети бункера — базова потреба гри + 5.
+// problems / food_supply для гри необов'язкові (buildRequirements їх не вимагає), але для пака рекомендуємо мінімум 1 картку.
+export const PACK_MIN_CHARACTER_CARDS = 30;
+export const PACK_MIN_GENDER_CARDS = 2;
+export const PACK_BUNKER_EXTRA_CARDS = 5;
+
+export function buildPackNoticeRequirements(bc) {
+  const base = buildRequirements(1, bc); // 1 гравець: беремо лише базову кількість для бункера (катаклізм, історія, кімнати, локація, предмети)
+  const character = Object.fromEntries(
+    Object.keys(base.character).map(category => [category, PACK_MIN_CHARACTER_CARDS])
+  );
+  character.gender = PACK_MIN_GENDER_CARDS;
+  character.body_type = 1; // статура: гра тягне її з повторами, тому вистачить однієї
+  const bunker = Object.fromEntries(
+    // Бункерні характеристики (катаклізм, історія, кімнати, локація) — мінімум 1; лише предмети бункера лишаються з запасом +5
+    Object.entries(base.bunker).map(([category, need]) => [category, category === 'items' ? need + PACK_BUNKER_EXTRA_CARDS : need])
+  );
+  bunker.problems = 1;    // проблема бункера
+  bunker.food_supply = 1; // примітка до запасів їжі/води
+  return { character, bunker };
+}
+
 // Мінімум для дій ведучого посеред гри (перерол однієї картки): щоб жодна категорія не лишилась порожньою
 export function buildMinimalRequirements() {
   const one = {};
@@ -48,22 +72,27 @@ export function buildMinimalRequirements() {
   return one;
 }
 
-// Категорії, де власних карток менше, ніж треба для повної гри на playersCount гравців (тобто гра добиратиме з дефолтного пака).
-// cards — рядки { pool_type, category } (buildCardRows). Правила ті самі, що в buildRequirements, тож підказка редактора
-// збігається з реальним добором. Повертає [{ poolType, category, label, have, need }] у порядку редактора.
-export function findShortCategories(cards, playersCount, bc) {
-  const have = {};
+// Категорії, де власних карток менше рекомендованого мінімуму пака (buildPackNoticeRequirements: 30 / стать 2 / бункер +5).
+// cards — рядки { pool_type, category } (buildCardRows). Не залежить від кількості гравців: добір з дефолтного пака працює
+// за реальними потребами гри (buildRequirements), а ця підказка лише радить набрати більше карток.
+// Повертає [{ poolType, category, label, have, need }] у порядку редактора.
+export function findShortCategories(cards, bc) {
+  const counts = {};
   for (const card of cards || []) {
-    const key = `${card.pool_type}:${card.category}`;
-    have[key] = (have[key] || 0) + 1;
+    counts[card.category] = (counts[card.category] || 0) + 1;
   }
+  return findShortByCounts(counts, bc);
+}
 
-  const req = buildRequirements(playersCount, bc);
+// Те саме, але за готовими лічильниками { [category]: кількість } — для іконок «мало карток» у редакторі (вони рахують лічильники наживо).
+// Єдина логіка порогів для вікна при збереженні та для іконок, щоб вони не розходились.
+export function findShortByCounts(counts, bc) {
+  const req = buildPackNoticeRequirements(bc);
   const short = [];
   for (const { poolType, category, label } of ALL_PACK_CATEGORIES) {
     const need = req[poolType]?.[category];
     if (!need) continue;
-    const count = have[`${poolType}:${category}`] || 0;
+    const count = counts?.[category] || 0;
     if (count < need) short.push({ poolType, category, label, have: count, need });
   }
   return short;

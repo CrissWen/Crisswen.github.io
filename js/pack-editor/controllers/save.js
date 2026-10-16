@@ -7,7 +7,7 @@ import {
 } from '../payload.js';
 import { parseCards } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
-import { showPackNotice, isPackNoticeMuted } from '../../game-modules/overlays/pack-notice.js';
+import { showPackNotice, isPackNoticeMuted, setPackNoticeMuted } from '../../game-modules/overlays/pack-notice.js';
 import { findShortCategories } from '../../utils/pack-fallback.js';
 import { getGameConfigSync } from '../../config/config-manager.js';
 import * as ui from '../ui/ui.js';
@@ -36,9 +36,9 @@ export const buildConfig = () => buildPackConfig({
 
 // Повертає керування вікном або null, якщо показувати нічого (усе в нормі, базовий пак, вікно вимкнено)
 function showShortageNotice(cards) {
-  if (state.packId === DEFAULT_PACK_ID || isPackNoticeMuted()) return null;
+  if (state.packId === DEFAULT_PACK_ID || isPackNoticeMuted(state.packId)) return null;
   const bc = getGameConfigSync() || {};
-  const short = findShortCategories(cards, bc.maxPlayersInLobby || 15, bc);
+  const short = findShortCategories(cards, bc);
   return short.length ? showPackNotice(short) : null;
 }
 
@@ -129,7 +129,7 @@ export async function handleSave(btn) {
   const notice = showShortageNotice(cards);
 
   try {
-    await savePack({
+    const savedId = await savePack({
       id: state.packId,
       title,
       description: state.form.description.trim(),
@@ -138,7 +138,11 @@ export async function handleSave(btn) {
     });
     showGlobalToast(isEdit ? 'Пак оновлено' : 'Пак створено');
     // Вікно йшло паралельно зі збереженням; на список переходимо, лише коли користувач його закрив
-    if (notice) await notice.closed;
+    if (notice) {
+      const { muted } = await notice.closed;
+      // «Більше не показувати» прив’язуємо до цього пака (id нового відомий лише після збереження); з цим статусом редактор показує іконки «мало карток»
+      if (muted) setPackNoticeMuted(savedId, true);
+    }
     goToList();
   } catch (err) {
     console.error('Не вдалося зберегти пак:', err);
