@@ -7,7 +7,7 @@
 // Стадія БЕЗ up_to_months (зазвичай остання) — відкрита верхня: діє для всього стажу понад найбільший поріг.
 // Масив рядків — не шкала за місяцями: такі списки лишаються на логіці pickStage (випадкова назва).
 
-import { randInt, pickStage } from './random.js';
+import { randInt, pickStage, pickFromStrings } from './random.js';
 
 export const UNKNOWN_STAGE = 'Невідома стадія';
 // Вік, з якого може починатися стаж (ранні роки життя без нього): максимум стажу = (вік − цей вік) років у місяцях.
@@ -99,20 +99,26 @@ export const generateExperienceMonths = (type, config, age, startAge = DEFAULT_E
 // Стадія стажу для нової картки: { stage } (завжди рядок з назвою). Місяці генеруються лише як вхідне число
 // для пошуку назви стадії і ніде не зберігаються й не показуються (інакше після ручної зміни стадії
 // ведучим залишився б застарілий стаж).
+// Для персонажів без віку (age === null / "Без віку") стадія вибирається просто випадково з доступного списку,
+// без прив'язки до штучних підрахунків місяців.
 // Порядок джерел:
-//   1) у картки є meta.stages з порогами up_to_months → шкала картки за місяцями;
+//   1) у картки є meta.stages з порогами up_to_months → шкала картки за місяцями (або випадкова зі списку, якщо без віку);
 //   2) у картки є meta.stages без порогів (рядки) → випадкова назва з них (pickStage);
-//   3) інакше, якщо в конфігу є шкала за місяцями → вона;
+//   3) інакше, якщо в конфігу є шкала за місяцями → вона (або випадкова зі списку, якщо без віку);
 //   4) інакше pickStage за default_stages.
 export function rollExperience(type, card, config, age, startAge = DEFAULT_EXPERIENCE_START_AGE) {
+  const isAgeKnown = age !== null && age !== undefined && age !== '' && Number.isFinite(Number(age));
   const cardStages = card?.meta?.stages;
   const hasCardStages = Array.isArray(cardStages) && cardStages.length > 0;
 
   if (hasCardStages) {
     const cardScale = getMonthScale(cardStages);
     if (cardScale.length) {
+      const stageName = isAgeKnown
+        ? stageNameByMonths(cardScale, generateMonthsForScale(cardScale, age, startAge))
+        : pickFromStrings(cardScale.map(s => s.name), UNKNOWN_STAGE);
       return {
-        stage: stageNameByMonths(cardScale, generateMonthsForScale(cardScale, age, startAge)),
+        stage: stageName,
         custom_scale: serializeScale(cardScale)
       };
     }
@@ -121,7 +127,10 @@ export function rollExperience(type, card, config, age, startAge = DEFAULT_EXPER
 
   const defaultScale = getMonthStages(type, config);
   if (defaultScale.length) {
-    return { stage: stageNameByMonths(defaultScale, generateMonthsForScale(defaultScale, age, startAge)) };
+    const stageName = isAgeKnown
+      ? stageNameByMonths(defaultScale, generateMonthsForScale(defaultScale, age, startAge))
+      : pickFromStrings(defaultScale.map(s => s.name), UNKNOWN_STAGE);
+    return { stage: stageName };
   }
   return { stage: pickStage(card || {}, config?.default_stages?.[type]) };
 }
