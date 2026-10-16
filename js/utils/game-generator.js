@@ -170,6 +170,10 @@ export async function generateGameState(playersList, pack, config) {
   });
   if (Object.keys(stageScales).length) bunkerState.stage_scales = stageScales;
 
+  // Порядок гравців у таблиці — випадковий на кожен старт. Хто коли доєднався до кімнати або який його id — порядок ключів players_state
+  // у JSONB не зберігається, тому потрібен явний список (читає board-view-model.js).
+  bunkerState.players_order = shuffleArray(playersList.map(player => player.id));
+
   // Вікові категорії пака: зберігаємо в bunkerState, якщо вони визначені в конфігу пака
   if (Array.isArray(config?.age_categories) && config.age_categories.length > 0) {
     bunkerState.age_categories = config.age_categories;
