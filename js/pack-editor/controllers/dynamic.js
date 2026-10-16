@@ -24,317 +24,429 @@ export function getDynamicCards() {
   return parseCards(state.form.texts[state.activeCategory] || '', state.activeCategory, state.extraMeta);
 }
 
-export function dynDraftPending() {
-  if (state.activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[state.activeCategory] || state.viewMode !== 'visual') return false;
-  const current = readDynRaw();
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
-  if (!schema) return false;
+// ===== Кодеки полів за типом (читання / запис / скидання / порівняння) =====
+const FIELD_CODECS = {
+  checkbox: {
+    read: el => el.checked,
+    write: (el, val) => { el.checked = Boolean(val); },
+    reset: (el, f) => { el.checked = Boolean(f.default); },
+    equals: (a, b) => Boolean(a) === Boolean(b)
+  },
+  list: {
+    read: el => parseLines(el.value),
+    write: (el, val) => { el.value = Array.isArray(val) ? val.join('\n') : ''; },
+    reset: el => { el.value = ''; },
+    equals: (a, b) => (a || []).join('\n') === (b || []).join('\n')
+  },
+  default: {
+    read: el => oneLine(el.value),
+    write: (el, val) => { el.value = val || ''; },
+    reset: el => { el.value = ''; },
+    equals: (a, b) => (a || '') === (b || '')
+  }
+};
 
-  // Якщо ми в режимі створення нової картки (не редагуємо існуючу):
+const getFieldCodec = type => FIELD_CODECS[type] || FIELD_CODECS.default;
+
+// ===== Допоміжні функції форми =====
+function showFormError(message, focusEl = null) {
+  const err = $('pe-dyn-error');
+  if (err) {
+    err.textContent = message;
+    err.hidden = false;
+  }
+  focusEl?.focus();
+}
+
+function clearFormErrors() {
+  const err = $('pe-dyn-error');
+  if (err) err.hidden = true;
+  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+}
+
+function toggleField(key, enabled) {
+  const el = $(`pe-dyn-${key}`);
+  if (!el) return;
+  el.disabled = !enabled;
+  el.closest('.pe-field').style.display = enabled ? '' : 'none';
+  if (!enabled) {
+    if (el.type === 'checkbox') el.checked = false;
+    else el.value = '';
+  }
+}
+
+function applyFieldVisibility(visibilityMap) {
+  for (const [key, enabled] of Object.entries(visibilityMap)) {
+    toggleField(key, Boolean(enabled));
+  }
+}
+
+function validatePositiveRange(minRaw, maxRaw, { minKey, maxKey, emptyMsg, orderMsg }) {
+  const minNum = parseInt(minRaw, 10);
+  const maxNum = parseInt(maxRaw, 10);
+  if (!minRaw || !maxRaw || isNaN(minNum) || isNaN(maxNum) || minNum <= 0 || maxNum <= 0) {
+    const badMin = !minRaw || isNaN(minNum) || minNum <= 0;
+    return { error: emptyMsg, focusEl: $(`pe-dyn-${badMin ? minKey : maxKey}`) };
+  }
+  if (minNum > maxNum) {
+    return { error: orderMsg, focusEl: $(`pe-dyn-${minKey}`) };
+  }
+  return { range: { min: minNum, max: maxNum } };
+}
+
+const getDefaultAgeStages = () =>
+  parseLines(state.form.stages['age_categories'] || '').map(line => parseStageEntry('age_categories', line));
+
+// ===== Стратегії списків стадій за категоріями =====
+const createToggleableStagesStrategy = category => ({
+  read() {
+    if (!$('pe-dyn-custom-stages-toggle')?.checked) return undefined;
+    const list = gatherDynStageList(category);
+    return list.length > 0 ? list : undefined;
+  },
+  fill(stages) {
+    const hasCustom = Array.isArray(stages) && stages.length > 0;
+    const toggle = $('pe-dyn-custom-stages-toggle');
+    const wrap = $('pe-dyn-stages-wrap');
+    if (toggle) toggle.checked = hasCustom;
+    if (wrap) wrap.hidden = !hasCustom;
+    if (hasCustom) {
+      renderDynStageList(category, stages);
+      initDynStageSortable(category);
+    } else {
+      const container = document.querySelector(`[data-dyn-stage-list="${category}"]`);
+      if (container) container.innerHTML = '';
+      destroyDynStageSortable();
+    }
+  },
+  reset() {
+    this.fill([]);
+  }
+});
+
+const STAGE_STRATEGIES = {
+  health: {
+    read() {
+      const list = gatherDynStageList('health');
+      return list.length > 0 ? list : undefined;
+    },
+    fill(stages = []) {
+      renderDynStageList('health', stages);
+      initDynStageSortable('health');
+    },
+    reset() {
+      this.fill([]);
+    }
+  },
+  profession: createToggleableStagesStrategy('profession'),
+  hobby: createToggleableStagesStrategy('hobby'),
+  gender: {
+    read() {
+      const mode = $('pe-dyn-custom_age_mode')?.value;
+      const noAge = $('pe-dyn-has_no_age')?.checked;
+      if (noAge || mode !== 'range_and_stages') return undefined;
+      const list = gatherDynStageList('gender');
+      return list.length > 0 ? list : undefined;
+    },
+    fill(stages) {
+      const hasCustom = Array.isArray(stages) && stages.length > 0;
+      const wrap = $('pe-dyn-gender-stages-wrap');
+      if (wrap) wrap.hidden = !hasCustom;
+      renderDynStageList('gender', hasCustom ? stages : getDefaultAgeStages());
+      if (hasCustom) initDynStageSortable('gender');
+      else destroyDynStageSortable();
+    },
+    reset() {
+      this.fill([]);
+    }
+  }
+};
+
+// ===== Стратегії специфічної поведінки категорій =====
+const CATEGORY_STRATEGIES = {
+  body_type: {
+    metaToForm(meta = {}) {
+      const mode = meta.has_no_height ? '' : (meta.range ? 'range' : (meta.exact_height !== undefined ? 'exact' : ''));
+      return {
+        has_no_height: Boolean(meta.has_no_height),
+        custom_height_mode: mode,
+        height_min: meta.range?.min !== undefined ? String(meta.range.min) : '',
+        height_max: meta.range?.max !== undefined ? String(meta.range.max) : '',
+        exact_height: meta.exact_height !== undefined ? String(meta.exact_height) : ''
+      };
+    },
+    syncFormState() {
+      const noHeight = $('pe-dyn-has_no_height')?.checked;
+      const mode = !noHeight ? $('pe-dyn-custom_height_mode')?.value : '';
+      applyFieldVisibility({
+        custom_height_mode: !noHeight,
+        height_min: mode === 'range',
+        height_max: mode === 'range',
+        exact_height: mode === 'exact'
+      });
+    },
+    prepareMeta(data, meta) {
+      for (const k of ['custom_height_mode', 'height_min', 'height_max', 'exact_height', 'range', 'has_no_height']) {
+        delete meta[k];
+      }
+      if (data.has_no_height) {
+        meta.has_no_height = true;
+        return null;
+      }
+      if (data.custom_height_mode === 'range') {
+        const res = validatePositiveRange(
+          String(data.height_min ?? '').trim(),
+          String(data.height_max ?? '').trim(),
+          {
+            minKey: 'height_min',
+            maxKey: 'height_max',
+            emptyMsg: 'Вкажіть коректні додатні числа для мінімального та максимального зросту',
+            orderMsg: 'Мінімальний зріст не може перевищувати максимальний'
+          }
+        );
+        if (res.error) return res;
+        meta.range = res.range;
+      } else if (data.custom_height_mode === 'exact') {
+        const exactRaw = String(data.exact_height ?? '').trim();
+        if (!exactRaw) {
+          return { error: 'Вкажіть точний зріст', focusEl: $('pe-dyn-exact_height') };
+        }
+        meta.exact_height = isNaN(Number(exactRaw)) ? exactRaw : Number(exactRaw);
+      }
+      return null;
+    }
+  },
+
+  gender: {
+    metaToForm(meta = {}) {
+      const hasRangeOrStages = Boolean(meta.range || (meta.stages && meta.stages.length > 0));
+      const mode = meta.has_no_age ? 'no_age' : (hasRangeOrStages ? 'range_and_stages' : (meta.custom_age ? 'no_age' : ''));
+      return {
+        has_no_age: Boolean(meta.has_no_age),
+        custom_age_mode: mode,
+        age_min: meta.range?.min !== undefined ? String(meta.range.min) : '',
+        age_max: meta.range?.max !== undefined ? String(meta.range.max) : '',
+        custom_age: meta.custom_age !== undefined ? String(meta.custom_age) : ''
+      };
+    },
+    syncFormState() {
+      const noAge = $('pe-dyn-has_no_age')?.checked;
+      const modeEl = $('pe-dyn-custom_age_mode');
+      if (modeEl) {
+        if (noAge) modeEl.value = 'no_age';
+        modeEl.disabled = Boolean(noAge);
+        modeEl.closest('.pe-field').style.display = noAge ? 'none' : '';
+      }
+      const mode = noAge ? 'no_age' : (modeEl?.value || '');
+      const isRangeStages = mode === 'range_and_stages';
+
+      applyFieldVisibility({
+        custom_age: mode === 'no_age',
+        age_min: isRangeStages,
+        age_max: isRangeStages
+      });
+
+      const stagesWrap = $('pe-dyn-gender-stages-wrap');
+      if (stagesWrap) stagesWrap.hidden = !isRangeStages;
+
+      if (isRangeStages) {
+        const current = gatherDynStageList('gender');
+        if (!current.length) renderDynStageList('gender', getDefaultAgeStages());
+        else updateStageListVisuals('gender');
+        initDynStageSortable('gender');
+      } else {
+        destroyDynStageSortable();
+      }
+    },
+    prepareMeta(data, meta, { cards }) {
+      for (const k of ['custom_age_mode', 'age_min', 'age_max', 'range', 'has_no_age', 'custom_age']) {
+        delete meta[k];
+      }
+      const noAge = Boolean(data.has_no_age || data.custom_age_mode === 'no_age');
+      if (noAge) {
+        meta.has_no_age = true;
+        meta.custom_age = data.custom_age?.trim() || 'Без віку';
+        delete meta.stages;
+      } else if (data.custom_age_mode === 'range_and_stages') {
+        const minRaw = String(data.age_min ?? '').trim();
+        const maxRaw = String(data.age_max ?? '').trim();
+        if (minRaw || maxRaw) {
+          const res = validatePositiveRange(minRaw, maxRaw, {
+            minKey: 'age_min',
+            maxKey: 'age_max',
+            emptyMsg: 'Вкажіть коректні додатні числа для мінімального та максимального віку',
+            orderMsg: 'Мінімальний вік не може перевищувати максимальний'
+          });
+          if (res.error) return res;
+          meta.range = res.range;
+        }
+      } else {
+        delete meta.stages;
+      }
+
+      const targetName = meta.opposite;
+      const currentName = data.value;
+      if (targetName) {
+        if (targetName === currentName) {
+          return { error: 'Стать не може бути протилежною сама собі.' };
+        }
+        const targetCard = cards.find(c => c.value === targetName);
+        const targetOpposite = targetCard?.meta?.opposite;
+        if (targetOpposite && targetOpposite !== currentName) {
+          return { error: `Стать "${targetName}" вже має протилежну стать "${targetOpposite}".` };
+        }
+      }
+      return null;
+    },
+    afterSave({ cards, data, meta, prevCard }) {
+      const oldOpposite = prevCard?.meta?.opposite;
+      const targetName = meta.opposite;
+      const currentName = data.value;
+
+      if (oldOpposite && oldOpposite !== targetName) {
+        const oldCard = cards.find(c => c.value === oldOpposite);
+        if (oldCard?.meta?.opposite === currentName) {
+          delete oldCard.meta.opposite;
+        }
+      }
+      if (targetName) {
+        const targetCard = cards.find(c => c.value === targetName);
+        if (targetCard) {
+          targetCard.meta.opposite = currentName;
+        } else {
+          cards.push({ value: targetName, meta: { opposite: currentName } });
+        }
+      }
+    }
+  },
+
+  special_ability: {
+    prepareMeta(data, meta, { prevCard }) {
+      // Поле action_type тимчасово приховане з форми (categories.js)
+      const prevAction = prevCard?.meta?.action_type;
+      if (prevAction !== undefined && prevAction !== null && prevAction !== '') {
+        meta.action_type = prevAction;
+      }
+      return null;
+    }
+  }
+};
+
+// Перетворює збережену картку { value, meta } на плоский об'єкт значень полів форми
+function resolveCardFormValues(category, card) {
+  const split = hasExplanationField(category) ? splitNameExplanation(card.value) : null;
+  const strategy = CATEGORY_STRATEGIES[category];
+  const mappedMeta = {
+    ...(card.meta || {}),
+    ...(strategy?.metaToForm ? strategy.metaToForm(card.meta) : {}),
+    ...(split ? { explanation: split.explanation } : {})
+  };
+  return {
+    name: split ? split.name : card.value,
+    fields: mappedMeta
+  };
+}
+
+// ===== Основні контролери динамічної форми =====
+export function dynDraftPending() {
+  const category = state.activeCategory;
+  const schema = CATEGORY_SCHEMAS[category];
+  if (category === 'cataclysm' || !schema || state.viewMode !== 'visual') return false;
+
+  const current = readDynRaw();
   if (state.dynEditIndex < 0) {
-    // Без введеної назви чернетки немає (навіть якщо чекбокс за замовчуванням true чи змінено інші поля)
     return Boolean(current.value && current.value.trim() !== '');
   }
-  
-  const cards = getDynamicCards();
-  const item = cards[state.dynEditIndex];
+
+  const item = getDynamicCards()[state.dynEditIndex];
   if (!item) return false;
-  
-  // Фобія: порівнюємо зклеєне "Назва - Пояснення" з збереженим value (обидва нормалізуємо), інакше картка завжди виглядала б "зміненою"
-  const withExplanation = hasExplanationField(state.activeCategory);
-  const savedValue = withExplanation
-    ? (s => joinNameExplanation(s.name, s.explanation))(splitNameExplanation(item.value))
-    : item.value;
+
+  const withExplanation = hasExplanationField(category);
+  const savedSplit = withExplanation ? splitNameExplanation(item.value) : null;
+  const savedValue = withExplanation ? joinNameExplanation(savedSplit.name, savedSplit.explanation) : item.value;
   const currentValue = withExplanation ? joinNameExplanation(current.value, current.explanation) : current.value;
   if (currentValue !== savedValue) return true;
-  const isBody = state.activeCategory === 'body_type';
-  const isGender = state.activeCategory === 'gender';
+
+  const { fields: savedFields } = resolveCardFormValues(category, item);
+
   for (const f of schema.fields) {
-    if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище
+    if (withExplanation && f.key === 'explanation') continue;
     const v1 = current[f.key];
-    let v2 = item.meta?.[f.key];
-    if (v2 === undefined && f.default !== undefined) {
-      v2 = f.default;
-    }
-    if (isBody) {
-      if (f.key === 'has_no_height') {
-        v2 = Boolean(item.meta?.has_no_height);
-      } else if (f.key === 'custom_height_mode') {
-        v2 = item.meta?.has_no_height ? '' : (item.meta?.range ? 'range' : (item.meta?.exact_height !== undefined ? 'exact' : ''));
-      } else if (f.key === 'height_min') {
-        v2 = item.meta?.range?.min !== undefined ? String(item.meta.range.min) : '';
-      } else if (f.key === 'height_max') {
-        v2 = item.meta?.range?.max !== undefined ? String(item.meta.range.max) : '';
-      } else if (f.key === 'exact_height') {
-        v2 = item.meta?.exact_height !== undefined ? String(item.meta.exact_height) : '';
-      }
-    }
-    if (isGender) {
-      if (f.key === 'has_no_age') {
-        v2 = Boolean(item.meta?.has_no_age);
-      } else if (f.key === 'custom_age_mode') {
-        v2 = item.meta?.has_no_age ? 'no_age' : ((item.meta?.range || (item.meta?.stages && item.meta.stages.length > 0)) ? 'range_and_stages' : (item.meta?.custom_age ? 'no_age' : ''));
-      } else if (f.key === 'age_min') {
-        v2 = item.meta?.range?.min !== undefined ? String(item.meta.range.min) : '';
-      } else if (f.key === 'age_max') {
-        v2 = item.meta?.range?.max !== undefined ? String(item.meta.range.max) : '';
-      } else if (f.key === 'custom_age') {
-        v2 = item.meta?.custom_age !== undefined ? String(item.meta.custom_age) : '';
-      }
-    }
+    const v2 = savedFields[f.key] !== undefined ? savedFields[f.key] : f.default;
+
     if (f.key === 'stages') {
-      const s1 = JSON.stringify(v1 || null);
-      const s2 = JSON.stringify(v2 || null);
-      if (s1 !== s2) return true;
+      if (JSON.stringify(v1 || null) !== JSON.stringify(v2 || null)) return true;
       continue;
     }
-    if (f.type === 'checkbox') {
-      if (Boolean(v1) !== Boolean(v2)) return true;
-    } else if (f.type === 'list') {
-      if ((v1 || []).join('\n') !== (v2 || []).join('\n')) return true;
-    } else {
-      if ((v1 || '') !== (v2 || '')) return true;
-    }
+    if (!getFieldCodec(f.type).equals(v1, v2)) return true;
   }
   return false;
 }
 
 export function readDynRaw() {
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
+  const category = state.activeCategory;
+  const schema = CATEGORY_SCHEMAS[category];
   if (!schema) return {};
-  const data = {};
-  data.value = oneLine($('pe-dyn-name').value);
+
+  const data = { value: oneLine($('pe-dyn-name').value) };
   for (const f of schema.fields) {
     if (f.key === 'stages') {
-      if (state.activeCategory === 'health') {
-        const list = gatherDynStageList('health');
-        data.stages = list.length > 0 ? list : undefined;
-      } else if (['profession', 'hobby'].includes(state.activeCategory)) {
-        const isCustom = $('pe-dyn-custom-stages-toggle')?.checked;
-        if (isCustom) {
-          const list = gatherDynStageList(state.activeCategory);
-          data.stages = list.length > 0 ? list : undefined;
-        } else {
-          data.stages = undefined;
-        }
-      } else if (state.activeCategory === 'gender') {
-        const mode = $('pe-dyn-custom_age_mode')?.value;
-        const noAge = $('pe-dyn-has_no_age')?.checked;
-        if (!noAge && mode === 'range_and_stages') {
-          const list = gatherDynStageList('gender');
-          data.stages = list.length > 0 ? list : undefined;
-        } else {
-          data.stages = undefined;
-        }
-      }
+      data.stages = STAGE_STRATEGIES[category]?.read();
       continue;
     }
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
-    if (el) {
-      if (f.type === 'checkbox') data[f.key] = el.checked;
-      else if (f.type === 'list') data[f.key] = parseLines(el.value);
-      else data[f.key] = oneLine(el.value);
-    }
+    if (el) data[f.key] = getFieldCodec(f.type).read(el);
   }
   return data;
 }
 
 export function fillDynFields(card) {
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
+  const category = state.activeCategory;
+  const schema = CATEGORY_SCHEMAS[category];
   if (!schema) return;
-  const split = hasExplanationField(state.activeCategory) ? splitNameExplanation(card.value) : null;
-  $('pe-dyn-name').value = split ? split.name : card.value;
+
+  const { name, fields } = resolveCardFormValues(category, card);
+  $('pe-dyn-name').value = name;
+
   for (const f of schema.fields) {
     if (f.key === 'stages') {
-      if (state.activeCategory === 'health') {
-        renderDynStageList('health', card.meta?.stages || []);
-        initDynStageSortable('health');
-      } else if (['profession', 'hobby'].includes(state.activeCategory)) {
-        const hasCustom = Array.isArray(card.meta?.stages) && card.meta.stages.length > 0;
-        const toggle = $('pe-dyn-custom-stages-toggle');
-        const wrap = $('pe-dyn-stages-wrap');
-        if (toggle) toggle.checked = hasCustom;
-        if (wrap) wrap.hidden = !hasCustom;
-        if (hasCustom) {
-          renderDynStageList(state.activeCategory, card.meta.stages);
-          initDynStageSortable(state.activeCategory);
-        } else {
-          const container = document.querySelector(`[data-dyn-stage-list="${state.activeCategory}"]`);
-          if (container) container.innerHTML = '';
-          destroyDynStageSortable();
-        }
-      } else if (state.activeCategory === 'gender') {
-        const hasCustom = Array.isArray(card.meta?.stages) && card.meta.stages.length > 0;
-        const wrap = $('pe-dyn-gender-stages-wrap');
-        if (wrap) wrap.hidden = !hasCustom;
-        if (hasCustom) {
-          renderDynStageList('gender', card.meta.stages);
-          initDynStageSortable('gender');
-        } else {
-          const rawText = state.form.stages['age_categories'] || '';
-          const lines = parseLines(rawText);
-          const entries = lines.map(line => parseStageEntry('age_categories', line));
-          renderDynStageList('gender', entries);
-          destroyDynStageSortable();
-        }
-      }
+      STAGE_STRATEGIES[category]?.fill(card.meta?.stages);
       continue;
     }
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
-      let val = split && f.key === 'explanation' ? split.explanation : card.meta?.[f.key];
-      if (val === undefined && f.default !== undefined) {
-        val = f.default;
-      }
-      if (state.activeCategory === 'body_type') {
-        if (f.key === 'has_no_height') {
-          val = Boolean(card.meta?.has_no_height);
-        } else if (f.key === 'custom_height_mode') {
-          val = card.meta?.has_no_height ? '' : (card.meta?.range ? 'range' : (card.meta?.exact_height !== undefined ? 'exact' : ''));
-        } else if (f.key === 'height_min') {
-          val = card.meta?.range?.min ?? '';
-        } else if (f.key === 'height_max') {
-          val = card.meta?.range?.max ?? '';
-        } else if (f.key === 'exact_height') {
-          val = card.meta?.exact_height ?? '';
-        }
-      }
-      if (state.activeCategory === 'gender') {
-        if (f.key === 'has_no_age') {
-          val = Boolean(card.meta?.has_no_age);
-        } else if (f.key === 'custom_age_mode') {
-          val = card.meta?.has_no_age ? 'no_age' : ((card.meta?.range || (card.meta?.stages && card.meta.stages.length > 0)) ? 'range_and_stages' : (card.meta?.custom_age ? 'no_age' : ''));
-        } else if (f.key === 'age_min') {
-          val = card.meta?.range?.min ?? '';
-        } else if (f.key === 'age_max') {
-          val = card.meta?.range?.max ?? '';
-        } else if (f.key === 'custom_age') {
-          val = card.meta?.custom_age ?? '';
-        }
-      }
-      if (f.type === 'checkbox') el.checked = Boolean(val);
-      else if (f.type === 'list') el.value = Array.isArray(val) ? val.join('\n') : '';
-      else el.value = val || '';
+      const val = fields[f.key] !== undefined ? fields[f.key] : f.default;
+      getFieldCodec(f.type).write(el, val);
     }
   }
 }
 
 export function setDynMode(index) {
   state.dynEditIndex = index;
-  const cards = getDynamicCards();
-  const item = index >= 0 ? cards[index] : null;
+  const item = index >= 0 ? getDynamicCards()[index] : null;
+
   const submitBtn = document.querySelector('[data-dyn-action="submit"]');
   if (submitBtn) submitBtn.textContent = item ? 'Зберегти зміни' : 'Додати';
-  
+
   const cancelBtn = document.querySelector('[data-dyn-action="cancel"]');
   if (cancelBtn) cancelBtn.hidden = !item;
-  
+
   const deleteBtn = document.querySelector('[data-dyn-action="delete"]');
   if (deleteBtn) deleteBtn.hidden = !item;
-  
+
   const modeEl = $('pe-dyn-mode');
   if (modeEl) modeEl.textContent = item ? `Редагування: "${oneLine(item.value)}"` : 'Нова картка';
-  
+
   if (onDynamicChange) onDynamicChange();
 }
 
 export function updateDynFormState() {
-  const toggleField = (key, enabled) => {
-    const el = $(`pe-dyn-${key}`);
-    if (el) {
-      el.disabled = !enabled;
-      el.closest('.pe-field').style.display = enabled ? '' : 'none';
-      if (!enabled) {
-        if (el.type === 'checkbox') el.checked = false;
-        else el.value = '';
-      }
-    }
-  };
-
-  if (state.activeCategory === 'body_type') {
-    const noHeight = $('pe-dyn-has_no_height')?.checked;
-    const mode = $('pe-dyn-custom_height_mode')?.value;
-
-    if (noHeight) {
-      toggleField('custom_height_mode', false);
-      toggleField('height_min', false);
-      toggleField('height_max', false);
-      toggleField('exact_height', false);
-    } else {
-      toggleField('custom_height_mode', true);
-      if (mode === 'range') {
-        toggleField('height_min', true);
-        toggleField('height_max', true);
-        toggleField('exact_height', false);
-      } else if (mode === 'exact') {
-        toggleField('height_min', false);
-        toggleField('height_max', false);
-        toggleField('exact_height', true);
-      } else {
-        toggleField('height_min', false);
-        toggleField('height_max', false);
-        toggleField('exact_height', false);
-      }
-    }
-  } else if (state.activeCategory === 'gender') {
-    const noAge = $('pe-dyn-has_no_age')?.checked;
-    const modeEl = $('pe-dyn-custom_age_mode');
-    let mode = modeEl?.value;
-    const stagesWrap = $('pe-dyn-gender-stages-wrap');
-
-    if (noAge) {
-      if (modeEl) {
-        modeEl.value = 'no_age';
-        modeEl.disabled = true;
-        modeEl.closest('.pe-field').style.display = 'none';
-      }
-      toggleField('custom_age', true);
-      toggleField('age_min', false);
-      toggleField('age_max', false);
-      if (stagesWrap) stagesWrap.hidden = true;
-      destroyDynStageSortable();
-    } else {
-      if (modeEl) {
-        modeEl.disabled = false;
-        modeEl.closest('.pe-field').style.display = '';
-      }
-      if (mode === 'no_age') {
-        toggleField('custom_age', true);
-        toggleField('age_min', false);
-        toggleField('age_max', false);
-        if (stagesWrap) stagesWrap.hidden = true;
-        destroyDynStageSortable();
-      } else if (mode === 'range_and_stages') {
-        toggleField('custom_age', false);
-        toggleField('age_min', true);
-        toggleField('age_max', true);
-        if (stagesWrap) stagesWrap.hidden = false;
-        const current = gatherDynStageList('gender');
-        if (!current.length) {
-          const rawText = state.form.stages['age_categories'] || '';
-          const lines = parseLines(rawText);
-          const entries = lines.map(line => parseStageEntry('age_categories', line));
-          renderDynStageList('gender', entries);
-        } else {
-          updateStageListVisuals('gender');
-        }
-        initDynStageSortable('gender');
-      } else {
-        toggleField('custom_age', false);
-        toggleField('age_min', false);
-        toggleField('age_max', false);
-        if (stagesWrap) stagesWrap.hidden = true;
-        destroyDynStageSortable();
-      }
-    }
-  }
+  CATEGORY_STRATEGIES[state.activeCategory]?.syncFormState?.();
 }
 
 export function startDynEdit(index, card) {
   fillDynFields(card);
-  const err = $('pe-dyn-error');
-  if (err) err.hidden = true;
-  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  clearFormErrors();
   setDynMode(index);
   updateDynFormState();
   $('pe-dynamic-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -343,275 +455,109 @@ export function startDynEdit(index, card) {
 
 export function resetDynForm() {
   $('pe-dyn-name').value = '';
-  const schema = CATEGORY_SCHEMAS[state.activeCategory];
-  if (schema) {
-    for (const f of schema.fields) {
-      if (f.key === 'stages') {
-        if (state.activeCategory === 'health') {
-          renderDynStageList('health', []);
-          initDynStageSortable('health');
-        } else if (['profession', 'hobby'].includes(state.activeCategory)) {
-          const toggle = $('pe-dyn-custom-stages-toggle');
-          const wrap = $('pe-dyn-stages-wrap');
-          if (toggle) toggle.checked = false;
-          if (wrap) wrap.hidden = true;
-          const container = document.querySelector(`[data-dyn-stage-list="${state.activeCategory}"]`);
-          if (container) container.innerHTML = '';
-          destroyDynStageSortable();
-        } else if (state.activeCategory === 'gender') {
-          const wrap = $('pe-dyn-gender-stages-wrap');
-          if (wrap) wrap.hidden = true;
-          const rawText = state.form.stages['age_categories'] || '';
-          const lines = parseLines(rawText);
-          const entries = lines.map(line => parseStageEntry('age_categories', line));
-          renderDynStageList('gender', entries);
-          destroyDynStageSortable();
-        }
-        continue;
-      }
-      const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
-      if (el) {
-        if (f.type === 'checkbox') el.checked = Boolean(f.default);
-        else el.value = '';
-      }
+  const category = state.activeCategory;
+  const schema = CATEGORY_SCHEMAS[category];
+
+  for (const f of schema?.fields || []) {
+    if (f.key === 'stages') {
+      STAGE_STRATEGIES[category]?.reset();
+      continue;
     }
+    const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
+    if (el) getFieldCodec(f.type).reset(el, f);
   }
-  const err = $('pe-dyn-error');
-  if (err) err.hidden = true;
-  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+  clearFormErrors();
   setDynMode(-1);
   updateDynFormState();
 }
 
 export function applyDynChange({ scrollToEnd = false } = {}) {
-  ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
-  if (onDynamicChange) {
-    onDynamicChange({ scrollToEnd });
-  }
+  ui.showCategory({
+    category: state.activeCategory,
+    text: state.form.texts[state.activeCategory] || '',
+    viewMode: state.viewMode
+  });
+  if (onDynamicChange) onDynamicChange({ scrollToEnd });
 }
 
-
-export function submitDyn() {
-  const data = readDynRaw();
-  const isEdit = state.dynEditIndex >= 0;
-  // Обов'язкові поля: назва + поля схеми з required (Хобі — Пояснення, Професія — Вміння).
-  // Перевірка йде ДО будь-яких змін стану й запитів до Supabase.
+function validateRequiredFields(category, data) {
   const missing = [];
-  if (String(data.value ?? '').trim() === '') missing.push({ el: $('pe-dyn-name'), label: 'Назва' });
-  for (const f of CATEGORY_SCHEMAS[state.activeCategory]?.fields || []) {
-    if (!f.required) continue;
-    if (String(data[f.key] ?? '').trim() === '') {
+  if (String(data.value ?? '').trim() === '') {
+    missing.push({ el: $('pe-dyn-name'), label: 'Назва' });
+  }
+  for (const f of CATEGORY_SCHEMAS[category]?.fields || []) {
+    if (f.required && String(data[f.key] ?? '').trim() === '') {
       missing.push({ el: document.querySelector(`[data-dyn-key="${f.key}"]`), label: f.label });
     }
   }
-  document.querySelectorAll('#pe-dynamic-form .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  return missing;
+}
+
+export function submitDyn() {
+  const category = state.activeCategory;
+  const data = readDynRaw();
+  const isEdit = state.dynEditIndex >= 0;
+
+  clearFormErrors();
+
+  const missing = validateRequiredFields(category, data);
   if (missing.length > 0) {
     missing.forEach(m => m.el?.classList.add('is-invalid'));
-    const err = $('pe-dyn-error');
-    if (err) {
-      err.textContent = missing.length === 1
-        ? `Поле «${missing[0].label}» обов'язкове`
-        : `Заповніть обов'язкові поля: ${missing.map(m => m.label).join(', ')}`;
-      err.hidden = false;
-    }
-    missing[0].el?.focus();
+    const msg = missing.length === 1
+      ? `Поле «${missing[0].label}» обов'язкове`
+      : `Заповніть обов'язкові поля: ${missing.map(m => m.label).join(', ')}`;
+    showFormError(msg, missing[0].el);
     return;
   }
 
-  if (OBJECT_STAGE_KEYS.includes(state.activeCategory) && data.stages) {
-    const stageErr = validateStageEntries(state.activeCategory, data.stages);
+  if (OBJECT_STAGE_KEYS.includes(category) && data.stages) {
+    const stageErr = validateStageEntries(category, data.stages);
     if (stageErr) {
-      const err = $('pe-dyn-error');
-      if (err) {
-        err.textContent = stageErr;
-        err.hidden = false;
-      }
+      showFormError(stageErr);
       showGlobalToast(stageErr);
       return;
     }
   }
 
-  const err = $('pe-dyn-error');
-  if (err) err.hidden = true;
-  
   const cards = getDynamicCards();
+  const prevCard = isEdit ? cards[state.dynEditIndex] : null;
   const meta = { ...data };
   delete meta.value;
 
-  // Фобія: "Назва" + "Пояснення" → один рядок "Назва - Пояснення" (це й йде в value у Supabase).
-  const withExplanation = hasExplanationField(state.activeCategory);
+  const withExplanation = hasExplanationField(category);
   const storedValue = withExplanation ? joinNameExplanation(data.value, data.explanation) : data.value;
   if (withExplanation) delete meta.explanation;
 
-  if (state.activeCategory === 'body_type') {
-    delete meta.custom_height_mode;
-    delete meta.height_min;
-    delete meta.height_max;
-    delete meta.exact_height;
-    delete meta.range;
-
-    if (data.has_no_height) {
-      meta.has_no_height = true;
-    } else {
-      delete meta.has_no_height;
-      const mode = data.custom_height_mode;
-      if (mode === 'range') {
-        const minRaw = String(data.height_min ?? '').trim();
-        const maxRaw = String(data.height_max ?? '').trim();
-        const minNum = parseInt(minRaw, 10);
-        const maxNum = parseInt(maxRaw, 10);
-        if (!minRaw || !maxRaw || isNaN(minNum) || isNaN(maxNum) || minNum <= 0 || maxNum <= 0) {
-          const err = $('pe-dyn-error');
-          if (err) {
-            err.textContent = 'Вкажіть коректні додатні числа для мінімального та максимального зросту';
-            err.hidden = false;
-          }
-          if (!minRaw || isNaN(minNum) || minNum <= 0) $('pe-dyn-height_min')?.focus();
-          else $('pe-dyn-height_max')?.focus();
-          return;
-        }
-        if (minNum > maxNum) {
-          const err = $('pe-dyn-error');
-          if (err) {
-            err.textContent = 'Мінімальний зріст не може перевищувати максимальний';
-            err.hidden = false;
-          }
-          $('pe-dyn-height_min')?.focus();
-          return;
-        }
-        meta.range = { min: minNum, max: maxNum };
-      } else if (mode === 'exact') {
-        const exactRaw = String(data.exact_height ?? '').trim();
-        if (!exactRaw) {
-          const err = $('pe-dyn-error');
-          if (err) {
-            err.textContent = 'Вкажіть точний зріст';
-            err.hidden = false;
-          }
-          $('pe-dyn-exact_height')?.focus();
-          return;
-        }
-        meta.exact_height = isNaN(Number(exactRaw)) ? exactRaw : Number(exactRaw);
-      }
+  const strategy = CATEGORY_STRATEGIES[category];
+  if (strategy?.prepareMeta) {
+    const errResult = strategy.prepareMeta(data, meta, { cards, prevCard });
+    if (errResult?.error) {
+      showFormError(errResult.error, errResult.focusEl);
+      return;
     }
   }
 
-  if (state.activeCategory === 'gender') {
-    delete meta.custom_age_mode;
-    delete meta.age_min;
-    delete meta.age_max;
-    delete meta.range;
-
-    const noAge = Boolean(data.has_no_age || data.custom_age_mode === 'no_age');
-    if (noAge) {
-      meta.has_no_age = true;
-      meta.custom_age = (data.custom_age && data.custom_age.trim()) ? data.custom_age.trim() : 'Без віку';
-      delete meta.stages;
-    } else {
-      delete meta.has_no_age;
-      delete meta.custom_age;
-      const mode = data.custom_age_mode;
-      if (mode === 'range_and_stages') {
-        const minRaw = String(data.age_min ?? '').trim();
-        const maxRaw = String(data.age_max ?? '').trim();
-        if (minRaw || maxRaw) {
-          const minNum = parseInt(minRaw, 10);
-          const maxNum = parseInt(maxRaw, 10);
-          if (isNaN(minNum) || isNaN(maxNum) || minNum <= 0 || maxNum <= 0) {
-            const err = $('pe-dyn-error');
-            if (err) {
-              err.textContent = 'Вкажіть коректні додатні числа для мінімального та максимального віку';
-              err.hidden = false;
-            }
-            if (isNaN(minNum) || minNum <= 0) $('pe-dyn-age_min')?.focus();
-            else $('pe-dyn-age_max')?.focus();
-            return;
-          }
-          if (minNum > maxNum) {
-            const err = $('pe-dyn-error');
-            if (err) {
-              err.textContent = 'Мінімальний вік не може перевищувати максимальний';
-              err.hidden = false;
-            }
-            $('pe-dyn-age_min')?.focus();
-            return;
-          }
-          meta.range = { min: minNum, max: maxNum };
-        }
-      } else {
-        delete meta.stages;
-      }
-    }
-  }
-  
-  for (const k of Object.keys(meta)) {
-    if (meta[k] === '' || (Array.isArray(meta[k]) && meta[k].length === 0)) {
+  for (const [k, v] of Object.entries(meta)) {
+    if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) {
       delete meta[k];
     }
   }
 
-  // Поле action_type тимчасово приховане з форми (categories.js)
-  if (state.dynEditIndex >= 0 && state.activeCategory === 'special_ability') {
-    const prevAction = cards[state.dynEditIndex]?.meta?.action_type;
-    if (prevAction !== undefined && prevAction !== null && prevAction !== '') meta.action_type = prevAction;
-  }
-
-  let oldOpposite = null;
-  if (state.activeCategory === 'gender') {
-    if (state.dynEditIndex >= 0) oldOpposite = cards[state.dynEditIndex].meta.opposite;
-    const targetName = meta.opposite;
-    const currentName = data.value;
-    if (targetName) {
-      if (targetName === currentName) {
-        const err = document.getElementById('pe-dyn-error');
-        err.textContent = "Стать не може бути протилежною сама собі.";
-        err.hidden = false;
-        return;
-      }
-      let targetIndex = cards.findIndex(c => c.value === targetName);
-      if (targetIndex >= 0) {
-        const targetOpposite = cards[targetIndex].meta.opposite;
-        if (targetOpposite && targetOpposite !== currentName) {
-          const err = document.getElementById('pe-dyn-error');
-          err.textContent = `Стать "${targetName}" вже має протилежну стать "${targetOpposite}".`;
-          err.hidden = false;
-          return;
-        }
-      }
-    }
-  }
-
-  if (state.dynEditIndex >= 0) {
+  if (isEdit) {
     cards[state.dynEditIndex] = { value: storedValue, meta };
   } else {
     cards.push({ value: storedValue, meta });
     state.newDynIndex = cards.length - 1;
   }
 
-  if (state.activeCategory === 'gender') {
-    const targetName = meta.opposite;
-    const currentName = data.value;
-    if (oldOpposite && oldOpposite !== targetName) {
-      let oldIndex = cards.findIndex(c => c.value === oldOpposite);
-      if (oldIndex >= 0 && cards[oldIndex].meta.opposite === currentName) {
-        delete cards[oldIndex].meta.opposite;
-      }
-    }
-    if (targetName) {
-      let targetIndex = cards.findIndex(c => c.value === targetName);
-      if (targetIndex >= 0) {
-        cards[targetIndex].meta.opposite = currentName;
-      } else {
-        cards.push({ value: targetName, meta: { opposite: currentName } });
-      }
-    }
-  }
+  strategy?.afterSave?.({ cards, data, meta, prevCard });
 
-  state.form.texts[state.activeCategory] = cards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
-  
+  state.form.texts[category] = cards.map(c => cardToLine(category, c.value, c.meta)).join('\n');
+
   applyDynChange({ scrollToEnd: state.newDynIndex >= 0 });
   resetDynForm();
-  
+
   if (state.newDynIndex >= 0) {
     state.newDynIndex = -1;
   }
@@ -623,7 +569,7 @@ export async function deleteDyn(btn) {
   if (state.dynEditIndex < 0 || state.isConfirming) return;
   const cards = getDynamicCards();
   const item = cards[state.dynEditIndex];
-  
+
   state.isConfirming = true;
   let confirmed = false;
   try {
@@ -635,38 +581,36 @@ export async function deleteDyn(btn) {
 
   cards.splice(state.dynEditIndex, 1);
   state.form.texts[state.activeCategory] = cards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
-  
+
   applyDynChange();
   resetDynForm();
   showGlobalToast('Картку видалено');
 }
 
+const DYN_ACTIONS = {
+  submit: () => submitDyn(),
+  cancel: () => resetDynForm(),
+  delete: btn => deleteDyn(btn)
+};
+
 export function handleDynClick(e) {
   const btn = e.target.closest('[data-dyn-action]');
   if (!btn || btn.disabled) return;
-  switch (btn.dataset.dynAction) {
-    case 'submit': submitDyn(); break;
-    case 'cancel': resetDynForm(); break;
-    case 'delete': deleteDyn(btn); break;
-  }
+  DYN_ACTIONS[btn.dataset.dynAction]?.(btn);
 }
 
 export function updateComboDropdown(input, forceShowAll = false) {
   const list = input.parentElement.querySelector('.pe-combo__dropdown');
   if (!list) return;
-  const cards = getDynamicCards();
-  const nameEl = document.getElementById('pe-dyn-name');
-  const currentName = nameEl ? nameEl.value : '';
-  let options = cards.map(c => c.value);
-  if (currentName) options = options.filter(o => o !== currentName);
-  
+  const currentName = $('pe-dyn-name')?.value || '';
   const filter = forceShowAll ? '' : input.value.toLowerCase();
-  const filtered = options.filter(o => o.toLowerCase().includes(filter));
-  
-  if (filtered.length === 0) {
-    list.innerHTML = '<div class="pe-combo__empty">Введіть нове значення</div>';
-  } else {
-    list.innerHTML = filtered.map(o => `<div class="pe-combo__item" data-val="${o.replace(/"/g, '&quot;')}">${o.replace(/</g, '&lt;')}</div>`).join('');
-  }
+
+  const filtered = getDynamicCards()
+    .map(c => c.value)
+    .filter(o => (!currentName || o !== currentName) && o.toLowerCase().includes(filter));
+
+  list.innerHTML = filtered.length === 0
+    ? '<div class="pe-combo__empty">Введіть нове значення</div>'
+    : filtered.map(o => `<div class="pe-combo__item" data-val="${o.replace(/"/g, '&quot;')}">${o.replace(/</g, '&lt;')}</div>`).join('');
 }
 
