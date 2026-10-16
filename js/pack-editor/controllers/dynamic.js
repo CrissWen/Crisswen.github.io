@@ -27,9 +27,31 @@ export function getDynamicCards() {
 export function dynDraftPending() {
   if (state.activeCategory === 'cataclysm' || !CATEGORY_SCHEMAS[state.activeCategory] || state.viewMode !== 'visual') return false;
   const current = readDynRaw();
-  if (!current.value && Object.values(current).every(v => !v || (Array.isArray(v) && !v.length))) return false;
-  
-  if (state.dynEditIndex < 0) return true;
+  const schema = CATEGORY_SCHEMAS[state.activeCategory];
+  if (!schema) return false;
+
+  // Якщо ми в режимі створення нової картки (не редагуємо існуючу):
+  if (state.dynEditIndex < 0) {
+    // Якщо введено назву картки — це активний незбережений чернетковий запис
+    if (current.value && current.value.trim() !== '') return true;
+
+    // Якщо назва порожня, перевіряємо, чи автор змінив будь-яке поле від його дефолтного стану
+    for (const f of schema.fields) {
+      if (f.key === 'stages') {
+        if (current.stages && current.stages.length > 0) return true;
+        continue;
+      }
+      const defaultVal = f.default !== undefined ? f.default : (f.type === 'checkbox' ? false : (f.type === 'list' ? [] : ''));
+      if (f.type === 'checkbox') {
+        if (Boolean(current[f.key]) !== Boolean(defaultVal)) return true;
+      } else if (f.type === 'list') {
+        if (Array.isArray(current[f.key]) && current[f.key].length > 0) return true;
+      } else {
+        if (String(current[f.key] ?? '').trim() !== String(defaultVal).trim()) return true;
+      }
+    }
+    return false;
+  }
   
   const cards = getDynamicCards();
   const item = cards[state.dynEditIndex];
@@ -44,10 +66,13 @@ export function dynDraftPending() {
   if (currentValue !== savedValue) return true;
   const isBody = state.activeCategory === 'body_type';
   const isGender = state.activeCategory === 'gender';
-  for (const f of CATEGORY_SCHEMAS[state.activeCategory].fields) {
+  for (const f of schema.fields) {
     if (withExplanation && f.key === 'explanation') continue; // вже враховано в currentValue вище
     const v1 = current[f.key];
-    let v2 = item.meta[f.key];
+    let v2 = item.meta?.[f.key];
+    if (v2 === undefined && f.default !== undefined) {
+      v2 = f.default;
+    }
     if (isBody) {
       if (f.key === 'has_no_height') {
         v2 = Boolean(item.meta?.has_no_height);
@@ -174,7 +199,10 @@ export function fillDynFields(card) {
     }
     const el = document.querySelector(`[data-dyn-key="${f.key}"]`);
     if (el) {
-      let val = split && f.key === 'explanation' ? split.explanation : card.meta[f.key];
+      let val = split && f.key === 'explanation' ? split.explanation : card.meta?.[f.key];
+      if (val === undefined && f.default !== undefined) {
+        val = f.default;
+      }
       if (state.activeCategory === 'body_type') {
         if (f.key === 'has_no_height') {
           val = Boolean(card.meta?.has_no_height);

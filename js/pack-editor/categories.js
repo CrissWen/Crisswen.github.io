@@ -64,8 +64,8 @@ export const CATEGORY_SCHEMAS = {
         { value: 'no_age', label: 'Без віку' }
       ] },
       { key: 'custom_age', type: 'text', label: 'Текст замість віку (напр. "Без віку")' },
-      { key: 'age_min', type: 'text', label: 'Мін. вік (якщо обрано власний діапазон)' },
-      { key: 'age_max', type: 'text', label: 'Макс. вік (якщо обрано власний діапазон)' },
+      { key: 'age_min', type: 'text', label: 'Мін. вік (роки)' },
+      { key: 'age_max', type: 'text', label: 'Макс. вік (роки)' },
       { key: 'stages', type: 'list', label: 'Власні вікові стадії' }
     ]
   },
@@ -94,15 +94,15 @@ export const CATEGORY_SCHEMAS = {
   },
   body_type: {
     fields: [
-      { key: 'has_no_height', type: 'checkbox', label: 'Без зросту (зріст не генерується)' },
+      { key: 'has_no_height', type: 'checkbox', label: 'Без зросту' },
       { key: 'custom_height_mode', type: 'select', label: 'Індивідуальний режим зросту', options: [
         { value: '', label: 'За замовчуванням (з глобального конфігу)' },
         { value: 'range', label: 'Власний діапазон' },
         { value: 'exact', label: 'Точне значення' }
       ] },
-      { key: 'height_min', type: 'text', label: 'Мін. зріст (см, якщо обрано діапазон)' },
-      { key: 'height_max', type: 'text', label: 'Макс. зріст (см, якщо обрано діапазон)' },
-      { key: 'exact_height', type: 'text', label: 'Точний зріст (число або текст, якщо обрано точне значення)' }
+      { key: 'height_min', type: 'text', label: 'Мін. зріст (см)' },
+      { key: 'height_max', type: 'text', label: 'Макс. зріст (см)' },
+      { key: 'exact_height', type: 'text', label: 'Точний зріст (число або текст)' }
     ]
   },
   // Фобія: у формі два поля ("Назва" + "Пояснення", обов'язкове), у БД — один рядок "Назва - Пояснення" (зклеює submitDyn через joinNameExplanation)
