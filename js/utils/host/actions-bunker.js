@@ -1,5 +1,5 @@
 import { BUNKER_FIELDS } from './constants.js';
-import { pickCard } from '../random.js';
+import { pickUniqueFromPools } from './characteristics.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';
@@ -35,7 +35,7 @@ export async function changeBunker(roomCode, field, customValue) {
   const bState = room.bunker_state || {};
   if (!value) {
     const pools = await loadPools(room.selected_pack_id);
-    value = await randomBunkerFieldValue(field, pools.bunker, bState);
+    value = await randomBunkerFieldValue(field, pools.bunker, bState, pools.fallback?.bunker);
     if (!value) throw new Error('Для цього параметра немає варіантів у пулі карток — введіть значення вручну');
   }
   snapshot(room); // після всіх перевірок, щоб невдала спроба не затирала попередній знімок для "Скасувати"
@@ -89,7 +89,14 @@ export async function changeCataclysm(roomCode) {
   snapshot(room);
   const pools = await loadPools(room.selected_pack_id);
   const bState = room.bunker_state || {};
-  const card = pickCard(pools.bunker.cataclysm, 'Невідомий катаклізм');
+  const currentCatText = String(bState.cataclysm?.text ?? '').trim().toLowerCase();
+  const usedSet = currentCatText ? new Set([currentCatText]) : null;
+  const card = pickUniqueFromPools(
+    pools.bunker?.cataclysm,
+    pools.fallback?.bunker?.cataclysm,
+    usedSet,
+    'Невідомий катаклізм'
+  );
   // Скільки хвилин відведено новому катаклізму на відлік (0/відсутнє — без таймера)
   const timerMinutes = Number(card.meta?.timer_minutes) || 0;
   bState.cataclysm = {

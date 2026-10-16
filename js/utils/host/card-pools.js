@@ -54,17 +54,20 @@ async function getRawPools(packId, { fresh = false } = {}) {
 // Пули для дій ведучого посеред гри (перерол характеристик, зміна бункера тощо).
 // packId — rooms.selected_pack_id; null/дефолтний → дефолтний пак. Для особистого пака порожні категорії
 // добираються з дефолтного (мінімум по одній картці), щоб перерол не видавав «Немає даних».
+// Додатково повертається fallback (базовий пак), щоб при виборі нових карток без повторів
+// спочатку брати вільні картки з кастомного пака, а якщо їх не лишилось — добирати з базового.
 // Якщо особистий пак не вдалося прочитати (наприклад, ведучим став не його автор), мовчки працюємо на дефолтному.
 export async function loadPools(packId = null) {
   const defaults = await getRawPools(DEFAULT_PACK_ID);
-  if (isDefaultPack(packId)) return defaults;
+  if (isDefaultPack(packId)) return { ...defaults, fallback: null };
 
   try {
     const own = await getRawPools(packId);
-    return applyDefaultFallback(own, defaults, buildMinimalRequirements()).pools;
+    const { pools } = applyDefaultFallback(own, defaults, buildMinimalRequirements());
+    return { ...pools, fallback: defaults };
   } catch (err) {
     console.warn('Особистий пак недоступний, використовується базовий:', err);
-    return defaults;
+    return { ...defaults, fallback: null };
   }
 }
 
@@ -110,7 +113,8 @@ export async function getStageOptions(player = null, packId = null) {
     const current = Array.isArray(owned) ? owned.find(c => c && !c.isEmpty) : (owned && !owned.isEmpty ? owned : null);
     const title = current?.[titleKey];
     if (title) {
-      const poolCard = (pools.character?.[key] || []).find(c => c.value === title);
+      const poolCard = (pools.character?.[key] || []).find(c => c.value === title)
+        || (pools.fallback?.character?.[key] || []).find(c => c.value === title);
       // Картка з власними (кастомними) стадіями — показуємо ТІЛЬКИ їх, без стандартних.
       // Без кастомних стадій лишаються стандартні.
       const custom = getStageNames(poolCard?.meta?.stages);

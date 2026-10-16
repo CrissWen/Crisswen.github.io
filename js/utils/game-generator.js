@@ -66,13 +66,27 @@ const parseStayTimeMonths = (text) => {
 // Асинхронна — читає поточний конфіг балансу (config-manager.js) для розміру бункера (size) й розрахунку їжі.
 const BUNKER_POOL_CATEGORY = { history: 'history', rooms_description: 'rooms_description', location: 'location', problem: 'problems' };
 
-export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerState = {}) {
+export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerState = {}, fallbackBunkerPool = null) {
   const b = bunkerPool || {};
+  const fb = fallbackBunkerPool || {};
   const poolKey = BUNKER_POOL_CATEGORY[field];
 
   if (poolKey) {
-    const pool = b[poolKey];
-    return Array.isArray(pool) && pool.length > 0 ? pickCard(pool).value : null;
+    const primary = Array.isArray(b[poolKey]) ? b[poolKey] : [];
+    const base = Array.isArray(fb[poolKey]) ? fb[poolKey] : [];
+    if (primary.length === 0 && base.length === 0) return null;
+
+    const currentVal = String(currentBunkerState[field] ?? '').trim().toLowerCase();
+    if (currentVal) {
+      const availPrimary = primary.filter(c => String(c.value ?? '').trim().toLowerCase() !== currentVal);
+      if (availPrimary.length > 0) return pickCard(availPrimary).value;
+
+      const availBase = base.filter(c => String(c.value ?? '').trim().toLowerCase() !== currentVal);
+      if (availBase.length > 0) return pickCard(availBase).value;
+    }
+
+    const list = primary.length > 0 ? primary : base;
+    return list.length > 0 ? pickCard(list).value : null;
   }
 
   const bc = await getGameConfig();
@@ -81,12 +95,18 @@ export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerSta
     case 'size':
       return `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
     case 'stay_time': {
-      if (!Array.isArray(b.cataclysm) || b.cataclysm.length === 0) return null;
-      const months = Number(pickCard(b.cataclysm).meta?.stay_time_months) || 12;
+      const catList = Array.isArray(b.cataclysm) && b.cataclysm.length > 0 ? b.cataclysm : (Array.isArray(fb.cataclysm) ? fb.cataclysm : []);
+      if (catList.length === 0) return null;
+      const months = Number(pickCard(catList).meta?.stay_time_months) || 12;
       return formatStayTime(months);
     }
-    case 'food_and_water':
-      return buildFoodAndWater(parseStayTimeMonths(currentBunkerState.stay_time), b, bc);
+    case 'food_and_water': {
+      const mergedForFood = {
+        ...b,
+        food_supply: (Array.isArray(b.food_supply) && b.food_supply.length > 0) ? b.food_supply : fb.food_supply
+      };
+      return buildFoodAndWater(parseStayTimeMonths(currentBunkerState.stay_time), mergedForFood, bc);
+    }
     default:
       return null;
   }

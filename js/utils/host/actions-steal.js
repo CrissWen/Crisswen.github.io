@@ -3,7 +3,7 @@ import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { setHostEvent, nameOf, labelOf } from './common.js';
 import {
-  drawCharacteristic, rerollGenderAndAge,
+  drawCharacteristic, collectUsedValues, rerollGenderAndAge,
   isEmptyChar, realCards, slotRevealed, forceReveal, emptyMarker
 } from './characteristics.js';
 
@@ -47,9 +47,14 @@ export async function stealCharacteristic(roomCode, thiefId, victimId, charType)
       victim.gender.is_revealed = victimWasRevealed;
       if (victim.age) victim.age.is_revealed = victimWasRevealed;
     } else {
+      const usedValues = collectUsedValues(pState, charType);
+      const currentValue = charType === 'body' ? victim.body?.type : null;
       const stolen = victim[charType];
       thief[charType] = forceReveal(stolen, thiefWasRevealed);
-      victim[charType] = forceReveal(drawCharacteristic(charType, pools, { age: victim.age?.value }), victimWasRevealed);
+      victim[charType] = forceReveal(
+        drawCharacteristic(charType, pools, { age: victim.age?.value, usedValues, currentValue }),
+        victimWasRevealed
+      );
     }
   } else {
     // Поле злодія стає масивом (якщо ще не був) і отримує вкрадені картки поруч з власними;

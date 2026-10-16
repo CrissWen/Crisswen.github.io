@@ -4,7 +4,7 @@ import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { resolveIds, setHostEvent, nameOf, labelOf, targetPhrase } from './common.js';
 import {
-  drawCharacteristic, withReveal, rerollGenderAndAge, applyGenderCard, buildCustomCard,
+  drawCharacteristic, collectUsedValues, withReveal, rerollGenderAndAge, applyGenderCard, buildCustomCard,
   isEmptyChar, realCards, slotRevealed, emptyMarker
 } from './characteristics.js';
 
@@ -18,6 +18,7 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
   const pools = await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
+  const usedValues = collectUsedValues(pState, charType);
 
   resolveIds(pState, targetId).forEach(id => {
     if (!pState[id]) return;
@@ -26,7 +27,11 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
       rerollGenderAndAge(pState[id], pools);
       return;
     }
-    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools, { age: pState[id].age?.value }));
+    const currentValue = charType === 'body' ? pState[id].body?.type : null;
+    pState[id][charType] = withReveal(
+      pState[id][charType],
+      drawCharacteristic(charType, pools, { age: pState[id].age?.value, usedValues, currentValue })
+    );
   });
 
   setHostEvent(bState, `Ведучий змінив характеристику «${labelOf(charType)}» ${targetPhrase(pState, targetId)}`);
@@ -204,6 +209,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
   const pools = custom ? null : await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
+  const usedValues = custom ? null : collectUsedValues(pState, charCategory);
 
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
@@ -212,7 +218,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
     const existing = realCards(p[charCategory]);
     // Нова картка успадковує стан відкриття групи, щоб не "випадати" з відображення
     const revealed = existing.length ? !!existing[0].is_revealed : false;
-    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools, { age: p.age?.value });
+    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools, { age: p.age?.value, usedValues });
     p[charCategory] = [...existing, ...fresh.map(x => ({ ...x, is_revealed: revealed }))];
   });
 
