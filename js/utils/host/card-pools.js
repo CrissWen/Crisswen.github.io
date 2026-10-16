@@ -96,7 +96,7 @@ const PLAYER_CARD_FIELDS = {
 };
 
 // player — запис гравця з players_state (або null/undefined, напр. «Для всіх»: тоді лише стандартні стадії).
-// Список стадій індивідуальний: default_stages + meta.stages ЛИШЕ тієї картки, якою зараз володіє гравець
+// Список стадій індивідуальний: meta.stages тієї картки, якою зараз володіє гравець (якщо вони є), інакше default_stages
 // (changeExperience/changeDiseaseSeverity змінюють саме першу картку слота, тому дивимось на неї).
 // gender — усі варіанти статі з пака (для дії "Змінити стать" в блоці "Лікувати / Зробити"). Вони теж заповнюються через data-stages.
 export async function getStageOptions(player = null, packId = null) {
@@ -104,16 +104,19 @@ export async function getStageOptions(player = null, packId = null) {
   const stages = pools.config?.default_stages || {};
   // У випадаючі списки йдуть лише назви: стадії можуть бути масивом об'єктів { name, up_to_months } або старим масивом рядків (getStageNames)
   const build = (key) => {
-    const names = [...getStageNames(stages[key])];
+    let names = [...getStageNames(stages[key])];
     const { field, titleKey } = PLAYER_CARD_FIELDS[key];
     const owned = player?.[field];
     const current = Array.isArray(owned) ? owned.find(c => c && !c.isEmpty) : (owned && !owned.isEmpty ? owned : null);
     const title = current?.[titleKey];
     if (title) {
       const poolCard = (pools.character?.[key] || []).find(c => c.value === title);
-      names.push(...getStageNames(poolCard?.meta?.stages));
+      // Картка з власними (кастомними) стадіями — показуємо ТІЛЬКИ їх, без стандартних.
+      // Без кастомних стадій лишаються стандартні.
+      const custom = getStageNames(poolCard?.meta?.stages);
+      if (custom.length) names = custom;
     }
-    return [...new Set(names)]; // без дублікатів, стандартні їдуть першими
+    return [...new Set(names)]; // без дублікатів
   };
   const bodyTypeStages = getStageNames(stages.body_type);
   return {
