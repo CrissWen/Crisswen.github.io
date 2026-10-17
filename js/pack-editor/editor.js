@@ -105,8 +105,15 @@ function updateCardsMeta() {
 }
 
 function selectCategory(category) {
+  // Режим LLM — один на весь редактор: state.viewMode міняє лише чекбокс «Режим LLM», тому при перемиканні категорій він не скидається.
+  // Катаклізми зберігаються масивом, а в LLM-режимі редагуються текстом: при виході з вкладки розбираємо текст назад
+  // у масив (і повертаємо у state.form.texts звичний список назв), при вході — генеруємо LLM-текст з масиву.
+  if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm' && category !== 'cataclysm') {
+    syncCataclysmsFromLlmText();
+    syncCataText();
+  }
   state.activeCategory = category;
-  state.viewMode = 'visual';
+  if (state.viewMode === 'llm' && category === 'cataclysm') syncCataclysmsToLlmText();
   
   ui.showCategory({ category, text: state.form.texts[category] || '', viewMode: state.viewMode });
   
@@ -285,6 +292,7 @@ export async function initPackEditor() {
   state.initialForm = cloneForm(state.form);
   state.activeCategory = ALL_PACK_CATEGORIES[0].category;
   state.stagesViewMode = 'visual';
+  state.viewMode = 'visual';
   state.isSaving = false;
   state.isConfirming = false;
   state.allowLeave = false;

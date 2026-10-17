@@ -18,7 +18,13 @@ export function syncCataText(f = state.form) {
   f.texts.cataclysm = cataclysmNamesText(f.cataclysms);
 }
 
+// Знімок згенерованого LLM-тексту катаклізмів. Розбір тексту назад у масив втрачає поля, яких у тексті немає (наприклад extra),
+// тож якщо текст не змінювали, масив лишаємо як є. Це важливо, бо режим LLM тепер переходить між категоріями
+// і текст катаклізмів розбирається щоразу при виході з вкладки.
+let llmTextBaseline = null;
+
 export function syncCataclysmsFromLlmText() {
+  if (state.form.texts.cataclysm === llmTextBaseline) return;
   const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
   state.form.cataclysms = parsed.map(c => ({
     name: c.value,
@@ -37,6 +43,7 @@ export function syncCataclysmsToLlmText() {
     stay_time_months: c.stay_time_months,
     population: c.population
   })).join('\n');
+  llmTextBaseline = state.form.texts.cataclysm;
 }
 
 // Чи є у формі дані, які ще не потрапили в список (новий катаклізм або незбережені правки існуючого)

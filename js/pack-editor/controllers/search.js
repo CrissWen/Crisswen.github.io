@@ -80,6 +80,14 @@ export function openTextResult(category, lineIndex) {
 export function openCataResult(index) {
   if (state.activeCategory !== 'cataclysm') orchestrator.selectCategory('cataclysm');
   if (!state.form.cataclysms[index]) return;
+  // У LLM-режимі форми й списку катаклізмів немає (редагується текст) — виділяємо рядок катаклізму в textarea, як у звичайних категоріях
+  if (state.viewMode === 'llm') {
+    if (!ui.selectCardsLine(index)) {
+      showGlobalToast('Рядок змінився — виберіть результат ще раз');
+      renderSearch();
+    }
+    return;
+  }
   if (index !== state.cataEditIndex) {
     if (cataDraftPending()) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
