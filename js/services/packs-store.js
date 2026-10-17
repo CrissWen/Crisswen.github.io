@@ -12,6 +12,10 @@ import { cardToLine } from '../pack-editor/parser.js';
 export const DEFAULT_PACK_ID = '16ea0906-5874-4471-aa38-aef1513e82c6';
 export const DEFAULT_PACK_LABEL = 'Базовий пак';
 
+// Ліміт особистих паків на одного користувача (базовий пак не рахується)
+export const MAX_PERSONAL_PACKS = 3;
+export const PACK_LIMIT_MESSAGE = `Ви вже маєте ${MAX_PERSONAL_PACKS} особисті паки — це максимум. Видаліть один із них, щоб створити новий.`;
+
 // Назва пака для інтерфейсу. Дефолтний у БД зветься 'default' (системна назва), тож для людей підписуємо його "Базовий пак".
 // Порожній packId (кімната створена до міграції або пак видалено) теж означає дефолтний.
 export function packDisplayName(packId, title) {
@@ -76,6 +80,19 @@ export async function listPacks() {
       };
     })
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.title.localeCompare(b.title, 'uk'));
+}
+
+// Кількість особистих паків поточного користувача (базовий не враховується).
+// Це перевірка на клієнті для зручності: щоб ліміт був обов'язковим, його має перевіряти і save_personal_pack у БД.
+export async function countPersonalPacks() {
+  const user = await currentUser();
+  const { count, error } = await supabase
+    .from('packs')
+    .select('id', { count: 'exact', head: true })
+    .eq('author_id', user.id)
+    .neq('id', DEFAULT_PACK_ID);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 // Конфіг дефолтного пака — основа для config нового пака: рушій вимагає default_stages, age_range, height_range тощо
@@ -161,6 +178,9 @@ export async function savePack({ id, title, description, config, cards }) {
 
   const isSavingDefault = packId === DEFAULT_PACK_ID;
   if (isSavingDefault && !isAdmin) throw new Error('Дефолтний пак змінювати не можна');
+
+  // Ліміт діє лише на створення нового пака (id не передано); оновлення існуючого ліміт не зачіпає
+  if (!id && (await countPersonalPacks()) >= MAX_PERSONAL_PACKS) throw new Error(PACK_LIMIT_MESSAGE);
 
   // save_default_pack приймає (p_pack_id, p_title, p_description, p_config, p_cards) — без p_author_id (автор пака не міняється).
   // PostgREST шукає функцію за іменами параметрів, тому при незбігу повертає 404 (PGRST202).

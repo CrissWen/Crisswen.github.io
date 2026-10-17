@@ -1,5 +1,5 @@
 import { esc } from '../utils/escape-html.js';
-import { listPacks, deletePack } from '../services/packs-store.js';
+import { listPacks, deletePack, MAX_PERSONAL_PACKS, PACK_LIMIT_MESSAGE } from '../services/packs-store.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 
@@ -10,6 +10,7 @@ import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 const DELETE_CONFIRM_TEXT = 'Чи точно хочете видалити цей пак? Цю дію неможливо скасувати.';
 
 let isDeleting = false; // щоб повторний клік під час підтвердження/видалення не запустив другу операцію
+let personalCount = 0; // скільки особистих паків (без базового) показано в списку: за ним блокуємо "+ Створити пак"
 
 function packTitle(pack) {
   // У БД дефолтний пак має службову назву "default" (за нею його шукає гра) — користувачу показуємо людську
@@ -63,7 +64,7 @@ export function renderPacks() {
     <section class="packs-page layout-large-centered">
       <div class="packs-toolbar">
         <h2 class="packs-title">Паки</h2>
-        <a class="pk-btn pk-btn--primary" href="#/pack-editor">+ Створити пак</a>
+        <a class="pk-btn pk-btn--primary" href="#/pack-editor" data-create-pack>+ Створити пак</a>
       </div>
       <div id="packs-root" class="packs-root">
         <p class="packs-empty">Завантаження паків...</p>
@@ -83,7 +84,9 @@ async function reload() {
   const root = document.getElementById('packs-root');
   if (!root) return;
   try {
-    root.innerHTML = gridHtml(await listPacks());
+    const packs = await listPacks();
+    personalCount = packs.filter(p => p.isOwn && !p.isDefault).length;
+    root.innerHTML = gridHtml(packs);
   } catch (err) {
     console.error('Не вдалося завантажити паки:', err);
     root.innerHTML = '<p class="packs-empty">Не вдалося завантажити паки</p>';
@@ -115,6 +118,13 @@ async function handleDelete(btn) {
 }
 
 function handleClick(e) {
+  // Ліміт паків: на 3-му й далі замість переходу в редактор показуємо повідомлення (редактор і збереження перевіряють ліміт ще раз)
+  if (e.target.closest('[data-create-pack]') && personalCount >= MAX_PERSONAL_PACKS) {
+    e.preventDefault();
+    showGlobalToast(PACK_LIMIT_MESSAGE);
+    return;
+  }
+
   const toggle = e.target.closest('[data-menu-toggle]');
   if (toggle) {
     const menu = toggle.parentElement.querySelector('.pack-card__dropdown');
@@ -148,4 +158,5 @@ export function cleanupPacks() {
   document.removeEventListener('click', handleClick);
   document.removeEventListener('keydown', handleKeydown);
   isDeleting = false;
+  personalCount = 0;
 }

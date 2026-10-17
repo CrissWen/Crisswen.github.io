@@ -2,7 +2,10 @@ import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './c
 import { parseLines, oneLine, hasExplanationField, splitNameExplanation } from './parser.js';
 import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, parseStageEntry } from './payload.js';
 import { getStagePrompt } from './prompts/stage-prompts.js';
-import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
+import {
+  getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID,
+  countPersonalPacks, MAX_PERSONAL_PACKS, PACK_LIMIT_MESSAGE
+} from '../services/packs-store.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { isPackNoticeMuted } from '../game-modules/overlays/pack-notice.js';
@@ -729,6 +732,13 @@ export async function initPackEditor() {
     // Базовий пак редагує лише адмін: перевіряємо ще до завантаження даних (статус кешується в packs-store.js; дублює перевірку в getPack)
     if (state.packId === DEFAULT_PACK_ID && !(await checkIsAdmin())) {
       showGlobalToast('Дефолтний пак не можна редагувати');
+      goToList();
+      return;
+    }
+
+    // Новий пак при вичерпаному ліміті не відкриваємо (збереження теж перевіряє ліміт). Збій самого підрахунку редактор не блокує.
+    if (!state.packId && await countPersonalPacks().then(n => n >= MAX_PERSONAL_PACKS, () => false)) {
+      showGlobalToast(PACK_LIMIT_MESSAGE);
       goToList();
       return;
     }
