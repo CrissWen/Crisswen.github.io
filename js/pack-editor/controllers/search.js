@@ -105,10 +105,21 @@ export function onSearchResultClick(e) {
       return;
     }
 
-    if (state.selectedDeleteIndices.has(index)) {
-      state.selectedDeleteIndices.delete(index);
+    if (e.shiftKey && state.lastClickedDeleteIndex !== null && state.lastClickedDeleteIndex !== undefined) {
+      const start = Math.min(state.lastClickedDeleteIndex, index);
+      const end = Math.max(state.lastClickedDeleteIndex, index);
+      const shouldSelect = !state.selectedDeleteIndices.has(index);
+      for (let i = start; i <= end; i++) {
+        if (shouldSelect) state.selectedDeleteIndices.add(i);
+        else state.selectedDeleteIndices.delete(i);
+      }
     } else {
-      state.selectedDeleteIndices.add(index);
+      if (state.selectedDeleteIndices.has(index)) {
+        state.selectedDeleteIndices.delete(index);
+      } else {
+        state.selectedDeleteIndices.add(index);
+      }
+      state.lastClickedDeleteIndex = index;
     }
 
     orchestrator.renderList();

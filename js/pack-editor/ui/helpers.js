@@ -808,26 +808,47 @@ export function focusSiblingRow(btn, dir) {
 export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 0 }) {
   const deleteToolbar = $('pe-delete-toolbar');
   const bulkBtn = $('pe-bulk-delete-btn');
-  const formCol = $('pe-cata')?.closest('.pe-char-form-col');
   const deleteOverlay = $('pe-delete-overlay');
+  const listWrap = $('pe-cata-list-wrap');
+  const isCata = state.activeCategory === 'cataclysm';
+  const activeForm = isCata ? $('pe-cata') : $('pe-dynamic-form');
 
+  if (listWrap) listWrap.classList.toggle('is-delete-mode', isDeleteMode);
   if (deleteToolbar) deleteToolbar.hidden = !isDeleteMode;
 
   if (bulkBtn) {
     bulkBtn.classList.toggle('is-active', isDeleteMode);
-    bulkBtn.title = isDeleteMode ? 'Вийти з режиму видалення (Esc)' : 'Видалити кілька карток';
+    bulkBtn.title = isDeleteMode ? 'Вийти з режиму вибору (Esc)' : 'Режим вибору карток';
     bulkBtn.setAttribute('aria-pressed', isDeleteMode);
+    const span = bulkBtn.querySelector('span');
+    if (span) span.textContent = 'Вибір';
   }
 
-  if (formCol) formCol.classList.toggle('is-delete-disabled', isDeleteMode);
-  if (deleteOverlay) deleteOverlay.hidden = !isDeleteMode;
+  // Блокування форми: оверлей-наліпка прикріплюється до активної форми і покриває її повністю
+  if (deleteOverlay && activeForm) {
+    if (isDeleteMode) {
+      if (deleteOverlay.parentElement !== activeForm) {
+        activeForm.appendChild(deleteOverlay);
+      }
+      activeForm.classList.add('is-delete-disabled');
+      deleteOverlay.hidden = false;
+    } else {
+      activeForm.classList.remove('is-delete-disabled');
+      deleteOverlay.hidden = true;
+    }
+  }
 
   const countEl = $('pe-delete-count');
-  if (countEl) countEl.textContent = `Вибрано: ${selectedCount}`;
+  if (countEl) countEl.textContent = `Обрано: ${selectedCount}`;
 
   const submitBtn = $('pe-delete-submit-btn');
   if (submitBtn) {
-    submitBtn.textContent = `Видалити (${selectedCount})`;
+    const textSpan = submitBtn.querySelector('span');
+    if (textSpan) {
+      textSpan.textContent = `Видалити (${selectedCount})`;
+    } else {
+      submitBtn.textContent = `Видалити (${selectedCount})`;
+    }
     submitBtn.disabled = selectedCount === 0;
   }
 

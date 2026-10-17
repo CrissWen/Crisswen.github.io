@@ -57,6 +57,10 @@ function resultRowHtml(r, tokens, searchAll) {
     if (isMarkedDelete) rowClasses += ' is-marked-delete';
   }
 
+  const checkHtml = state.isDeleteMode && isCurrentCat
+    ? `<span class="added-item-row__check" aria-hidden="true">${isMarkedDelete ? '✓' : ''}</span>`
+    : '';
+
   const deleteHintHtml = state.isDeleteMode && isCurrentCat
     ? (isMarkedDelete
         ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
@@ -66,6 +70,7 @@ function resultRowHtml(r, tokens, searchAll) {
   if (r.type === 'cata') {
     return `
       <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-cata="${r.index}" aria-pressed="${isMarkedDelete}">
+        ${checkHtml}
         <span class="added-item-row__name">${highlightHtml(oneLine(r.item.name), tokens)}${snippetHtml(r.item.description, tokens)}</span>
         ${deleteHintHtml || `<span class="pe-result__meta">${esc(r.label)}</span>`}
       </button>`;
@@ -73,6 +78,7 @@ function resultRowHtml(r, tokens, searchAll) {
   const where = `${searchAll ? `${esc(r.label)} · ` : ''}рядок ${r.line + 1}`;
   return `
     <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-line="${r.line}" aria-pressed="${isMarkedDelete}">
+      ${checkHtml}
       <span class="added-item-row__name">${highlightHtml(r.text, tokens)}</span>
       ${deleteHintHtml || `<span class="pe-result__meta">${where}</span>`}
     </button>`;

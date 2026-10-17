@@ -22,6 +22,7 @@ export class EditorState {
     this.searchAll = false;
     this.isDeleteMode = false;
     this.selectedDeleteIndices = new Set();
+    this.lastClickedDeleteIndex = null;
   }
 }
 

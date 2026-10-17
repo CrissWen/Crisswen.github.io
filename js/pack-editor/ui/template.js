@@ -197,20 +197,22 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                 </div>
               </div>
               <div class="pe-toolbar__opts">
-                <button type="button" id="pe-bulk-delete-btn" class="pk-btn pk-btn--ghost pe-bulk-delete-btn" title="Видалити кілька карток" aria-label="Видалити кілька карток">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                  <span>Видалити кілька</span>
+                <button type="button" id="pe-bulk-delete-btn" class="pe-bulk-delete-btn" title="Режим вибору карток (Esc для виходу)" aria-label="Режим вибору карток">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  <span>Вибір</span>
                 </button>
-                <label class="pe-check" title="Режим LLM (робота з чистим текстом)">
-                  <input type="checkbox" id="pe-llm-mode" class="pe-check__input">
-                  <span class="pe-check__box" aria-hidden="true"></span>
-                  <span class="pe-check__text">Режим LLM</span>
-                </label>
-                <span class="pe-llm-slot" id="pe-llm-slot">
-                <button type="button" id="pe-llm-copy" class="pk-btn pk-btn--ghost pe-llm-copy-btn" title="Скопіювати промпт для LLM" aria-label="Скопіювати промпт для LLM">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                </button>
-                </span>
+                <div class="pe-toolbar__llm-group">
+                  <label class="pe-check" title="Режим LLM (робота з чистим текстом)">
+                    <input type="checkbox" id="pe-llm-mode" class="pe-check__input">
+                    <span class="pe-check__box" aria-hidden="true"></span>
+                    <span class="pe-check__text">Режим LLM</span>
+                  </label>
+                  <span class="pe-llm-slot" id="pe-llm-slot">
+                    <button type="button" id="pe-llm-copy" class="pk-btn pk-btn--ghost pe-llm-copy-btn" title="Скопіювати промпт для LLM" aria-label="Скопіювати промпт для LLM">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -225,24 +227,23 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
               <div class="pe-field">
                 <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
                 <div class="pe-cata-list-wrap" id="pe-cata-list-wrap" hidden>
-                  <!-- Панель дій режиму видалення над списком карток -->
-                  <div class="pe-delete-toolbar" id="pe-delete-toolbar" hidden>
-                    <div class="pe-delete-toolbar__actions">
-                      <button type="button" id="pe-delete-select-all-btn" class="pk-btn pk-btn--ghost pe-delete-select-all-btn">
-                        Вибрати всі
-                      </button>
-                      <span id="pe-delete-count" class="pe-delete-toolbar__count">Вибрано: 0</span>
-                    </div>
-                    <div class="pe-delete-toolbar__submit">
-                      <button type="button" id="pe-delete-cancel-btn" class="pk-btn pk-btn--ghost pe-delete-cancel-btn" title="Вийти з режиму (Esc)">
-                        Скасувати
-                      </button>
-                      <button type="button" id="pe-delete-submit-btn" class="pk-btn pk-btn--danger pe-delete-submit-btn" disabled>
-                        Видалити (0)
-                      </button>
-                    </div>
-                  </div>
                   <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані картки"></div>
+                  <!-- Плаваюча панель дій (Floating Pill) режиму вибору -->
+                  <div class="pe-delete-toolbar pe-delete-floating-bar" id="pe-delete-toolbar" hidden>
+                    <button type="button" id="pe-delete-cancel-btn" class="pe-delete-pill-btn pe-delete-pill-btn--cancel" title="Скасувати вибір (Esc)" aria-label="Скасувати вибір">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      <span>Скасувати</span>
+                    </button>
+                    <span id="pe-delete-count" class="pe-delete-toolbar__count" hidden></span>
+                    <button type="button" id="pe-delete-select-all-btn" class="pe-delete-pill-btn pe-delete-pill-btn--ghost">
+                      Вибрати всі
+                    </button>
+                    <div class="pe-delete-floating-divider" aria-hidden="true"></div>
+                    <button type="button" id="pe-delete-submit-btn" class="pe-delete-pill-btn pe-delete-pill-btn--danger" disabled>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <span>Видалити (0)</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="pe-list-meta">
                   <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
@@ -252,9 +253,21 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
 
             <div class="pe-char-form-col">
               <div id="pe-delete-overlay" class="pe-delete-overlay" hidden>
-                <div class="pe-delete-overlay__badge">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  <span>Увімкнено режим видалення</span>
+                <div class="pe-hazard-sticker">
+                  <div class="pe-hazard-sticker__stripe" aria-hidden="true"></div>
+                  <div class="pe-hazard-sticker__icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                  </div>
+                  <h4 class="pe-hazard-sticker__title">РЕЖИМ ВИБОРУ</h4>
+                  <p class="pe-hazard-sticker__desc">Редагування карток заблоковано під час вибору для видалення</p>
+                  <div class="pe-hazard-sticker__hint">
+                    Клікайте по картках для вибору<br>
+                    або натисніть <b>Esc</b> для виходу
+                  </div>
                 </div>
               </div>
               <!-- Форма катаклізму -->

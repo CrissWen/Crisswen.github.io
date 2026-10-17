@@ -92,6 +92,10 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
       if (isNew) rowClasses += ' is-new';
     }
 
+    const checkHtml = state.isDeleteMode
+      ? `<span class="added-item-row__check" aria-hidden="true">${isMarkedDelete ? '✓' : ''}</span>`
+      : '';
+
     const hintHtml = state.isDeleteMode
       ? (isMarkedDelete
           ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
@@ -100,6 +104,7 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
 
     return `
       <button type="button" class="${rowClasses}" data-cata-index="${i}" aria-pressed="${state.isDeleteMode ? isMarkedDelete : selected}">
+        ${checkHtml}
         <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}${descHtml}</span>
         ${hintHtml}
       </button>`;

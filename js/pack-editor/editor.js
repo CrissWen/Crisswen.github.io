@@ -196,6 +196,7 @@ function updateDeleteModeUi() {
 }
 
 function enterDeleteMode() {
+  if (state.viewMode === 'llm') return;
   if (state.activeCategory === 'cataclysm') {
     if (cataDraftPending()) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
@@ -212,6 +213,7 @@ function enterDeleteMode() {
 
   state.isDeleteMode = true;
   state.selectedDeleteIndices.clear();
+  state.lastClickedDeleteIndex = null;
 
   renderList();
   renderSearch();
@@ -221,6 +223,7 @@ function enterDeleteMode() {
 function exitDeleteMode() {
   state.isDeleteMode = false;
   state.selectedDeleteIndices.clear();
+  state.lastClickedDeleteIndex = null;
   renderList();
   renderSearch();
   updateDeleteModeUi();
@@ -295,10 +298,21 @@ function onCataListClick(e) {
   const index = Number(row.dataset.cataIndex);
 
   if (state.isDeleteMode) {
-    if (state.selectedDeleteIndices.has(index)) {
-      state.selectedDeleteIndices.delete(index);
+    if (e.shiftKey && state.lastClickedDeleteIndex !== null && state.lastClickedDeleteIndex !== undefined) {
+      const start = Math.min(state.lastClickedDeleteIndex, index);
+      const end = Math.max(state.lastClickedDeleteIndex, index);
+      const shouldSelect = !state.selectedDeleteIndices.has(index);
+      for (let i = start; i <= end; i++) {
+        if (shouldSelect) state.selectedDeleteIndices.add(i);
+        else state.selectedDeleteIndices.delete(i);
+      }
     } else {
-      state.selectedDeleteIndices.add(index);
+      if (state.selectedDeleteIndices.has(index)) {
+        state.selectedDeleteIndices.delete(index);
+      } else {
+        state.selectedDeleteIndices.add(index);
+      }
+      state.lastClickedDeleteIndex = index;
     }
     renderList();
     renderSearch();
@@ -691,6 +705,7 @@ export async function initPackEditor() {
 
   // Кнопки режиму масового видалення
   $('pe-bulk-delete-btn')?.addEventListener('click', () => {
+    if (state.viewMode === 'llm') return;
     if (state.isDeleteMode) exitDeleteMode();
     else enterDeleteMode();
   });
