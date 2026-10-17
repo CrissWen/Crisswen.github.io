@@ -173,8 +173,10 @@ export function showCategory({ category, text, viewMode = "visual" }) {
 
   const isVisual = hasVisualMode && (viewMode === "visual");
   
+  const listWrap = $('pe-cata-list-wrap');
   if (isVisual) {
     $('pe-cards').hidden = true;
+    if (listWrap) listWrap.hidden = false;
     $('pe-cata-list').hidden = false;
     
     if (isCata) {
@@ -197,6 +199,7 @@ export function showCategory({ category, text, viewMode = "visual" }) {
     }
   } else {
     $('pe-cards').hidden = false;
+    if (listWrap) listWrap.hidden = true;
     $('pe-cata-list').hidden = true;
     $('pe-cata').hidden = true;
     $('pe-dynamic-form').hidden = true;
@@ -205,6 +208,9 @@ export function showCategory({ category, text, viewMode = "visual" }) {
   const formCol = $("pe-cata")?.closest(".pe-char-form-col");
   if (formCol) formCol.hidden = !isVisual;
   
+  const bulkBtn = $('pe-bulk-delete-btn');
+  if (bulkBtn) bulkBtn.hidden = !isVisual;
+
   $("pe-cards").scrollTop = 0;
 }
 
@@ -796,5 +802,38 @@ export function focusSiblingRow(btn, dir) {
   if (!next) return false;
   next.focus();
   return true;
+}
+
+// Керування виглядом панелі видалення та блокуванням форми
+export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 0 }) {
+  const deleteToolbar = $('pe-delete-toolbar');
+  const bulkBtn = $('pe-bulk-delete-btn');
+  const formCol = $('pe-cata')?.closest('.pe-char-form-col');
+  const deleteOverlay = $('pe-delete-overlay');
+
+  if (deleteToolbar) deleteToolbar.hidden = !isDeleteMode;
+
+  if (bulkBtn) {
+    bulkBtn.classList.toggle('is-active', isDeleteMode);
+    bulkBtn.title = isDeleteMode ? 'Вийти з режиму видалення (Esc)' : 'Видалити кілька карток';
+    bulkBtn.setAttribute('aria-pressed', isDeleteMode);
+  }
+
+  if (formCol) formCol.classList.toggle('is-delete-disabled', isDeleteMode);
+  if (deleteOverlay) deleteOverlay.hidden = !isDeleteMode;
+
+  const countEl = $('pe-delete-count');
+  if (countEl) countEl.textContent = `Вибрано: ${selectedCount}`;
+
+  const submitBtn = $('pe-delete-submit-btn');
+  if (submitBtn) {
+    submitBtn.textContent = `Видалити (${selectedCount})`;
+    submitBtn.disabled = selectedCount === 0;
+  }
+
+  const selectAllBtn = $('pe-delete-select-all-btn');
+  if (selectAllBtn) {
+    selectAllBtn.textContent = (totalCount > 0 && selectedCount === totalCount) ? 'Зняти всі' : 'Вибрати всі';
+  }
 }
 

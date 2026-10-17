@@ -11,7 +11,8 @@ let orchestrator = {
   renderList: () => {},
   getDynamicCards: () => [],
   dynDraftPending: () => false,
-  startDynEdit: () => {}
+  startDynEdit: () => {},
+  updateDeleteModeUi: () => {}
 };
 
 export function setSearchOrchestrator(handlers) {
@@ -93,6 +94,29 @@ export function openCataResult(index) {
 export function onSearchResultClick(e) {
   const row = e.target.closest('.pe-result');
   if (!row) return;
+
+  if (state.isDeleteMode) {
+    const isCata = row.dataset.resCata !== undefined;
+    const cat = isCata ? 'cataclysm' : row.dataset.resCat;
+    const index = isCata ? Number(row.dataset.resCata) : Number(row.dataset.resLine);
+
+    if (cat !== state.activeCategory) {
+      showGlobalToast('Режим видалення діє тільки для поточної активної категорії');
+      return;
+    }
+
+    if (state.selectedDeleteIndices.has(index)) {
+      state.selectedDeleteIndices.delete(index);
+    } else {
+      state.selectedDeleteIndices.add(index);
+    }
+
+    orchestrator.renderList();
+    renderSearch();
+    orchestrator.updateDeleteModeUi();
+    return;
+  }
+
   if (row.dataset.resCata !== undefined) openCataResult(Number(row.dataset.resCata));
   else openTextResult(row.dataset.resCat, Number(row.dataset.resLine));
 }

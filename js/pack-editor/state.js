@@ -20,6 +20,8 @@ export class EditorState {
     this.newCataIndex = -1;
     this.searchQuery = '';
     this.searchAll = false;
+    this.isDeleteMode = false;
+    this.selectedDeleteIndices = new Set();
   }
 }
 

@@ -581,6 +581,57 @@ body.is-stage-dragging * {
   .pe-toolbar__search{flex-basis:100%;}
 }
 
+/* Кнопка «Видалити кілька» у тулбарі */
+.pe-bulk-delete-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;padding:6px 12px;
+  color:var(--text-mute);border-color:var(--metal-lt);
+  transition:color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pe-bulk-delete-btn:hover{
+  color:var(--danger, #ef4444);
+  border-color:color-mix(in srgb, var(--danger, #ef4444) 45%, var(--metal-lt));
+  background:color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
+}
+.pe-bulk-delete-btn.is-active{
+  color:#ef4444;
+  border-color:#ef4444;
+  background:color-mix(in srgb, #ef4444 18%, transparent);
+}
+.pe-bulk-delete-btn svg{flex-shrink:0;}
+
+/* Контекстна панель режиму видалення над списком карток */
+.pe-delete-toolbar{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;
+  padding:8px 12px;margin:0;
+  background:color-mix(in srgb, var(--panel) 95%, transparent);
+  border-bottom:1px solid color-mix(in srgb, #ef4444 35%, var(--metal-lt));
+  flex-shrink:0;
+  animation:pe-slide-down .2s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes pe-slide-down{
+  from{opacity:0;transform:translateY(-6px);}
+  to{opacity:1;transform:none;}
+}
+.pe-delete-toolbar[hidden]{display:none;}
+.pe-delete-toolbar__actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
+.pe-delete-toolbar__count{
+  font-size:13px;font-weight:500;color:var(--text);
+  white-space:nowrap;
+}
+.pe-delete-toolbar__submit{display:flex;align-items:center;gap:8px;}
+.pe-delete-submit-btn{
+  background:#ef4444;color:#fff;border:1px solid #dc2626;font-weight:600;
+  padding:6px 14px;
+  transition:background-color .2s ease, opacity .2s ease;
+}
+.pe-delete-submit-btn:hover:not(:disabled){
+  background:#dc2626;border-color:#b91c1c;
+}
+.pe-delete-submit-btn:disabled{
+  opacity:0.4;cursor:not-allowed;filter:grayscale(0.5);
+}
+
 /* Форма додавання та редагування (під списком і підсумком, нижче за них) */
 .pe-cata{
   display:flex;flex-direction:column;gap:14px;
@@ -712,19 +763,77 @@ body.is-stage-dragging * {
   .added-item-row:focus-visible .added-item-row__name,
   .added-item-row.is-selected .added-item-row__name{transform:none;}
 }
-/* Користувачам із вимкненою анімацією в системі — миттєві стани без руху */
-@media (prefers-reduced-motion:reduce){
-  .added-item-row,
-  .added-item-row::before,
-  .added-item-row__name,
-  .added-item-row__hint,
-  .added-item-row__hint::after{transition:none;}
-  .added-item-row.is-new{animation:none;}
-  .added-item-row:active{transform:none;}
-  .added-item-row:hover .added-item-row__name,
-  .added-item-row:focus-visible .added-item-row__name,
-  .added-item-row.is-selected .added-item-row__name{transform:none;}
+/* Рядки карток у режимі видалення */
+.added-item-row.is-delete-mode{
+  cursor:pointer;
 }
+.added-item-row.is-marked-delete{
+  background:rgba(239, 68, 68, 0.15) !important;
+  border-color:#ef4444 !important;
+}
+.added-item-row.is-marked-delete::before{
+  background:#ef4444 !important;
+  transform:scaleY(1) !important;
+}
+.added-item-row.is-marked-delete:hover{
+  background:rgba(239, 68, 68, 0.22) !important;
+}
+.added-item-row__hint--delete{
+  color:#ef4444 !important;
+  background:rgba(239, 68, 68, 0.2) !important;
+  opacity:1 !important;
+  font-weight:600;
+}
+.added-item-row__hint--delete::after{
+  content:"" !important;
+}
+.added-item-row__hint--pick{
+  color:var(--text-mute);
+  opacity:0.65;
+}
+.added-item-row__hint--pick::after{
+  content:"" !important;
+}
+
+/* Блокування правої колонки форми під час режиму видалення */
+.pe-char-form-col{
+  position:relative;
+}
+.pe-char-form-col.is-delete-disabled{
+  opacity:0.35;
+  pointer-events:none;
+  user-select:none;
+}
+.pe-delete-overlay{
+  position:absolute;
+  inset:0;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+.pe-delete-overlay[hidden]{
+  display:none;
+}
+.pe-delete-overlay__badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 16px;
+  background:var(--panel);
+  border:1px solid color-mix(in srgb, #ef4444 45%, var(--metal-lt));
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  font-size:13.5px;
+  font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,0.5);
+}
+.pe-delete-overlay__badge svg{
+  color:#ef4444;
+  flex-shrink:0;
+}
+
 /* ----- Вікно підтвердження для паків (pack-confirm.js) ----- */
 .pk-confirm{
   position:fixed;z-index:10003;
@@ -1181,12 +1290,41 @@ body.is-stage-dragging * {
   min-height: 300px;
   resize: vertical;
 }
-.pe-char-list-col .pe-cata-list {
+.pe-char-list-col .pe-cata-list-wrap {
+  display: flex;
+  flex-direction: column;
   height: 600px;
   min-height: 300px;
   max-height: none;
+  background: var(--panel-2);
+  border: 1px solid var(--metal-lt);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
   resize: vertical;
-  overflow: auto;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.pe-char-list-col .pe-cata-list-wrap[hidden] {
+  display: none;
+}
+.pe-char-list-col .pe-cata-list-wrap:hover {
+  border-color: color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));
+}
+.pe-char-list-col .pe-cata-list-wrap:focus-within {
+  border-color: var(--accent, var(--hazard));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--hazard)) 22%, transparent);
+}
+.pe-char-list-col .pe-cata-list-wrap .pe-cata-list {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  resize: none;
+  overflow-y: auto;
+  padding: 4px;
 }
 /* ----- Інформаційне вікно про нестачу карток (pack-notice.js) ----- */
 .pk-notice{

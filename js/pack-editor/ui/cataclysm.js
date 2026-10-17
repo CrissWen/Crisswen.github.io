@@ -3,6 +3,7 @@ import { oneLine } from '../parser.js';
 import { cataMatches } from '../search.js';
 import { highlightHtml } from './search.js';
 import { $, CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
+import { state } from '../state.js';
 
 // ----- Катаклізми: форма і список -----
 export function readCataRaw() {
@@ -77,13 +78,30 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   }
 
   list.innerHTML = rows.map(({ c, i }) => {
-    const selected = i === editIndex;
-    const isNew = i === newIndex;
+    const isMarkedDelete = state.isDeleteMode && state.selectedDeleteIndices.has(i);
+    const selected = !state.isDeleteMode && i === editIndex;
+    const isNew = !state.isDeleteMode && i === newIndex;
     const descHtml = (category !== 'cataclysm' && c.description) ? `<span style="opacity:0.7"> - ${highlightHtml(oneLine(c.description), tokens)}</span>` : '';
+    
+    let rowClasses = 'added-item-row';
+    if (state.isDeleteMode) {
+      rowClasses += ' is-delete-mode';
+      if (isMarkedDelete) rowClasses += ' is-marked-delete';
+    } else {
+      if (selected) rowClasses += ' is-selected';
+      if (isNew) rowClasses += ' is-new';
+    }
+
+    const hintHtml = state.isDeleteMode
+      ? (isMarkedDelete
+          ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
+          : `<span class="added-item-row__hint added-item-row__hint--pick">обрати</span>`)
+      : `<span class="added-item-row__hint">${selected ? 'редагується' : 'редагувати'}</span>`;
+
     return `
-      <button type="button" class="added-item-row${selected ? ' is-selected' : ''}${isNew ? ' is-new' : ''}" data-cata-index="${i}" aria-pressed="${selected}">
+      <button type="button" class="${rowClasses}" data-cata-index="${i}" aria-pressed="${state.isDeleteMode ? isMarkedDelete : selected}">
         <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}${descHtml}</span>
-        <span class="added-item-row__hint">${selected ? 'редагується' : 'редагувати'}</span>
+        ${hintHtml}
       </button>`;
   }).join('');
 

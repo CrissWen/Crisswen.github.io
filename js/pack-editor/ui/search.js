@@ -2,6 +2,7 @@ import { esc } from '../../utils/escape-html.js';
 import { oneLine } from '../parser.js';
 import { normalizeSearch } from '../search.js';
 import { $ } from './helpers.js';
+import { state } from '../state.js';
 
 // ----- Пошук: рендер -----
 // Екранований HTML з підсвіченими збігами (<mark>). Якщо нормалізація змінила довжину рядка, позиції б зсунулись — тоді без підсвітки.
@@ -47,18 +48,33 @@ function snippetHtml(text, tokens) {
 }
 
 function resultRowHtml(r, tokens, searchAll) {
+  const isCurrentCat = r.category === state.activeCategory;
+  const isMarkedDelete = state.isDeleteMode && isCurrentCat && state.selectedDeleteIndices.has(r.type === 'cata' ? r.index : r.line);
+
+  let rowClasses = 'added-item-row pe-result';
+  if (state.isDeleteMode && isCurrentCat) {
+    rowClasses += ' is-delete-mode';
+    if (isMarkedDelete) rowClasses += ' is-marked-delete';
+  }
+
+  const deleteHintHtml = state.isDeleteMode && isCurrentCat
+    ? (isMarkedDelete
+        ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
+        : `<span class="added-item-row__hint added-item-row__hint--pick">обрати</span>`)
+    : '';
+
   if (r.type === 'cata') {
     return `
-      <button type="button" class="added-item-row pe-result" data-res-cat="${esc(r.category)}" data-res-cata="${r.index}">
+      <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-cata="${r.index}" aria-pressed="${isMarkedDelete}">
         <span class="added-item-row__name">${highlightHtml(oneLine(r.item.name), tokens)}${snippetHtml(r.item.description, tokens)}</span>
-        <span class="pe-result__meta">${esc(r.label)}</span>
+        ${deleteHintHtml || `<span class="pe-result__meta">${esc(r.label)}</span>`}
       </button>`;
   }
   const where = `${searchAll ? `${esc(r.label)} · ` : ''}рядок ${r.line + 1}`;
   return `
-    <button type="button" class="added-item-row pe-result" data-res-cat="${esc(r.category)}" data-res-line="${r.line}">
+    <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-line="${r.line}" aria-pressed="${isMarkedDelete}">
       <span class="added-item-row__name">${highlightHtml(r.text, tokens)}</span>
-      <span class="pe-result__meta">${where}</span>
+      ${deleteHintHtml || `<span class="pe-result__meta">${where}</span>`}
     </button>`;
 }
 

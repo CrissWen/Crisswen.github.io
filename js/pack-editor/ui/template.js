@@ -181,7 +181,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
           </div>
 
           <div class="pe-toolbar">
-            <div class="pe-toolbar__row">
+            <div class="pe-toolbar__row" id="pe-toolbar-default">
               <div class="pe-field pe-search pe-toolbar__search">
                 <div class="pe-search__box">
                   <svg class="pe-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -197,6 +197,10 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                 </div>
               </div>
               <div class="pe-toolbar__opts">
+                <button type="button" id="pe-bulk-delete-btn" class="pk-btn pk-btn--ghost pe-bulk-delete-btn" title="Видалити кілька карток" aria-label="Видалити кілька карток">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  <span>Видалити кілька</span>
+                </button>
                 <label class="pe-check" title="Режим LLM (робота з чистим текстом)">
                   <input type="checkbox" id="pe-llm-mode" class="pe-check__input">
                   <span class="pe-check__box" aria-hidden="true"></span>
@@ -209,7 +213,8 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                 </span>
               </div>
             </div>
-            <div class="pe-search__meta">
+
+            <div class="pe-search__meta" id="pe-search-meta-box">
               <span id="pe-search-count" aria-live="polite"></span>
             </div>
             <div id="pe-search-results" class="pe-cata-list pe-search-results" role="group" aria-label="Результати пошуку" hidden></div>
@@ -219,15 +224,39 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
             <div class="pe-char-list-col">
               <div class="pe-field">
                 <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
-                <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані картки" hidden></div>
+                <div class="pe-cata-list-wrap" id="pe-cata-list-wrap" hidden>
+                  <!-- Панель дій режиму видалення над списком карток -->
+                  <div class="pe-delete-toolbar" id="pe-delete-toolbar" hidden>
+                    <div class="pe-delete-toolbar__actions">
+                      <button type="button" id="pe-delete-select-all-btn" class="pk-btn pk-btn--ghost pe-delete-select-all-btn">
+                        Вибрати всі
+                      </button>
+                      <span id="pe-delete-count" class="pe-delete-toolbar__count">Вибрано: 0</span>
+                    </div>
+                    <div class="pe-delete-toolbar__submit">
+                      <button type="button" id="pe-delete-cancel-btn" class="pk-btn pk-btn--ghost pe-delete-cancel-btn" title="Вийти з режиму (Esc)">
+                        Скасувати
+                      </button>
+                      <button type="button" id="pe-delete-submit-btn" class="pk-btn pk-btn--danger pe-delete-submit-btn" disabled>
+                        Видалити (0)
+                      </button>
+                    </div>
+                  </div>
+                  <div id="pe-cata-list" class="pe-cata-list" role="group" aria-label="Додані картки"></div>
+                </div>
                 <div class="pe-list-meta">
-                  
                   <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
                 </div>
               </div>
             </div>
 
             <div class="pe-char-form-col">
+              <div id="pe-delete-overlay" class="pe-delete-overlay" hidden>
+                <div class="pe-delete-overlay__badge">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <span>Увімкнено режим видалення</span>
+                </div>
+              </div>
               <!-- Форма катаклізму -->
               <div id="pe-cata" class="pe-cata pe-side-form" hidden>
                 <h3 id="pe-cata-mode" class="pe-cata__title">Новий катаклізм</h3>

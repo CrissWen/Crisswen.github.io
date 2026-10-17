@@ -1,5 +1,5 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, getPromptForCategory } from './categories.js';
-import { parseLines, oneLine, hasExplanationField, splitNameExplanation } from './parser.js';
+import { parseLines, oneLine, hasExplanationField, splitNameExplanation, cardToLine } from './parser.js';
 import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, parseStageEntry } from './payload.js';
 import { getStagePrompt } from './prompts/stage-prompts.js';
 import { getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID } from '../services/packs-store.js';
@@ -105,6 +105,9 @@ function updateCardsMeta() {
 }
 
 function selectCategory(category) {
+  if (state.isDeleteMode) {
+    exitDeleteMode();
+  }
   state.activeCategory = category;
   state.viewMode = 'visual';
   
@@ -137,7 +140,8 @@ setSearchOrchestrator({
   renderList,
   getDynamicCards: () => getDynamicCards(),
   dynDraftPending: () => dynDraftPending(),
-  startDynEdit: (idx, card) => startDynEdit(idx, card)
+  startDynEdit: (idx, card) => startDynEdit(idx, card),
+  updateDeleteModeUi
 });
 
 // Підключення координатора змін катаклізмів
@@ -181,11 +185,126 @@ function renderList() {
   }
 }
 
+function updateDeleteModeUi() {
+  const isCata = state.activeCategory === 'cataclysm';
+  const totalCount = isCata ? state.form.cataclysms.length : getDynamicCards().length;
+  ui.setDeleteModeUi({
+    isDeleteMode: state.isDeleteMode,
+    selectedCount: state.selectedDeleteIndices.size,
+    totalCount
+  });
+}
+
+function enterDeleteMode() {
+  if (state.activeCategory === 'cataclysm') {
+    if (cataDraftPending()) {
+      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
+      return;
+    }
+    resetCataForm();
+  } else {
+    if (dynDraftPending()) {
+      showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
+      return;
+    }
+    resetDynForm();
+  }
+
+  state.isDeleteMode = true;
+  state.selectedDeleteIndices.clear();
+
+  renderList();
+  renderSearch();
+  updateDeleteModeUi();
+}
+
+function exitDeleteMode() {
+  state.isDeleteMode = false;
+  state.selectedDeleteIndices.clear();
+  renderList();
+  renderSearch();
+  updateDeleteModeUi();
+}
+
+function toggleSelectAllForDelete() {
+  const isCata = state.activeCategory === 'cataclysm';
+  const totalCount = isCata ? state.form.cataclysms.length : getDynamicCards().length;
+  if (state.selectedDeleteIndices.size === totalCount) {
+    state.selectedDeleteIndices.clear();
+  } else {
+    state.selectedDeleteIndices.clear();
+    for (let i = 0; i < totalCount; i++) {
+      state.selectedDeleteIndices.add(i);
+    }
+  }
+  renderList();
+  renderSearch();
+  updateDeleteModeUi();
+}
+
+async function executeBulkDelete(anchorBtn) {
+  const count = state.selectedDeleteIndices.size;
+  if (count === 0 || state.isConfirming) return;
+
+  const categoryLabel = ALL_PACK_CATEGORIES.find(c => c.category === state.activeCategory)?.label || state.activeCategory;
+  state.isConfirming = true;
+  let confirmed = false;
+  try {
+    confirmed = await showPackConfirm(
+      `Ви дійсно бажаєте видалити обрані записи (${count} шт.) з категорії "${categoryLabel}"?`,
+      anchorBtn,
+      { confirmLabel: 'Видалити' }
+    );
+  } finally {
+    state.isConfirming = false;
+  }
+  if (!confirmed) return;
+
+  const toDelete = state.selectedDeleteIndices;
+
+  if (state.activeCategory === 'cataclysm') {
+    state.form.cataclysms = state.form.cataclysms.filter((_, i) => !toDelete.has(i));
+    syncCataText();
+  } else {
+    const cards = getDynamicCards();
+    const remainingCards = cards.filter((_, i) => !toDelete.has(i));
+    
+    // Якщо стать, очищаємо протилежну стать, якщо вона посилалася на видалену картку
+    if (state.activeCategory === 'gender') {
+      const deletedNames = new Set(cards.filter((_, i) => toDelete.has(i)).map(c => c.value));
+      for (const c of remainingCards) {
+        if (c.meta?.opposite && deletedNames.has(c.meta.opposite)) {
+          delete c.meta.opposite;
+        }
+      }
+    }
+
+    state.form.texts[state.activeCategory] = remainingCards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
+  }
+
+  exitDeleteMode();
+  updateCardsMeta();
+  renderSummary();
+  updateButtons();
+  showGlobalToast(`Видалено записів: ${count}`);
+}
 
 function onCataListClick(e) {
   const row = e.target.closest('[data-cata-index]');
   if (!row) return;
   const index = Number(row.dataset.cataIndex);
+
+  if (state.isDeleteMode) {
+    if (state.selectedDeleteIndices.has(index)) {
+      state.selectedDeleteIndices.delete(index);
+    } else {
+      state.selectedDeleteIndices.add(index);
+    }
+    renderList();
+    renderSearch();
+    updateDeleteModeUi();
+    return;
+  }
 
   if (state.activeCategory === 'cataclysm') {
     if (!state.form.cataclysms[index] || index === state.cataEditIndex) return;
@@ -514,6 +633,7 @@ export async function initPackEditor() {
   });
 
   $('pe-llm-mode')?.addEventListener('change', e => {
+    if (state.isDeleteMode) exitDeleteMode();
     state.viewMode = e.target.checked ? 'llm' : 'visual';
     ui.setLlmCopyVisible(e.target.checked);
 
@@ -552,10 +672,31 @@ export async function initPackEditor() {
     debouncedCardUpdates();
   });
 
-  $('pe-chips').addEventListener('click', e => {
+  $('pe-chips').addEventListener('click', async e => {
     const chip = e.target.closest('[data-chip]');
-    if (chip) selectCategory(chip.dataset.chip);
+    if (!chip) return;
+    if (state.isDeleteMode && state.selectedDeleteIndices.size > 0) {
+      state.isConfirming = true;
+      let confirmed = false;
+      try {
+        confirmed = await showPackConfirm('Скинути вибрані картки для видалення?', chip, { confirmLabel: 'Скинути' });
+      } finally {
+        state.isConfirming = false;
+      }
+      if (!confirmed) return;
+    }
+    if (state.isDeleteMode) exitDeleteMode();
+    selectCategory(chip.dataset.chip);
   });
+
+  // Кнопки режиму масового видалення
+  $('pe-bulk-delete-btn')?.addEventListener('click', () => {
+    if (state.isDeleteMode) exitDeleteMode();
+    else enterDeleteMode();
+  });
+  $('pe-delete-cancel-btn')?.addEventListener('click', exitDeleteMode);
+  $('pe-delete-select-all-btn')?.addEventListener('click', toggleSelectAllForDelete);
+  $('pe-delete-submit-btn')?.addEventListener('click', e => executeBulkDelete(e.currentTarget));
 
   $('pe-stages-llm')?.addEventListener('change', e => {
     const isLlm = e.target.checked;
@@ -685,6 +826,12 @@ export async function initPackEditor() {
   });
 
   document.getElementById('pe-root')?.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && state.isDeleteMode) {
+      e.preventDefault();
+      exitDeleteMode();
+      return;
+    }
+
     if (e.ctrlKey && e.shiftKey && ['1', '2', '3', '4'].includes(e.key)) {
       e.preventDefault();
       
@@ -756,4 +903,6 @@ export function cleanupPackEditor() {
   ui.destroyStageSortables();
   state.isSaving = false;
   state.isConfirming = false;
+  state.isDeleteMode = false;
+  state.selectedDeleteIndices.clear();
 }
