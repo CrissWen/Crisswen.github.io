@@ -608,8 +608,9 @@ body.is-stage-dragging * {
 .pe-bulk-delete-btn[hidden]{
   display:none !important;
 }
+/* «Режим LLM» залишається зліва й коли «Вибір» ховається (у LLM-режимі він недоступний), щоб група не перестрибувала праворуч */
 .pe-toolbar__opts:has(.pe-bulk-delete-btn[hidden]){
-  justify-content:flex-end;
+  justify-content:flex-start;
 }
 
 .pe-toolbar__llm-group{
@@ -632,7 +633,7 @@ body.is-stage-dragging * {
   backdrop-filter:blur(14px);
   -webkit-backdrop-filter:blur(14px);
   border:1px solid color-mix(in srgb, var(--metal-lt) 80%, transparent);
-  border-radius:9999px;
+  border-radius:var(--radius);
   box-shadow:0 14px 34px -4px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
   animation:pe-pill-pop .25s cubic-bezier(.16,1,.3,1);
   white-space:nowrap;
@@ -672,7 +673,7 @@ body.is-stage-dragging * {
   gap:6px;
   height:28px;
   padding:0 10px;
-  border-radius:9999px;
+  border-radius:var(--radius-sm);
   font-size:12px;
   font-family:var(--body);
   font-weight:500;
@@ -813,7 +814,7 @@ body.is-stage-dragging * {
 .added-item-row__hint{
   flex-shrink:0;display:inline-flex;align-items:center;gap:3px;
   font-size:11.5px;color:var(--text-mute);
-  padding:1px 7px;border-radius:10px;
+  padding:1px 7px;border-radius:var(--radius-sm);
   background:color-mix(in srgb, var(--metal-lt) 40%, transparent);
   opacity:.65; margin-left: auto; transition:opacity .2s ease, transform .28s cubic-bezier(.22,.8,.3,1), color .2s ease, background-color .2s ease;
 }
@@ -855,11 +856,11 @@ body.is-stage-dragging * {
 .added-item-row.is-delete-mode{
   cursor:pointer;
 }
-/* Круглий чек-індикатор вибору картки зліва */
+/* Чек-індикатор вибору картки зліва: форма кутів з теми, як у всіх чекбоксів */
 .added-item-row__check{
   flex-shrink:0;
   width:16px;height:16px;
-  border-radius:50%;
+  border-radius:var(--radius-sm);
   border:1.5px solid color-mix(in srgb, var(--metal-lt) 85%, transparent);
   display:inline-flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:700;line-height:1;
@@ -895,7 +896,7 @@ body.is-stage-dragging * {
   opacity:0.9 !important;
   font-size:11.5px;
   font-weight:500;
-  border-radius:9999px;
+  border-radius:var(--radius-sm);
   padding:2px 9px;
   box-shadow:none !important;
   transition:all .2s ease;
@@ -914,7 +915,7 @@ body.is-stage-dragging * {
   transform:translateX(4px);
   border:1px dashed color-mix(in srgb, var(--metal-lt) 70%, transparent);
   background:transparent;
-  border-radius:10px;
+  border-radius:var(--radius-sm);
   padding:1px 8px;
   transition:all .18s ease;
 }
@@ -954,7 +955,7 @@ body.is-stage-dragging * {
   to{opacity:1;transform:scale(1);}
 }
 
-/* Наліпка з попередженням (Hazard Warning Sticker) */
+/* Наліпка з попередженням (Hazard Warning Sticker): картка поверх форми «Нова картка», поки активний режим вибору */
 .pe-hazard-sticker{
   position:relative;
   overflow:hidden;
@@ -962,67 +963,113 @@ body.is-stage-dragging * {
   flex-direction:column;
   align-items:center;
   text-align:center;
-  gap:10px;
+  gap:12px;
   width:100%;
-  max-width:250px;
-  padding:20px 14px 16px;
-  background:color-mix(in srgb, var(--panel) 96%, #121826);
-  border:1px solid color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));
-  border-radius:var(--radius-sm);
-  box-shadow:0 12px 32px rgba(0,0,0,0.65), 0 0 0 1px color-mix(in srgb, var(--hazard) 25%, transparent);
+  max-width:272px;
+  padding:28px 18px 18px;
+  box-sizing:border-box;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--hazard) 8%, var(--panel)) 0, var(--panel) 52%);
+  border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
+  border-radius:var(--radius);
+  box-shadow:0 16px 40px rgba(0,0,0,.55), 0 0 30px color-mix(in srgb, var(--hazard) 14%, transparent);
 }
 .pe-hazard-sticker__stripe{
   position:absolute;
   top:0;
   left:0;
   right:0;
-  height:5px;
-  background:repeating-linear-gradient(
-    -45deg,
-    var(--hazard, #f59e0b),
-    var(--hazard, #f59e0b) 10px,
-    #18181b 10px,
-    #18181b 20px
-  );
+  height:3px;
+  background:var(--hazard, #f59e0b);
 }
 .pe-hazard-sticker__icon{
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  background:color-mix(in srgb, var(--hazard) 15%, transparent);
-  border:1px solid color-mix(in srgb, var(--hazard) 40%, transparent);
+  position:relative;
+  width:46px;
+  height:46px;
+  border-radius:var(--radius-sm);
+  background:color-mix(in srgb, var(--hazard) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--hazard) 45%, transparent);
   display:flex;
   align-items:center;
   justify-content:center;
   color:var(--hazard);
 }
+/* Кільце, що м'яко розходиться навколо іконки */
+.pe-hazard-sticker__icon::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius:var(--radius-sm);
+  border:1px solid var(--hazard);
+  opacity:0;
+  animation:pe-hazard-pulse 2.4s ease-out infinite;
+}
+@keyframes pe-hazard-pulse{
+  0%{transform:scale(1);opacity:.5;}
+  100%{transform:scale(1.65);opacity:0;}
+}
 .pe-hazard-sticker__title{
   margin:0;
   font-family:var(--head);
-  font-size:15px;
+  font-size:17px;
   font-weight:700;
-  letter-spacing:0.08em;
+  letter-spacing:0.1em;
   text-transform:uppercase;
   color:var(--text);
 }
 .pe-hazard-sticker__desc{
   margin:0;
   font-size:12.5px;
-  line-height:1.45;
+  line-height:1.5;
   color:var(--text-mute);
 }
-.pe-hazard-sticker__hint{
-  font-size:11.5px;
-  line-height:1.4;
+/* Підказки: рядки-«таблетки» замість суцільного пунктирного блоку */
+.pe-hazard-sticker__steps{
+  list-style:none;
+  margin:4px 0 0;
+  padding:12px 0 0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  border-top:1px solid var(--metal);
+}
+.pe-hazard-sticker__steps li{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:7px 10px;
+  text-align:left;
+  font-size:12px;
+  line-height:1.35;
+  color:var(--text-mute);
+  background:color-mix(in srgb, var(--panel-2) 85%, transparent);
+  border:1px solid var(--metal);
+  border-radius:var(--radius-sm);
+}
+.pe-hazard-sticker__steps svg{
+  flex:none;
   color:var(--hazard);
-  background:color-mix(in srgb, var(--hazard) 8%, transparent);
-  border:1px dashed color-mix(in srgb, var(--hazard) 35%, transparent);
-  border-radius:4px;
-  padding:5px 8px;
 }
-.pe-hazard-sticker__hint b{
+.pe-hazard-sticker__key{
+  flex:none;
+  min-width:30px;
+  box-sizing:border-box;
+  padding:1px 7px 2px;
+  text-align:center;
+  font-family:var(--mono, ui-monospace, monospace);
+  font-size:11px;
+  font-weight:600;
   color:var(--text);
+  background:var(--panel);
+  border:1px solid var(--metal-lt);
+  border-bottom-width:2px;
+  border-radius:var(--radius-sm);
 }
+@media (prefers-reduced-motion:reduce){
+  .pe-delete-overlay{animation:none;}
+  .pe-hazard-sticker__icon::after{animation:none;}
+}
+
 
 /* ----- Вікно підтвердження для паків (pack-confirm.js) ----- */
 .pk-confirm{
@@ -1352,14 +1399,6 @@ body.is-stage-dragging * {
   padding: 18px;
   display: flex;
   flex-direction: column;
-}
-
-@keyframes pe-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
-}
-.pe-char-main.is-updating {
-  animation: pe-fade-in 0.25s cubic-bezier(.22,.8,.3,1);
 }
 
 .pe-char-header {

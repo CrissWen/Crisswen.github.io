@@ -2,6 +2,7 @@ import { state } from '../state.js';
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from '../categories.js';
 import { tokenize, cataMatches, collectSearchResults } from '../search.js';
 import { cataDraftPending, startCataEdit } from './cataclysm.js';
+import { applyDeleteClick, resultRowIndex, visibleResultIndices } from './delete-selection.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
 import { $ } from '../ui/helpers.js';
@@ -53,13 +54,15 @@ export function setSearchQuery(value, { focus = false } = {}) {
   if (focus) ui.focusSearchInput();
 }
 
-// Результат-рядок: переходимо в його категорію, виділяємо рядок у textarea й прокручуємо до нього
-export function openTextResult(category, lineIndex) {
+// Результат-рядок: переходимо в його категорію, виділяємо рядок у textarea й прокручуємо до нього.
+// lineIndex — сирий рядок тексту (для textarea), cardIndex — номер картки серед непорожніх рядків (для візуального списку):
+// якщо в тексті є порожні рядки, ці два номери різні, і без cardIndex відкривалась б інша картка.
+export function openTextResult(category, lineIndex, cardIndex = lineIndex) {
   if (category !== state.activeCategory) orchestrator.selectCategory(category);
 
   if (state.viewMode === 'visual' && CATEGORY_SCHEMAS[category]) {
     const cards = orchestrator.getDynamicCards();
-    if (!cards[lineIndex]) {
+    if (!cards[cardIndex]) {
       showGlobalToast('Рядок змінився — виберіть результат ще раз');
       renderSearch();
       return;
@@ -68,7 +71,7 @@ export function openTextResult(category, lineIndex) {
       showGlobalToast('Спочатку натисніть "Додати" / "Зберегти зміни" або "Скасувати" у формі');
       return;
     }
-    orchestrator.startDynEdit(lineIndex, cards[lineIndex]);
+    orchestrator.startDynEdit(cardIndex, cards[cardIndex]);
   } else {
     if (!ui.selectCardsLine(lineIndex)) {
       showGlobalToast('Рядок змінився — виберіть результат ще раз');
@@ -96,31 +99,15 @@ export function onSearchResultClick(e) {
   if (!row) return;
 
   if (state.isDeleteMode) {
-    const isCata = row.dataset.resCata !== undefined;
-    const cat = isCata ? 'cataclysm' : row.dataset.resCat;
-    const index = isCata ? Number(row.dataset.resCata) : Number(row.dataset.resLine);
+    const cat = row.dataset.resCat;
 
     if (cat !== state.activeCategory) {
       showGlobalToast('Режим видалення діє тільки для поточної активної категорії');
       return;
     }
 
-    if (e.shiftKey && state.lastClickedDeleteIndex !== null && state.lastClickedDeleteIndex !== undefined) {
-      const start = Math.min(state.lastClickedDeleteIndex, index);
-      const end = Math.max(state.lastClickedDeleteIndex, index);
-      const shouldSelect = !state.selectedDeleteIndices.has(index);
-      for (let i = start; i <= end; i++) {
-        if (shouldSelect) state.selectedDeleteIndices.add(i);
-        else state.selectedDeleteIndices.delete(i);
-      }
-    } else {
-      if (state.selectedDeleteIndices.has(index)) {
-        state.selectedDeleteIndices.delete(index);
-      } else {
-        state.selectedDeleteIndices.add(index);
-      }
-      state.lastClickedDeleteIndex = index;
-    }
+    // Індекс — номер картки (не сирого рядка), діапазон Shift — лише серед видимих результатів (відповідає видаленню тільки того, що бачить користувач)
+    applyDeleteClick(resultRowIndex(row), { shiftKey: e.shiftKey, visibleIndices: visibleResultIndices(row) });
 
     orchestrator.renderList();
     renderSearch();
@@ -129,7 +116,7 @@ export function onSearchResultClick(e) {
   }
 
   if (row.dataset.resCata !== undefined) openCataResult(Number(row.dataset.resCata));
-  else openTextResult(row.dataset.resCat, Number(row.dataset.resLine));
+  else openTextResult(row.dataset.resCat, Number(row.dataset.resLine), Number(row.dataset.resCard ?? row.dataset.resLine));
 }
 
 export function onSearchKeydown(e) {

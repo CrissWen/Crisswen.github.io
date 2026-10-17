@@ -137,12 +137,6 @@ export function setLlmCopyVisible(on) {
 
 // Показує категорію: перемикає textarea / списки / форми залежно від наявності схеми та режиму
 export function showCategory({ category, text, viewMode = "visual" }) {
-  const mainEl = document.querySelector(".pe-char-main");
-  if (mainEl) {
-    mainEl.classList.remove("is-updating");
-    void mainEl.offsetWidth;
-    mainEl.classList.add("is-updating");
-  }
   const isCata = category === "cataclysm";
   const schema = CATEGORY_SCHEMAS[category];
   const hasVisualMode = isCata || Boolean(schema);
@@ -804,8 +798,9 @@ export function focusSiblingRow(btn, dir) {
   return true;
 }
 
-// Керування виглядом панелі видалення та блокуванням форми
-export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 0 }) {
+// Керування виглядом панелі видалення та блокуванням форми.
+// totalCount — скільки рядків зараз видно; allSelected — чи вибрані усі видимі (без нього порівнюємо лічильники).
+export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 0, allSelected = null }) {
   const deleteToolbar = $('pe-delete-toolbar');
   const bulkBtn = $('pe-bulk-delete-btn');
   const deleteOverlay = $('pe-delete-overlay');
@@ -854,7 +849,8 @@ export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 
 
   const selectAllBtn = $('pe-delete-select-all-btn');
   if (selectAllBtn) {
-    selectAllBtn.textContent = (totalCount > 0 && selectedCount === totalCount) ? 'Зняти всі' : 'Вибрати всі';
+    const everySelected = allSelected ?? (totalCount > 0 && selectedCount === totalCount);
+    selectAllBtn.textContent = everySelected ? 'Зняти всі' : 'Вибрати всі';
   }
 }
 

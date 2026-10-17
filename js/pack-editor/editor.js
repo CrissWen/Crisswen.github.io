@@ -24,7 +24,8 @@ import {
   openTextResult, openCataResult, onSearchResultClick, onSearchKeydown,
   onSearchListKeydown, initSearch, setSearchOrchestrator,
   isFormEmpty, buildConfig, handleSave, handleClear, handleReset,
-  handleExit, handleActionsClick, setSaveOrchestrator
+  handleExit, handleActionsClick, setSaveOrchestrator,
+  visibleListIndices, applyDeleteClick, toggleSelectVisible, areAllSelected
 } from './controllers/controllers.js';
 
 // ===== Сторінка "Редактор пака" (#/pack-editor, редагування — #/pack-editor?id=<uuid>) =====
@@ -185,13 +186,17 @@ function renderList() {
   }
 }
 
+// Рядки списку, які користувач бачить зараз (список катаклізмів може бути відфільтрований пошуком)
+const currentVisibleIndices = () => visibleListIndices($('pe-cata-list'));
+
 function updateDeleteModeUi() {
-  const isCata = state.activeCategory === 'cataclysm';
-  const totalCount = isCata ? state.form.cataclysms.length : getDynamicCards().length;
+  // «Вибрати всі» і підпис кнопки рахуються по видимих рядках, а не по всіх картках категорії
+  const visible = currentVisibleIndices();
   ui.setDeleteModeUi({
     isDeleteMode: state.isDeleteMode,
     selectedCount: state.selectedDeleteIndices.size,
-    totalCount
+    totalCount: visible.length,
+    allSelected: areAllSelected(visible)
   });
 }
 
@@ -229,17 +234,9 @@ function exitDeleteMode() {
   updateDeleteModeUi();
 }
 
+// «Вибрати всі» / «Зняти всі» чіпає лише видимі рядки: при активному фільтрі пошуку приховані картки не потраплять у видалення
 function toggleSelectAllForDelete() {
-  const isCata = state.activeCategory === 'cataclysm';
-  const totalCount = isCata ? state.form.cataclysms.length : getDynamicCards().length;
-  if (state.selectedDeleteIndices.size === totalCount) {
-    state.selectedDeleteIndices.clear();
-  } else {
-    state.selectedDeleteIndices.clear();
-    for (let i = 0; i < totalCount; i++) {
-      state.selectedDeleteIndices.add(i);
-    }
-  }
+  toggleSelectVisible(currentVisibleIndices());
   renderList();
   renderSearch();
   updateDeleteModeUi();
@@ -285,6 +282,10 @@ async function executeBulkDelete(anchorBtn) {
     state.form.texts[state.activeCategory] = remainingCards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
   }
 
+  // Індекси зсунулись: мітка «нова» більше не вказує на ту саму картку
+  state.newCataIndex = -1;
+  state.newDynIndex = -1;
+
   exitDeleteMode();
   updateCardsMeta();
   renderSummary();
@@ -298,22 +299,8 @@ function onCataListClick(e) {
   const index = Number(row.dataset.cataIndex);
 
   if (state.isDeleteMode) {
-    if (e.shiftKey && state.lastClickedDeleteIndex !== null && state.lastClickedDeleteIndex !== undefined) {
-      const start = Math.min(state.lastClickedDeleteIndex, index);
-      const end = Math.max(state.lastClickedDeleteIndex, index);
-      const shouldSelect = !state.selectedDeleteIndices.has(index);
-      for (let i = start; i <= end; i++) {
-        if (shouldSelect) state.selectedDeleteIndices.add(i);
-        else state.selectedDeleteIndices.delete(i);
-      }
-    } else {
-      if (state.selectedDeleteIndices.has(index)) {
-        state.selectedDeleteIndices.delete(index);
-      } else {
-        state.selectedDeleteIndices.add(index);
-      }
-      state.lastClickedDeleteIndex = index;
-    }
+    // Діапазон Shift — лише серед видимих рядків (список може бути відфільтрований пошуком)
+    applyDeleteClick(index, { shiftKey: e.shiftKey, visibleIndices: currentVisibleIndices() });
     renderList();
     renderSearch();
     updateDeleteModeUi();
@@ -688,7 +675,7 @@ export async function initPackEditor() {
 
   $('pe-chips').addEventListener('click', async e => {
     const chip = e.target.closest('[data-chip]');
-    if (!chip) return;
+    if (!chip || state.isConfirming) return; // поки відкритий діалог підтвердження, не відкриваємо другий
     if (state.isDeleteMode && state.selectedDeleteIndices.size > 0) {
       state.isConfirming = true;
       let confirmed = false;

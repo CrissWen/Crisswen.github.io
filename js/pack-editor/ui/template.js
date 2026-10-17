@@ -197,10 +197,6 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                 </div>
               </div>
               <div class="pe-toolbar__opts">
-                <button type="button" id="pe-bulk-delete-btn" class="pe-bulk-delete-btn" title="Режим вибору карток (Esc для виходу)" aria-label="Режим вибору карток">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                  <span>Вибір</span>
-                </button>
                 <div class="pe-toolbar__llm-group">
                   <label class="pe-check" title="Режим LLM (робота з чистим текстом)">
                     <input type="checkbox" id="pe-llm-mode" class="pe-check__input">
@@ -213,6 +209,10 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                     </button>
                   </span>
                 </div>
+                <button type="button" id="pe-bulk-delete-btn" class="pe-bulk-delete-btn" title="Режим вибору карток (Esc для виходу)" aria-label="Режим вибору карток">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  <span>Вибір</span>
+                </button>
               </div>
             </div>
 
@@ -264,10 +264,16 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   </div>
                   <h4 class="pe-hazard-sticker__title">РЕЖИМ ВИБОРУ</h4>
                   <p class="pe-hazard-sticker__desc">Редагування карток заблоковано під час вибору для видалення</p>
-                  <div class="pe-hazard-sticker__hint">
-                    Клікайте по картках для вибору<br>
-                    або натисніть <b>Esc</b> для виходу
-                  </div>
+                  <ul class="pe-hazard-sticker__steps">
+                    <li>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                      <span>Клікайте по картках, щоб вибрати</span>
+                    </li>
+                    <li>
+                      <kbd class="pe-hazard-sticker__key">Esc</kbd>
+                      <span>вийти з режиму вибору</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
               <!-- Форма катаклізму -->

@@ -24,7 +24,9 @@ export const cataMatches = (c, tokens) => matchesTokens(`${c.name ?? ''} ${c.des
 
 // categories — список { category, label }, у яких шукаємо; texts — { [category]: string }; cataclysms — записи катаклізмів.
 // Повертає { results, total }: results обрізано до SEARCH_MAX_RESULTS, total — скільки знайдено насправді.
-// Елемент результату: { type: 'cata', category, label, index, item } або { type: 'text', category, label, line, text }.
+// Елемент результату: { type: 'cata', category, label, index, item } або { type: 'text', category, label, line, cardIndex, text }.
+// line — номер сирого рядка тексту (враховує порожні), cardIndex — номер картки серед непорожніх рядків
+// (так само рахує parseLines/parseCards, тому саме cardIndex відповідає рядку візуального списку карток).
 export function collectSearchResults({ categories, texts, cataclysms, tokens }) {
   const results = [];
   let total = 0;
@@ -38,11 +40,14 @@ export function collectSearchResults({ categories, texts, cataclysms, tokens }) 
       });
       continue;
     }
+    let cardIndex = 0;
     String(texts[category] || '').split('\n').forEach((line, index) => {
       const text = line.trim();
-      if (!text || !matchesTokens(text, tokens)) return;
+      if (!text) return; // порожній рядок карткою не є і номера картки не отримує
+      const currentCard = cardIndex++;
+      if (!matchesTokens(text, tokens)) return;
       total++;
-      if (results.length < SEARCH_MAX_RESULTS) results.push({ type: 'text', category, label, line: index, text });
+      if (results.length < SEARCH_MAX_RESULTS) results.push({ type: 'text', category, label, line: index, cardIndex: currentCard, text });
     });
   }
   return { results, total };

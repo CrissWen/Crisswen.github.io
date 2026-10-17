@@ -49,7 +49,7 @@ function snippetHtml(text, tokens) {
 
 function resultRowHtml(r, tokens, searchAll) {
   const isCurrentCat = r.category === state.activeCategory;
-  const isMarkedDelete = state.isDeleteMode && isCurrentCat && state.selectedDeleteIndices.has(r.type === 'cata' ? r.index : r.line);
+  const isMarkedDelete = state.isDeleteMode && isCurrentCat && state.selectedDeleteIndices.has(r.type === 'cata' ? r.index : r.cardIndex);
 
   let rowClasses = 'added-item-row pe-result';
   if (state.isDeleteMode && isCurrentCat) {
@@ -77,7 +77,7 @@ function resultRowHtml(r, tokens, searchAll) {
   }
   const where = `${searchAll ? `${esc(r.label)} · ` : ''}рядок ${r.line + 1}`;
   return `
-    <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-line="${r.line}" aria-pressed="${isMarkedDelete}">
+    <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-line="${r.line}" data-res-card="${r.cardIndex}" aria-pressed="${isMarkedDelete}">
       ${checkHtml}
       <span class="added-item-row__name">${highlightHtml(r.text, tokens)}</span>
       ${deleteHintHtml || `<span class="pe-result__meta">${where}</span>`}
