@@ -54,7 +54,7 @@ body{
   --btn-disabled-border: #333333;
 }
 
-/* Звичайні (ghost) кнопки */
+/* Звичайні (ghost) кнопки: «Скасувати», «Очистити все», «Створити пак» у списку тощо */
 button.pk-btn:not(.pk-btn--primary):not(.pk-btn--danger),
 button.pk-confirm__btn:not(.pk-confirm__btn--ok),
 button.reconnect-card__btn{
@@ -79,7 +79,7 @@ button.reconnect-card__btn:active:not(:disabled){
   box-shadow:1px 1px 0 rgba(0,0,0,.5);
 }
 
-/* Головні кнопки (жовті) */
+/* Головні кнопки (жовті): лишаються жовтими, але з темною рамкою, тінню й світінням при наведенні */
 button.pk-btn.pk-btn--primary,
 button.pk-confirm__btn.pk-confirm__btn--ok{
   border:1px solid #f0cf3c;
@@ -93,7 +93,7 @@ button.pk-confirm__btn.pk-confirm__btn--ok:hover:not(:disabled){
 }
 button.pk-btn.pk-btn--primary:active:not(:disabled){transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,.5);}
 
-/* Небезпечні кнопки */
+/* Небезпечні кнопки: світліший червоний текст і рамка, щоб читались на темному; при наведенні заливаються */
 button.pk-btn.pk-btn--danger{
   background:color-mix(in srgb, var(--danger) 18%, var(--btn-bg));
   color:#e0746b;
@@ -113,7 +113,7 @@ button.pk-btn.pk-btn--danger:active:not(:disabled){transform:translate(1px,1px);
   border-color:#d4483c;
 }
 
-/* Неактивні кнопки: темні й приглушені, але текст читабельний (opacity повертаємо до 1) */
+/* Неактивні кнопки: темні й приглушені, але текст лишається читабельним (opacity повертаємо до 1, інакше колір «тоне» вдвічі) */
 button.pk-btn:disabled,
 button.pk-confirm__btn:disabled,
 button.reconnect-card__btn:disabled,
@@ -129,7 +129,7 @@ button.pk-confirm__btn.pk-confirm__btn--ok:disabled{
   cursor:not-allowed;
 }
 
-/* Чіпи категорій у редакторі паків */
+/* Чіпи категорій у редакторі паків: та сама рамка, активний — із жовтою рамкою */
 button.pe-chip{
   background:var(--btn-bg);
   color:var(--btn-text);
@@ -138,13 +138,40 @@ button.pe-chip{
 button.pe-chip:hover{background:var(--btn-hover-bg);border-color:var(--btn-hover-border);color:var(--btn-hover-text);}
 button.pe-chip.is-active{border-color:var(--hazard);background:var(--btn-hover-bg);}
 
-/* Фокус з клавіатури */
+/* Фокус з клавіатури видно в усіх кнопок */
 button.pk-btn:focus-visible,
 button.pk-confirm__btn:focus-visible,
 button.reconnect-card__btn:focus-visible,
 button.pe-chip:focus-visible{
   outline:2px solid var(--hazard);
   outline-offset:2px;
+}
+
+/* ===== Кнопка «Почати гру» в кімнаті очікування (waiting-room.js): жовта, з тінню і світінням ===== */
+#start-game-btn {
+  background: var(--hazard) !important;
+  color: #000 !important;
+  border: 1px solid #f0cf3c !important;
+  box-shadow: var(--btn-shadow) !important;
+  transition: all .2s ease !important;
+  font-weight: 700 !important;
+}
+#start-game-btn:hover:not(:disabled) {
+  filter: brightness(1.12) !important;
+  box-shadow: var(--btn-shadow), 0 0 10px rgba(214,176,34,.45) !important;
+}
+#start-game-btn:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 rgba(0,0,0,.5) !important;
+}
+#start-game-btn:disabled {
+  background: var(--btn-disabled-bg) !important;
+  color: var(--btn-disabled-text) !important;
+  border: 1px solid var(--btn-disabled-border) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  cursor: not-allowed !important;
 }
 
 /* ===== Головне меню: лобі (lobby.js), вхід (auth.js), профіль (profile.js) =====
@@ -247,4 +274,3 @@ button.auth-mode-tab:focus-visible{
   outline:2px solid var(--hazard);
   outline-offset:2px;
 }
-

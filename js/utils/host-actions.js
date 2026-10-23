@@ -19,7 +19,7 @@ export {
 } from './host/constants.js';
 
 // «Скасувати» та дані для випадаючих списків панелі
-export { canUndo, undoLastAction } from './host/room-store.js';
+export { canUndo, undoLastAction, clearSnapshot } from './host/room-store.js';
 export { getStageOptions } from './host/card-pools.js';
 
 // Дії ведучого

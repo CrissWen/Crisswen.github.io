@@ -39,7 +39,7 @@ export function renderProfile() {
 
         <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
         
-        <button id="profile-logout-btn" style="padding: 10px; border-radius: 6px; background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none; transition: filter 0.2s ease;">
+        <button id="profile-logout-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none; transition: filter 0.2s ease;">
           Вийти з акаунта
         </button>
       </div>

@@ -43,7 +43,7 @@
 .dice--d6 {
   width: clamp(96px, 20vw, 140px);
   height: clamp(96px, 20vw, 140px);
-  border-radius: 20px;
+  border-radius: var(--radius);
   background: linear-gradient(145deg, var(--hazard), color-mix(in srgb, var(--hazard) 50%, black));
   box-shadow: 0 0 40px color-mix(in srgb, var(--hazard) 45%, transparent), inset 0 0 20px rgba(0,0,0,.8);
   border: 2px solid #fff;

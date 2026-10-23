@@ -126,7 +126,7 @@ table.bunker-table td.player-cell .avatar {
   background: #edeff5;
   color: #10121a;
   padding: 10px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;

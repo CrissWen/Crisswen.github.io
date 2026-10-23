@@ -1,8 +1,9 @@
+import { getGlobalTime } from '../../services/server-time.js';
+
 // Плаваючий таймер внизу екрана. Живе поза #game-board (як і панель ведучого),
 // тож перемальовування дошки його не зачіпає.
 // Час закінчення береться зі стану кімнати: bunker_state.global_timer_end (timestamp у мс).
 
-import { getGlobalTime } from '../../utils/time-sync.js';
 
 const TIMER_ID = 'game-timer-root';
 const HIDE_AFTER_EXPIRED_MS = 10000; // скільки показувати 00 після завершення

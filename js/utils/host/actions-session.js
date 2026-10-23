@@ -73,10 +73,13 @@ export async function changeHost(roomCode, newHostId) {
   const pState = room.players_state || {};
   if (!newHostId || !pState[newHostId]) throw new Error('Гравця не знайдено в кімнаті');
   if (newHostId === room.host_id) throw new Error('Цей гравець уже ведучий');
-  snapshot(room);
   const bState = room.bunker_state || {};
   setHostEvent(bState, `Ведучий передав права ведучого гравцю ${nameOf(pState, newHostId)}`);
   await saveRoom(roomCode, { host_id: newHostId, bunker_state: bState });
+  // Передачу ролі скасувати не можна (панель зникає в колишнього ведучого одразу), тому знімка ця дія не робить, а старий скидає.
+  // Інакше після повернення ролі (А -> Б -> А) «Скасувати» відкотило б усе, що зробив Б. Новий ведучий починає без знімка:
+  // «Скасувати» неактивне до його першої дії.
+  clearSnapshot();
 }
 
 // Вигнати / повернути гравця. Просто інвертує players_state[id].is_kicked — рядок гравця

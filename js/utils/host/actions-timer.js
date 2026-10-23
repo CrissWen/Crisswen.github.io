@@ -1,6 +1,6 @@
 import { pushLog } from '../log-writer.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
-import { getGlobalTime } from '../time-sync.js';
+import { getGlobalTime } from '../../services/server-time.js';
 
 // ===== Глобальний таймер ведучого =====
 // Кнопки таймера НІКОЛИ не пишуть latest_host_event — таймер працює автономно і не повинен спамити Toast'ами.

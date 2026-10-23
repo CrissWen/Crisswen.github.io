@@ -107,7 +107,7 @@ body{
 }
 
 /* Header override for Cryo theme to make it less transparent and add ice texture */
-.main-header, .confirm-dialog, .cataclysm-end-modal__card {
+.main-header, .confirm-dialog, .pk-confirm, .cataclysm-end-modal__card {
   
   background-image: linear-gradient(rgba(3, 11, 38, 0.92), rgba(3, 11, 38, 0.92)), url('../../textures/ice.svg') !important;
   background-size: 1200px !important;
@@ -116,4 +116,27 @@ body{
   
   background-position: center !important;
   
+}
+
+/* ===== Випадаючі списки (select): читабельність у темі Deep Sea =====
+   --panel-2 тут напівпрозорий (rgba), а нативний список select малюється поверх сторінки без "скла" —
+   тому біле/ціанове тло з тексту зливалось. Для option/optgroup задаємо суцільний глибокий синій фон
+   (у тон --cryo-1/--cryo-2), а color-scheme: dark підказує браузеру темний вигляд самого списку і скролбара. */
+select{
+  color-scheme: dark;
+}
+select option,
+select optgroup{
+  background-color: #112240;   /* глибока вода: суцільний, без прозорості */
+  color: var(--text);
+}
+select optgroup{
+  color: var(--cryo-5);        /* заголовки груп ("Характеристики гравця", "Бункер") — світлий неоновий акцент */
+  background-color: #0b1a33;   /* трохи темніший за пункти, щоб група відділялась */
+  font-style: normal;
+}
+select option:checked,
+select option:hover{
+  background-color: var(--cryo-3);
+  color: #fff;
 }

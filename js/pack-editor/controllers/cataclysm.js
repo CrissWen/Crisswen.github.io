@@ -1,0 +1,221 @@
+import { state } from '../state.js';
+import { setMobileCardView } from './mobile-nav.js';
+import { cataclysmNamesText, cataFieldStrings, hasCataDraft, validateCataclysmInput } from '../payload.js';
+import { oneLine, parseCards, cardToLine } from '../parser.js';
+import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
+import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
+import * as ui from '../ui/ui.js';
+import { $ } from '../ui/helpers.js';
+
+// Коллбек оновлення зовнішнього UI (renderList, renderSearch, лічильники)
+let onCataChange = null;
+
+export function setCataChangeHandler(fn) {
+  onCataChange = fn;
+}
+
+// Текст списку (назви по одній на рядок) усередині state.form.texts.cataclysm: з нього читаються лічильники, підсумок і трекінг змін
+export function syncCataText(f = state.form) {
+  f.texts.cataclysm = cataclysmNamesText(f.cataclysms);
+}
+
+// Знімок згенерованого LLM-тексту катаклізмів. Розбір тексту назад у масив втрачає поля, яких у тексті немає (наприклад extra),
+// тож якщо текст не змінювали, масив лишаємо як є. Це важливо, бо режим LLM тепер переходить між категоріями
+// і текст катаклізмів розбирається щоразу при виході з вкладки.
+let llmTextBaseline = null;
+
+export function syncCataclysmsFromLlmText() {
+  if (state.form.texts.cataclysm === llmTextBaseline) return;
+  const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
+  const existingByName = new Map();
+  for (const c of state.form.cataclysms) {
+    if (c?.name) existingByName.set(c.name.trim().toLowerCase(), c);
+  }
+
+  const matchedIds = new Set();
+  const nextCatas = [];
+
+  for (const p of parsed) {
+    const key = p.value.trim().toLowerCase();
+    const existing = existingByName.get(key);
+    if (existing) {
+      if (existing.id) matchedIds.add(existing.id);
+      nextCatas.push({
+        id: existing.id || crypto.randomUUID(),
+        name: p.value,
+        description: p.meta.description || existing.description || '',
+        timer_minutes: p.meta.timer_minutes || existing.timer_minutes || 0,
+        stay_time_months: p.meta.stay_time_months || existing.stay_time_months || null,
+        population: p.meta.population || existing.population || null,
+        extra: existing.extra || {}
+      });
+    } else {
+      nextCatas.push({
+        id: crypto.randomUUID(),
+        name: p.value,
+        description: p.meta.description || '',
+        timer_minutes: p.meta.timer_minutes || 0,
+        stay_time_months: p.meta.stay_time_months || null,
+        population: p.meta.population || null,
+        extra: p.meta.extra || {}
+      });
+    }
+  }
+
+  for (const old of state.form.cataclysms) {
+    if (old?.id && !matchedIds.has(old.id)) {
+      state.markCardDeleted(old.id);
+    }
+  }
+
+  state.form.cataclysms = nextCatas;
+}
+
+export function syncCataclysmsToLlmText() {
+  state.form.texts.cataclysm = state.form.cataclysms.map(c => cardToLine('cataclysm', c.name, {
+    description: c.description,
+    timer_minutes: c.timer_minutes,
+    stay_time_months: c.stay_time_months,
+    population: c.population
+  })).join('\n');
+  llmTextBaseline = state.form.texts.cataclysm;
+}
+
+// Чи є у формі дані, які ще не потрапили в список (новий катаклізм або незбережені правки існуючого)
+export const cataDraftPending = () => hasCataDraft(ui.readCataRaw(), state.form.cataclysms[state.cataEditIndex], state.cataEditIndex >= 0);
+
+export function renderCataList(tokens = []) {
+  ui.renderCataList({
+    cataclysms: state.form.cataclysms,
+    editIndex: state.cataEditIndex,
+    newIndex: state.newCataIndex,
+    tokens
+  });
+}
+
+// Режим форми: -1 — додавання нового, ≥ 0 — редагування існуючого
+export function setCataMode(index) {
+  state.cataEditIndex = index;
+  ui.paintCataMode(index >= 0 ? state.form.cataclysms[index] : null);
+  if (onCataChange) onCataChange();
+  else renderCataList();
+}
+
+// Очищає поля і повертає форму в режим "додати"
+export function resetCataForm() {
+  ui.clearCataFields();
+  ui.showCataError('');
+  setCataMode(-1);
+}
+
+// Після будь-якої зміни списку: перемальовуємо поле-список, лічильники, підсумок і стан кнопок
+export function applyCataChange({ scrollToEnd = false } = {}) {
+  syncCataText();
+  if (onCataChange) {
+    onCataChange({ scrollToEnd });
+  } else {
+    renderCataList();
+    if (scrollToEnd) ui.scrollCataListToEnd();
+  }
+}
+
+// "Додати" / "Зберегти зміни" — залежно від режиму форми. Після успіху дані з’являються в полі-списку, а поля форми очищаються.
+export function submitCata() {
+  const result = validateCataclysmInput(ui.readCataRaw(), { cataclysms: state.form.cataclysms, editIndex: state.cataEditIndex });
+  if (result.error) {
+    ui.showCataError(result.error, result.field);
+    return;
+  }
+
+  const existing = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
+  if (existing) {
+    // Додаткова meta цього катаклізму, якої форма не показує, лишається правою
+    state.form.cataclysms[state.cataEditIndex] = {
+      ...result.item,
+      id: existing.id || crypto.randomUUID(),
+      extra: existing.extra || {}
+    };
+  } else {
+    state.form.cataclysms.push({
+      ...result.item,
+      id: crypto.randomUUID()
+    });
+  }
+
+  applyCataChange();
+  resetCataForm();
+
+  // Новий рядок з’являється з анімацією: клас is-new діє лише на цей рендер
+  if (!existing) {
+    state.newCataIndex = state.form.cataclysms.length - 1;
+    if (onCataChange) onCataChange();
+    state.newCataIndex = -1;
+    ui.scrollCataListToEnd();
+  }
+  showGlobalToast(existing ? 'Катаклізм оновлено' : 'Катаклізм додано');
+  setMobileCardView('list');
+  $(ui.CATA_FIELDS.name)?.focus();
+}
+
+// Клік по назві у списку → поля форми заповнюються даними цього катаклізму
+export function startCataEdit(index) {
+  const item = state.form.cataclysms[index];
+  if (!item) return;
+  ui.fillCataFields(cataFieldStrings(item));
+  ui.showCataError('');
+  setCataMode(index);
+  $(ui.CATA_FIELDS.name)?.focus({ preventScroll: true });
+}
+
+export async function deleteCata(btn) {
+  const item = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
+  if (!item || state.isConfirming) return;
+
+  state.isConfirming = true;
+  let confirmed = false;
+  try {
+    confirmed = await showPackConfirm(`Чи точно хочете видалити катаклізм "${oneLine(item.name)}"?`, btn, { confirmLabel: 'Видалити' });
+  } finally {
+    state.isConfirming = false;
+  }
+  if (!confirmed) return;
+
+  // Після await індекс міг змінитися (наприклад, "Очистити все"), тому шукаємо запис за посиланням
+  const index = state.form.cataclysms.indexOf(item);
+  if (index < 0) return;
+  if (item.id) {
+    state.markCardDeleted(item.id);
+  }
+  state.form.cataclysms.splice(index, 1);
+
+  applyCataChange();
+  resetCataForm();
+  showGlobalToast('Катаклізм видалено');
+  setMobileCardView('list');
+}
+
+const CATA_ACTIONS = {
+  submit: () => submitCata(),
+  cancel: () => {
+    resetCataForm();
+    setMobileCardView('list');
+  },
+  delete: btn => deleteCata(btn)
+};
+
+export function handleCataClick(e) {
+  const btn = e.target.closest('[data-cata-action]');
+  if (!btn || btn.disabled) return;
+  CATA_ACTIONS[btn.dataset.cataAction]?.(btn);
+}
+
+// Числові поля приймають лише цифри; правка поля прибирає попередню помилку
+export function handleCataInput(e) {
+  ui.sanitizeCataNumericInput(e.target);
+  if (!ui.isCataErrorVisible()) return;
+  // Прибираємо рамку лише з поля, що редагується; помилку ховаємо, коли не лишилося підсвічених.
+  e.target.classList.remove('is-invalid');
+  if (!document.querySelector('#pe-cata .is-invalid')) ui.showCataError('');
+}
+
+
