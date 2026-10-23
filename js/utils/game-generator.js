@@ -72,6 +72,8 @@ export function generateGameState(playersList, pack, config) {
   const cataclysm = getRandomItem(b.cataclysm, "Невідомий катаклізм");
   const stayTimeMonths = cataclysm.meta?.stay_time_months || 12; 
   const formattedStayTime = formatStayTime(stayTimeMonths);
+  // Скільки хвилин відведено катаклізму на відлік (0/відсутнє — без таймера, таймер просто не відобразиться)
+  const cataclysmTimerMinutes = Number(cataclysm.meta?.timer_minutes) || 0;
   
   const foodMonths = calculateFoodMonths(stayTimeMonths);
   let foodAndWater = `${formatStayTime(foodMonths)}`;
@@ -104,9 +106,15 @@ export function generateGameState(playersList, pack, config) {
     cataclysm: {
       text: cataclysm.value,
       description: cataclysm.meta.description || "",
-      timer_minutes: cataclysm.meta.timer_minutes || 0
+      timer_minutes: cataclysmTimerMinutes
     }
   };
+
+  // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
+  // Якщо timer_minutes відсутній/0 — поле не створюємо, таймер не відображається.
+  if (cataclysmTimerMinutes > 0) {
+    bunkerState.cataclysm_timer_end = Date.now() + cataclysmTimerMinutes * 60 * 1000;
+  }
 
   const c = pack.character || {};
   const playersState = {};

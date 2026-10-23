@@ -7,18 +7,41 @@ function getAgeCategory(age) {
   return "";
 }
 
+const EMPTY_TEXT = { professions: "Без професії" };
+
+function isEmptyValue(data) {
+  if (data === null) return true;
+  if (Array.isArray(data)) return data.filter(x => x && !x.isEmpty).length === 0;
+  return data.isEmpty === true;
+}
+
+function emptyMeta(data, key) {
+  const marker = Array.isArray(data) ? data.find(x => x && x.isEmpty) : (data && data.isEmpty ? data : null);
+  return {
+    revealed: marker ? !!marker.is_revealed : true,
+    text: (marker && marker.value) || EMPTY_TEXT[key] || "Пусто"
+  };
+}
+
 export function mapPlayerState(rawPlayer) {
   const chars = [];
   
   const add = (key, label, formatFunc) => {
-    if (!rawPlayer[key]) return;
     const data = rawPlayer[key];
+    if (data === undefined) return;
+
+    if (isEmptyValue(data)) {
+      const { revealed, text } = emptyMeta(data, key);
+      chars.push({ label, value: text, open: revealed, dbKey: key, isEmpty: true });
+      return;
+    }
+
     let val, rev;
     
     if (Array.isArray(data)) {
-      if (data.length === 0) return;
-      val = data.map(formatFunc).join(", "); 
-      rev = data[0].is_revealed; 
+      const items = data.filter(x => x && !x.isEmpty);
+      val = items.map(formatFunc).join(", ");
+      rev = items[0].is_revealed;
     } else {
       val = formatFunc(data);
       rev = data.is_revealed;
@@ -49,8 +72,19 @@ export function mapPlayerState(rawPlayer) {
 
   add('body', 'Статура', d => `${d.height_cm} см (${d.type})`);
   add('traits', 'Риса характеру', d => d.value);
-  add('professions', 'Професія', d => `${d.title} (${d.stage})`);
-  add('health', "Здоров'я", d => d.disease === "Ідеально здоровий" ? d.disease : `${d.disease} (${d.severity})`);
+  
+add('professions', 'Професія', d => {
+    const title = d.title || "Невідома професія"; 
+    let profText = d.stage ? `${title} (${d.stage})` : title;
+    
+    if (d.ability && d.ability !== "") {
+      const safeAbilityText = d.ability.replace(/"/g, '&quot;');
+      profText += ` <span class="info-icon" data-tooltip="<b>Унікальна здібність:</b><br>${safeAbilityText}">i</span>`;
+    }
+    
+    return profText;
+  });
+  add('health', "Здоров'я", d => (d.disease === "Ідеально здоровий" || !d.severity) ? d.disease : `${d.disease} (${d.severity})`);
   add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
   add('phobias', 'Фобія', d => d.value);
   add('backpack', 'Рюкзак', d => d.item);
