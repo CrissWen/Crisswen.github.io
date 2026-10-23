@@ -204,7 +204,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
 
             ${acc('Змінити параметр бункера', `
               ${field('Параметр', `<select class="hp-select" data-field="bunkerField">${bunkerFieldOptions()}</select>`)}
-              ${field('Ваша характеристика', `<input type="text" class="hp-input" data-field="customValue" placeholder="Власне значення" maxlength="300">`)}
+              ${field('Ваша характеристика', `<input type="text" class="hp-input" data-field="customValue" placeholder="Власне значення (порожнє — випадкове)" maxlength="300">`)}
               <!-- Керування предметами: показується лише для параметра "items" (перемикає game.js) -->
               <select class="hp-select" id="bunker-item-action" data-field="itemAction" style="display:none">
                 <option value="add" selected>Додати</option>
@@ -217,8 +217,8 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
 
             ${acc('Кубики', `
               <div class="hp-row">
-                ${actionBtn('D6', 'dice', 'data-arg="6"')}
-                ${actionBtn('D20', 'dice', 'data-arg="20"')}
+                ${actionBtn('Кинути d20', 'dice', 'data-arg="d20"')}
+                ${actionBtn('Кинути d6', 'dice', 'data-arg="d6"')}
               </div>
               <div class="hp-dice-result" data-hp-dice>—</div>
             `)}

@@ -1,0 +1,98 @@
+/* ===== Player characteristics (list + lock toggle) ===== */
+.char-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* Заповнення по колонках: елементи 1-5 — ліва колонка, 6-10 — права */
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
+  
+  gap: 12px clamp(16px, 3vw, 48px); 
+}
+@media (max-width: 600px) {
+  .char-list {
+    grid-template-columns: 1fr; 
+    grid-template-rows: none;
+    grid-auto-flow: row;
+  }
+}
+.abilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.char-item{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  border:1px solid var(--metal);
+  border-radius:var(--radius-sm);
+  padding:12px 14px;
+  transition:all .3s ease;
+  position:relative;
+  /* Закрита картка — текстура решітки */
+  background: repeating-linear-gradient(45deg, var(--panel), var(--panel) 10px, var(--bg) 10px, var(--bg) 20px);
+  box-shadow: inset 0 0 15px rgba(0,0,0,.8);
+  opacity:.8;
+}
+/* Відкрита картка — термінальне свічення */
+.char-item.open{
+  border-color:var(--hazard);
+  background:var(--panel-2);
+  opacity:1;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.5), -4px 0 0 var(--hazard);
+}
+.char-text{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.char-label{
+  font-family:var(--mono);font-size:12.5px;
+  color:var(--text-mute);text-transform:uppercase;
+}
+.char-value {
+  font-family: var(--body); 
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: normal; 
+}
+
+/* Робимо кнопку прозорою і без рамок */
+.char-lock {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;  /* Трохи збільшили розмір самої кнопки */
+  height: 40px;
+  border: none;
+  background: transparent;
+  padding: 6px; /* Внутрішній відступ ("безпечна зона" від країв) */
+  overflow: visible; /* Гарантуємо, що браузер не обріже краї */
+  cursor: pointer;
+}
+
+/* Оскільки рамок більше немає, при наведенні трохи збільшуємо іконку */
+.char-lock:hover .lock-icon {
+  transform: scale(1.2); /* Збільшуємо на 20% */
+  filter: brightness(1.15);
+}
+
+/* Налаштування самої картинки */
+.char-lock .lock-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; 
+  /* Анімацію переносимо сюди, на саму картинку */
+  transition: transform 0.2s ease, filter 0.2s ease; 
+}
+
+/* Логіка перемикання (відкрита/закрита) */
+.char-lock .lock-open { display: none; }
+.char-item.open .char-lock .lock-closed { display: none; }
+.char-item.open .char-lock .lock-open { display: block; }
+
+/* ===== Special abilities sub-block (inside block 3) ===== */
+.abilities-block{margin-top:22px;padding-top:18px;border-top:2px dashed var(--metal);}
+.abilities-title{
+  font-family:var(--mono);font-weight:600;font-size:13px;
+  color:var(--hazard);margin:0 0 10px;text-transform:uppercase;
+}
+.ability-item{border-color:var(--metal-lt);}
+.ability-item.open{border-color:var(--danger);box-shadow: inset 0 0 20px rgba(0,0,0,.5), -4px 0 0 var(--danger);}
+.ability-item.open .char-lock{border-color:var(--hazard);}

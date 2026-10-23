@@ -1,0 +1,39 @@
+/* ===== Режим глядача: плаваюча іконка в правому нижньому куті ===== */
+.spectator-badge {
+    position: fixed;
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    padding: 10px;
+    background: linear-gradient(180deg, var(--metal-lt), var(--metal));
+    border: 1px solid var(--metal-lt);
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+    color: var(--text);
+    cursor: default;
+}
+.spectator-badge.is-hidden {
+    display: none;
+}
+.spectator-badge__icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    filter: invert(1); /* чорна svg -> біла на темному фоні */
+}
+.spectator-badge__text {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    font-size: 13.5px;
+    transition: max-width .3s ease, opacity .3s ease, margin-left .3s ease;
+}
+.spectator-badge:hover .spectator-badge__text {
+    max-width: 220px;
+    opacity: 1;
+    margin-left: 8px;
+    margin-right: 4px;
+}

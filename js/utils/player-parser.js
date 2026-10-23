@@ -87,8 +87,8 @@ add('professions', 'Професія', d => {
   add('health', "Здоров'я", d => (d.disease === "Ідеально здоровий" || !d.severity) ? d.disease : `${d.disease} (${d.severity})`);
   add('hobbies', 'Хобі/Навички', d => `${d.title} (${d.stage})`);
   add('phobias', 'Фобія', d => d.value);
-  add('backpack', 'Рюкзак', d => d.item);
   add('large_inventory', 'Крупний інвентар', d => d.item);
+  add('backpack', 'Рюкзак', d => d.item);
   add('extra_info', 'Дод. відомості', d => d.value);
 
   const abilities = [];

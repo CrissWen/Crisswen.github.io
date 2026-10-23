@@ -1,0 +1,130 @@
+/* ===== Кастомне вікно підтвердження (заміна window.confirm) =====
+   Позиціонується динамічно в JS (confirm-dialog.js) відносно натиснутої кнопки — ліворуч від неї,
+   по вертикалі по центру кнопки. Тут лишається лише розмір/вигляд/анімація, без фіксованих top/left/bottom.
+   z-index вище за все, включно з панеллю ведучого (.hp-panel 10002/.hp-backdrop 10001) і глобальним таймером (9999) — це критично, бо runHostAction (game.js)
+   відкриває це вікно саме кнопками всередині відкритої .hp-panel — без цього затемнення .hp-backdrop сховало б його. */
+.confirm-dialog{
+  position:fixed;z-index:10003;
+  width:min(300px,calc(100vw - 40px));
+  background:var(--panel);border:1px solid var(--metal-lt);border-radius:var(--radius);
+  padding:16px;
+  box-shadow:0 14px 36px rgba(0,0,0,.55);
+  opacity:0;transform:translateY(10px) scale(.96);
+  transition:opacity .2s ease, transform .2s ease, top .2s ease, left .2s ease;
+  pointer-events:none;
+}
+.confirm-dialog.is-open{
+  opacity:1;transform:translateY(0) scale(1);
+  pointer-events:auto;
+}
+.confirm-dialog__text{
+  margin:0 0 14px;color:var(--text);font-family:var(--body);font-size:14px;line-height:1.45;
+}
+.confirm-dialog__row{display:flex;gap:8px;}
+.confirm-dialog__btn{
+  flex:1;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;
+  font-family:var(--body);font-size:14px;font-weight:600;border:1px solid transparent;
+  transition:filter .2s ease;
+}
+.confirm-dialog__btn:hover{filter:brightness(1.1);}
+.confirm-dialog__btn--no{background:var(--danger);color:#1a0806;}
+.confirm-dialog__btn--yes{background:var(--ok);color:#06110d;}
+
+@media (max-width:520px){
+  .confirm-dialog{width:min(300px,calc(100vw - 24px));}
+}
+
+/* ===== Глобальний toast від ведучого (global-toast.js) =====
+   По-центру екрана, видно всім гравцям кімнати — на відміну від .hp-toast у панелі ведучого, який бачить лише сам ведучий. */
+.global-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(.94);
+  z-index: 9999;
+  max-width: min(440px, 88vw);
+  padding: 16px 24px;
+  background: linear-gradient(180deg, #1c3b30, #142a22);
+  border: 1px solid var(--ok);
+  border-radius: var(--radius);
+  color: #f2fff9;
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.global-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+
+/* ===== Модалка "Час сплив" (cataclysm-timer.js finished → game.js) =====
+   На відміну від .global-toast (авто-зникає, без підкладки і без взаємодії) — це справжня модалка
+   з напівпрозорою підкладкою і кнопкою "Закрити": гравець сам її закриває, а гра під нею НІКОЛИ
+   не блокується (це звичайний DOM-оверлей, не window.alert()). z-index — вище за все інше в грі, включно з .confirm-dialog (10003)
+   і панеллю ведучого (.hp-panel 10002/.hp-backdrop 10001) — щоб не було нічийної з .hp-backdrop, якщо катаклізм завершиться
+   при відкритій панелі ведучого. */
+.cataclysm-end-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10004;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, background .2s ease;
+}
+.cataclysm-end-modal.is-open {
+  opacity: 1;
+  background: rgba(0, 0, 0, .6);
+  pointer-events: auto;
+}
+.cataclysm-end-modal__card {
+  width: min(360px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 26px 22px 22px;
+  text-align: center;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+  transform: translateY(10px) scale(.96);
+  transition: transform .2s ease;
+}
+.cataclysm-end-modal.is-open .cataclysm-end-modal__card {
+  transform: translateY(0) scale(1);
+}
+.cataclysm-end-modal__icon {
+  font-size: 34px;
+  line-height: 1;
+  margin-bottom: 12px;
+  color: var(--danger);
+}
+.cataclysm-end-modal__text {
+  margin: 0 0 20px;
+  font-family: var(--body);
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.cataclysm-end-modal__btn {
+  padding: 10px 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--danger);
+  background: var(--danger);
+  color: #1a0806;
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter .2s ease;
+}
+.cataclysm-end-modal__btn:hover { filter: brightness(1.1); }

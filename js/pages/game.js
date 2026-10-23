@@ -1,15 +1,16 @@
 import { supabase } from '../services/supabase.js';
-import { catastrophe } from '../game-moduls/catastrophe.js';
+import { cataclysm } from '../game-moduls/cataclysm.js';
 import { bunkerInfo } from '../game-moduls/bunker-info.js';
 import { playerCharacteristics } from '../game-moduls/player-characteristics.js';
 import { playersTable } from '../game-moduls/players-table.js';
 import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js';
-import { votingSection } from '../game-moduls/voting.js';
+import { votingSection, captureVoteSelection, restoreVoteSelection } from '../game-moduls/voting.js';
 import { mapPlayerState } from '../utils/player-parser.js';
 import { waitingRoom } from '../game-moduls/waiting-room.js';
 import { mountGameTimer, unmountGameTimer } from '../game-moduls/game-timer.js';
-import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer } from '../game-moduls/cataclysm-timer.js';
+import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer, getCataclysmTimerText } from '../game-moduls/cataclysm-timer.js';
 import { generateGameState } from '../utils/game-generator.js';
+import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
 import * as HostActions from '../utils/host-actions.js';
 import {
   renderHostPanel,
@@ -23,6 +24,10 @@ import {
 } from '../game-moduls/host-panel.js';
 import { showCustomConfirm } from '../game-moduls/confirm-dialog.js';
 import { showGlobalToast } from '../game-moduls/global-toast.js';
+import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-moduls/dice-overlay.js';
+import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-moduls/event-log.js';
+import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-moduls/personal-notes.js';
+import { addLog } from '../utils/event-log.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
@@ -34,16 +39,24 @@ let hasSeenCataclysmEnd = false; // флаг в пам'яті вкладки: щ
 let trackedCataclysmTimerEnd = null; // останнє відоме cataclysm_timer_end (для скидання флага при НОВОМУ катаклізмі)
 let wasVotingActive = false; // щоб автоскрол до #voting-section спрацював рівно один раз на кожне запускання голосування, а не при кожному рендері
 let votingFinishInFlight = false; // щоб декілька швидких postgres_changes підряд не відправили кілька паралельних finishVoting
+let pendingDiceLogId = null; // id запису в лозі про кидок, який прихований до зупинки кубика
+let pendingDiceLogTimer = null;
+
+// Закрита кімната — режим лише для читання для будь-кого (навіть колишнього хоста/гравця): host_id ігнорується, панель ведучого не рендериться.
+function isHostOf(roomData) {
+  if (roomData.status === 'closed') return false;
+  return roomData.host_id === currentUserId;
+}
 
 // Синхронізує віджет-таймер катаклізму і скидає флаг модалки "Час сплив", коли ведучий ставить
 // новий катаклізм (інше значення cataclysm_timer_end) — щоб модалка могла показатись знову для наступного відліку.
-function syncCataclysm(bunkerState) {
+function syncCataclysm(bunkerState, roomStatus) {
   const end = bunkerState?.cataclysm_timer_end ?? null;
   if (end !== trackedCataclysmTimerEnd) {
     trackedCataclysmTimerEnd = end;
     hasSeenCataclysmEnd = false;
   }
-  syncCataclysmTimer(bunkerState);
+  syncCataclysmTimer(bunkerState, roomStatus);
 }
 
 // Захист від спаму: відлік досягає нуля рівно один раз (цей колбек викликає модуль
@@ -126,10 +139,13 @@ export async function initGame() {
 
     
     // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
-    // Ліміт на 15 місць діє виключно на етапі лобі: якщо гра вже йде, цю перевірку повністю ігноруємо.
+    // Ліміт на місця (bc.maxPlayersInLobby, config-manager.js) діє виключно на етапі лобі: якщо гра вже йде, цю перевірку повністю ігноруємо.
+    // Дочекуємось конфігу (base + можливий game-config.local.js) ДО першого рендеру кімнати. Інакше при прямому заході по посиланню
+    // вейтінг-рум міг би побачити лише базові ліміти, поки локальний файл ще вантажиться (getGameConfigSync дає базу).
+    const bc = await getGameConfig();
     if (!isGameStarted && !isPlayerInRoom) {
       const playersCount = Object.keys(room.players_state || {}).length;
-      if (playersCount >= 15) {
+      if (playersCount >= bc.maxPlayersInLobby) {
         showGlobalToast('Ця кімната вже переповнена');
         window.location.hash = '#/lobby';
         return;
@@ -154,7 +170,7 @@ export async function initGame() {
     setupActionListeners();
     mountGameTimer(() => localRoomState?.bunker_state);
     mountCataclysmTimer(onCataclysmTimerExpired);
-    syncCataclysm(localRoomState.bunker_state);
+    syncCataclysm(localRoomState.bunker_state, localRoomState.status);
 
   } catch (err) {
     statusEl.textContent = "Помилка: " + err.message;
@@ -164,17 +180,22 @@ export async function initGame() {
 
 function updateGameBoard(roomData, container) {
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
-  const isHost = roomData.host_id === currentUserId;
-  isSpectator = isGameStarted && !roomData.players_state?.[currentUserId];
+  const isHost = isHostOf(roomData);
+  // Закрита кімната — кожен, навіть колишній гравець/ведучий, примусово глядач (режим лише для читання)
+  isSpectator = roomData.status === 'closed' || (isGameStarted && !roomData.players_state?.[currentUserId]);
   document.getElementById('spectator-badge')?.classList.toggle('is-hidden', !isSpectator);
   syncHostPanel(roomData);
-  syncCataclysm(roomData.bunker_state);
+  syncCataclysm(roomData.bunker_state, roomData.status);
 
   if (!isGameStarted) {
+    // Із цього моменту конфіг вже завантажено (див. await getGameConfig() у initGame), тому синхронного читання досить
+    const bc = getGameConfigSync();
     container.innerHTML = waitingRoom({
       roomCode: currentRoomCode,
       playersState: roomData.players_state,
-      isHost: isHost
+      isHost: isHost,
+      minPlayers: bc.minPlayersToStart,
+      maxPlayers: bc.maxPlayersInLobby
     });
     
     if (isHost) {
@@ -195,6 +216,13 @@ async function handleStartGame(e) {
     const { data: room } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
     const pState = room.players_state || {};
     const playersList = Object.entries(pState).map(([id, p]) => ({ id, name: p.name }));
+
+    // Кнопка «Почати гру» вже disabled при недостатній кількості, але відображена кількість могла застаріти
+    // (хтось вийшов між рендером і кліком) — тому рахуємо ще раз по свіжих даних кімнати.
+    const { minPlayersToStart } = await getGameConfig();
+    if (playersList.length < minPlayersToStart) {
+      throw new Error(`Для старту потрібно мінімум ${minPlayersToStart} гравців (зараз ${playersList.length})`);
+    }
 
     
     const { data: pack, error: packError } = await supabase
@@ -234,7 +262,7 @@ async function handleStartGame(e) {
       });
     });
 
-    const { bunkerState, playersState } = generateGameState(playersList, cardsData, pack.config);
+    const { bunkerState, playersState } = await generateGameState(playersList, cardsData, pack.config);
     
     await supabase.from('rooms').update({ 
       bunker_state: bunkerState,
@@ -253,7 +281,7 @@ async function handleStartGame(e) {
 function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
-  const isHost = roomData.host_id === currentUserId;
+  const isHost = isHostOf(roomData);
   
 const descriptionParts = [
     bState.history,
@@ -279,7 +307,8 @@ const descriptionParts = [
   const cataclysmData = bState.cataclysm ? {
     icon: "☢",
     title: bState.cataclysm.text,
-    desc: bState.cataclysm.description
+    desc: bState.cataclysm.description,
+    population: bState.cataclysm.population
   } : null;
 
   const parsedPlayers = [];
@@ -342,7 +371,7 @@ const descriptionParts = [
   };
 
   const order = [
-    safe('Катаклізм', () => catastrophe(cataclysmData)),
+    safe('Катаклізм', () => cataclysm(cataclysmData)),
     safe('Бункер', () => bunkerInfo(bunkerData)),
     isSpectator ? '' : safe('Мої характеристики', () => playerCharacteristics({ ownerName: myData.name, characteristics: myData.characteristics, abilities: myData.abilities })),
     safe('Гравці', () => playersTable(columns.length ? columns : ["Очікування роздачі..."], tableRows, alivePlayers, totalPlayers, isHost)),
@@ -352,10 +381,19 @@ const descriptionParts = [
       players: Object.entries(pState).map(([id, p]) => ({ id, name: p.name || 'Гравець', alive: p.is_alive !== false })),
       myId: currentUserId,
       amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false
-    }))
+    })),
+    // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
+    safe('Особисті замітки', () => personalNotes()),
+    // Лог подій — самий низ сторінки, одразу після блоку голосування
+    safe('Лог подій', () => eventLog(bState.logs, pendingDiceLogId ? [pendingDiceLogId] : []))
   ];
 
+  captureVoteSelection(); // запам'ятовуємо обрану радіокнопку голосування, бо innerHTML нижче створить її заново без checked
+  captureNotesFocus(); // запам'ятовуємо курсор у замітках, бо innerHTML нижче створить textarea заново
   container.innerHTML = order.join("");
+  restoreVoteSelection(); // повертаємо виділення і розблоковуємо «Проголосувати»
+  restoreNotesFocus();
+  scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
 
   // Автоматичний скрол до блоку голосування рівно один раз на кожне його запускання (див. syncVotingScroll)
   syncVotingScroll(pState, bState);
@@ -475,14 +513,16 @@ function subscribeToRoomUpdates() {
     }, (payload) => {
       // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
       const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
+      const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
 
       // Supabase Realtime у payload.new НЕ передає великі (TOAST) jsonb-колонки, які не змінювались
       // в цьому UPDATE. Тому таймер/голосування (міняють лише bunker_state) приходили без players_state,
       // і характеристики зникали. Зливаємо зміни поверх попереднього стану замість повної заміни.
       localRoomState = { ...localRoomState, ...payload.new };
 
-      // Ведучий закрив кімнату: повертаємо всіх у лобі
-      if (localRoomState.bunker_state?.room_closed) {
+      // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
+      if (localRoomState.status === 'closed') {
+        freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
         if (localRoomState.host_id !== currentUserId) alert('Ведучий закрив кімнату.');
         window.location.hash = '#/lobby';
         return;
@@ -492,6 +532,22 @@ function subscribeToRoomUpdates() {
       const hostEvent = localRoomState.bunker_state?.latest_host_event;
       if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
         showGlobalToast(hostEvent.text);
+      }
+
+      // Новий кидок кубика від ведучого — у всіх клієнтів (включно з ведучим і глядачами) локально запускається анімація.
+      // Порівняння по id не дає повторно програти старий кидок при будь-якому іншому оновленні рядка кімнати.
+      // Записи старого формату (без type/value, з d20+d6) ігноруємо.
+      const diceRoll = localRoomState.bunker_state?.latest_dice;
+      if (diceRoll && diceRoll.id > 0 && diceRoll.id !== prevDiceId && diceRoll.type) {
+        showDiceRoll(diceRoll.type, diceRoll.value);
+        // Запис про цей кидок у лозі ховаємо, поки кубик крутиться, і розкриваємо в момент зупинки
+        pendingDiceLogId = diceRoll.id;
+        clearTimeout(pendingDiceLogTimer);
+        pendingDiceLogTimer = setTimeout(() => {
+          pendingDiceLogId = null;
+          const el = document.getElementById('game-board');
+          if (el && localRoomState) updateGameBoard(localRoomState, el);
+        }, DICE_ROLL_MS);
       }
 
       const boardEl = document.getElementById('game-board');
@@ -558,6 +614,11 @@ async function handleKickToggle(btn) {
 }
 
 async function handleGlobalClick(e) {
+  if (e.target.closest('[data-log-toggle]')) {
+    toggleEventLog();
+    return;
+  }
+
   const copyBtn = e.target.closest('[data-copy-target]');
   if (copyBtn) {
     await handleInviteCopy(copyBtn);
@@ -635,6 +696,12 @@ async function handleGlobalClick(e) {
       user_id_val: currentUserId,
       player_data: state[currentUserId]
     });
+
+    // Запис у «Лог подій». Помилка логування не має ламати саме перемикання картки.
+    const label = item.querySelector('.char-label')?.textContent?.trim() || dbKey;
+    const who = state[currentUserId]?.name || currentUserName || 'Гравець';
+    addLog(currentRoomCode, `Гравець ${who} ${isOpen ? 'сховав' : 'відкрив'} характеристику ${label}`)
+      .catch(err => console.error('Не вдалося записати подію в лог:', err));
     
   } catch (err) {
     console.error("Помилка оновлення:", err);
@@ -665,7 +732,7 @@ function hostPanelData(roomData) {
 // Панель живе поза #game-board, тож перемальовування дошки її не зачіпає.
 // Показуємо лише ведучому і лише після старту гри (до роздачі карт дії не мають сенсу).
 function syncHostPanel(roomData) {
-  const isHost = roomData.host_id === currentUserId;
+  const isHost = isHostOf(roomData);
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
   let root = getHostPanelRoot();
 
@@ -727,7 +794,9 @@ const HOST_ACTIONS = {
     run: f => f.bunkerField === 'items'
       ? HostActions.changeBunkerItems(currentRoomCode, f.itemAction, f.itemAction === 'remove' ? f.itemRemove : f.itemAddText)
       : HostActions.changeBunker(currentRoomCode, f.bunkerField, f.customValue),
-    ok: r => Array.isArray(r) ? 'Предмети бункера оновлено' : 'Параметр бункера змінено',
+    ok: (r, f) => Array.isArray(r)
+      ? 'Предмети бункера оновлено'
+      : (f?.customValue || '').trim() ? 'Параметр бункера змінено' : `Випадкове значення: ${r}`,
     after: (root, result) => {
       const el = root.querySelector('[data-field="customValue"]');
       if (el) el.value = '';
@@ -736,10 +805,11 @@ const HOST_ACTIONS = {
     }
   },
 
+  // Одна дія на обидві кнопки: тип кубика ('d20' / 'd6') приходить з data-arg натиснутої кнопки
   dice: {
-    run: (f, arg) => HostActions.rollDice(currentRoomCode, Number(arg)),
-    ok: (r, f, arg) => `Кубик D${arg}: ${r}`,
-    after: (root, r) => setHostDiceResult(root, r)
+    run: (f, arg) => HostActions.rollDice(currentRoomCode, arg),
+    ok: r => `${r.type}: ${r.value}`,
+    after: (root, r) => setHostDiceResult(root, `${r.type}: ${r.value}`)
   },
 
   changeHost: {
@@ -752,7 +822,7 @@ const HOST_ACTIONS = {
     ok: 'Гру скинуто'
   },
   closeRoom: {
-    run: () => HostActions.closeRoom(currentRoomCode),
+    run: () => HostActions.closeRoom(currentRoomCode, getCataclysmTimerText()), // час з екрана йде в bunker_state.stopped_timer разом із status: 'closed'
     ok: 'Кімнату закрито',
     after: () => { window.location.hash = '#/lobby'; }
   }
@@ -799,8 +869,9 @@ async function runHostAction(root, btn) {
 
   const arg = btn.dataset.arg;
   try {
-    const result = await def.run(readHostFields(btn), arg);
-    const msg = typeof def.ok === 'function' ? def.ok(result, null, arg) : def.ok;
+    const fields = readHostFields(btn);
+    const result = await def.run(fields, arg);
+    const msg = typeof def.ok === 'function' ? def.ok(result, fields, arg) : def.ok;
     showHostToast(root, msg);
     def.after?.(root, result);
   } catch (err) {
@@ -892,4 +963,6 @@ export function cleanupGame() {
   document.removeEventListener("change", handleVoteRadioChange);
   wasVotingActive = false;
   votingFinishInFlight = false;
+  clearTimeout(pendingDiceLogTimer);
+  pendingDiceLogId = null;
 }

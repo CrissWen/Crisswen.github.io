@@ -1,0 +1,132 @@
+/* ===== Тема: КЛАСИКА (Нічна) — основна тема за замовчуванням =====
+   Початковий "м'який" темний стиль гри: синьо-графітові панелі, теплий персиковий акцент (--hazard),
+   бірюзовий (--ok), заокруглення 14px/9px. Це оригінальний вигляд сайту до появи тем.
+
+   Скелет css/styles.css містить "гримдарк"-декор, спільний для інших тем (великі літери, внутрішні тіні,
+   смуги небезпеки, текстура закритих карток). Тому нижче, після :root і body, — блок перекриттів, який
+   повертає цим елементам вигляд оригіналу. Тема підключається ПІСЛЯ styles.css з тією самою специфічністю,
+   тож правила тут перемагають за порядком. */
+:root{
+  --bg:        #10121a;
+  --panel:     #181b26;
+  --panel-2:   #1f2330;
+  --metal:     #2b2f40;
+  --metal-lt:  #3d4256;
+  --hazard:    #f0a868;
+  --danger:    #ef6f61;
+  --ok:        #5fcdb0;
+  --accent:    #8f8ff0;
+  --text:      #edeff5;
+  --text-mute: #8a90a6;
+  --radius:    14px;
+  --radius-sm: 9px;
+  --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --head: 'Oswald', 'Arial Narrow', sans-serif;
+  --body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+  /* Використовується лише в темах зі смугами небезпеки; тут смуг немає (див. .reconnect-card::before нижче) */
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
+}
+
+body{
+  background: radial-gradient(ellipse at top, #1a1e2c 0%, var(--bg) 55%);
+}
+
+/* ===== Перекриття гримдарк-декору скелета ===== */
+
+/* Блоки й заголовки */
+.block{
+  border-top: 1px solid var(--metal);
+  box-shadow: none;
+}
+.block-head{ background: none; }
+.block-head h2{ letter-spacing: .02em; text-transform: none; }
+
+/* Катаклізм */
+.cata-icon{
+  background: var(--panel-2);
+  border: 1px solid var(--danger);
+  box-shadow: none;
+}
+.cata-title{ letter-spacing: .01em; text-transform: none; }
+.cata-desc{ color: var(--text-mute); opacity: 1; }
+
+/* Характеристики бункера та спорядження */
+.info-stat{
+  background: var(--panel-2);
+  border-left: 1px solid var(--metal);
+  box-shadow: none;
+}
+.info-stat .k{ font-family: var(--body); text-transform: none; }
+.info-stat .v{ color: inherit; }
+.equipment-title{ font-family: var(--body); text-transform: none; }
+.equipment-list li{ font-family: var(--body); box-shadow: none; }
+
+/* Картки характеристик гравця: без текстури решітки і свічення */
+.char-item{
+  background: var(--panel-2);
+  box-shadow: none;
+  opacity: 1;
+  transition: border-color .3s ease, background .3s ease;
+}
+.char-item.open{
+  border-color: var(--ok);
+  background: var(--panel-2);
+  box-shadow: none;
+}
+.char-label{ font-family: var(--body); text-transform: none; }
+
+/* Спеціальні можливості */
+.abilities-block{ border-top: 1px dashed var(--metal); }
+.abilities-title{ font-family: var(--body); text-transform: none; }
+.ability-item.open{ border-color: var(--hazard); box-shadow: none; }
+
+/* Вигнаний гравець */
+.kicked-player{ opacity: .5; filter: grayscale(100%); }
+.kicked-player td,
+.kicked-player th{
+  background-color: #151720 !important;
+  border-color: var(--metal-lt) !important;
+}
+
+/* Кнопки панелі ведучого */
+.hp-btn{
+  background: #07080c;
+  border-color: var(--metal-lt);
+  font-family: var(--body);
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: none;
+  transition: border-color .2s ease, opacity .2s ease, filter .2s ease;
+}
+.hp-btn:hover:not(:disabled){ border-color: var(--hazard); background: #07080c; }
+.hp-btn-green{ background: var(--ok); color: #06110d; border-color: var(--ok); }
+.hp-btn-red{ background: var(--danger); color: #1a0806; border-color: var(--danger); }
+.hp-btn-green:hover:not(:disabled){ background: var(--ok); color: #06110d; box-shadow: none; filter: brightness(1.1); border-color: transparent; }
+.hp-btn-red:hover:not(:disabled){ background: var(--danger); color: #1a0806; box-shadow: none; filter: brightness(1.1); border-color: transparent; }
+.hp-select,
+.hp-input{ background: var(--panel-2); font-family: var(--body); }
+.hp-select:focus,
+.hp-input:focus,
+.personal-notes__input:focus{ border-color: var(--accent); box-shadow: none; }
+
+/* Картки "Повернутися до гри" в лобі: без смуги небезпеки */
+.reconnect-card{ overflow: visible; }
+.reconnect-card::before{ display: none; }
+.reconnect-card__head{ padding-left: 0; }
+.reconnect-card__code{ font-family: var(--head); font-size: 15px; letter-spacing: .04em; }
+.reconnect-card__status{ padding-left: 0; font-family: inherit; text-transform: none; }
+.reconnect-card__btn{
+  padding: 9px;
+  border: none;
+  border-radius: 6px;
+  background: var(--hazard);
+  color: #000;
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  transition: filter .2s ease;
+}
+.reconnect-card__btn:hover{ background: var(--hazard); color: #000; box-shadow: none; border-color: transparent; filter: brightness(1.08); }
+.reconnect-card__dot{ width: 9px; height: 9px; border-radius: 50%; }
+.reconnect-card__dot.is-playing{ box-shadow: none; }
+.reconnect-card__dot.is-waiting{ box-shadow: none; }

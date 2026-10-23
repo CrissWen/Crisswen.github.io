@@ -1,3 +1,5 @@
+import { getGameConfig } from '../config/config-manager.js';
+
 const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const getSkewedRandomInt = (min, max, skew = 3) => {
@@ -48,50 +50,100 @@ const formatStayTime = (months) => {
   return res.join(" і ") || "Менше місяця";
 };
 
-const calculateFoodMonths = (requiredMonths) => {
+// bc — поточний (base+local) конфіг балансу з config-manager.js. Усі пороги/діапазони — bc.foodMonths.*
+const calculateFoodMonths = (requiredMonths, bc) => {
+  const fm = bc.foodMonths;
   const roll = Math.random();
   let foodMonths = 0;
-  
-  if (roll < 0.15) { 
-    foodMonths = getRandomInt(1, 2);
-  } else if (roll < 0.65) { 
-    foodMonths = Math.floor(requiredMonths * (getRandomInt(30, 80) / 100));
-  } else if (roll < 0.90) { 
+
+  if (roll < fm.shortfallThreshold) {
+    foodMonths = getRandomInt(fm.shortfallRange.min, fm.shortfallRange.max);
+  } else if (roll < fm.partialThreshold) {
+    foodMonths = Math.floor(requiredMonths * (getRandomInt(fm.partialPercentRange.min, fm.partialPercentRange.max) / 100));
+  } else if (roll < fm.exactThreshold) {
     foodMonths = requiredMonths;
-  } else { 
-    foodMonths = Math.floor(requiredMonths * (getRandomInt(110, 150) / 100));
+  } else {
+    foodMonths = Math.floor(requiredMonths * (getRandomInt(fm.surplusPercentRange.min, fm.surplusPercentRange.max) / 100));
   }
-  
+
   return Math.max(1, foodMonths);
 };
 
-export function generateGameState(playersList, pack, config) {
+// Запаси їжі/води: місяці від тривалості перебування + з шансом bc.foodSupplyNoteChance особлива примітка з пулу food_supply
+const buildFoodAndWater = (requiredMonths, bunkerPool, bc) => {
+  let result = formatStayTime(calculateFoodMonths(requiredMonths, bc));
+  if (bunkerPool?.food_supply && bunkerPool.food_supply.length > 0 && Math.random() < bc.foodSupplyNoteChance) {
+    result += ` (${getRandomItem(bunkerPool.food_supply).value})`;
+  }
+  return result;
+};
+
+// Зворотне до formatStayTime: "1 рік і 3 місяці" -> 15. Якщо розібрати не вдалося (ведучий ввів власний текст) — 12 місяців, як у generateGameState.
+const parseStayTimeMonths = (text) => {
+  const s = String(text || '');
+  const y = s.match(/(\d+)\s*(?:рік|роки|років)/);
+  const m = s.match(/(\d+)\s*(?:місяць|місяці|місяців)/);
+  const total = (y ? Number(y[1]) * 12 : 0) + (m ? Number(m[1]) : 0);
+  return total || 12;
+};
+
+// Випадкове значення однієї текстової характеристики бункера (викликається з host-actions.js, коли ведучий лишив поле порожнім).
+// Ті ж правила, що й при старті гри: поля history / rooms_description / location / problem беруться з пулу pack_cards,
+// size генерується (у пулі її немає), stay_time — з місяців випадкового катаклізму, food_and_water — від поточного stay_time.
+// Повертає null, якщо для поля немає звідки брати варіанти (порожній пул або невідоме поле).
+// Асинхронна — читає поточний конфіг балансу (config-manager.js) для розміру бункера (size) й розрахунку їжі.
+const BUNKER_POOL_CATEGORY = { history: 'history', rooms_description: 'rooms_description', location: 'location', problem: 'problems' };
+
+export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerState = {}) {
+  const b = bunkerPool || {};
+  const poolKey = BUNKER_POOL_CATEGORY[field];
+
+  if (poolKey) {
+    const pool = b[poolKey];
+    return Array.isArray(pool) && pool.length > 0 ? getRandomItem(pool).value : null;
+  }
+
+  const bc = await getGameConfig();
+
+  switch (field) {
+    case 'size':
+      return `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
+    case 'stay_time': {
+      if (!Array.isArray(b.cataclysm) || b.cataclysm.length === 0) return null;
+      const months = Number(getRandomItem(b.cataclysm).meta?.stay_time_months) || 12;
+      return formatStayTime(months);
+    }
+    case 'food_and_water':
+      return buildFoodAndWater(parseStayTimeMonths(currentBunkerState.stay_time), b, bc);
+    default:
+      return null;
+  }
+}
+
+// Асинхронна — чекає getGameConfig() (base + можливе game-config.local.js) ПЕРЕД генерацією,
+// щоб усі шанси/діапазони бралися з єдиного джерела правди, а не з магічних чисел у коді.
+export async function generateGameState(playersList, pack, config) {
+  const bc = await getGameConfig();
   const b = pack.bunker || {};
-  const capacity = Math.max(1, Math.floor(playersList.length / 2));
+  const capacity = Math.max(1, Math.floor(playersList.length / bc.bunkerCapacityDivisor));
   
   const cataclysm = getRandomItem(b.cataclysm, "Невідомий катаклізм");
-  const stayTimeMonths = cataclysm.meta?.stay_time_months || 12; 
+  const stayTimeMonths = cataclysm.meta?.stay_time_months || 12;
   const formattedStayTime = formatStayTime(stayTimeMonths);
   // Скільки хвилин відведено катаклізму на відлік (0/відсутнє — без таймера, таймер просто не відобразиться)
   const cataclysmTimerMinutes = Number(cataclysm.meta?.timer_minutes) || 0;
   
-  const foodMonths = calculateFoodMonths(stayTimeMonths);
-  let foodAndWater = `${formatStayTime(foodMonths)}`;
+  const foodAndWater = buildFoodAndWater(stayTimeMonths, b, bc);
 
-  if (b.food_supply && b.food_supply.length > 0 && Math.random() < 0.4) {
-    const specialFood = getRandomItem(b.food_supply).value;
-    foodAndWater += ` (${specialFood})`;
-  }
-
-  const bunkerSize = `${getSkewedRandomInt(25, 350, 4)} м²`; 
+  const bunkerSize = `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
   
   let bunkerProblem = "Відсутня";
-  if (Math.random() < 0.65) {
+  if (Math.random() < bc.bunkerProblemChance) {
     bunkerProblem = getRandomItem(b.problems, "Відсутня").value;
   }
 
   const shuffledItems = shuffle(b.items);
-  const bunkerItems = shuffledItems.slice(0, getRandomInt(1, 5)).map(i => i.value);
+  const bunkerItems = shuffledItems.slice(0, getRandomInt(bc.bunkerItemsCount.min, bc.bunkerItemsCount.max)).map(i => i.value);
 
   const bunkerState = {
     capacity: capacity,
@@ -106,7 +158,8 @@ export function generateGameState(playersList, pack, config) {
     cataclysm: {
       text: cataclysm.value,
       description: cataclysm.meta.description || "",
-      timer_minutes: cataclysmTimerMinutes
+      timer_minutes: cataclysmTimerMinutes,
+      population: cataclysm.meta.population || "Невідомо" // <--- ДОДАЄМО ЦЕ
     }
   };
 
@@ -142,7 +195,7 @@ export function generateGameState(playersList, pack, config) {
     if (genderItem.meta && genderItem.meta.custom_age) {
       ageVal = genderItem.meta.custom_age;
     }
-    const isChildfree = config.allow_childfree ? (Math.random() > 0.7) : false;
+    const isChildfree = config.allow_childfree ? (Math.random() < bc.childfreeChance) : false;
 
     let bodyTypeVal = "Тілобудова невідома";
     if (c.body_type && c.body_type.length > 0) {
@@ -155,7 +208,7 @@ export function generateGameState(playersList, pack, config) {
     let healthDisease = "Хвороба невідома";
     let healthStage = "Невідома стадія";
 
-    if (Math.random() < 0.20) {
+    if (Math.random() < bc.perfectHealthChance) {
       healthDisease = "Ідеально здоровий";
       healthStage = null; 
     } else {

@@ -1,0 +1,90 @@
+/* ===== Плаваючий таймер (game-timer.js) ===== */
+.game-timer {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 10px 22px;
+  background: var(--panel);
+  border: 2px solid var(--hazard);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
+  text-align: center;
+  pointer-events: none;
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+.game-timer[hidden] { display: none; }
+.game-timer__time {
+  font-family: var(--mono);
+  font-size: 2.2rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .04em;
+  color: var(--text);
+}
+.game-timer--warn { border-color: var(--danger); }
+.game-timer--warn .game-timer__time { color: var(--danger); }
+.game-timer--done { border-color: var(--metal-lt); }
+.game-timer--done .game-timer__time { color: var(--text-mute); }
+.game-timer--paused { border-color: var(--hazard); animation: game-timer-blink 1.4s ease-in-out infinite; }
+.game-timer--paused .game-timer__time { color: var(--hazard); }
+@keyframes game-timer-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+.game-timer__voting[hidden] { display: none; }
+
+/* ===== Таймер катаклізму (cataclysm-timer.js) =====
+   На відміну від .game-timer (таймер обговорень, знизу по центру, нейтральний вигляд), цей —
+   відлік до катастрофи: лівий верхній кут, червонуватий тон, іконка радіації. Джерело —
+   bunker_state.cataclysm_timer_end. z-index узгоджений з рештою плаваючих віджетів (9999). */
+/* Змінюємо блок таймера катаклізму */
+.cataclysm-timer {
+  position: fixed;
+  top: 80px; /* Було 20px, стало 80px (60px хедер + 20px відступ) */
+  left: 20px;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: linear-gradient(180deg, #2a1210, #1a0b0a);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
+  pointer-events: none;
+  margin-top: env(safe-area-inset-top, 0px);
+  margin-left: env(safe-area-inset-left, 0px);
+}
+.cataclysm-timer[hidden] { display: none; }
+.cataclysm-timer__icon {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--danger);
+  filter: drop-shadow(0 0 6px rgba(239, 111, 97, .6));
+  animation: cataclysm-timer-pulse 1.8s ease-in-out infinite;
+}
+.cataclysm-timer__time {
+  font-family: var(--mono);
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .04em;
+  color: var(--danger);
+}
+@keyframes cataclysm-timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+@media (max-width: 520px) {
+  .cataclysm-timer { 
+    top: 72px; /* Було 12px, стало 72px (60px хедер + 12px відступ) */
+    left: 12px; 
+    padding: 8px 14px; 
+    gap: 8px; 
+  }
+  .cataclysm-timer__icon { font-size: 18px; }
+  .cataclysm-timer__time { font-size: 1.35rem; }
+}
