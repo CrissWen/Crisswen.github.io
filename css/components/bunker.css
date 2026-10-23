@@ -9,32 +9,39 @@
 .cataclysm-row {
   display: flex;
   gap: 20px;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   position: relative;
   z-index: 1;
 }
+.cataclysm-main {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 300px;
+}
 .cataclysm-icon {
   font-size: 48px;
   line-height: 1;
-  color: var(--danger); /* Forces text color instead of colorful emoji */
-  font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif; /* Prevents OS from forcing Apple Color Emoji */
+  color: var(--danger);
+  font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;
   width: 84px;
   height: 84px;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-bottom: 4px; /* Optical centering (moves icon up) */
+  padding-bottom: 4px;
   background: var(--bg);
   border: 2px solid var(--danger);
-  border-radius: 50%; /* Circle for emergency look */
+  border-radius: 50%;
   box-shadow: 0 0 15px color-mix(in srgb, var(--danger) 50%, transparent), inset 0 0 10px color-mix(in srgb, var(--danger) 40%, transparent);
   animation: pulse-danger 2s infinite;
 }
 .cataclysm-content {
   flex: 1;
-  min-width: 250px;
 }
 .cataclysm-title {
   font-family: var(--head);
@@ -53,14 +60,44 @@
   opacity: .9;
   line-height: 1.5;
 }
+.cataclysm-pop-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+}
+.cataclysm-pop-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--head);
+  font-size: 16px;
+  color: var(--danger);
+  letter-spacing: 0.15em;
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+.cataclysm-pop-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+.pop-mask {
+  width: 64px;
+  height: 64px;
+  background-color: var(--danger);
+  -webkit-mask: url('../../icons/Population.svg') no-repeat center / contain;
+  mask: url('../../icons/Population.svg') no-repeat center / contain;
+}
 .cataclysm-population {
-  margin: 12px 0 0;
+  margin: 0;
   font-family: var(--mono);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--danger);
   font-weight: bold;
   background: color-mix(in srgb, var(--danger) 15%, transparent);
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   display: inline-block;
   border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);

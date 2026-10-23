@@ -1,3 +1,9 @@
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 export function cataclysm(data) {
   if (!data) {
     return `
@@ -12,7 +18,7 @@ export function cataclysm(data) {
     `;
   }
 
-  // Форматуємо число населення (наприклад, 184220100 -> 184 220 100)
+  // Форматуємо число населення
   let popDisplay = "";
   if (data.population && data.population !== "Невідомо") {
     // Використовуємо toLocaleString для гарного форматування чисел, якщо це число
@@ -20,7 +26,15 @@ export function cataclysm(data) {
       ? Number(data.population).toLocaleString('uk-UA') 
       : data.population;
       
-    popDisplay = `<p class="cataclysm-population">Залишок населення: ${formattedPop}</p>`;
+    popDisplay = `
+      <div class="cataclysm-pop-wrapper">
+        <div class="cataclysm-pop-label">Населення</div>
+        <div class="cataclysm-pop-section">
+          <div class="pop-mask"></div>
+          <p class="cataclysm-population">${esc(formattedPop)}</p>
+        </div>
+      </div>
+    `;
   }
 
   return `
@@ -30,12 +44,14 @@ export function cataclysm(data) {
       </div>
       <div class="block-body">
         <div class="cataclysm-row">
-          <div class="cataclysm-icon">${(data.icon || "☢").replace(/\uFE0F/g, '\uFE0E')}</div>
-          <div class="cataclysm-content">
-            <p class="cataclysm-title">${data.title}</p>
-            <p class="cataclysm-desc">${data.desc}</p>
-            ${popDisplay}
+          <div class="cataclysm-main">
+            <div class="cataclysm-icon">${esc((data.icon || "☢").replace(/\uFE0F/g, '\uFE0E'))}</div>
+            <div class="cataclysm-content">
+              <p class="cataclysm-title">${esc(data.title)}</p>
+              <p class="cataclysm-desc">${esc(data.desc)}</p>
+            </div>
           </div>
+          ${popDisplay}
         </div>
       </div>
     </section>

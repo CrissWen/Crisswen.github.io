@@ -8,7 +8,7 @@
 
 export const gameConfigBase = {
   // Мінімальна кількість гравців у кімнаті, щоб хост міг натиснути «Почати гру»
-  // (кнопка/підказка під нею — js/game-moduls/waiting-room.js)
+  // (кнопка/підказка під нею — js/game-modules/board/waiting-room.js)
   minPlayersToStart: 6,
 
   // Ліміт гравців, поки кімната ще в лобі (гра не почалась). Після старту гри не діє —
@@ -23,7 +23,7 @@ export const gameConfigBase = {
   defaultAgeRange: { min: 18, max: 60 },
 
   // Скільки останніх записів лишається в «Лог подій» (bunker_state.logs). Старіші відкидаються,
-  // щоб запис у базі не розростався (js/utils/event-log.js → pushLog)
+  // щоб запис у базі не розростався (js/utils/log-writer.js → pushLog)
   maxLogEntries: 100,
 
   // Шанс (0..1), що здоров'я гравця одразу згенерується як "Ідеально здоровий" (без хвороби й стадії)

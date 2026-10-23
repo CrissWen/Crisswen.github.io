@@ -3,7 +3,7 @@ import {
   EXTRA_CHARACTERISTIC_TYPES,
   BUNKER_FIELDS,
   HEAL_PERFECT
-} from '../utils/host-actions.js';
+} from '../../utils/host-actions.js';
 
 // Цей модуль відповідає ЛИШЕ за HTML/DOM-вигляд панелі.
 // Уся логіка дій — у utils/host-actions.js, підключення подій — у pages/game.js.

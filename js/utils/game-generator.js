@@ -1,35 +1,5 @@
 import { getGameConfig } from '../config/config-manager.js';
-
-const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-const getSkewedRandomInt = (min, max, skew = 3) => {
-  let rand = Math.pow(Math.random(), skew); 
-  return Math.floor(rand * (max - min + 1)) + min;
-};
-
-const getRandomItem = (arr, fallback = "Немає даних") => {
-  if (!arr || !Array.isArray(arr) || arr.length === 0) {
-    return { value: fallback, meta: {} }; 
-  }
-  return arr[getRandomInt(0, arr.length - 1)];
-};
-
-const shuffle = (array) => {
-  if (!array || !Array.isArray(array)) return [];
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-};
-
-const pickStage = (item, defaultStages) => {
-  if (item.meta && item.meta.stages && item.meta.stages.length > 0) {
-    return getRandomItem(item.meta.stages, "Невідома стадія");
-  }
-  return getRandomItem(defaultStages, "Невідома стадія");
-};
+import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray } from './random.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -57,13 +27,13 @@ const calculateFoodMonths = (requiredMonths, bc) => {
   let foodMonths = 0;
 
   if (roll < fm.shortfallThreshold) {
-    foodMonths = getRandomInt(fm.shortfallRange.min, fm.shortfallRange.max);
+    foodMonths = randInt(fm.shortfallRange.min, fm.shortfallRange.max);
   } else if (roll < fm.partialThreshold) {
-    foodMonths = Math.floor(requiredMonths * (getRandomInt(fm.partialPercentRange.min, fm.partialPercentRange.max) / 100));
+    foodMonths = Math.floor(requiredMonths * (randInt(fm.partialPercentRange.min, fm.partialPercentRange.max) / 100));
   } else if (roll < fm.exactThreshold) {
     foodMonths = requiredMonths;
   } else {
-    foodMonths = Math.floor(requiredMonths * (getRandomInt(fm.surplusPercentRange.min, fm.surplusPercentRange.max) / 100));
+    foodMonths = Math.floor(requiredMonths * (randInt(fm.surplusPercentRange.min, fm.surplusPercentRange.max) / 100));
   }
 
   return Math.max(1, foodMonths);
@@ -72,8 +42,8 @@ const calculateFoodMonths = (requiredMonths, bc) => {
 // Запаси їжі/води: місяці від тривалості перебування + з шансом bc.foodSupplyNoteChance особлива примітка з пулу food_supply
 const buildFoodAndWater = (requiredMonths, bunkerPool, bc) => {
   let result = formatStayTime(calculateFoodMonths(requiredMonths, bc));
-  if (bunkerPool?.food_supply && bunkerPool.food_supply.length > 0 && Math.random() < bc.foodSupplyNoteChance) {
-    result += ` (${getRandomItem(bunkerPool.food_supply).value})`;
+  if (bunkerPool?.food_supply && bunkerPool.food_supply.length > 0 && rollChance(bc.foodSupplyNoteChance)) {
+    result += ` (${pickCard(bunkerPool.food_supply).value})`;
   }
   return result;
 };
@@ -100,7 +70,7 @@ export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerSta
 
   if (poolKey) {
     const pool = b[poolKey];
-    return Array.isArray(pool) && pool.length > 0 ? getRandomItem(pool).value : null;
+    return Array.isArray(pool) && pool.length > 0 ? pickCard(pool).value : null;
   }
 
   const bc = await getGameConfig();
@@ -110,7 +80,7 @@ export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerSta
       return `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
     case 'stay_time': {
       if (!Array.isArray(b.cataclysm) || b.cataclysm.length === 0) return null;
-      const months = Number(getRandomItem(b.cataclysm).meta?.stay_time_months) || 12;
+      const months = Number(pickCard(b.cataclysm).meta?.stay_time_months) || 12;
       return formatStayTime(months);
     }
     case 'food_and_water':
@@ -127,7 +97,7 @@ export async function generateGameState(playersList, pack, config) {
   const b = pack.bunker || {};
   const capacity = Math.max(1, Math.floor(playersList.length / bc.bunkerCapacityDivisor));
   
-  const cataclysm = getRandomItem(b.cataclysm, "Невідомий катаклізм");
+  const cataclysm = pickCard(b.cataclysm, "Невідомий катаклізм");
   const stayTimeMonths = cataclysm.meta?.stay_time_months || 12;
   const formattedStayTime = formatStayTime(stayTimeMonths);
   // Скільки хвилин відведено катаклізму на відлік (0/відсутнє — без таймера, таймер просто не відобразиться)
@@ -138,21 +108,21 @@ export async function generateGameState(playersList, pack, config) {
   const bunkerSize = `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
   
   let bunkerProblem = "Відсутня";
-  if (Math.random() < bc.bunkerProblemChance) {
-    bunkerProblem = getRandomItem(b.problems, "Відсутня").value;
+  if (rollChance(bc.bunkerProblemChance)) {
+    bunkerProblem = pickCard(b.problems, "Відсутня").value;
   }
 
-  const shuffledItems = shuffle(b.items);
-  const bunkerItems = shuffledItems.slice(0, getRandomInt(bc.bunkerItemsCount.min, bc.bunkerItemsCount.max)).map(i => i.value);
+  const shuffledItems = shuffleArray(b.items);
+  const bunkerItems = shuffledItems.slice(0, randInt(bc.bunkerItemsCount.min, bc.bunkerItemsCount.max)).map(i => i.value);
 
   const bunkerState = {
     capacity: capacity,
     size: bunkerSize,
     stay_time: formattedStayTime,
     food_and_water: foodAndWater,
-    location: getRandomItem(b.location, "Локація невідома").value,
-    history: getRandomItem(b.history, "Історія невідома").value,
-    rooms_description: getRandomItem(b.rooms_description, "Кімнати невідомі").value,
+    location: pickCard(b.location, "Локація невідома").value,
+    history: pickCard(b.history, "Історія невідома").value,
+    rooms_description: pickCard(b.rooms_description, "Кімнати невідомі").value,
     problem: bunkerProblem, 
     items: bunkerItems,
     cataclysm: {
@@ -173,46 +143,46 @@ export async function generateGameState(playersList, pack, config) {
   const playersState = {};
 
   const decks = {
-    professions: shuffle(c.profession),
-    hobbies: shuffle(c.hobby),
-    phobias: shuffle(c.phobia),
-    traits: shuffle(c.trait),
-    backpacks: shuffle(c.backpack),
-    large_inventory: shuffle(c.large_inventory),
-    extra_info: shuffle(c.extra_info),
-    abilities: shuffle(c.special_ability)
+    professions: shuffleArray(c.profession),
+    hobbies: shuffleArray(c.hobby),
+    phobias: shuffleArray(c.phobia),
+    traits: shuffleArray(c.trait),
+    backpacks: shuffleArray(c.backpack),
+    large_inventory: shuffleArray(c.large_inventory),
+    extra_info: shuffleArray(c.extra_info),
+    abilities: shuffleArray(c.special_ability)
   };
 
   const drawCard = (deckName, fallbackArray) => {
     if (decks[deckName] && decks[deckName].length > 0) return decks[deckName].pop();
-    return getRandomItem(fallbackArray, "Немає даних"); 
+    return pickCard(fallbackArray, "Немає даних"); 
   };
 
   playersList.forEach(player => {
-    const genderItem = getRandomItem(c.gender, "Стать невідома");
-    let ageVal = getRandomInt(config.age_range.min, config.age_range.max);
+    const genderItem = pickCard(c.gender, "Стать невідома");
+    let ageVal = randInt(config.age_range.min, config.age_range.max);
     
     if (genderItem.meta && genderItem.meta.custom_age) {
       ageVal = genderItem.meta.custom_age;
     }
-    const isChildfree = config.allow_childfree ? (Math.random() < bc.childfreeChance) : false;
+    const isChildfree = config.allow_childfree ? (rollChance(bc.childfreeChance)) : false;
 
     let bodyTypeVal = "Тілобудова невідома";
     if (c.body_type && c.body_type.length > 0) {
-      bodyTypeVal = getRandomItem(c.body_type).value;
+      bodyTypeVal = pickCard(c.body_type).value;
     } else if (config.default_stages && config.default_stages.body_type) {
-      bodyTypeVal = getRandomItem(config.default_stages.body_type);
+      bodyTypeVal = pickFromStrings(config.default_stages.body_type, "Тілобудова невідома");
     }
-    const heightVal = getRandomInt(config.height_range.min, config.height_range.max);
+    const heightVal = randInt(config.height_range.min, config.height_range.max);
 
     let healthDisease = "Хвороба невідома";
     let healthStage = "Невідома стадія";
 
-    if (Math.random() < bc.perfectHealthChance) {
+    if (rollChance(bc.perfectHealthChance)) {
       healthDisease = "Ідеально здоровий";
       healthStage = null; 
     } else {
-      const healthItem = getRandomItem(c.health, "Хвороба невідома");
+      const healthItem = pickCard(c.health, "Хвороба невідома");
       healthDisease = healthItem.value;
       healthStage = pickStage(healthItem, config.default_stages.health);
     }

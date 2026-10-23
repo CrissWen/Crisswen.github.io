@@ -2,6 +2,8 @@
 // тож перемальовування дошки його не зачіпає.
 // Час закінчення береться зі стану кімнати: bunker_state.global_timer_end (timestamp у мс).
 
+import { getGlobalTime } from '../../utils/time-sync.js';
+
 const TIMER_ID = 'game-timer-root';
 const HIDE_AFTER_EXPIRED_MS = 10000; // скільки показувати 00 після завершення
 
@@ -52,7 +54,7 @@ function tick(getBunkerState) {
     return;
   }
 
-  const now = Date.now();
+  const now = getGlobalTime();
   const remaining = Math.ceil((end - now) / 1000);
 
   if (remaining <= -Math.ceil(HIDE_AFTER_EXPIRED_MS / 1000)) {

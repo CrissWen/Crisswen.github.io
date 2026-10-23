@@ -1,3 +1,9 @@
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 export function bunkerInfo(data) {
   if (!data) {
     return `
@@ -13,7 +19,7 @@ export function bunkerInfo(data) {
   }
 
   const featuresHtml = (data.features || [])
-    .map((f) => `<li>${f}</li>`)
+    .map((f) => `<li>${esc(f)}</li>`)
     .join("");
 
   return `
@@ -22,7 +28,7 @@ export function bunkerInfo(data) {
         <h2>Бункер</h2>
       </div>
       <div class="block-body">
-        <p class="block-desc">${data.description}</p>
+        <p class="block-desc">${esc(data.description)}</p>
         
         <div class="bunker-details-row">
           
@@ -39,19 +45,19 @@ export function bunkerInfo(data) {
             <div class="info-grid">
               <div class="info-stat">
                 <div class="k">Площа</div>
-                <div class="v">${data.size}</div>
+                <div class="v">${esc(data.size)}</div>
               </div>
               <div class="info-stat">
                 <div class="k">Час перебування</div>
-                <div class="v">${data.yearsInBunker}</div>
+                <div class="v">${esc(data.yearsInBunker)}</div>
               </div>
               <div class="info-stat">
                 <div class="k">Запасів їжі/води на</div>
-                <div class="v">${data.foodSupply}</div>
+                <div class="v">${esc(data.foodSupply)}</div>
               </div>
               <div class="info-stat">
                 <div class="k">Кількість місць</div>
-                <div class="v">${data.capacity}</div>
+                <div class="v">${esc(data.capacity)}</div>
               </div>
             </div>
           </div>

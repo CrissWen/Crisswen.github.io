@@ -9,11 +9,17 @@
 //   4. Голосування йде, гравець живий і ще не голосував — форма вибору кандидата.
 //   5. Голосування ще не запускалось — секція порожня.
 
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 function candidateTile(id, name) {
   return `
     <label class="vote-tile">
-      <input type="radio" name="vote" value="${id}" class="vote-tile__input">
-      <span class="vote-tile__name">${name}</span>
+      <input type="radio" name="vote" value="${esc(id)}" class="vote-tile__input">
+      <span class="vote-tile__name">${esc(name)}</span>
     </label>
   `;
 }
@@ -37,8 +43,8 @@ function resultsTableHtml(votes, players, aliveCount) {
       const percent = aliveCount > 0 ? Math.round((voterIds.length / aliveCount) * 100) : 0;
       return `
         <tr>
-          <td>${nameOf(players, candidateId)}</td>
-          <td>${voterIds.map(id => nameOf(players, id)).join(', ')}</td>
+          <td>${esc(nameOf(players, candidateId))}</td>
+          <td>${voterIds.map(id => esc(nameOf(players, id))).join(', ')}</td>
           <td>${percent}%</td>
         </tr>
       `;
