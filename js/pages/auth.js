@@ -35,7 +35,7 @@ export function renderAuth() {
 
           <p class="char-hint" id="auth-hint">${HINT_TEXT.login}</p>
 
-          <input type="text" id="username" placeholder="Ім'я гравця" style="${inputStyle}">
+          <input type="text" id="username" placeholder="Ім'я гравця" maxlength="12" style="${inputStyle}">
           <input type="password" id="password" placeholder="Пароль" style="${inputStyle}">
 
           <button id="login-btn" style="padding: 10px; border-radius: 6px; background: var(--ok); color: #000; font-weight: bold; cursor: pointer; border: none;">${BUTTON_TEXT.login}</button>
@@ -101,6 +101,11 @@ export async function initAuth() {
 
     if (!username) {
       errorText.textContent = "Будь ласка, введіть ім'я!";
+      errorText.style.display = 'block';
+      return;
+    }
+    if (username.length > 12) {
+      errorText.textContent = "Ім'я не повинно перевищувати 12 символів!";
       errorText.style.display = 'block';
       return;
     }

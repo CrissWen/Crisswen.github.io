@@ -32,7 +32,17 @@ export async function finishVoting(roomCode) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   if (!bState.voting?.isActive) return;
-  bState.voting = { ...bState.voting, isActive: false };
+
+  const pState = room.players_state || {};
+  let totalVoters = 0;
+  for (const id in pState) {
+    const p = pState[id];
+    if (p && p.is_alive !== false && !p.is_kicked) {
+      totalVoters++;
+    }
+  }
+
+  bState.voting = { ...bState.voting, isActive: false, totalVoters };
   await saveRoom(roomCode, { bunker_state: bState });
 }
 
@@ -96,6 +106,16 @@ export async function toggleKickPlayer(roomCode, playerId) {
     : `Ведучий вигнав гравця ${nameOf(pState, playerId)}`);
 
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+}
+
+export async function kickPlayerFromLobby(roomCode, playerId) {
+  const room = await getRoom(roomCode);
+  const pState = room.players_state || {};
+  if (!playerId || !pState[playerId]) return;
+  
+  delete pState[playerId];
+  
+  await saveRoom(roomCode, { players_state: pState });
 }
 
 export async function restartGame(roomCode) {

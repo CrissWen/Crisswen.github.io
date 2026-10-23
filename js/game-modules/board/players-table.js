@@ -1,6 +1,6 @@
 function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  return String(str ?? '').replace(/[&<>"]/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
   ));
 }
 
@@ -126,6 +126,10 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost) {
             <tbody>${rows}</tbody>
           </table>
         </div>
+        <p class="survival-test-hint">
+          Щоб дізнатися, чи вижив ваш бункер після закінчення гри, ви можете пройти тест
+          <a class="survival-test-link" href="survival-test.html" target="_blank" rel="noopener noreferrer">"Оцінка виживання бункера"</a>
+        </p>
       </div>
     </section>
   `;

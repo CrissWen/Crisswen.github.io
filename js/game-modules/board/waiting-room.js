@@ -6,7 +6,7 @@ function esc(str) {
 
 // minPlayers / maxPlayers — з конфігу балансу (config-manager.js: minPlayersToStart / maxPlayersInLobby), викликач — game.js.
 // Тут немає зашитих чисел: інакше локальне перевизначення в game-config.local.js не змінювало б кнопку «Почати гру» і підказку.
-export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPlayers }) {
+export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPlayers, myId }) {
   const pState = playersState || {};
   const playersCount = Object.keys(pState).length;
 
@@ -18,8 +18,13 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
   // Повне посилання на основі поточного домену: origin + pathname (без старого hash), далі власний #/lobby?join=
   const inviteLink = `${window.location.origin}${window.location.pathname}#/lobby?join=${encodeURIComponent(roomCode || '')}`;
 
-  const playersListHtml = Object.values(pState)
-    .map(p => `<li style="padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius-sm); margin-bottom: 8px;">${esc(p.name)}</li>`)
+  const playersListHtml = Object.entries(pState)
+    .map(([playerId, p]) => `
+      <li class="lobby-player-item" style="padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span>${esc(p.name)}</span>
+        ${isHost && playerId !== myId ? `<button data-lobby-kick="${playerId}" class="lobby-kick-btn" title="Вигнати з лобі" style="background: transparent; border: none; color: var(--hazard); cursor: pointer; font-size: 16px; padding: 0 4px;">✕</button>` : ''}
+      </li>
+    `)
     .join('');
 
   return `
