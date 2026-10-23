@@ -4,10 +4,15 @@ import { bunkerInfo } from '../game-moduls/bunker-info.js';
 import { playerCharacteristics } from '../game-moduls/player-characteristics.js';
 import { playersTable } from '../game-moduls/players-table.js';
 import { specialAbilitiesTable } from '../game-moduls/special-abilities-table.js';
+import { mapPlayerState } from '../utils/player-parser.js';
+import { waitingRoom } from '../game-moduls/waiting-room.js';
+import { generateGameState } from '../utils/game-generator.js';
 
 let currentRoomCode = null;
 let realtimeSubscription = null;
 let currentUserId = null;
+let currentUserName = null;
+let localRoomState = null;
 
 export function renderGame() {
   return `
@@ -33,20 +38,38 @@ export async function initGame() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Ви не авторизовані");
     currentUserId = user.id;
+    currentUserName = user.user_metadata?.username || "Гравець";
 
-    const { data: room, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('room_code', currentRoomCode)
-      .single();
-
+    const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
     if (error || !room) throw new Error("Кімнату не знайдено");
 
-    updateGameBoard(room, boardEl);
+    localRoomState = room;
+
+    const isGameStarted = Object.keys(room.bunker_state || {}).length > 0;
+    const isPlayerInRoom = room.players_state && room.players_state[currentUserId];
+
+    
+    if (isGameStarted && !isPlayerInRoom) {
+      statusEl.textContent = "Гра вже почалася. Приєднання нових гравців закрито.";
+      statusEl.style.color = 'var(--danger)';
+      return;
+    }
+
+    
+    if (!isGameStarted && !isPlayerInRoom) {
+      const updatedPlayersState = room.players_state || {};
+      
+      updatedPlayersState[currentUserId] = { name: currentUserName };
+      
+      await supabase.from('rooms').update({ players_state: updatedPlayersState }).eq('room_code', currentRoomCode);
+      room.players_state = updatedPlayersState;
+    }
+
+    updateGameBoard(localRoomState, boardEl);
     statusEl.style.display = 'none';
     boardEl.style.display = 'block';
 
-    subscribeToRoomUpdates(boardEl);
+    subscribeToRoomUpdates();
     setupActionListeners();
 
   } catch (err) {
@@ -55,55 +78,108 @@ export async function initGame() {
   }
 }
 
-// Конвертує складний JSON гравця у плаский список для UI
-function mapPlayerState(rawPlayer) {
-  const chars = [];
-  const abilities = [];
-  
-  const add = (label, val, rev, path) => chars.push({ label, value: val, open: rev, dbPath: path });
+function updateGameBoard(roomData, container) {
+  const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
+  const isHost = roomData.host_id === currentUserId;
 
-  if (rawPlayer.gender) add("Стать", rawPlayer.gender.value, rawPlayer.gender.is_revealed, 'gender.is_revealed');
-  if (rawPlayer.age) add("Вік", rawPlayer.age.value + ' р.', rawPlayer.age.is_revealed, 'age.is_revealed');
-  if (rawPlayer.childfree) add("Чайлдфрі", rawPlayer.childfree.value ? "Так" : "Ні", rawPlayer.childfree.is_revealed, 'childfree.is_revealed');
-  
-  if (rawPlayer.body) {
-    add("Тілобудова", `${rawPlayer.body.type}, ${rawPlayer.body.height_cm} см`, rawPlayer.body.is_revealed, 'body.is_revealed');
-  }
-
-  if (rawPlayer.professions) {
-    rawPlayer.professions.forEach((p, i) => add(`Професія ${i+1}`, `${p.title} (${p.stage})`, p.is_revealed, `professions.${i}.is_revealed`));
-  }
-  if (rawPlayer.health) {
-    rawPlayer.health.forEach((h, i) => add(`Здоров'я ${i+1}`, `${h.disease} (${h.severity})`, h.is_revealed, `health.${i}.is_revealed`));
-  }
-  if (rawPlayer.hobbies) {
-    rawPlayer.hobbies.forEach((h, i) => add(`Хобі ${i+1}`, `${h.title} (${h.stage})`, h.is_revealed, `hobbies.${i}.is_revealed`));
-  }
-  if (rawPlayer.traits) {
-    rawPlayer.traits.forEach((t, i) => add(`Риса ${i+1}`, t.value, t.is_revealed, `traits.${i}.is_revealed`));
-  }
-  if (rawPlayer.phobias) {
-    rawPlayer.phobias.forEach((p, i) => add(`Фобія ${i+1}`, p.value, p.is_revealed, `phobias.${i}.is_revealed`));
-  }
-  if (rawPlayer.backpack) {
-    rawPlayer.backpack.forEach((b, i) => add(`Багаж ${i+1}`, b.item, b.is_revealed, `backpack.${i}.is_revealed`));
-  }
-  
-  if (rawPlayer.special_abilities) {
-    rawPlayer.special_abilities.forEach((a, i) => {
-      abilities.push({ label: `Спец можливість №${i+1}`, value: a.text, open: a.is_revealed, dbPath: `special_abilities.${i}.is_revealed` });
+  if (!isGameStarted) {
+    container.innerHTML = waitingRoom({
+      roomCode: currentRoomCode,
+      playersState: roomData.players_state,
+      isHost: isHost
     });
+    
+    if (isHost) {
+      document.getElementById('start-game-btn')?.addEventListener('click', handleStartGame);
+    }
+  } else {
+    renderActiveGame(roomData, container);
   }
-
-  return { name: rawPlayer.name, characteristics: chars, abilities: abilities };
 }
 
-function updateGameBoard(roomData, container) {
+async function handleStartGame(e) {
+  const btn = e.target;
+  btn.disabled = true;
+  btn.textContent = "Генерація...";
+
+  try {
+    
+    const { data: room } = await supabase.from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
+    const pState = room.players_state || {};
+    const playersList = Object.entries(pState).map(([id, p]) => ({ id, name: p.name }));
+
+    
+    const { data: pack, error: packError } = await supabase
+      .from('packs')
+      .select('id, config')
+      .eq('title', 'default')
+      .single();
+
+    if (packError || !pack) throw new Error("Не вдалося завантажити конфігурацію пака з бази");
+
+    const { data: cardsRows, error: cardsError } = await supabase
+      .from('pack_cards')
+      .select('pool_type, category, value, meta')
+      .eq('pack_id', pack.id); 
+
+    if (cardsError || !cardsRows || cardsRows.length === 0) {
+      throw new Error("Не знайдено жодної картки для цього пака");
+    }
+
+    
+    const cardsData = {
+      bunker: {},
+      character: {}
+    };
+
+    cardsRows.forEach(row => {
+      const pool = row.pool_type; 
+      const cat = row.category;   
+      
+      if (!cardsData[pool][cat]) {
+        cardsData[pool][cat] = [];
+      }
+      
+      cardsData[pool][cat].push({
+        value: row.value,
+        meta: row.meta || {}
+      });
+    });
+
+    const { bunkerState, playersState } = generateGameState(playersList, cardsData, pack.config);
+    
+    await supabase.from('rooms').update({ 
+      bunker_state: bunkerState,
+      players_state: playersState 
+    }).eq('room_code', currentRoomCode);
+
+  } catch (err) {
+    console.error("Помилка старту:", err);
+    alert(err.message);
+    btn.disabled = false;
+    btn.textContent = "Почати гру";
+  }
+}
+
+
+function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
   
+const descriptionParts = [
+    bState.history,
+    bState.rooms_description,
+    bState.location,
+    (bState.problem && bState.problem !== "Відсутня") ? bState.problem : null
+  ]
+  .filter(Boolean)
+  .map(text => {
+    const trimmed = text.trim();
+    return trimmed.match(/[.!?]$/) ? trimmed : trimmed + ".";
+  });
+
   const bunkerData = bState.capacity ? {
-    description: `${bState.history}. ${bState.rooms_description}. Розташування: ${bState.location}`,
+    description: descriptionParts.join(" "),
     size: bState.size,
     yearsInBunker: bState.stay_time,
     foodSupply: bState.food_and_water,
@@ -114,7 +190,7 @@ function updateGameBoard(roomData, container) {
   const cataclysmData = bState.cataclysm ? {
     icon: "☢",
     title: bState.cataclysm.text,
-    desc: `Час до удару: ${bState.cataclysm.timer_minutes} хв.`
+    desc: bState.cataclysm.description
   } : null;
 
   const parsedPlayers = [];
@@ -122,6 +198,9 @@ function updateGameBoard(roomData, container) {
   const allCharLabels = new Set();
 
   for (const [id, rawPlayer] of Object.entries(pState)) {
+    
+    if (!rawPlayer.gender) continue; 
+
     const flatPlayer = mapPlayerState(rawPlayer);
     flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
     
@@ -144,7 +223,9 @@ function updateGameBoard(roomData, container) {
     return { name: p.name, cells: cells };
   });
 
-  const myData = pState[currentUserId] ? mapPlayerState(pState[currentUserId]) : { name: "Глядач", characteristics: [], abilities: [] };
+  const myData = (pState[currentUserId] && pState[currentUserId].gender) 
+    ? mapPlayerState(pState[currentUserId]) 
+    : { name: pState[currentUserId]?.name || "Глядач", characteristics: [], abilities: [] };
 
   const order = [
     catastrophe(cataclysmData), 
@@ -157,11 +238,92 @@ function updateGameBoard(roomData, container) {
   container.innerHTML = order.join("");
 }
 
-function subscribeToRoomUpdates(container) {
+function subscribeToRoomUpdates() {
   if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
+  
   realtimeSubscription = supabase
     .channel(`room-${currentRoomCode}`)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `room_code=eq.${currentRoomCode}` }, (payload) => {
-      updateGameBoard(payload.new, container);
+    .on('postgres_changes', { 
+      event: 'UPDATE', 
+      schema: 'public', 
+      table: 'rooms', 
+      filter: `room_code=eq.${currentRoomCode}` 
+    }, (payload) => {
+      localRoomState = payload.new; 
+      
+      const boardEl = document.getElementById('game-board');
+      if (boardEl) {
+        updateGameBoard(localRoomState, boardEl);
+      }
     }).subscribe();
+}
+
+function setupActionListeners() {
+  document.removeEventListener("click", handleGlobalClick);
+  document.addEventListener("click", handleGlobalClick);
+}
+
+let isUpdatingLock = false;
+
+async function handleGlobalClick(e) {
+  if (isUpdatingLock) return;
+
+  const lockBtn = e.target.closest(".char-lock");
+  if (!lockBtn) return;
+
+  const item = lockBtn.closest(".char-item");
+  if (!item) return;
+
+  const dbKey = item.dataset.dbkey;
+  const idxStr = item.dataset.idx;
+  if (!dbKey) return;
+
+  isUpdatingLock = true;
+
+  try {
+    if (!localRoomState || !localRoomState.players_state[currentUserId]) return;
+    
+    const state = localRoomState.players_state;
+    const targetRef = state[currentUserId][dbKey];
+
+    if (Array.isArray(targetRef)) {
+      if (idxStr !== "" && idxStr !== undefined) {
+        const i = parseInt(idxStr);
+        targetRef[i].is_revealed = !targetRef[i].is_revealed;
+      } else {
+        const newState = !targetRef[0].is_revealed;
+        targetRef.forEach(x => x.is_revealed = newState);
+      }
+    } else {
+      targetRef.is_revealed = !targetRef.is_revealed;
+      
+      if (dbKey === 'gender') {
+        const newState = targetRef.is_revealed;
+        if (state[currentUserId].age) state[currentUserId].age.is_revealed = newState;
+        if (state[currentUserId].is_childfree) state[currentUserId].is_childfree.is_revealed = newState;
+        if (state[currentUserId].childfree) state[currentUserId].childfree.is_revealed = newState;
+      }
+    }
+
+    updateGameBoard(localRoomState, document.getElementById('game-board'));
+
+    await supabase.rpc('update_single_player_state', {
+      room_code_val: currentRoomCode,
+      user_id_val: currentUserId,
+      player_data: state[currentUserId]
+    });
+    
+  } catch (err) {
+    console.error("Помилка оновлення:", err);
+  } finally {
+    isUpdatingLock = false; 
+  }
+}
+
+export function cleanupGame() {
+  if (realtimeSubscription) {
+    supabase.removeChannel(realtimeSubscription);
+    realtimeSubscription = null;
+  }
+  document.removeEventListener("click", handleGlobalClick);
 }

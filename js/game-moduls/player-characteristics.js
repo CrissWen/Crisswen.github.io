@@ -24,12 +24,12 @@ export function playerCharacteristics(data) {
   const ownerName = data.ownerName || "Гравець";
 
 const renderItem = (c, i, extraClass) => `
-      <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-label="${c.label}" data-path="${c.dbPath}">
+      <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-dbkey="${c.dbKey || ''}" data-idx="${c.index !== undefined ? c.index : ''}">
         <div class="char-text">
           <span class="char-label">${c.label}</span>
           <span class="char-value">${c.value}</span>
         </div>
-        <button type="button" class="char-lock" aria-label="Показати або приховати характеристику">
+        <button type="button" class="char-lock" aria-label="Показати або приховати">
           <span class="lock-icon lock-closed" aria-hidden="true">🔒</span>
           <span class="lock-icon lock-open" aria-hidden="true">🔓</span>
         </button>
