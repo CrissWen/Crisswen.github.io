@@ -1,5 +1,7 @@
 import { getGameConfig } from '../config/config-manager.js';
-import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray } from './random.js';
+import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray, generateHeight } from './random.js';
+import { getGlobalTime } from '../services/server-time.js';
+import { rollExperience, getMonthStages, serializeScale } from './experience.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -64,13 +66,27 @@ const parseStayTimeMonths = (text) => {
 // Асинхронна — читає поточний конфіг балансу (config-manager.js) для розміру бункера (size) й розрахунку їжі.
 const BUNKER_POOL_CATEGORY = { history: 'history', rooms_description: 'rooms_description', location: 'location', problem: 'problems' };
 
-export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerState = {}) {
+export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerState = {}, fallbackBunkerPool = null) {
   const b = bunkerPool || {};
+  const fb = fallbackBunkerPool || {};
   const poolKey = BUNKER_POOL_CATEGORY[field];
 
   if (poolKey) {
-    const pool = b[poolKey];
-    return Array.isArray(pool) && pool.length > 0 ? pickCard(pool).value : null;
+    const primary = Array.isArray(b[poolKey]) ? b[poolKey] : [];
+    const base = Array.isArray(fb[poolKey]) ? fb[poolKey] : [];
+    if (primary.length === 0 && base.length === 0) return null;
+
+    const currentVal = String(currentBunkerState[field] ?? '').trim().toLowerCase();
+    if (currentVal) {
+      const availPrimary = primary.filter(c => String(c.value ?? '').trim().toLowerCase() !== currentVal);
+      if (availPrimary.length > 0) return pickCard(availPrimary).value;
+
+      const availBase = base.filter(c => String(c.value ?? '').trim().toLowerCase() !== currentVal);
+      if (availBase.length > 0) return pickCard(availBase).value;
+    }
+
+    const list = primary.length > 0 ? primary : base;
+    return list.length > 0 ? pickCard(list).value : null;
   }
 
   const bc = await getGameConfig();
@@ -79,12 +95,18 @@ export async function randomBunkerFieldValue(field, bunkerPool, currentBunkerSta
     case 'size':
       return `${getSkewedRandomInt(bc.bunkerSize.min, bc.bunkerSize.max, bc.bunkerSize.skew)} м²`;
     case 'stay_time': {
-      if (!Array.isArray(b.cataclysm) || b.cataclysm.length === 0) return null;
-      const months = Number(pickCard(b.cataclysm).meta?.stay_time_months) || 12;
+      const catList = Array.isArray(b.cataclysm) && b.cataclysm.length > 0 ? b.cataclysm : (Array.isArray(fb.cataclysm) ? fb.cataclysm : []);
+      if (catList.length === 0) return null;
+      const months = Number(pickCard(catList).meta?.stay_time_months) || 12;
       return formatStayTime(months);
     }
-    case 'food_and_water':
-      return buildFoodAndWater(parseStayTimeMonths(currentBunkerState.stay_time), b, bc);
+    case 'food_and_water': {
+      const mergedForFood = {
+        ...b,
+        food_supply: (Array.isArray(b.food_supply) && b.food_supply.length > 0) ? b.food_supply : fb.food_supply
+      };
+      return buildFoodAndWater(parseStayTimeMonths(currentBunkerState.stay_time), mergedForFood, bc);
+    }
     default:
       return null;
   }
@@ -136,7 +158,25 @@ export async function generateGameState(playersList, pack, config) {
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Якщо timer_minutes відсутній/0 — поле не створюємо, таймер не відображається.
   if (cataclysmTimerMinutes > 0) {
-    bunkerState.cataclysm_timer_end = Date.now() + cataclysmTimerMinutes * 60 * 1000;
+    bunkerState.cataclysm_timer_end = getGlobalTime() + cataclysmTimerMinutes * 60 * 1000;
+  }
+
+  // Шкала стадій пака для підказок таблиці (tooltip): зберігаємо в кімнаті, щоб всі гравці бачили пороги саме цього пака.
+  // Типи без шкали за місяцями в об'єкт не потрапляють (підказка не показується).
+  const stageScales = {};
+  ['profession', 'hobby'].forEach(type => {
+    const scale = getMonthStages(type, config);
+    if (scale.length) stageScales[type] = serializeScale(scale);
+  });
+  if (Object.keys(stageScales).length) bunkerState.stage_scales = stageScales;
+
+  // Порядок гравців у таблиці — випадковий на кожен старт. Хто коли доєднався до кімнати або який його id — порядок ключів players_state
+  // у JSONB не зберігається, тому потрібен явний список (читає board-view-model.js).
+  bunkerState.players_order = shuffleArray(playersList.map(player => player.id));
+
+  // Вікові категорії пака: зберігаємо в bunkerState, якщо вони визначені в конфігу пака
+  if (Array.isArray(config?.age_categories) && config.age_categories.length > 0) {
+    bunkerState.age_categories = config.age_categories;
   }
 
   const c = pack.character || {};
@@ -161,20 +201,39 @@ export async function generateGameState(playersList, pack, config) {
 
   playersList.forEach(player => {
     const genderItem = pickCard(c.gender, "Стать невідома");
-    let ageVal = randInt(config.age_range.min, config.age_range.max);
-    
-    if (genderItem.meta && genderItem.meta.custom_age) {
-      ageVal = genderItem.meta.custom_age;
+    const genderMeta = genderItem.meta || {};
+
+    let ageVal;
+    if (genderMeta.has_no_age === true || genderMeta.custom_age_mode === 'no_age') {
+      ageVal = genderMeta.custom_age || "Без віку";
+    } else if (genderMeta.custom_age && !genderMeta.range && !genderMeta.age_range && !genderMeta.age_min && !genderMeta.age_max) {
+      ageVal = genderMeta.custom_age;
+    } else {
+      const min = genderMeta.range?.min ?? genderMeta.age_range?.min ?? genderMeta.age_min ?? config.age_range?.min ?? 16;
+      const max = genderMeta.range?.max ?? genderMeta.age_range?.max ?? genderMeta.age_max ?? config.age_range?.max ?? 85;
+      ageVal = randInt(Math.min(min, max), Math.max(min, max));
+    }
+
+    const genderObj = { value: genderItem.value, is_revealed: false };
+    if (genderMeta.has_no_age === true || genderMeta.custom_age_mode === 'no_age') {
+      genderObj.has_no_age = true;
+    }
+    if (Array.isArray(genderMeta.stages) && genderMeta.stages.length > 0) {
+      genderObj.custom_stages = genderMeta.stages;
     }
     const isChildfree = config.allow_childfree ? (rollChance(bc.childfreeChance)) : false;
 
     let bodyTypeVal = "Тілобудова невідома";
+    let bodyMeta = {};
     if (c.body_type && c.body_type.length > 0) {
-      bodyTypeVal = pickCard(c.body_type).value;
+      const bodyCard = pickCard(c.body_type);
+      bodyTypeVal = bodyCard.value;
+      bodyMeta = bodyCard.meta || {};
     } else if (config.default_stages && config.default_stages.body_type) {
       bodyTypeVal = pickFromStrings(config.default_stages.body_type, "Тілобудова невідома");
     }
-    const heightVal = randInt(config.height_range.min, config.height_range.max);
+    // Зріст враховує meta статури (has_no_height / exact_height / height_min-max / range), інакше — глобальний діапазон паку
+    const heightVal = generateHeight(bodyMeta, config.height_range);
 
     let healthDisease = "Хвороба невідома";
     let healthStage = "Невідома стадія";
@@ -185,7 +244,9 @@ export async function generateGameState(playersList, pack, config) {
     } else {
       const healthItem = drawCard('healths', c.health);
       healthDisease = healthItem.value;
-      healthStage = pickStage(healthItem, config.default_stages.health);
+      // Стадії хвороби: спочатку meta.stages картки, інакше default_stages.health (рядки або об'єкти — pickStage бере лише name, up_to_months не чіпає).
+      // ?. — пак без default_stages не валить старт гри (буде «Невідома стадія»)
+      healthStage = pickStage(healthItem, config.default_stages?.health);
     }
 
     const profItem = drawCard('professions', c.profession);
@@ -197,7 +258,7 @@ export async function generateGameState(playersList, pack, config) {
       name: player.name,
       is_alive: true,
       
-      gender: { value: genderItem.value, is_revealed: false },
+      gender: genderObj,
       age: { value: ageVal, is_revealed: false },
       childfree: { value: isChildfree, is_revealed: false },
       
@@ -207,7 +268,8 @@ export async function generateGameState(playersList, pack, config) {
         { 
           title: profItem.value, 
           ability: profItem.meta.ability || "", 
-          stage: pickStage(profItem, config.default_stages.profession),
+          // Стадія стажу: місяці генеруються за віком, назва береться з порогів up_to_months (js/utils/experience.js)
+          ...rollExperience('profession', profItem, config, ageVal, bc.experienceStartAge),
           is_revealed: false 
         }
       ],
@@ -217,7 +279,7 @@ export async function generateGameState(playersList, pack, config) {
       ],
       
       hobbies: [
-        { title: hobbyItem.value, stage: pickStage(hobbyItem, config.default_stages.hobby), is_revealed: false }
+        { title: hobbyItem.value, description: hobbyItem.meta?.description || "", ability: hobbyItem.meta?.ability || "", ...rollExperience('hobby', hobbyItem, config, ageVal, bc.experienceStartAge), is_revealed: false }
       ],
       
       traits: [

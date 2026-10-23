@@ -305,11 +305,16 @@ export function refreshHostPanel(root, { players, currentUserId, capacity, canUn
   if (timerSlot) timerSlot.innerHTML = timerControlsHtml(timer || {});
 }
 
-// stages = { profession: [...], health: [...], hobby: [...] } з getStageOptions()
+// stages = { profession: [...], health: [...], hobby: [...] } з getStageOptions(player)
+// root — уся панель або один акордеон (.hp-acc-body): список стадій індивідуальний для вибраного в ньому гравця.
+// Якщо набір стадій не змінився — DOM не чіпаємо (щоб не закривати відкритий dropdown при кожному оновленні кімнати).
 export function fillStageOptions(root, stages) {
   if (!root) return;
   root.querySelectorAll('select[data-stages]').forEach(sel => {
     const list = stages[sel.dataset.stages] || [];
+    const sig = JSON.stringify(list);
+    if (sel.dataset.stagesSig === sig) return;
+    sel.dataset.stagesSig = sig;
     const prev = sel.value;
     sel.querySelectorAll('option:not([data-static])').forEach(o => o.remove());
     sel.insertAdjacentHTML('beforeend', optionsHtml(list.map(s => ({ value: s, label: s }))));

@@ -1,8 +1,4 @@
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"]/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
-  ));
-}
+import { esc, unescapeApos } from '../../utils/security.js';
 
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.
@@ -16,14 +12,13 @@ export function specialAbilitiesTable (players) {
 
   const cellHtml = (val) => {
     if (!val) return '<span class="cell-empty"></span>';
-    const cleanVal = String(val).replace(/&amp;#39;|&amp;apos;/g, "'").replace(/&#39;|&apos;/g, "'");
-    return `<span class="cell-value">${esc(cleanVal)}</span>`;
+    return `<span class="cell-value">${esc(unescapeApos(val))}</span>`;
   };
 
   const rows = players
     .map((p) => {
       const rowClass = p.isKicked ? 'kicked-player' : '';
-      const cleanName = String(p.name ?? '').replace(/&amp;#39;|&amp;apos;/g, "'").replace(/&#39;|&apos;/g, "'");
+      const cleanName = unescapeApos(p.name);
       const firstLetter = cleanName ? cleanName[0] : '';
       return `
         <tr data-player="${esc(cleanName)}" class="${rowClass}">
@@ -56,4 +51,3 @@ export function specialAbilitiesTable (players) {
     </section>
   `;
 };
-

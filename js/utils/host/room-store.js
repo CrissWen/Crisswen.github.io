@@ -4,7 +4,7 @@ import { pushLog } from '../log-writer.js';
 // ===== Доступ до кімнати в БД + знімок для «Скасувати» =====
 // lastSnapshot — стан модуля: живе лише тут, інші модулі працюють через snapshot() / clearSnapshot().
 
-let lastSnapshot = null; // { room_code, players_state, bunker_state, host_id }
+let lastSnapshot = null; // { room_code, players_state, bunker_state } — host_id свідомо не зберігаємо: «Скасувати» не змінює ведучого
 
 export async function getRoom(roomCode) {
   const { data, error } = await supabase.from('rooms').select('*').eq('room_code', roomCode).single();
@@ -23,8 +23,7 @@ export function snapshot(room) {
   lastSnapshot = {
     room_code: room.room_code,
     players_state: JSON.parse(JSON.stringify(room.players_state || {})),
-    bunker_state: JSON.parse(JSON.stringify(room.bunker_state || {})),
-    host_id: room.host_id
+    bunker_state: JSON.parse(JSON.stringify(room.bunker_state || {}))
   };
 }
 
@@ -42,7 +41,7 @@ export async function undoLastAction(roomCode) {
     throw new Error('Немає дії для скасування');
   }
   const room = await getRoom(roomCode);
-  const { players_state: restoredPState, bunker_state, host_id } = lastSnapshot;
+  const { players_state: restoredPState, bunker_state } = lastSnapshot;
 
   // Переносимо стан відкритості карток та використання здібностей з поточного стану,
   // щоб "Скасувати" не закривало те, що гравці встигли відкрити або використати
@@ -76,6 +75,7 @@ export async function undoLastAction(roomCode) {
   if (Array.isArray(current.logs)) restored.logs = current.logs;
   if (current.latest_dice) restored.latest_dice = current.latest_dice;
   pushLog(restored, 'Ведучий скасував попередню дію');
-  await saveRoom(roomCode, { players_state: restoredPState, bunker_state: restored, host_id });
+  // host_id в патчі немає навмисно: скасування не повертає колишнього ведучого, навіть якщо застарілий знімок якось уцілів
+  await saveRoom(roomCode, { players_state: restoredPState, bunker_state: restored });
   lastSnapshot = null;
 }

@@ -9,7 +9,7 @@
     padding: 10px;
     background: linear-gradient(180deg, var(--metal-lt), var(--metal));
     border: 1px solid var(--metal-lt);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
     color: var(--text);
     cursor: default;

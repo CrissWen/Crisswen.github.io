@@ -1,6 +1,6 @@
 import { supabase } from '../services/supabase.js';
 
-const inputStyle = "padding: 10px; border-radius: 6px; border: 1px solid var(--metal); background: var(--panel-2); color: var(--text);";
+const inputStyle = "padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text);";
 
 const HINT_TEXT = {
   login: "Введіть ім'я та пароль, щоб увійти в гру.",
@@ -22,7 +22,7 @@ export function renderAuth() {
 
         <!-- Контейнер А: форма входу/реєстрації. Видно, коли сесії немає (стандартний сценарій). -->
         <div id="auth-form-container" style="display: flex; flex-direction: column; gap: 14px;">
-          <div id="auth-mode-switch" style="display: flex; border: 1px solid var(--metal); border-radius: 6px; overflow: hidden;">
+          <div id="auth-mode-switch" style="display: flex; border: 1px solid var(--metal); border-radius: var(--radius-sm); overflow: hidden;">
             <button type="button" class="auth-mode-tab is-active" data-mode="login"
               style="flex: 1; padding: 10px; border: none; cursor: pointer; font-weight: 600; background: var(--panel-2); color: var(--text);">
               Увійти
@@ -38,7 +38,7 @@ export function renderAuth() {
           <input type="text" id="username" placeholder="Ім'я гравця" maxlength="12" style="${inputStyle}">
           <input type="password" id="password" placeholder="Пароль" style="${inputStyle}">
 
-          <button id="login-btn" style="padding: 10px; border-radius: 6px; background: var(--ok); color: #000; font-weight: bold; cursor: pointer; border: none;">${BUTTON_TEXT.login}</button>
+          <button id="login-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--ok); color: #000; font-weight: bold; cursor: pointer; border: none;">${BUTTON_TEXT.login}</button>
           <p id="auth-error" style="color: var(--danger); font-size: 13px; display: none;"></p>
         </div>
 
@@ -46,8 +46,8 @@ export function renderAuth() {
              якщо supabase.auth.getSession() поверне активну сесію (наприклад, гравець зайшов сюди через кнопку "Профіль" у хедері). -->
         <div id="auth-profile-container" style="display: none; flex-direction: column; gap: 14px;">
           <p id="auth-profile-text" style="margin: 0; font-size: 15px; color: var(--text);"></p>
-          <button id="profile-lobby-btn" style="padding: 10px; border-radius: 6px; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none;">Повернутися в лобі</button>
-          <button id="profile-logout-btn" style="padding: 10px; border-radius: 6px; background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none;">Вийти з акаунта</button>
+          <button id="profile-lobby-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none;">Повернутися в лобі</button>
+          <button id="profile-logout-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none;">Вийти з акаунта</button>
         </div>
 
       </div>

@@ -1,9 +1,10 @@
 import { BUNKER_FIELDS } from './constants.js';
-import { pickCard } from '../random.js';
+import { pickUniqueFromPools } from './characteristics.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';
 import { randomBunkerFieldValue } from '../game-generator.js';
+import { getGlobalTime } from '../../services/server-time.js';
 
 // ===== Дії з бункером =====
 
@@ -33,8 +34,8 @@ export async function changeBunker(roomCode, field, customValue) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   if (!value) {
-    const pools = await loadPools();
-    value = await randomBunkerFieldValue(field, pools.bunker, bState);
+    const pools = await loadPools(room.selected_pack_id);
+    value = await randomBunkerFieldValue(field, pools.bunker, bState, pools.fallback?.bunker);
     if (!value) throw new Error('Для цього параметра немає варіантів у пулі карток — введіть значення вручну');
   }
   snapshot(room); // після всіх перевірок, щоб невдала спроба не затирала попередній знімок для "Скасувати"
@@ -86,19 +87,27 @@ export async function changeBunkerItems(roomCode, action, value) {
 export async function changeCataclysm(roomCode) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools();
+  const pools = await loadPools(room.selected_pack_id);
   const bState = room.bunker_state || {};
-  const card = pickCard(pools.bunker.cataclysm, 'Невідомий катаклізм');
+  const currentCatText = String(bState.cataclysm?.text ?? '').trim().toLowerCase();
+  const usedSet = currentCatText ? new Set([currentCatText]) : null;
+  const card = pickUniqueFromPools(
+    pools.bunker?.cataclysm,
+    pools.fallback?.bunker?.cataclysm,
+    usedSet,
+    'Невідомий катаклізм'
+  );
   // Скільки хвилин відведено новому катаклізму на відлік (0/відсутнє — без таймера)
   const timerMinutes = Number(card.meta?.timer_minutes) || 0;
   bState.cataclysm = {
     text: card.value,
     description: card.meta?.description || '',
-    timer_minutes: timerMinutes
+    timer_minutes: timerMinutes,
+    population: card.meta?.population || 'Невідомо' // так само, як у generateGameState: інакше після зміни катаклізму населення зникло б з дошки
   };
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.
-  bState.cataclysm_timer_end = timerMinutes > 0 ? Date.now() + timerMinutes * 60 * 1000 : null;
+  bState.cataclysm_timer_end = timerMinutes > 0 ? getGlobalTime() + timerMinutes * 60 * 1000 : null;
   setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
   await saveRoom(roomCode, { bunker_state: bState });
 }

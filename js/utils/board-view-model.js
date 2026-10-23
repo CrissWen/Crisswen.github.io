@@ -1,5 +1,15 @@
 import { mapPlayerState } from './player-parser.js';
 
+// Гравці у порядку, випадково визначеному при старті гри (generateGameState → bunker_state.players_order).
+// Гравці, яких у списку немає (стара гра без players_order або хтось доєднався пізніше), йдуть в кінці у звичному порядку.
+function orderedPlayerEntries(pState, bState) {
+  const entries = Object.entries(pState);
+  const order = Array.isArray(bState?.players_order) ? bState.players_order : null;
+  if (!order) return entries;
+  const position = new Map(order.map((id, index) => [id, index]));
+  return entries.sort(([a], [b]) => (position.get(a) ?? order.length) - (position.get(b) ?? order.length));
+}
+
 // Перетворює стан кімнати (players_state + bunker_state) на готові дані для блоків дошки.
 // Чиста функція: без DOM і без звернень до БД, тож її легко перевіряти окремо від рендеру (game.js -> renderActiveGame).
 export function buildBoardViewModel(roomData, currentUserId) {
@@ -41,12 +51,12 @@ export function buildBoardViewModel(roomData, currentUserId) {
   const parsedAbilities = [];
   const allCharLabels = new Set();
 
-  for (const [id, rawPlayer] of Object.entries(pState)) {
+  for (const [id, rawPlayer] of orderedPlayerEntries(pState, bState)) {
     if (!rawPlayer.gender) continue;
 
     // Помилка парсингу одного гравця не повинна ламати весь стіл
     try {
-      const flatPlayer = mapPlayerState(rawPlayer);
+      const flatPlayer = mapPlayerState(rawPlayer, bState.stage_scales, bState.age_categories);
       flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
 
       parsedAbilities.push({
@@ -80,14 +90,14 @@ export function buildBoardViewModel(roomData, currentUserId) {
   let myData = { name: pState[currentUserId]?.name || 'Глядач', characteristics: [], abilities: [] };
   try {
     if (pState[currentUserId] && pState[currentUserId].gender) {
-      myData = mapPlayerState(pState[currentUserId]);
+      myData = mapPlayerState(pState[currentUserId], bState.stage_scales, bState.age_categories);
     }
   } catch (err) {
     console.error('Не вдалося розібрати власні характеристики:', err);
   }
 
   // ===== Кандидати для голосування =====
-  const votingPlayers = Object.entries(pState).map(([id, p]) => ({
+  const votingPlayers = orderedPlayerEntries(pState, bState).map(([id, p]) => ({
     id,
     name: p.name || 'Гравець',
     // Вигнаний (is_kicked) не голосує і не може бути кандидатом — так само, як і вибулий (is_alive === false)

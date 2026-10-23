@@ -4,7 +4,7 @@ import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { resolveIds, setHostEvent, nameOf, labelOf, targetPhrase } from './common.js';
 import {
-  drawCharacteristic, withReveal, rerollGenderAndAge, applyGenderCard, buildCustomCard,
+  drawCharacteristic, collectUsedValues, withReveal, rerollGenderAndAge, applyGenderCard, buildCustomCard,
   isEmptyChar, realCards, slotRevealed, emptyMarker
 } from './characteristics.js';
 
@@ -15,9 +15,10 @@ import {
 export async function changeCharacteristic(roomCode, targetId, charType) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools();
+  const pools = await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
+  const usedValues = collectUsedValues(pState, charType);
 
   resolveIds(pState, targetId).forEach(id => {
     if (!pState[id]) return;
@@ -26,7 +27,11 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
       rerollGenderAndAge(pState[id], pools);
       return;
     }
-    pState[id][charType] = withReveal(pState[id][charType], drawCharacteristic(charType, pools));
+    const currentValue = charType === 'body' ? pState[id].body?.type : null;
+    pState[id][charType] = withReveal(
+      pState[id][charType],
+      drawCharacteristic(charType, pools, { age: pState[id].age?.value, usedValues, currentValue })
+    );
   });
 
   setHostEvent(bState, `Ведучий змінив характеристику «${labelOf(charType)}» ${targetPhrase(pState, targetId)}`);
@@ -78,7 +83,7 @@ export async function changeBodyType(roomCode, targetId, bodyType) {
   if (!bodyType) throw new Error('Оберіть статуру');
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools(); // потрібна лише для діапазону зросту, коли статуру треба відновити після видалення
+  const pools = await loadPools(room.selected_pack_id); // потрібна лише для діапазону зросту, коли статуру треба відновити після видалення
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -111,7 +116,7 @@ export async function changeBodyType(roomCode, targetId, bodyType) {
 export async function invertGender(roomCode, targetId) {
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = await loadPools();
+  const pools = await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
@@ -201,9 +206,10 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
   const custom = String(customText || '').trim();
   const room = await getRoom(roomCode);
   snapshot(room);
-  const pools = custom ? null : await loadPools();
+  const pools = custom ? null : await loadPools(room.selected_pack_id);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
+  const usedValues = custom ? null : collectUsedValues(pState, charCategory);
 
   resolveIds(pState, targetId).forEach(id => {
     const p = pState[id];
@@ -212,7 +218,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
     const existing = realCards(p[charCategory]);
     // Нова картка успадковує стан відкриття групи, щоб не "випадати" з відображення
     const revealed = existing.length ? !!existing[0].is_revealed : false;
-    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools);
+    const fresh = custom ? [buildCustomCard(charCategory, custom)] : drawCharacteristic(charCategory, pools, { age: p.age?.value, usedValues });
     p[charCategory] = [...existing, ...fresh.map(x => ({ ...x, is_revealed: revealed }))];
   });
 
@@ -310,11 +316,11 @@ export async function curePhobia(roomCode, targetId) {
 // Задати конкретну стать (з пулу пака) і перегенерувати вік під неї. Вже маючих цю стать пропускаємо.
 export async function setGender(roomCode, targetId, genderValue) {
   if (!genderValue) throw new Error('Оберіть стать');
-  const pools = await loadPools();
+  const room = await getRoom(roomCode);
+  const pools = await loadPools(room.selected_pack_id);
   const card = (pools.character.gender || []).find(c => c.value === genderValue);
   if (!card) throw new Error('Такої статі немає в паку');
 
-  const room = await getRoom(roomCode);
   const pState = room.players_state || {};
   const bState = room.bunker_state || {};
 
