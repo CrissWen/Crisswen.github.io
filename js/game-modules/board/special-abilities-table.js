@@ -1,4 +1,5 @@
 import { esc, unescapeApos } from '../../utils/security.js';
+import { avatarImgHtml } from '../../utils/avatar.js';
 
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.
@@ -22,7 +23,7 @@ export function specialAbilitiesTable (players) {
       const firstLetter = cleanName ? cleanName[0] : '';
       return `
         <tr data-player="${esc(cleanName)}" class="${rowClass}">
-          <td class="player-cell"><span class="avatar">${esc(firstLetter)}</span>${esc(cleanName)}</td>
+          <td class="player-cell"><span class="avatar">${esc(firstLetter)}${avatarImgHtml(p.id)}</span>${esc(cleanName)}</td>
           <td data-col-label="Спец можливість №1">${cellHtml(p.ability1)}</td>
           <td data-col-label="Спец можливість №2">${cellHtml(p.ability2)}</td>
         </tr>`;

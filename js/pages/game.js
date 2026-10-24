@@ -26,6 +26,7 @@ import { startGame } from '../utils/start-game.js';
 import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.js';
 import { syncServerTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
+import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -141,6 +142,9 @@ export async function initGame() {
     if (room.status !== 'closed') setLastRoom(currentUserId, currentRoomCode);
     else clearLastRoom(currentUserId);
 
+    // Аватарки гравців кімнати — одним запитом ДО першого рендеру, щоб літери не підмінялися фото вже на екрані
+    await fetchAvatars(Object.keys(room.players_state || {}));
+
     updateGameBoard(localRoomState, boardEl);
     statusEl.style.display = 'none';
     boardEl.style.display = 'block';
@@ -160,7 +164,18 @@ export async function initGame() {
   }
 }
 
+// Хтось новий зайшов у кімнату — докачуємо його аватарку (раз на гравця) і перемальовуємо дошку, коли вона з'явиться.
+// Невдалий запит нічого не кешує і не дає перемальовування, тож зациклитись це не може.
+function prefetchAvatars(roomData) {
+  const ids = Object.keys(roomData.players_state || {});
+  if (!ids.length || ids.every(hasCachedAvatar)) return;
+  fetchAvatars(ids).then(loaded => {
+    if (loaded > 0) ctx.refreshBoard();
+  });
+}
+
 function updateGameBoard(roomData, container) {
+  prefetchAvatars(roomData);
   const isGameStarted = Object.keys(roomData.bunker_state || {}).length > 0;
   const isHost = isHostOf(roomData);
   // Закрита кімната — кожен, навіть колишній гравець/ведучий, примусово глядач (режим лише для читання)

@@ -1,5 +1,7 @@
 import { supabase } from '../services/supabase.js';
 import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
+import { fetchAvatars, getCachedAvatar, uploadAvatar, removeAvatar } from '../services/avatar-service.js';
+import { setAvatarEl } from '../utils/avatar.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
@@ -17,14 +19,23 @@ export function renderProfile() {
       </div>
       <div class="block-body" style="display: flex; flex-direction: column; gap: 16px;">
         
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="profile-avatar-row">
           <!-- Inline-стилі змінено на outline: transparent фон, border, колір тексту -->
-        <div id="profile-page-avatar" style="width: 48px; height: 48px; border-radius: 50%; background: transparent; border: 2px solid var(--text-mute); color: var(--text-mute); font-family: var(--mono); display: flex; align-items: center; justify-content: center; font-size: 24px; padding-bottom: 5px;">
-            ?
+        <!-- Велика аватарка = кнопка: при наведенні з'являється рамка з олівцем, клік відкриває вибір файла -->
+        <button type="button" id="avatar-change-btn" class="profile-avatar-edit" aria-label="Змінити аватарку" title="Змінити аватарку">
+          <span id="profile-page-avatar" class="profile-avatar">?</span>
+          <span class="profile-avatar-overlay" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </span>
+        </button>
+        <div class="profile-avatar-actions">
+          <button type="button" id="avatar-remove-btn" class="avatar-action avatar-action--danger" style="display: none;">Видалити</button>
+          <input type="file" id="avatar-file-input" accept="image/*" hidden>
         </div>
           <div>
             <p style="margin: 0; font-size: 13px; color: var(--text-mute);">Ім'я гравця</p>
             <p id="profile-page-name" style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text);">Завантаження...</p>
+            <p id="avatar-status" role="status" aria-live="polite" style="margin: 6px 0 0; font-size: 12px; min-height: 16px; color: var(--text-mute);"></p>
           </div>
         </div>
 
@@ -74,10 +85,69 @@ export async function initProfile() {
     avatarEl.textContent = firstLetter;
 
     if (/^[gjpqyуфщц]/i.test(firstLetter)) {
-        avatarEl.style.paddingBottom = '5px'; // Тут зсув трохи більший, бо аватарка 48px
+        avatarEl.style.paddingBottom = '9px'; // Тут зсув більший, бо аватарка велика (96px)
     } else {
         avatarEl.style.paddingBottom = '0';
     }
+
+    // ===== Аватарка: вибір файла → стиснення → Storage → users.avatar_url (див. services/avatar-service.js) =====
+    const userId = session.user.id;
+    const fileInput = document.getElementById('avatar-file-input');
+    const changeBtn = document.getElementById('avatar-change-btn');
+    const removeBtn = document.getElementById('avatar-remove-btn');
+    const avatarStatus = document.getElementById('avatar-status');
+    const headerAvatarEl = document.getElementById('header-user-avatar');
+
+    const paintAvatar = (url) => {
+        setAvatarEl(avatarEl, firstLetter, url);
+        setAvatarEl(headerAvatarEl, firstLetter, url);
+        removeBtn.style.display = url ? '' : 'none';
+    };
+    const setAvatarStatus = (text, isError = false) => {
+        avatarStatus.textContent = text;
+        avatarStatus.style.color = isError ? 'var(--danger)' : 'var(--text-mute)';
+    };
+    const setAvatarBusy = (busy) => {
+        changeBtn.disabled = busy;
+        removeBtn.disabled = busy;
+    };
+
+    await fetchAvatars([userId]);
+    paintAvatar(getCachedAvatar(userId));
+
+    changeBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        fileInput.value = ''; // щоб повторний вибір того самого файла теж спрацював
+        if (!file) return;
+
+        setAvatarBusy(true);
+        setAvatarStatus('Завантаження...');
+        try {
+            const url = await uploadAvatar(userId, file);
+            paintAvatar(url);
+            setAvatarStatus('Аватарку оновлено');
+        } catch (err) {
+            setAvatarStatus(err.message || 'Не вдалося змінити аватарку', true);
+        } finally {
+            setAvatarBusy(false);
+        }
+    });
+
+    removeBtn.addEventListener('click', async () => {
+        setAvatarBusy(true);
+        setAvatarStatus('');
+        try {
+            await removeAvatar(userId);
+            paintAvatar(null);
+            setAvatarStatus('Аватарку видалено');
+        } catch (err) {
+            setAvatarStatus(err.message || 'Не вдалося видалити аватарку', true);
+        } finally {
+            setAvatarBusy(false);
+        }
+    });
 
     logoutBtn.addEventListener('mouseover', () => logoutBtn.style.filter = 'brightness(1.1)');
     logoutBtn.addEventListener('mouseout', () => logoutBtn.style.filter = 'none');

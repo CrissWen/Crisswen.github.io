@@ -60,6 +60,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
       flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
 
       parsedAbilities.push({
+        id,
         name: flatPlayer.name,
         ability1: flatPlayer.abilities[0]?.open ? flatPlayer.abilities[0].value : null,
         ability2: flatPlayer.abilities[1]?.open ? flatPlayer.abilities[1].value : null,

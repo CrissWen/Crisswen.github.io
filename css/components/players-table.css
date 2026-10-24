@@ -111,8 +111,8 @@ table.bunker-table tbody td:first-child {
 }
 
 table.bunker-table td.player-cell .avatar {
-  display: inline-flex; width: 22px; height: 22px; border: 1px solid var(--metal-lt);
-  align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px;
+  display: inline-flex; width: 28px; height: 28px; border: 1px solid var(--metal-lt);
+  align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px;
   margin-right: 6px; color: var(--text-mute); vertical-align: middle; border-radius: 50%;
 }
 

@@ -1,5 +1,6 @@
 import { describeScale } from '../../utils/experience.js';
 import { esc, unescapeApos, renderSafeNodes } from '../../utils/security.js';
+import { avatarImgHtml } from '../../utils/avatar.js';
 
 // Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
 function renderSafeTooltip(popup, rawTooltip) {
@@ -80,7 +81,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
           <td class="player-cell">
             <div class="player-info-wrapper">
               <span class="player-num">${index + 1}</span>
-              <span class="avatar" style="${avatarPadding}">${esc(firstLetter)}</span>
+              <span class="avatar" style="${avatarPadding}">${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
               <div class="player-name-wrapper">
                 <div class="player-nickname">${esc(cleanName)}</div>
                 ${kickToggle(p)}

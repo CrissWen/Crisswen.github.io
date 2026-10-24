@@ -1,0 +1,169 @@
+/* ===== Аватарки (фото поверх літери) =====
+   Кольори — лише зі змінних теми, тож усе працює в усіх темах без окремих перевизначень. */
+
+/* Контейнери, куди js/utils/avatar.js кладе <img>: фото має накривати весь круг */
+.header-user-avatar,
+#profile-page-avatar,
+table.bunker-table td.player-cell .avatar {
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+  background: var(--panel-2, var(--panel));
+}
+
+/* ===== Профіль: велика аватарка зліва, нік справа, «Видалити» під аватаркою ===== */
+.profile-avatar-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 20px;
+  row-gap: 8px;
+  align-items: center;
+}
+.profile-avatar-actions {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: center;
+  min-height: 18px; /* місце зарезервоване, щоб блок не «стрибав», коли кнопка з'являється/зникає */
+}
+.profile-avatar-row > div:last-child {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+/* Сама аватарка — кнопка без власного вигляду */
+.profile-avatar-edit {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--text-mute);
+  background: transparent;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 44px;
+  line-height: 1;
+  padding-bottom: 5px;
+}
+
+/* Рамка з олівцем при наведенні або фокусі з клавіатури */
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  color: var(--text);
+  opacity: 0;
+  transition: opacity .15s ease;
+  pointer-events: none;
+}
+.profile-avatar-overlay svg {
+  width: 30px;
+  height: 30px;
+}
+.profile-avatar-edit:hover .profile-avatar-overlay,
+.profile-avatar-edit:focus-visible .profile-avatar-overlay {
+  opacity: 1;
+}
+.profile-avatar-edit:disabled {
+  cursor: default;
+  opacity: .6;
+}
+
+/* На тач-пристроях наведення немає — лишається маленький олівець у кутку, щоб було видно, що аватарку можна змінити */
+@media (hover: none) {
+  .profile-avatar-overlay {
+    opacity: 1;
+    background: none;
+    border: none;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+  .profile-avatar-overlay svg {
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 50%;
+    border: 1px solid var(--metal-lt);
+    background: var(--panel-2, var(--panel));
+  }
+}
+
+/* Текстова дія без рамок: колір з палітри теми, підкреслення при наведенні */
+.avatar-action {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color .15s ease, opacity .15s ease;
+}
+.avatar-action:hover:not(:disabled),
+.avatar-action:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.avatar-action:disabled {
+  opacity: .45;
+  cursor: default;
+}
+.avatar-action--danger {
+  color: var(--danger);
+}
+
+/* Самостійний круглий бейдж (кімната очікування, голосування) */
+.avatar-badge {
+  --avatar-size: 28px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  margin-right: 8px;
+  border: 1px solid var(--metal-lt);
+  border-radius: 50%;
+  overflow: hidden;
+  vertical-align: middle;
+  font-family: var(--mono);
+  line-height: 1;
+  color: var(--text-mute);
+  background: transparent;
+}
