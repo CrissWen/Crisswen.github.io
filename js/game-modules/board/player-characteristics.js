@@ -5,6 +5,8 @@
 // Спец можливості показані окремим підблоком нижче основних характеристик,
 // їх завжди рівно 2.
 
+import { isBlockCollapsed } from './board-ui-state.js';
+
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
@@ -28,8 +30,10 @@ export function playerCharacteristics(data) {
   };
 
   const ownerName = data.ownerName || "Гравець";
+  const blockId = 'block-player-characteristics';
+  const collapsed = isBlockCollapsed(blockId);
 
-const renderItem = (c, i, extraClass) => `
+  const renderItem = (c, i, extraClass) => `
       <div class="char-item${c.open ? " open" : ""}${extraClass ? " " + extraClass : ""}" data-dbkey="${esc(c.dbKey || '')}" data-idx="${c.index !== undefined ? esc(c.index) : ''}">
         <div class="char-text">
           <span class="char-label">${esc(c.label)}</span>
@@ -46,11 +50,12 @@ const renderItem = (c, i, extraClass) => `
   const abilityItems = data.abilities.map((c, i) => renderItem(c, i, "ability-item")).join("");
 
   return `
-    <section class="block" id="block-player-characteristics" data-owner="${esc(ownerName)}">
-      <div class="block-head">
+    <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}" data-owner="${esc(ownerName)}">
+      <button type="button" class="block-head block-head--collapsible" data-block-toggle="${blockId}" aria-expanded="${!collapsed}" aria-controls="${blockId}-body">
         <h2>Твої характеристики</h2>
-      </div>
-      <div class="block-body">
+        <span class="block-toggle-arrow${collapsed ? ' is-collapsed' : ''}" aria-hidden="true">▼</span>
+      </button>
+      <div class="block-body" id="${blockId}-body">
         <div class="char-list" data-group="characteristics">${charItems}</div>
 
         <div class="abilities-block">
@@ -60,4 +65,4 @@ const renderItem = (c, i, extraClass) => `
       </div>
     </section>
   `;
-};
+}

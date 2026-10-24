@@ -1,3 +1,5 @@
+import { isBlockCollapsed } from './board-ui-state.js';
+
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
@@ -5,13 +7,20 @@ function esc(str) {
 }
 
 export function cataclysm(data) {
+  const blockId = 'block-cataclysm';
+  const collapsed = isBlockCollapsed(blockId);
+  const headHtml = `
+    <button type="button" class="block-head block-head--collapsible" data-block-toggle="${blockId}" aria-expanded="${!collapsed}" aria-controls="${blockId}-body">
+      <h2>Катаклізм</h2>
+      <span class="block-toggle-arrow${collapsed ? ' is-collapsed' : ''}" aria-hidden="true">▼</span>
+    </button>
+  `;
+
   if (!data) {
     return `
-      <section class="block" id="block-cataclysm">
-        <div class="block-head">
-          <h2>Катаклізм</h2>
-        </div>
-        <div class="block-body">
+      <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
+        ${headHtml}
+        <div class="block-body" id="${blockId}-body">
           <p class="cataclysm-desc" style="text-align: center; color: var(--text-mute);">Очікування генерації катаклізму...</p>
         </div>
       </section>
@@ -38,11 +47,9 @@ export function cataclysm(data) {
   }
 
   return `
-    <section class="block" id="block-cataclysm">
-      <div class="block-head">
-        <h2>Катаклізм</h2>
-      </div>
-      <div class="block-body">
+    <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
+      ${headHtml}
+      <div class="block-body" id="${blockId}-body">
         <div class="cataclysm-row">
           <div class="cataclysm-main">
             <div class="cataclysm-icon">${esc((data.icon || "☢").replace(/\uFE0F/g, '\uFE0E'))}</div>

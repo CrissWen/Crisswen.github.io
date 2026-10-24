@@ -1,3 +1,5 @@
+import { isBlockCollapsed } from './board-ui-state.js';
+
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
@@ -5,13 +7,20 @@ function esc(str) {
 }
 
 export function bunkerInfo(data) {
+  const blockId = 'block-bunker-info';
+  const collapsed = isBlockCollapsed(blockId);
+  const headHtml = `
+    <button type="button" class="block-head block-head--collapsible" data-block-toggle="${blockId}" aria-expanded="${!collapsed}" aria-controls="${blockId}-body">
+      <h2>Бункер</h2>
+      <span class="block-toggle-arrow${collapsed ? ' is-collapsed' : ''}" aria-hidden="true">▼</span>
+    </button>
+  `;
+
   if (!data) {
     return `
-      <section class="block" id="block-bunker-info">
-        <div class="block-head">
-          <h2>Бункер</h2>
-        </div>
-        <div class="block-body">
+      <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
+        ${headHtml}
+        <div class="block-body" id="${blockId}-body">
           <p class="block-desc" style="text-align: center; color: var(--text-mute);">Очікування генерації бункера...</p>
         </div>
       </section>
@@ -23,11 +32,9 @@ export function bunkerInfo(data) {
     .join("");
 
   return `
-    <section class="block" id="block-bunker-info">
-      <div class="block-head">
-        <h2>Бункер</h2>
-      </div>
-      <div class="block-body">
+    <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
+      ${headHtml}
+      <div class="block-body" id="${blockId}-body">
         <p class="block-desc">${esc(data.description)}</p>
         
         <div class="bunker-details-row">

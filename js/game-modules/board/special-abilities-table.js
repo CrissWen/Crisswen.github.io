@@ -1,15 +1,19 @@
 import { esc, unescapeApos } from '../../utils/security.js';
 import { avatarImgHtml } from '../../utils/avatar.js';
+import { isBlockCollapsed } from './board-ui-state.js';
 
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.
-export function specialAbilitiesTable (players) {
+export function specialAbilitiesTable(players) {
   players = players || [
     { name: "Олена",  ability1: "Подвійний голос на голосуванні", ability2: null },
     { name: "Максим", ability1: null, ability2: null },
     { name: "Ірина",  ability1: "Блокування власного вигнання", ability2: "Обмін карткою з іншим гравцем" },
     { name: "Богдан", ability1: "Погляд у колоду дій", ability2: null }
   ];
+
+  const blockId = 'block-special-abilities';
+  const collapsed = isBlockCollapsed(blockId);
 
   const cellHtml = (val) => {
     if (!val) return '<span class="cell-empty"></span>';
@@ -31,13 +35,14 @@ export function specialAbilitiesTable (players) {
     .join("");
 
   return `
-    <section class="block" id="block-special-abilities">
-      <div class="block-head">
-        <h2>Спец можливості</h2>
-      </div>
-      <div class="block-body">
-        <div class="table-scroll">
-          <table class="bunker-table">
+    <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
+      <button type="button" class="block-head block-head--collapsible" data-block-toggle="${blockId}" aria-expanded="${!collapsed}" aria-controls="${blockId}-body">
+        <h2 id="special-abilities-heading">Спец можливості</h2>
+        <span class="block-toggle-arrow${collapsed ? ' is-collapsed' : ''}" aria-hidden="true">▼</span>
+      </button>
+      <div class="block-body special-abilities-container" id="${blockId}-body">
+        <div class="table-scroll" tabindex="0" role="region" aria-labelledby="special-abilities-heading">
+          <table class="bunker-table special-abilities-table">
             <thead>
               <tr>
                 <th>Гравець</th>
@@ -51,4 +56,4 @@ export function specialAbilitiesTable (players) {
       </div>
     </section>
   `;
-};
+}

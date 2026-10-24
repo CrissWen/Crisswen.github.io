@@ -78,7 +78,7 @@ function infoIcon(sections) {
     .filter(s => s.text)
     .map(s => `<b>${s.title}</b><br>${safeEsc(safeEsc(s.text))}`)
     .join('<br>');
-  return html ? ` <span class="info-icon" data-tooltip="${html}">i</span>` : '';
+  return html ? ` <span class="info-icon" data-tooltip="${html}" tabindex="0" role="button" aria-label="Підказка">i</span>` : '';
 }
 
 // stageScales (необов'язково) — bunker_state.stage_scales: з ним тултіп професії показує ще й проміжок стадії гравця.

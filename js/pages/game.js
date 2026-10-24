@@ -2,10 +2,17 @@ import { supabase } from '../services/supabase.js';
 import { cataclysm } from '../game-modules/board/cataclysm.js';
 import { bunkerInfo } from '../game-modules/board/bunker-info.js';
 import { playerCharacteristics } from '../game-modules/board/player-characteristics.js';
-import { playersTable } from '../game-modules/board/players-table.js';
+import { playersTable, hideGlobalTooltip } from '../game-modules/board/players-table.js';
 import { specialAbilitiesTable } from '../game-modules/board/special-abilities-table.js';
 import { votingSection, captureVoteSelection, restoreVoteSelection } from '../game-modules/board/voting.js';
 import { waitingRoom } from '../game-modules/board/waiting-room.js';
+import {
+  toggleBlockCollapsed,
+  setPlayersViewMode,
+  togglePlayerCard,
+  toggleAllPlayerCards,
+  resetBoardUiState
+} from '../game-modules/board/board-ui-state.js';
 import { mountGameTimer, unmountGameTimer } from '../game-modules/timers/game-timer.js';
 import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer } from '../game-modules/timers/cataclysm-timer.js';
 import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
@@ -43,6 +50,11 @@ let pendingDiceLogId = null; // id запису в лозі про кидок, �
 let pendingDiceLogTimer = null;
 let renderSkippedForPackSelect = false; // оновлення кімнати очікування пропущено, бо ведучий тримає у фокусі список паків
 
+// Згортання верхньої навігаційної панелі під час гри (особливо важливо на телефонах)
+let lastScrollY = 0;
+let headerScrollListening = false;
+let headerManuallyCollapsed = false;
+
 const ctx = {
   getRoomCode: () => currentRoomCode,
   getUserId: () => currentUserId,
@@ -54,6 +66,62 @@ const ctx = {
     if (boardEl && localRoomState) updateGameBoard(localRoomState, boardEl);
   }
 };
+
+function setHeaderCollapsed(collapsed) {
+  document.body.classList.toggle('is-header-collapsed', collapsed);
+  const tab = document.getElementById('header-collapse-tab');
+  if (tab) {
+    tab.setAttribute('aria-expanded', String(!collapsed));
+    tab.title = collapsed ? 'Показати верхню панель' : 'Згорнути верхню панель';
+    tab.innerHTML = collapsed ? '<span>Меню ▼</span>' : '<span>▲</span>';
+  }
+}
+
+function handleGameScroll() {
+  if (!document.body.classList.contains('is-in-game')) return;
+  const isCompactViewport = window.innerWidth <= 900 || window.innerHeight <= 520;
+  if (!isCompactViewport) return;
+
+  const y = window.scrollY || 0;
+  const delta = y - lastScrollY;
+  lastScrollY = y;
+
+  if (y > 48 && delta > 8) {
+    setHeaderCollapsed(true);
+  } else if (y <= 14 && !headerManuallyCollapsed) {
+    setHeaderCollapsed(false);
+  }
+}
+
+function mountHeaderCollapseTab() {
+  document.body.classList.add('is-in-game');
+  if (!document.getElementById('header-collapse-tab')) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'header-collapse-tab';
+    btn.className = 'header-collapse-tab';
+    btn.dataset.headerCollapseToggle = 'true';
+    btn.setAttribute('aria-expanded', 'true');
+    btn.title = 'Згорнути верхню панель';
+    btn.innerHTML = '<span>▲</span>';
+    document.body.appendChild(btn);
+  }
+  if (!headerScrollListening) {
+    lastScrollY = window.scrollY || 0;
+    window.addEventListener('scroll', handleGameScroll, { passive: true });
+    headerScrollListening = true;
+  }
+}
+
+function unmountHeaderCollapseTab() {
+  if (headerScrollListening) {
+    window.removeEventListener('scroll', handleGameScroll);
+    headerScrollListening = false;
+  }
+  headerManuallyCollapsed = false;
+  document.body.classList.remove('is-in-game', 'is-header-collapsed');
+  document.getElementById('header-collapse-tab')?.remove();
+}
 
 // Закрита кімната — режим лише для читання для будь-кого (навіть колишнього хоста/гравця): host_id ігнорується, панель ведучого не рендериться.
 function isHostOf(roomData) {
@@ -149,7 +217,7 @@ export async function initGame() {
     statusEl.style.display = 'none';
     boardEl.style.display = 'block';
 
-    // Гравець зайшов (зокрема кнопкою «Повернутися» з лобі) у кімнату, де гра вже йде — просимо повернути телефон горизонтально
+    // Гравець зайшов (зокрема кнопкою «Повернутися» з лобі) у кімнату, де гра вже йде — пропонуємо повернути телефон горизонтально або продовжити вертикально
     if (isGameStarted && room.status !== 'closed') showOrientationPrompt();
 
     subscribeToRoomUpdates();
@@ -185,6 +253,7 @@ function updateGameBoard(roomData, container) {
   syncCataclysm(roomData.bunker_state, roomData.status);
 
   if (!isGameStarted) {
+    unmountHeaderCollapseTab();
     // Ведучий саме обирає пак у розкритому списку: не перемальовуємо кімнату, щоб список не закрився посеред вибору.
     // Стан кімнати вже оновлено, а перемалювання відбудеться, щойно список втратить фокус (handleGlobalFocusOut).
     if (isHost && document.activeElement?.id === 'wr-pack-select') {
@@ -211,6 +280,7 @@ function updateGameBoard(roomData, container) {
       document.getElementById('start-game-btn')?.addEventListener('click', handleStartGame);
     }
   } else {
+    mountHeaderCollapseTab();
     renderActiveGame(roomData, container);
   }
 }
@@ -308,7 +378,7 @@ function handleRoomUpdate(patch) {
     return;
   }
 
-  // Гра щойно почалася (характеристики роздано) — просимо повернути телефон горизонтально
+  // Гра щойно почалася (характеристики роздано) — пропонуємо повернути телефон горизонтально або продовжити вертикально
   if (!wasGameStarted && isGameStartedNow) showOrientationPrompt();
 
   // Нова подія від ведучого (крадіжка, зміна характеристики тощо) — показуємо всім гравцям тост по-центру екрана.
@@ -410,6 +480,44 @@ async function handleKickToggle(btn) {
 
 // Диспетчер кліків: лише визначає, кому належить клік, і віддає контролеру
 async function handleGlobalClick(e) {
+  if (e.target.closest('[data-header-collapse-toggle]')) {
+    const nextCollapsed = !document.body.classList.contains('is-header-collapsed');
+    headerManuallyCollapsed = nextCollapsed;
+    setHeaderCollapsed(nextCollapsed);
+    return;
+  }
+
+  const blockToggle = e.target.closest('[data-block-toggle]');
+  if (blockToggle) {
+    if (window.innerWidth <= 920 || window.innerHeight <= 520) {
+      toggleBlockCollapsed(blockToggle.dataset.blockToggle);
+    }
+    return;
+  }
+
+  const viewBtn = e.target.closest('[data-players-view]');
+  if (viewBtn) {
+    setPlayersViewMode(viewBtn.dataset.playersView);
+    return;
+  }
+
+  if (e.target.closest('[data-players-expand-all]')) {
+    toggleAllPlayerCards();
+    return;
+  }
+
+  const kickBtn = e.target.closest('[data-kick-id]');
+  if (kickBtn) {
+    await handleKickToggle(kickBtn);
+    return;
+  }
+
+  const cardToggle = e.target.closest('[data-player-card-toggle]');
+  if (cardToggle && !e.target.closest('.info-icon')) {
+    togglePlayerCard(cardToggle.dataset.playerCardToggle, cardToggle.closest('.player-acc-card'));
+    return;
+  }
+
   if (e.target.closest('[data-log-toggle]')) {
     toggleEventLog();
     return;
@@ -424,12 +532,6 @@ async function handleGlobalClick(e) {
   const voteBtn = e.target.closest('[data-vote-submit]');
   if (voteBtn && !voteBtn.disabled) {
     await handleVoteSubmit(voteBtn, ctx);
-    return;
-  }
-
-  const kickBtn = e.target.closest('[data-kick-id]');
-  if (kickBtn) {
-    await handleKickToggle(kickBtn);
     return;
   }
 
@@ -457,6 +559,9 @@ async function handleGlobalClick(e) {
 export function cleanupGame() {
   isSpectator = false;
   hideOrientationPrompt();
+  hideGlobalTooltip();
+  unmountHeaderCollapseTab();
+  resetBoardUiState();
   document.getElementById('spectator-badge')?.classList.add('is-hidden');
   removeHostPanel();
   HostActions.clearSnapshot(); // знімок «Скасувати» живе в пам'яті модуля: без цього після виходу й повернення в ту саму кімнату він би лишився

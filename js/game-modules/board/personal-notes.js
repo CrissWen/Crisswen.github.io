@@ -3,6 +3,8 @@
 // тож після перезавантаження сторінки зникає. Змінна потрібна тому, що дошка перемальовується через innerHTML
 // на кожне оновлення кімнати (Realtime) — без неї текст у textarea щоразу стирався б.
 
+import { isBlockCollapsed } from './board-ui-state.js';
+
 let notesText = '';
 let focusState = null; // { start, end, scrollTop } — щоб набір тексту не переривався перемальовуванням
 
@@ -15,12 +17,15 @@ function esc(str) {
 const getTextarea = () => document.getElementById('personal-notes-input');
 
 export function personalNotes() {
+  const blockId = 'block-personal-notes';
+  const collapsed = isBlockCollapsed(blockId);
   return `
-    <section class="block personal-notes" id="block-personal-notes">
-      <div class="block-head">
+    <section class="block personal-notes${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
+      <button type="button" class="block-head block-head--collapsible" data-block-toggle="${blockId}" aria-expanded="${!collapsed}" aria-controls="${blockId}-body">
         <h2>Особисті замітки</h2>
-      </div>
-      <div class="block-body">
+        <span class="block-toggle-arrow${collapsed ? ' is-collapsed' : ''}" aria-hidden="true">▼</span>
+      </button>
+      <div class="block-body" id="${blockId}-body">
         <p class="personal-notes__warning">Увага: після перезавантаження сайту дані зітруться!</p>
         <textarea id="personal-notes-input" class="personal-notes__input" rows="5"
           placeholder="Ваші записи, бачите тільки ви..." aria-label="Особисті замітки">${esc(notesText)}</textarea>

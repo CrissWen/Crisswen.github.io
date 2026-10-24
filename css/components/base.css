@@ -11,7 +11,9 @@ body{
   font-family:var(--body);
   line-height:1.5;
   min-height:100vh;
+  min-height:100dvh;
   padding: 28px 16px 80px; /* padding-top далі перебивається на 80px в header.css (під фіксований хедер) */
+  transition: padding-top .25s ease;
 }
 
 /* ===== Приховані скролбари (прокрутка коліщатком/свайпом лишається, сам повзунок не малюється) ===== */
@@ -50,6 +52,33 @@ body::-webkit-scrollbar,
   border-bottom:1px solid var(--metal);
   background: rgba(0,0,0,.2);
 }
+
+/* За замовчуванням на десктопі блоки НЕ згортаються і стрілочки приховані */
+.block-head--collapsible{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border-top:none;
+  border-left:none;
+  border-right:none;
+  color:var(--text);
+  font:inherit;
+  text-align:left;
+  cursor:default;
+}
+.block-toggle-arrow{
+  display:none;
+  font-size:12px;
+  color:var(--text-mute);
+  transition:transform .2s ease;
+  flex:none;
+}
+.block-toggle-arrow.is-collapsed{
+  transform:rotate(-90deg);
+}
+
 .block-head h2{
   font-family:var(--head);
   font-weight:600;
@@ -73,14 +102,55 @@ body::-webkit-scrollbar,
 
 /* Для вікна гри (60-70% екрану по центру) */
 .layout-large-centered {
-  width: 85%;        /* Змінили з 70% на 60% */
-  max-width: 1900px; /* Жорстке обмеження (60% від 1920px) */
+  width: 85%;
+  max-width: 1900px;
   margin: 5vh auto;  
 }
 
-/* Медіа-запит: Правило для планшетів та смартфонів */
-@media (max-width: 768px) {
+/* Згортання блоків, компактні відступи та зменшені шрифти — для телефонів (портрет і ландшафт) */
+@media (max-width: 920px), (max-height: 520px) {
+  body {
+    padding-inline: 8px;
+    padding-bottom: 64px;
+    font-size: 13.5px;
+  }
+  .wrap {
+    width: 100%;
+  }
   .layout-large-centered {
-    width: 98%;
+    width: 100%;
+    margin: 10px auto;
+  }
+  .layout-small-centered {
+    margin: 20px auto;
+  }
+  .block {
+    margin-bottom: 12px;
+  }
+  .block-head {
+    padding: 9px 12px;
+  }
+  .block-head h2 {
+    font-size: 15.5px;
+    letter-spacing: .04em;
+  }
+  .block-body {
+    padding: 11px 12px;
+  }
+  .block-head--collapsible{
+    cursor:pointer;
+    transition:background .2s ease;
+  }
+  .block-head--collapsible:hover{
+    background:var(--panel-2);
+  }
+  .block-toggle-arrow{
+    display:inline-block;
+  }
+  .block.is-collapsed > .block-body{
+    display:none;
+  }
+  .block.is-collapsed > .block-head--collapsible{
+    border-bottom-color:transparent;
   }
 }

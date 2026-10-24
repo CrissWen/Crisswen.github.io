@@ -1,128 +1,559 @@
-/* ===== Вигнаний гравець ("сірий" рядок) ===== */
+/* ===== Вигнаний гравець ("сірий" рядок / картка) ===== */
 .kicked-player {
-    opacity: 0.35; /* Робить весь рядок напівпрозорим */
-    filter: grayscale(100%) sepia(20%) hue-rotate(80deg); /* Мертвенно-зелений відтінок */
-    pointer-events: none; /* Забороняє клікати по картках характеристик цього гравця */
+  opacity: 0.38;
+  filter: grayscale(100%) sepia(20%) hue-rotate(80deg);
+  pointer-events: none;
 }
-/* Повертаємо можливість клікати ТІЛЬКИ по кнопці "Повернути" (щоб хост міг це зробити) */
-.kicked-player .kick-action-btn {
-    pointer-events: auto;
-}
-
-/* Примусово заливаємо сірим фоном усі комірки рядка — перебиває зебру, sticky-колонку (td:first-child
-   має власний background-color) і будь-який локальний фон карток характеристик. */
-.kicked-player td,
-.kicked-player th {
-    background-color: #050605 !important; /* чорна безодня */
-    border-color: #1a1e1a !important; /* повертає видиму сітку-розділювачі таблиці */
+/* Повертаємо можливість клікати по кнопці "Повернути" (для хоста) та розгортати картку гравця */
+.kicked-player .kick-action-btn,
+.kicked-player .player-acc-card__toggle,
+.kicked-player .player-acc-card__preview {
+  pointer-events: auto;
 }
 
-/* Фон і рамки внутрішніх карток (.trait-card, .cell-value тощо) свідомо НЕ чіпаємо: рядок і так має
-   100% grayscale + 50% opacity (правило вище), тож власні кольори/рамки карток самі стають приглушеними
-   сіро-білими — і при цьому лишаються візуально відокремленими від темного фону комірки (#151720). */
+/* Примусово заливаємо сірим фоном усі комірки рядка таблиці */
+tr.kicked-player td,
+tr.kicked-player th {
+  background-color: #050605 !important;
+  border-color: #1a1e1a !important;
+}
 
+/* ===== Шапка блоку гравців і перемикач виду (Картки / Таблиця — ТІЛЬКИ на мобільних/планшетах) ===== */
+.players-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
 
-/* ===== Tables =====
-   .table-scroll — обгортка таблиці (роль "table-responsive"): горизонтальний скрол свайпом на вузьких екранах,
-   аби колонки не налізали один на одний, коли table.bunker-table ширша за екран (див. min-width нижче). */
+.candidates-count {
+  color: var(--text-mute);
+  font-size: 18px;
+}
+
+/* На десктопі перемикач Картки/Таблиця прихований — завжди показується повноцінна таблиця */
+.players-view-controls {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 920px), (max-height: 520px), (pointer: coarse) and (max-width: 1024px) {
+  .players-view-controls {
+    display: inline-flex;
+  }
+  .candidates-count {
+    font-size: 14px;
+  }
+}
+
+.players-view-btn,
+.players-expand-all-btn {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--metal-lt);
+  background: var(--panel-2);
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .2s ease, color .2s ease, background .2s ease;
+}
+.players-view-btn:hover,
+.players-expand-all-btn:hover {
+  color: var(--text);
+  border-color: var(--hazard);
+}
+.players-view-btn.is-active {
+  color: var(--hazard);
+  border-color: var(--hazard);
+  background: color-mix(in srgb, var(--hazard) 14%, var(--panel));
+}
+
+/* ===== Контейнер блоку гравців ===== */
+.players-board-container {
+  container-type: inline-size;
+  width: 100%;
+}
+
+/* На десктопі завжди таблиця, картки сховані */
+.players-board-container .players-cards-list {
+  display: none;
+}
+.players-board-container .table-scroll {
+  display: block;
+}
+
+/* На мобільних і планшетах вмикається підтримка режимів auto / cards / table */
+@media (max-width: 920px), (max-height: 520px), (pointer: coarse) and (max-width: 1024px) {
+  .players-board-container[data-view-mode="cards"] .players-cards-list {
+    display: flex;
+  }
+  .players-board-container[data-view-mode="cards"] .table-scroll {
+    display: none;
+  }
+
+  .players-board-container[data-view-mode="table"] .players-cards-list {
+    display: none;
+  }
+  .players-board-container[data-view-mode="table"] .table-scroll {
+    display: block;
+  }
+
+  /* Ховаємо кнопку "Розгорнути всі", коли активна таблиця */
+  #block-players-table:has(.players-board-container[data-view-mode="table"]) .players-expand-all-btn {
+    display: none;
+  }
+
+  /* У режимі AUTO у портретній орієнтації (< 640px) за замовчуванням картки, у ширшому ландшафті — таблиця */
+  #block-players-table:has(.players-board-container[data-view-mode="auto"]) .players-expand-all-btn {
+    display: none;
+  }
+  #block-players-table:has(.players-board-container[data-view-mode="auto"]) [data-players-view="table"] {
+    color: var(--hazard);
+    border-color: var(--hazard);
+    background: color-mix(in srgb, var(--hazard) 14%, var(--panel));
+  }
+}
+
+@media (max-width: 640px) {
+  .players-board-container[data-view-mode="auto"] .players-cards-list {
+    display: flex;
+  }
+  .players-board-container[data-view-mode="auto"] .table-scroll {
+    display: none;
+  }
+  #block-players-table:has(.players-board-container[data-view-mode="auto"]) .players-expand-all-btn {
+    display: inline-flex;
+  }
+  #block-players-table:has(.players-board-container[data-view-mode="auto"]) [data-players-view="table"] {
+    color: var(--text-mute);
+    border-color: var(--metal-lt);
+    background: var(--panel-2);
+  }
+  #block-players-table:has(.players-board-container[data-view-mode="auto"]) [data-players-view="cards"] {
+    color: var(--hazard);
+    border-color: var(--hazard);
+    background: color-mix(in srgb, var(--hazard) 14%, var(--panel));
+  }
+}
+
+/* ===== Мобільні акордеон-картки гравців (.players-cards-list) ===== */
+.players-cards-list {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-acc-card {
+  border: 1px solid var(--metal);
+  border-left: 3px solid var(--metal-lt);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  overflow: hidden;
+  transition: border-color .2s ease, background .2s ease;
+}
+.player-acc-card.is-expanded {
+  border-left-color: var(--hazard);
+  background: var(--panel);
+}
+
+.player-acc-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 10px;
+}
+
+.player-acc-card__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.player-acc-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.player-acc-card__identity .avatar {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 1px solid var(--metal-lt);
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-mute);
+  border-radius: 50%;
+}
+.player-acc-card__identity .player-nickname {
+  font-family: var(--head);
+  font-size: 14.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-acc-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.player-acc-card__badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  color: var(--text-mute);
+}
+
+.player-acc-card__arrow {
+  font-size: 12px;
+  color: var(--text-mute);
+  transition: transform .2s ease;
+}
+.player-acc-card.is-expanded .player-acc-card__arrow {
+  transform: rotate(180deg);
+  color: var(--hazard);
+}
+
+/* Коротке прев'ю відкритих характеристик у згорнутому стані */
+.player-acc-card__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 10px 8px;
+  cursor: pointer;
+}
+.player-acc-card.is-expanded .player-acc-card__preview {
+  display: none;
+}
+.player-acc-chip {
+  font-size: 11.5px;
+  line-height: 1.3;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  color: var(--text-mute);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-acc-chip strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Розгорнуте тіло картки гравця */
+.player-acc-card__body {
+  display: none;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--metal);
+  background: var(--bg);
+}
+.player-acc-card.is-expanded .player-acc-card__body {
+  display: block;
+}
+
+.player-acc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+@container (width < 420px) {
+  .player-acc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.player-acc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--metal);
+  background: var(--panel);
+  min-width: 0;
+}
+.player-acc-field.is-open {
+  border-left: 3px solid var(--ok);
+  background: var(--panel-2);
+}
+.player-acc-field.is-hidden-val {
+  opacity: 0.6;
+}
+.player-acc-field__label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.player-acc-field__value {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+.cell-empty-text {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-mute);
+  font-style: italic;
+}
+
+/* ===== Таблиці (.bunker-table) — без стискання колонок і розриву заголовків по літерах ===== */
 .table-scroll {
   overflow-x: auto;
   overflow-y: hidden;
   width: 100%;
-  -webkit-overflow-scrolling: touch; /* інерційний свайп-скрол на iOS */
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--metal);
   border-radius: var(--radius-sm);
 }
 
 table.bunker-table {
   width: 100%;
-  min-width: 800px; /* на вузьких екранах таблиця не стискається менше цього — з'являється горизонтальний скрол у .table-scroll замість здавлених колонок */
+  /* 11 колонок: достатня ширина, щоб жоден заголовок ("Професія", "Здоров'я", "Хобі/Навички") не рвався по буквах */
+  min-width: 1320px;
   border-collapse: separate;
   border-spacing: 0;
-  /* Фіксований font-size прибрано — тепер масштаб задається через clamp() у th/td нижче */
-  /* Прибрали min-width: 560px (тепер 800px вище) */
-  table-layout: fixed; /* Змушує колонки рівномірно ділити 800піксельну/ширшу базу */
+  table-layout: fixed;
 }
 
-table.bunker-table th, table.bunker-table td {
+/* Таблиця спецможливостей має лише 3 колонки */
+table.bunker-table.special-abilities-table {
+  min-width: 640px;
+}
+
+table.bunker-table th,
+table.bunker-table td {
   border-bottom: 1px solid var(--metal);
   border-right: 1px solid var(--metal);
   font-size: 13px;
   line-height: 1.4;
   text-align: left;
   vertical-align: middle;
-  word-wrap: break-word;     
-  overflow-wrap: break-word; 
-  white-space: normal;       
   transition: all .3s ease;
 }
 
-table.bunker-table th:last-child, table.bunker-table td:last-child {
+table.bunker-table th:last-child,
+table.bunker-table td:last-child {
   border-right: none;
 }
 table.bunker-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-table.bunker-table th:last-child, table.bunker-table td:last-child {
-  border-right: none;
-}
-table.bunker-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* 2. УНІКАЛЬНА ВИСОТА ДЛЯ ЗАГОЛОВКІВ (Шапка таблиці) */
+/* Шапка таблиці: забороняємо розрив слів посередині ("Профес-ія", "Здоров'-я") */
 table.bunker-table thead th {
   font-family: var(--body);
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-mute);
   background: var(--panel-2);
   font-weight: 600;
-  
-  padding: 10px; /* Компактні відступи для шапки */
-  height: 44px;  /* Жорстка висота рядка заголовків */
+  padding: 10px 12px;
+  height: 46px;
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: normal;
 }
 
-/* 3. УНІКАЛЬНА ВИСОТА ДЛЯ РЯДКІВ З ГРАВЦЯМИ (Дані) */
+/* Рядки з гравцями */
 table.bunker-table tbody td {
-  padding: 25px 10px; /* Збільшені відступи зверху та знизу */
-  height: 70px;       /* Базова висота для рядків з гравцями */
+  padding: 16px 12px;
+  height: 68px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 table.bunker-table td.player-cell {
   font-family: var(--head);
-  /* font-size тепер успадковується від базового clamp() вище, щоб бути в тон з рештою таблиці */
 }
 
-/* Липка перша колонка (імена гравців): при горизонтальному свайпі в .table-scroll (Див. вище) залишається зліва,
-   поки характеристики прокручуються під нею — щоб гравець не загубив чию характеристику він дивиться. */
+/* Липка перша колонка (імена гравців) */
 table.bunker-table th:first-child,
 table.bunker-table td:first-child {
   position: sticky;
   left: 0;
   z-index: 2;
-  width: 15%;
+  width: 180px;
+  min-width: 180px;
+  max-width: 200px;
+}
+table.bunker-table.special-abilities-table th:first-child,
+table.bunker-table.special-abilities-table td:first-child {
+  width: 200px;
+  min-width: 180px;
+  max-width: 240px;
 }
 table.bunker-table thead th:first-child {
-  background-color: var(--panel-2); /* той же фон, що й у решти заголовків — без цього був би прозорим став під скролом */
+  background-color: var(--panel-2);
 }
 table.bunker-table tbody td:first-child {
-  background-color: var(--panel); /* фон блоку, щоб непрозоро перекривати колонки, що проїжджають під низом */
+  background-color: var(--panel);
 }
 
 table.bunker-table td.player-cell .avatar {
-  display: inline-flex; width: 28px; height: 28px; border: 1px solid var(--metal-lt);
-  align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px;
-  margin-right: 6px; color: var(--text-mute); vertical-align: middle; border-radius: 50%;
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--metal-lt);
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-right: 4px;
+  color: var(--text-mute);
+  vertical-align: middle;
+  border-radius: 50%;
 }
 
+/* На телефонах (портрет і ландшафт) зменшуємо шрифт та відступи самої таблиці,
+   щоб більше колонок вміщувалося на екрані, але слова в заголовках все одно залишалися цілими */
+@media (max-width: 920px), (max-height: 520px) {
+  table.bunker-table {
+    min-width: 1120px;
+  }
+  table.bunker-table thead th {
+    font-size: 11.5px;
+    padding: 7px 8px;
+    height: 36px;
+  }
+  table.bunker-table tbody td {
+    font-size: 12px;
+    padding: 9px 8px;
+    height: 48px;
+  }
+  table.bunker-table th:first-child,
+  table.bunker-table td:first-child {
+    width: 150px;
+    min-width: 150px;
+    max-width: 165px;
+  }
+  table.bunker-table td.player-cell .avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+  .player-name-wrapper .player-nickname {
+    font-size: 13px;
+  }
+  .kick-action-btn {
+    font-size: 11px;
+  }
+  .survival-test-hint {
+    font-size: 12px;
+    margin-top: 10px;
+  }
+}
 
+/* ===== Адаптивна таблиця "Спец можливості" (@container stacked cards на телефонах у портреті) ===== */
+.special-abilities-container {
+  container-type: inline-size;
+}
 
-/* ===== Глобальний Тултип (Малюється поверх таблиці) ===== */
+@container (width < 560px) {
+  .special-abilities-container .table-scroll {
+    border: none;
+    overflow: visible;
+  }
+  .special-abilities-container table.special-abilities-table,
+  .special-abilities-container table.special-abilities-table tbody,
+  .special-abilities-container table.special-abilities-table tr,
+  .special-abilities-container table.special-abilities-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .special-abilities-container table.special-abilities-table thead {
+    display: none;
+  }
+  .special-abilities-container table.special-abilities-table tbody tr {
+    margin-bottom: 8px;
+    border: 1px solid var(--metal);
+    border-radius: var(--radius-sm);
+    background: var(--panel-2);
+    overflow: hidden;
+  }
+  .special-abilities-container table.special-abilities-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .special-abilities-container table.special-abilities-table tbody td {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 7px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--metal);
+    font-size: 12.5px;
+  }
+  .special-abilities-container table.special-abilities-table tbody td:first-child {
+    background: var(--panel);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 10px;
+  }
+  .special-abilities-container table.special-abilities-table tbody td:last-child {
+    border-bottom: none;
+  }
+  .special-abilities-container table.special-abilities-table tbody td[data-col-label]::before {
+    content: attr(data-col-label) ": ";
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .special-abilities-container table.special-abilities-table tbody td .cell-empty::after {
+    content: "Приховано";
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-mute);
+    font-style: italic;
+    opacity: 0.7;
+  }
+}
+
+/* ===== Глобальний Тултип (Малюється поверх таблиці, не виходить за краї екрана) ===== */
 .global-info-popup {
-  position: fixed; /* Прикріплюємо жорстко до вікна браузера, а не до таблиці */
-  transform: translate(-50%, -100%); /* Центруємо і піднімаємо рівно над іконкою */
+  position: fixed;
+  transform: translate(-50%, -100%);
   width: max-content;
+  max-width: min(320px, calc(100dvw - 24px));
+  white-space: normal;
+  overflow-wrap: break-word;
   background: #edeff5;
   color: #10121a;
   padding: 10px 14px;
@@ -134,11 +565,15 @@ table.bunker-table td.player-cell .avatar {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
-  z-index: 10000; /* Максимальний пріоритет малювання (Z-Order) */
+  z-index: 10005;
 }
 
 .global-info-popup.is-visible {
   opacity: 1;
+}
+
+.global-info-popup.is-flipped {
+  transform: translate(-50%, 0);
 }
 
 /* Стрілочка вниз, що вказує на іконку */
@@ -153,40 +588,54 @@ table.bunker-table td.player-cell .avatar {
   border-color: #edeff5 transparent transparent transparent;
 }
 
-/* Сама іконка "i" в заголовку таблиці */
+.global-info-popup.is-flipped::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent #edeff5 transparent;
+}
+
+/* Сама іконка "i" в заголовку таблиці або картці */
 .info-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: transparent; border: 1px solid var(--text-mute);
+  background: transparent;
+  border: 1px solid var(--text-mute);
   color: var(--text-mute);
   font-size: 10px;
   font-weight: bold;
   font-family: var(--mono);
-  transition: background 0.2s ease;
-  cursor: help;
-  margin-left: 6px;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  margin-left: 4px;
   vertical-align: middle;
 }
 
-.info-icon:hover { color: var(--on-ok, var(--bg)); border-color: var(--ok);
+.info-icon:hover,
+.info-icon:focus-visible,
+.info-icon:active {
+  color: var(--on-ok, var(--bg));
+  border-color: var(--ok);
   background: var(--ok);
+  outline: none;
 }
 
 .player-info-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .player-num {
   color: var(--text-mute);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: bold;
   min-width: 14px;
+  flex-shrink: 0;
 }
 
 /* Нік і кнопка "Вигнати/Повернути" — одна колонка, кнопка чітко під ніком */
@@ -194,21 +643,39 @@ table.bunker-table td.player-cell .avatar {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.player-name-wrapper .player-nickname {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .kick-action-btn {
-  font-size: 0.85em;
+  font-size: 11.5px;
   cursor: pointer;
   text-decoration: underline;
-  color: var(--danger); /* "Вигнати" — червоний */
+  color: var(--danger);
+  white-space: nowrap;
+  padding: 0;
+  line-height: 1.2;
+}
+
+.player-acc-card__top .kick-action-btn {
+  padding: 4px 6px;
 }
 
 .kick-action-btn.is-return {
-  color: var(--ok); /* "Повернути" — зелений */
+  color: var(--ok);
 }
 
-/* Підказка під таблицею з посиланням на тест виживання (відкривається в новій вкладці, див. survival-test.html) */
+/* Підказка під таблицею з посиланням на тест виживання */
 .survival-test-hint {
   margin: 14px 0 0;
   font-size: 13px;
@@ -217,7 +684,7 @@ table.bunker-table td.player-cell .avatar {
 }
 .survival-test-link {
   color: var(--hazard);
-  text-decoration: underline; /* підкреслені саме слова в лапках */
+  text-decoration: underline;
   cursor: pointer;
 }
 .survival-test-link:hover { filter: brightness(1.2); }

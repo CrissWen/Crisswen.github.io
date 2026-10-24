@@ -48,7 +48,7 @@
 
 .hp-panel{
   position:fixed;top:0;right:0;z-index:10002;
-  width:min(400px,100vw);height:100vh;height:100dvh;
+  width:min(400px,100dvw);height:100vh;height:100dvh;
   display:flex;flex-direction:column;
   background:var(--bg);border-left:1px solid var(--metal);
   transform:translateX(100%);transition:transform .28s ease;
@@ -67,7 +67,12 @@
 }
 .hp-close:hover{border-color:var(--danger);}
 
-.hp-scroll{flex:1;overflow-y:auto;padding:14px 16px;}
+.hp-scroll{
+  flex:1;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:14px 16px;
+}
 .hp-section{margin-bottom:18px;}
 .hp-section h3{
   font-family:var(--body);font-size:12.5px;font-weight:600;
@@ -162,7 +167,202 @@
 .hp-toast-error{border-color:var(--danger);}
 .hp-toast-show{opacity:1;}
 
-@media (max-width:520px){
-  .hp-fab span{display:none;}
-  .hp-fab{padding:12px;}
+@media (max-width: 520px), (max-height: 520px) {
+  .hp-fab > span:not(.hp-fab-icon) { display: none; }
+  .hp-fab {
+    padding: 11px;
+    bottom: 12px;
+    left: 12px;
+  }
 }
+
+/* ===== Адаптація панелі ведучого для горизонтального режиму телефона (мала висота екрана) ===== */
+@media (max-height: 520px) {
+  .hp-panel {
+    width: min(460px, 82dvw);
+  }
+  .hp-head {
+    padding: 7px 12px;
+  }
+  .hp-head h2 {
+    font-size: 15.5px;
+  }
+  .hp-close {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .hp-scroll {
+    padding: 8px 12px;
+  }
+  .hp-section {
+    margin-bottom: 10px;
+  }
+  .hp-section h3 {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .hp-row {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  /* У горизонтальному режимі кнопки зі стеку ставимо в один ряд по 2, щоб не витрачати висоту */
+  .hp-row-stack {
+    flex-direction: row;
+  }
+  .hp-btn {
+    padding: 7px 8px;
+    font-size: 11.5px;
+  }
+  .hp-counter {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+  .hp-counter-ctrl {
+    gap: 8px;
+  }
+  .hp-counter-ctrl strong {
+    font-size: 17px;
+    min-width: 20px;
+  }
+  .hp-btn-sq {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .hp-acc {
+    margin-bottom: 6px;
+  }
+  .hp-acc summary {
+    padding: 8px 11px;
+    font-size: 12.5px;
+  }
+  .hp-acc-body {
+    padding: 8px 11px;
+    gap: 7px;
+  }
+  .hp-field {
+    gap: 2px;
+  }
+  .hp-field > span {
+    font-size: 11px;
+  }
+  .hp-select,
+  .hp-input {
+    padding: 6px 8px;
+    font-size: 12.5px;
+  }
+  .hp-dice-result {
+    font-size: 22px;
+    padding: 5px;
+  }
+  /* Футер у горизонтальному режимі: компактна сітка в 1 ряд із 3 кнопок замість високого стовпчика на пів екрана */
+  .hp-foot {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 7px 12px calc(7px + env(safe-area-inset-bottom, 0px));
+  }
+  .hp-foot .hp-btn {
+    padding: 6px 6px;
+    font-size: 10.5px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+}
+
+/* ===== Адаптація панелі ведучого для горизонтального режиму телефона (мала висота екрана) ===== */
+@media (max-height: 520px) {
+  .hp-panel {
+    width: min(460px, 82dvw);
+  }
+  .hp-head {
+    padding: 7px 12px;
+  }
+  .hp-head h2 {
+    font-size: 15.5px;
+  }
+  .hp-close {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .hp-scroll {
+    padding: 8px 12px;
+  }
+  .hp-section {
+    margin-bottom: 10px;
+  }
+  .hp-section h3 {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .hp-row {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  /* У горизонтальному режимі кнопки зі стеку ставимо в один ряд по 2, щоб не витрачати висоту */
+  .hp-row-stack {
+    flex-direction: row;
+  }
+  .hp-btn {
+    padding: 7px 8px;
+    font-size: 11.5px;
+  }
+  .hp-counter {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+  .hp-counter-ctrl {
+    gap: 8px;
+  }
+  .hp-counter-ctrl strong {
+    font-size: 17px;
+    min-width: 20px;
+  }
+  .hp-btn-sq {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .hp-acc {
+    margin-bottom: 6px;
+  }
+  .hp-acc summary {
+    padding: 8px 11px;
+    font-size: 12.5px;
+  }
+  .hp-acc-body {
+    padding: 8px 11px;
+    gap: 7px;
+  }
+  .hp-field {
+    gap: 2px;
+  }
+  .hp-field > span {
+    font-size: 11px;
+  }
+  .hp-select,
+  .hp-input {
+    padding: 6px 8px;
+    font-size: 12.5px;
+  }
+  .hp-dice-result {
+    font-size: 22px;
+    padding: 5px;
+  }
+  /* Футер у горизонтальному режимі: компактна сітка в 1 ряд із 3 кнопок замість високого стовпчика на пів екрана */
+  .hp-foot {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 7px 12px calc(7px + env(safe-area-inset-bottom, 0px));
+  }
+  .hp-foot .hp-btn {
+    padding: 6px 6px;
+    font-size: 10.5px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+}
+
