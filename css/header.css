@@ -122,6 +122,10 @@ body {
   color: var(--hazard);
   border-bottom-color: var(--hazard);
 }
+/* Приховані вкладки (напр. «Гра» без активної сесії) */
+.header-nav-link[hidden] {
+  display: none;
+}
 
 @media (max-width: 520px) {
   .header-left { gap: 14px; }

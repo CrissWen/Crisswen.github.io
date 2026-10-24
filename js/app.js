@@ -6,6 +6,7 @@ import { renderProfile, initProfile } from './pages/profile.js'; // Підклю
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
 import { applyStoredTheme } from './utils/theme-manager.js';
+import { syncGameTab } from './utils/last-session.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -51,6 +52,9 @@ async function router() {
 
     // Вставляємо ім'я
     headerUserName.textContent = username;
+
+    // Вкладка «Гра»: веде до останньої активної кімнати або сіра, якщо такої немає (без await — не гальмуємо рендер сторінки)
+    syncGameTab(session.user.id);
 
     const firstLetter = username.charAt(0);
     headerUserAvatar.textContent = firstLetter;

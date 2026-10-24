@@ -25,6 +25,7 @@ import { buildBoardViewModel } from '../utils/board-view-model.js';
 import { startGame } from '../utils/start-game.js';
 import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.js';
 import { syncServerTime } from '../services/server-time.js';
+import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -94,7 +95,10 @@ export async function initGame() {
     currentUserName = user.user_metadata?.username || "Гравець";
 
     const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
-    if (error || !room) throw new Error("Кімнату не знайдено");
+    if (error || !room) {
+      clearLastRoom(currentUserId); // кімнати більше немає — вкладка «Гра» має стати сірою
+      throw new Error("Кімнату не знайдено");
+    }
 
     localRoomState = room;
 
@@ -118,6 +122,7 @@ export async function initGame() {
       if (!currentPlayers[currentUserId]) {
         if (Object.keys(currentPlayers).length >= bc.maxPlayersInLobby) {
           showGlobalToast('Ця кімната вже переповнена');
+          clearLastRoom(currentUserId);
           window.location.hash = '#/lobby';
           return;
         }
@@ -131,6 +136,10 @@ export async function initGame() {
         room.players_state = currentPlayers;
       }
     }
+
+    // Кімната успішно відкрита — запам'ятовуємо її для вкладки «Гра» в хедері
+    if (room.status !== 'closed') setLastRoom(currentUserId, currentRoomCode);
+    else clearLastRoom(currentUserId);
 
     updateGameBoard(localRoomState, boardEl);
     statusEl.style.display = 'none';
@@ -270,6 +279,7 @@ function handleRoomUpdate(patch) {
   const isGameStartedNow = Object.keys(localRoomState.bunker_state || {}).length > 0;
   if (!isGameStartedNow && localRoomState.host_id !== currentUserId && !localRoomState.players_state?.[currentUserId]) {
     showGlobalToast('Вас вигнали з кімнати.');
+    clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
     return;
   }
@@ -278,6 +288,7 @@ function handleRoomUpdate(patch) {
   if (localRoomState.status === 'closed') {
     freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
     if (localRoomState.host_id !== currentUserId) showGlobalToast('Ведучий закрив кімнату.');
+    clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
     return;
   }
