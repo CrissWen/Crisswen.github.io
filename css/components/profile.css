@@ -1,0 +1,135 @@
+/* ===== Профіль: вкладки («Профіль» / «Статистика» / «Історія ігор») і заглушки =====
+   Кольори й шрифти — лише зі змінних теми (var(--...)), окремих перевизначень під теми немає навмисно.
+   Плитки статистики повторюють вигляд .info-stat з bunker.css, щоб усе виглядало як єдина система. */
+
+/* Блок профілю трохи ширший за стандартний layout-small-centered (400px): під список ігор потрібно більше місця */
+.layout-small-centered.profile-block {
+  max-width: 560px;
+}
+
+/* --- Перемикач вкладок --- */
+.profile-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--metal);
+  background: rgba(0, 0, 0, .12);
+}
+.profile-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-bottom: -1px; /* активне підкреслення лягає поверх нижньої межі блока */
+  padding: 12px 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--head);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: color .2s ease, border-color .2s ease;
+}
+.profile-tab:hover {
+  color: var(--text);
+}
+.profile-tab[aria-selected="true"] {
+  color: var(--hazard);
+  border-bottom-color: var(--hazard);
+}
+.profile-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* --- Панелі вкладок --- */
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-panel[hidden] {
+  display: none;
+}
+
+/* --- Статистика: плитки --- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  border-left: 3px solid var(--metal-lt);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .8);
+}
+.stat-tile__label {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.stat-tile__value {
+  font-family: var(--head);
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.profile-placeholder-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-mute);
+}
+
+/* --- Порожній стан (історія ігор) --- */
+.profile-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  text-align: center;
+  border: 1px dashed var(--metal);
+  border-radius: var(--radius-sm);
+  color: var(--text-mute);
+}
+.profile-empty svg {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 4px;
+  opacity: .8;
+}
+.profile-empty__title {
+  margin: 0;
+  font-family: var(--head);
+  font-size: 18px;
+  color: var(--text);
+}
+.profile-empty__text {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 380px) {
+  .profile-tab {
+    font-size: 13px;
+    letter-spacing: .03em;
+    padding-inline: 4px;
+  }
+  .stat-tile__value {
+    font-size: 22px;
+  }
+}

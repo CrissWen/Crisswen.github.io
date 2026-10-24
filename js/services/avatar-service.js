@@ -12,6 +12,11 @@ const MAX_SOURCE_BYTES = 10 * 1024 * 1024; // вихідний файл, яки�
 // userId -> url | null (null = у гравця немає аватарки). Відсутній ключ = ще не запитували.
 const cache = new Map();
 
+// Після невдалого запиту (немає прав, мережа) кілька секунд не пробуємо знову: інакше кожне оновлення кімнати
+// чи перехід між сторінками слало б новий запит і засипало консоль однаковими помилками.
+const RETRY_AFTER_MS = 60 * 1000;
+let lastFailureAt = 0;
+
 // Показуємо лише картинки з власного бакета (на випадок, якщо в БД опинилося щось стороннє)
 export function isSafeAvatarUrl(url) {
   return typeof url === 'string' && url.startsWith('https://') && url.includes(PUBLIC_PATH);
@@ -30,6 +35,7 @@ export function getCachedAvatar(userId) {
 export async function fetchAvatars(userIds) {
   const missing = [...new Set((userIds || []).filter(id => id && !cache.has(id)))];
   if (!missing.length) return 0;
+  if (Date.now() - lastFailureAt < RETRY_AFTER_MS) return 0;
 
   try {
     const { data, error } = await supabase
@@ -38,13 +44,15 @@ export async function fetchAvatars(userIds) {
       .in('id', missing);
     if (error) throw error;
 
+    lastFailureAt = 0;
     missing.forEach(id => cache.set(id, null));
     (data || []).forEach(row => {
       if (isSafeAvatarUrl(row.avatar_url)) cache.set(row.id, row.avatar_url);
     });
     return missing.length;
   } catch (err) {
-    // Не кешуємо помилку — наступна спроба спробує ще раз; інтерфейс тим часом показує літери
+    // Помилку не кешуємо як «аватарки немає», але наступна спроба — не раніше ніж через хвилину; інтерфейс тим часом показує літери
+    lastFailureAt = Date.now();
     console.error('Не вдалося завантажити аватарки:', err);
     return 0;
   }
