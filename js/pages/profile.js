@@ -255,8 +255,20 @@ export async function initProfile() {
         removeBtn.disabled = busy;
     };
 
-    await fetchAvatars([userId]);
+    // 1. Малюємо аватарку одразу зі збереженого локального кешу (миттєво, 0 мс)
     paintAvatar(getCachedAvatar(userId));
+
+    // 2. Якщо в кеші ще немає або запис застарів — підтягуємо у фоні
+    if (!hasCachedAvatar(userId) || isAvatarStale(userId)) {
+        fetchAvatars([userId], { force: true });
+    }
+
+    // 3. Будь-які зміни (з Realtime або фонового запиту) оновлюють аватарку на екрані
+    onAvatarChange((newUrl, changedUserId) => {
+        if (changedUserId === userId) {
+            paintAvatar(newUrl);
+        }
+    });
 
     changeBtn.addEventListener('click', () => fileInput.click());
 

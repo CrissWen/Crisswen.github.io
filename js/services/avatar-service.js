@@ -9,31 +9,168 @@ const PUBLIC_PATH = `/storage/v1/object/public/${BUCKET}/`;
 const OUTPUT_SIZE = 256;               // аватарка зберігається квадратом 256×256
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024; // вихідний файл, який гравець вибирає (стискається ще до відправки)
 
-// userId -> url | null (null = у гравця немає аватарки). Відсутній ключ = ще не запитували.
-const cache = new Map();
+// Постійний кеш аватарок у localStorage (Stale-While-Revalidate).
+// Картинка малюється з кешу миттєво (0 мс), але якщо з моменту останньої звірки минуло більше STALE_AFTER_MS,
+// у фоні тихо робиться запит до БД для перевірки заміни з іншого пристрою.
+const AVATAR_STORAGE_KEY = 'bunker_avatars_cache_v1';
+const STALE_AFTER_MS     = 10 * 60 * 1000; // 10 хвилин свіжості (протягом цього часу до БД не звертаємось)
+const TTL_AVATAR_MS      = 7 * 24 * 60 * 60 * 1000; // 7 днів для зберігання в localStorage
+const TTL_NULL_MS        = 2 * 60 * 60 * 1000;      // 2 години для гравців без аватарки
+const MAX_PERSISTED_ITEMS = 150;
 
-// Після невдалого запиту (немає прав, мережа) кілька секунд не пробуємо знову: інакше кожне оновлення кімнати
-// чи перехід між сторінками слало б новий запит і засипало консоль однаковими помилками.
-const RETRY_AFTER_MS = 60 * 1000;
-let lastFailureAt = 0;
+// userId -> { url: string | null, ts: number }
+const cache = new Map();
 
 // Показуємо лише картинки з власного бакета (на випадок, якщо в БД опинилося щось стороннє)
 export function isSafeAvatarUrl(url) {
   return typeof url === 'string' && url.startsWith('https://') && url.includes(PUBLIC_PATH);
 }
 
+function loadPersistentCache() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(AVATAR_STORAGE_KEY) : null;
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+    const now = Date.now();
+    for (const [userId, item] of Object.entries(parsed)) {
+      if (!userId || !item || typeof item !== 'object') continue;
+      const { url, ts } = item;
+      const maxAge = url ? TTL_AVATAR_MS : TTL_NULL_MS;
+      if (typeof ts === 'number' && (now - ts < maxAge)) {
+        if (url === null || isSafeAvatarUrl(url)) {
+          cache.set(userId, { url, ts });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Не вдалося завантажити кеш аватарок:', err);
+  }
+}
+
+function savePersistentCache() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const entries = [...cache.entries()]
+      .sort((a, b) => (b[1]?.ts || 0) - (a[1]?.ts || 0))
+      .slice(0, MAX_PERSISTED_ITEMS);
+
+    const obj = {};
+    for (const [userId, item] of entries) {
+      obj[userId] = item;
+    }
+    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(obj));
+  } catch (err) {
+    console.warn('Не вдалося зберегти кеш аватарок:', err);
+  }
+}
+
+// Завантажуємо збережений кеш одразу при старті модуля
+loadPersistentCache();
+
+function setInCache(userId, url) {
+  cache.set(userId, { url: url || null, ts: Date.now() });
+}
+
+// Після невдалого запиту (немає прав, мережа) кілька секунд не пробуємо знову: інакше кожне оновлення кімнати
+// чи перехід між сторінками слало б новий запит і засипало консоль однаковими помилками.
+const RETRY_AFTER_MS = 60 * 1000;
+let lastFailureAt = 0;
+
 export function hasCachedAvatar(userId) {
   return cache.has(userId);
 }
 
-export function getCachedAvatar(userId) {
-  return cache.get(userId) || null;
+export function isAvatarStale(userId) {
+  const item = cache.get(userId);
+  if (!item) return true;
+  return Date.now() - (item.ts || 0) > STALE_AFTER_MS;
 }
 
-// Підтягує аватарки для списку гравців ОДНИМ запитом (лише тих, яких ще немає в кеші).
-// Повертає кількість щойно завантажених id — викликач за потреби перемальовує інтерфейс. Ніколи не кидає помилку.
-export async function fetchAvatars(userIds) {
-  const missing = [...new Set((userIds || []).filter(id => id && !cache.has(id)))];
+export function getCachedAvatar(userId) {
+  const item = cache.get(userId);
+  return item ? (item.url || null) : null;
+}
+
+// Слухачі оновлення аватарок (UI компоненти: хедер, профіль тощо)
+const avatarListeners = new Set();
+
+export function onAvatarChange(callback) {
+  if (typeof callback === 'function') avatarListeners.add(callback);
+  return () => avatarListeners.delete(callback);
+}
+
+function notifyAvatarListeners(url, userId) {
+  avatarListeners.forEach(fn => {
+    try { fn(url, userId); } catch (e) { console.error('Помилка слухача аватарки:', e); }
+  });
+}
+
+// Синхронізація між вкладками одного пристрою в реальному часі
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === AVATAR_STORAGE_KEY) {
+      loadPersistentCache();
+    }
+  });
+}
+
+// ===== Supabase Realtime: відстеження оновлення аватарки з іншого пристрою =====
+let activeAvatarChannel = null;
+let activeAvatarUserId = null;
+
+export function subscribeToUserAvatar(userId) {
+  if (!userId) return () => {};
+  if (activeAvatarUserId === userId && activeAvatarChannel) {
+    return () => unsubscribeUserAvatar();
+  }
+
+  unsubscribeUserAvatar();
+  activeAvatarUserId = userId;
+
+  try {
+    activeAvatarChannel = supabase
+      .channel(`user-avatar-${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${userId}`
+      }, (payload) => {
+        const nextUrl = payload?.new?.avatar_url;
+        const safeUrl = isSafeAvatarUrl(nextUrl) ? nextUrl : null;
+        setInCache(userId, safeUrl);
+        savePersistentCache();
+        notifyAvatarListeners(safeUrl, userId);
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn('Не вдалося підписатися на Realtime аватарок:', err);
+  }
+
+  return () => unsubscribeUserAvatar();
+}
+
+export function unsubscribeUserAvatar() {
+  if (activeAvatarChannel) {
+    try { supabase.removeChannel(activeAvatarChannel); } catch (e) {}
+    activeAvatarChannel = null;
+    activeAvatarUserId = null;
+  }
+}
+
+// Підтягує аватарки для списку гравців ОДНИМ запитом.
+// За замовчуванням запитує тільки тих, кого немає в кеші або чий запис застарів (> 10 хв).
+// Якщо force=true — обов'язково перевіряє в БД навіть за наявності свіжого кешу.
+// Повертає кількість змінених/нових id — викликач за потреби перемальовує інтерфейс.
+export async function fetchAvatars(userIds, { force = false } = {}) {
+  const missing = [...new Set((userIds || []).filter(id => {
+    if (!id) return false;
+    if (force) return true;
+    if (!cache.has(id)) return true;
+    return isAvatarStale(id);
+  }))];
+
   if (!missing.length) return 0;
   if (Date.now() - lastFailureAt < RETRY_AFTER_MS) return 0;
 
@@ -45,13 +182,26 @@ export async function fetchAvatars(userIds) {
     if (error) throw error;
 
     lastFailureAt = 0;
-    missing.forEach(id => cache.set(id, null));
+    let changedCount = 0;
+    const returnedMap = new Map();
     (data || []).forEach(row => {
-      if (isSafeAvatarUrl(row.avatar_url)) cache.set(row.id, row.avatar_url);
+      returnedMap.set(row.id, isSafeAvatarUrl(row.avatar_url) ? row.avatar_url : null);
     });
-    return missing.length;
+
+    missing.forEach(id => {
+      const prevUrl = getCachedAvatar(id);
+      const nextUrl = returnedMap.get(id) || null;
+      if (prevUrl !== nextUrl) {
+        changedCount++;
+        notifyAvatarListeners(nextUrl, id);
+      }
+      setInCache(id, nextUrl);
+    });
+
+    savePersistentCache();
+    return changedCount;
   } catch (err) {
-    // Помилку не кешуємо як «аватарки немає», але наступна спроба — не раніше ніж через хвилину; інтерфейс тим часом показує літери
+    // Помилку не кешуємо як «аватарки немає», але наступна спроба — не раніше ніж через хвилину; інтерфейс тим часом показує кеш
     lastFailureAt = Date.now();
     console.error('Не вдалося завантажити аватарки:', err);
     return 0;
@@ -166,7 +316,9 @@ export async function uploadAvatar(userId, file) {
   }
 
   await removeFileByUrl(previousUrl, path);
-  cache.set(userId, url);
+  setInCache(userId, url);
+  savePersistentCache();
+  notifyAvatarListeners(url, userId);
   return url;
 }
 
@@ -180,5 +332,7 @@ export async function removeAvatar(userId) {
   }
 
   await removeFileByUrl(previousUrl);
-  cache.set(userId, null);
+  setInCache(userId, null);
+  savePersistentCache();
+  notifyAvatarListeners(null, userId);
 }

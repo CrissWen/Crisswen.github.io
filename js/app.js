@@ -7,7 +7,8 @@ import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
 import { applyStoredTheme } from './utils/theme-manager.js';
 import { syncGameTab } from './utils/last-session.js';
-import { showUserAvatar } from './utils/avatar.js';
+import { showUserAvatar, setAvatarEl } from './utils/avatar.js';
+import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -17,6 +18,14 @@ const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");
 const headerUserName = document.getElementById("header-user-name");
 const headerUserAvatar = document.getElementById("header-user-avatar");
+
+// Автоматичне оновлення аватарки в хедері при надходженні Realtime-події
+onAvatarChange((newUrl) => {
+  if (headerUserAvatar && headerUserName) {
+    const letter = headerUserName.textContent.trim().charAt(0) || '?';
+    setAvatarEl(headerUserAvatar, letter, newUrl);
+  }
+});
 
 // Додаємо новий роут
 const routes = {
@@ -68,8 +77,12 @@ async function router() {
 
     // Фото аватарки поверх літери (з кешу одразу, а якщо його ще немає — після одного запиту до БД)
     showUserAvatar(headerUserAvatar, session.user.id, firstLetter);
+
+    // Підписка на зміну аватарки в реальному часі (якщо гравець замінить її на іншому пристрої)
+    subscribeToUserAvatar(session.user.id);
   } else {
     globalHeader.style.display = 'none';
+    if (!session) unsubscribeUserAvatar();
   }
 
   // Підсвітка активного пункту навігації (редактор пака — частина розділу «Паки»)
