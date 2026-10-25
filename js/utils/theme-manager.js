@@ -48,8 +48,8 @@ export const THEMES = [
   },
   {
     value: 'patriot',
-    label: 'Штаб Оборони (Patriot)',
-    name: 'Штаб Оборони',
+    label: 'Потужність (Patriot)',
+    name: 'Потужність',
     tag: 'Patriot',
     palette: ['#001838', '#003882', '#ffa700', '#197bff']
   }
