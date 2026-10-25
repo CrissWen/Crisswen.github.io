@@ -2,6 +2,7 @@ import { supabase } from '../services/supabase.js';
 import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
 import { setAvatarEl } from '../utils/avatar.js';
+import { openAvatarCropper } from '../ui/avatar-cropper-modal.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
@@ -68,6 +69,7 @@ export function renderProfile() {
               <p id="avatar-status" role="status" aria-live="polite" style="margin: 6px 0 0; font-size: 12px; min-height: 16px; color: var(--text-mute);"></p>
             </div>
           </div>
+
 
           <div class="profile-quick-stats">
             <div class="stat-grid">
@@ -277,10 +279,23 @@ export async function initProfile() {
         fileInput.value = ''; // щоб повторний вибір того самого файла теж спрацював
         if (!file) return;
 
+        let croppedBlob = null;
+        try {
+            croppedBlob = await openAvatarCropper(file);
+        } catch (err) {
+            setAvatarStatus(err.message || 'Не вдалося відкрити редактор фото', true);
+            return;
+        }
+
+        // Якщо користувач скасував або закрив модалку без підтвердження
+        if (!croppedBlob) {
+            return;
+        }
+
         setAvatarBusy(true);
         setAvatarStatus('Завантаження...');
         try {
-            const url = await uploadAvatar(userId, file);
+            const url = await uploadAvatar(userId, croppedBlob);
             paintAvatar(url);
             setAvatarStatus('Аватарку оновлено');
         } catch (err) {

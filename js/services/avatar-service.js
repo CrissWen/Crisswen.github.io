@@ -7,7 +7,7 @@ import { supabase } from './supabase.js';
 const BUCKET = 'avatars';
 const PUBLIC_PATH = `/storage/v1/object/public/${BUCKET}/`;
 const OUTPUT_SIZE = 256;               // аватарка зберігається квадратом 256×256
-const MAX_SOURCE_BYTES = 10 * 1024 * 1024; // вихідний файл, який гравець вибирає (стискається ще до відправки)
+const MAX_SOURCE_BYTES = 30 * 1024 * 1024; // вихідний файл, який гравець вибирає (до 30 МБ, оптимізується на клієнті)
 
 // Постійний кеш аватарок у localStorage (Stale-While-Revalidate).
 // Картинка малюється з кешу миттєво (0 мс), але якщо з моменту останньої звірки минуло більше STALE_AFTER_MS,
@@ -233,7 +233,7 @@ function canvasToBlob(canvas, type, quality) {
 // Перекодування прибирає метадані (EXIF, геолокацію) і будь-який «зайвий» вміст файла.
 async function processImage(file) {
   if (!file || !file.type.startsWith('image/')) throw new Error('Оберіть файл із зображенням');
-  if (file.size > MAX_SOURCE_BYTES) throw new Error('Файл завеликий (максимум 10 МБ)');
+  if (file.size > MAX_SOURCE_BYTES) throw new Error('Файл завеликий (максимум 30 МБ)');
 
   const source = await loadImage(file);
   const width = source.width || source.naturalWidth;
@@ -290,8 +290,16 @@ async function getStoredUrl(userId) {
 
 // Стискає вибраний файл, вантажить у Storage, записує посилання в users і лише потім прибирає попередній файл.
 // Повертає нову адресу. Кидає Error з текстом, придатним для показу гравцю.
-export async function uploadAvatar(userId, file) {
-  const { blob, ext } = await processImage(file);
+export async function uploadAvatar(userId, fileOrBlob) {
+  let blob, ext;
+  if (fileOrBlob instanceof Blob && !(fileOrBlob instanceof File) && (fileOrBlob.type === 'image/webp' || fileOrBlob.type === 'image/jpeg')) {
+    blob = fileOrBlob;
+    ext = fileOrBlob.type === 'image/webp' ? 'webp' : 'jpg';
+  } else {
+    const res = await processImage(fileOrBlob);
+    blob = res.blob;
+    ext = res.ext;
+  }
   const previousUrl = await getStoredUrl(userId);
 
   // Ім'я файла щоразу нове — інакше браузери показували б стару картинку зі свого кешу
