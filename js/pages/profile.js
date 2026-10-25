@@ -1,6 +1,6 @@
 import { supabase } from '../services/supabase.js';
 import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
-import { fetchAvatars, getCachedAvatar, uploadAvatar, removeAvatar } from '../services/avatar-service.js';
+import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
 import { setAvatarEl } from '../utils/avatar.js';
 
 function esc(str) {
