@@ -10,7 +10,31 @@ function esc(str) {
 }
 
 export function renderProfile() {
-    const themeOptionsHtml = THEMES.map(t => `<option value="${esc(t.value)}">${esc(t.label)}</option>`).join('');
+    const themeCardsHtml = THEMES.map(t => `
+      <label class="theme-card" for="theme-radio-${esc(t.value)}">
+        <input
+          type="radio"
+          name="bunker-theme"
+          id="theme-radio-${esc(t.value)}"
+          value="${esc(t.value)}"
+          class="theme-radio-input"
+        >
+        <div class="theme-card-body">
+          <div class="theme-card-info">
+            <span class="theme-card-name">${esc(t.name || t.label)}</span>
+            ${t.tag ? `<span class="theme-card-tag">${esc(t.tag)}</span>` : ''}
+          </div>
+          <div class="theme-palette-swatch" aria-hidden="true">
+            ${(t.palette || []).map(c => `<span class="theme-dot" style="background-color: ${esc(c)};"></span>`).join('')}
+          </div>
+        </div>
+        <span class="theme-card-check" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+        </span>
+      </label>
+    `).join('');
 
     return `
     <section class="block layout-small-centered profile-block">
@@ -47,12 +71,12 @@ export function renderProfile() {
 
         <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
 
-        <div>
-          <p style="margin: 0 0 6px; font-size: 13px; color: var(--text-mute);">Тема інтерфейсу</p>
-          <select id="theme-selector" class="hp-select" style="width: 100%;">
-            ${themeOptionsHtml}
-          </select>
-        </div>
+        <fieldset class="theme-picker-group">
+          <legend class="theme-picker-legend">Тема інтерфейсу</legend>
+          <div class="theme-picker-grid" role="radiogroup" aria-label="Вибір теми інтерфейсу">
+            ${themeCardsHtml}
+          </div>
+        </fieldset>
 
         <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
         
@@ -137,14 +161,30 @@ export async function initProfile() {
     const nameEl = document.getElementById('profile-page-name');
     const avatarEl = document.getElementById('profile-page-avatar');
     const logoutBtn = document.getElementById('profile-logout-btn');
-    const themeSelect = document.getElementById('theme-selector');
+    const themeCards = document.querySelectorAll('.theme-card');
+    const themeRadios = document.querySelectorAll('input[name="bunker-theme"]');
+
+    function updateSelectedCard(selectedVal) {
+        themeCards.forEach(card => {
+            const input = card.querySelector('input[name="bunker-theme"]');
+            const isMatch = input && input.value === selectedVal;
+            if (input) input.checked = isMatch;
+            card.classList.toggle('theme-card--selected', isMatch);
+        });
+    }
 
     // Тему можна перемкнути незалежно від сесії (хоча на цю сторінку і так не пускає неавторизованих —
-    // перевірка нижче), тож вішаємо обробник одразу, до await supabase.auth.getSession()
-    if (themeSelect) {
-        themeSelect.value = getCurrentTheme();
-        themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
-    }
+    // перевірка нижче), тож ініціалізуємо одразу, до await supabase.auth.getSession()
+    updateSelectedCard(getCurrentTheme());
+
+    themeRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (radio.checked) {
+                updateSelectedCard(radio.value);
+                setTheme(radio.value);
+            }
+        });
+    });
 
     const { data: { session } } = await supabase.auth.getSession();
 

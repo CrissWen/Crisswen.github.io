@@ -11,12 +11,48 @@ export const THEME_STORAGE_KEY = 'bunker-theme';
 export const DEFAULT_THEME = 'classic';
 
 export const THEMES = [
-  { value: 'classic',   label: 'Класична (Dark)' },
-  { value: 'stalker',   label: 'Сталкер (Grimdark)' },
-  { value: 'fallout',   label: 'Fallout (Termainal)' },
-  { value: 'cyberpunk', label: 'Cyberpunk (Neo-Noir)' },
-  { value: 'cryo',      label: 'Кріо-Станція (Deep Sea)' },
-  { value: 'patriot',   label: 'Потужність (Patriot)' }
+  {
+    value: 'classic',
+    label: 'Класична (Dark)',
+    name: 'Класична',
+    tag: 'Dark',
+    palette: ['#10121a', '#181b26', '#f0a868', '#5fcdb0']
+  },
+  {
+    value: 'stalker',
+    label: 'Сталкер (Grimdark)',
+    name: 'Сталкер',
+    tag: 'Grimdark',
+    palette: ['#0a0b0a', '#141613', '#d6b022', '#4f6e43']
+  },
+  {
+    value: 'fallout',
+    label: 'Fallout (Terminal)',
+    name: 'Fallout',
+    tag: 'Terminal',
+    palette: ['#050a05', '#081208', '#ffb000', '#39ff6a']
+  },
+  {
+    value: 'cyberpunk',
+    label: 'Cyberpunk (Neo-Noir)',
+    name: 'Cyberpunk',
+    tag: 'Neo-Noir',
+    palette: ['#08060f', '#120f22', '#f6019d', '#00f0ff']
+  },
+  {
+    value: 'cryo',
+    label: 'Кріо-Станція (Deep Sea)',
+    name: 'Кріо-Станція',
+    tag: 'Deep Sea',
+    palette: ['#030b26', '#124973', '#17aec2', '#89fafa']
+  },
+  {
+    value: 'patriot',
+    label: 'Штаб Оборони (Patriot)',
+    name: 'Штаб Оборони',
+    tag: 'Patriot',
+    palette: ['#001838', '#003882', '#ffa700', '#197bff']
+  }
 ];
 
 const VALID_THEME_VALUES = new Set(THEMES.map(t => t.value));
