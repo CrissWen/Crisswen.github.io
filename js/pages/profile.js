@@ -43,57 +43,56 @@ export function renderProfile() {
       </div>
       <nav class="profile-tabs" role="tablist" aria-label="Розділи профілю">
         <button type="button" role="tab" class="profile-tab" id="profile-tab-profile" data-tab="profile" aria-controls="profile-panel-profile">Профіль</button>
-        <button type="button" role="tab" class="profile-tab" id="profile-tab-stats" data-tab="stats" aria-controls="profile-panel-stats">Статистика</button>
+        <button type="button" role="tab" class="profile-tab" id="profile-tab-themes" data-tab="themes" aria-controls="profile-panel-themes">Теми</button>
         <button type="button" role="tab" class="profile-tab" id="profile-tab-history" data-tab="history" aria-controls="profile-panel-history">Історія ігор</button>
       </nav>
       <div class="block-body">
       <div class="profile-panel" id="profile-panel-profile" role="tabpanel" aria-labelledby="profile-tab-profile">
         
-        <div class="profile-avatar-row">
-          <!-- Inline-стилі змінено на outline: transparent фон, border, колір тексту -->
-        <!-- Велика аватарка = кнопка: при наведенні з'являється рамка з олівцем, клік відкриває вибір файла -->
-        <button type="button" id="avatar-change-btn" class="profile-avatar-edit" aria-label="Змінити аватарку" title="Змінити аватарку">
-          <span id="profile-page-avatar" class="profile-avatar">?</span>
-          <span class="profile-avatar-overlay" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          </span>
-        </button>
-        <div class="profile-avatar-actions">
-          <button type="button" id="avatar-remove-btn" class="avatar-action avatar-action--danger" style="display: none;">Видалити</button>
-          <input type="file" id="avatar-file-input" accept="image/*" hidden>
-        </div>
-          <div>
-            <p style="margin: 0; font-size: 13px; color: var(--text-mute);">Ім'я гравця</p>
-            <p id="profile-page-name" style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text);">Завантаження...</p>
-            <p id="avatar-status" role="status" aria-live="polite" style="margin: 6px 0 0; font-size: 12px; min-height: 16px; color: var(--text-mute);"></p>
+        <div class="profile-identity-layout">
+          <div class="profile-avatar-row">
+            <!-- Велика аватарка = кнопка: при наведенні з'являється рамка з олівцем, клік відкриває вибір файла -->
+            <button type="button" id="avatar-change-btn" class="profile-avatar-edit" aria-label="Змінити аватарку" title="Змінити аватарку">
+              <span id="profile-page-avatar" class="profile-avatar">?</span>
+              <span class="profile-avatar-overlay" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </span>
+            </button>
+            <div class="profile-avatar-actions">
+              <button type="button" id="avatar-remove-btn" class="avatar-action avatar-action--danger" style="display: none;">Видалити</button>
+              <input type="file" id="avatar-file-input" accept="image/*" hidden>
+            </div>
+            <div>
+              <p style="margin: 0; font-size: 13px; color: var(--text-mute);">Ім'я гравця</p>
+              <p id="profile-page-name" style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text);">Завантаження...</p>
+              <p id="avatar-status" role="status" aria-live="polite" style="margin: 6px 0 0; font-size: 12px; min-height: 16px; color: var(--text-mute);"></p>
+            </div>
+          </div>
+
+          <div class="profile-quick-stats">
+            <div class="stat-grid">
+              <div class="stat-tile" title="Зіграно ігор"><span class="stat-tile__label">Зіграно</span><span class="stat-tile__value" data-stat="games_played">—</span></div>
+              <div class="stat-tile" title="Кількість перемог"><span class="stat-tile__label">Перемог</span><span class="stat-tile__value" data-stat="games_won">—</span></div>
+              <div class="stat-tile" title="Відсоток перемог"><span class="stat-tile__label">% перемог</span><span class="stat-tile__value" data-stat="win_rate">—</span></div>
+              <div class="stat-tile" title="Дата реєстрації"><span class="stat-tile__label">Реєстрація</span><span class="stat-tile__value" data-stat="created_at" id="profile-created-at">—</span></div>
+            </div>
           </div>
         </div>
 
-        <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
-
-        <fieldset class="theme-picker-group">
-          <legend class="theme-picker-legend">Тема інтерфейсу</legend>
-          <div class="theme-picker-grid" role="radiogroup" aria-label="Вибір теми інтерфейсу">
-            ${themeCardsHtml}
-          </div>
-        </fieldset>
-
-        <hr style="width: 100%; border-color: var(--metal-lt); margin: 8px 0;">
+        <hr style="width: 100%; border-color: var(--metal-lt); margin: 16px 0 12px;">
         
         <button id="profile-logout-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none; transition: filter 0.2s ease;">
           Вийти з акаунта
         </button>
       </div>
 
-      <!-- Заготовка: цифри підключимо, коли буде завершення гри та лічильники в БД (data-stat — ключ для підстановки) -->
-      <div class="profile-panel" id="profile-panel-stats" role="tabpanel" aria-labelledby="profile-tab-stats" hidden>
-        <div class="stat-grid">
-          <div class="stat-tile"><span class="stat-tile__label">Зіграно ігор</span><span class="stat-tile__value" data-stat="games_played">—</span></div>
-          <div class="stat-tile"><span class="stat-tile__label">Перемог</span><span class="stat-tile__value" data-stat="games_won">—</span></div>
-          <div class="stat-tile"><span class="stat-tile__label">Відсоток перемог</span><span class="stat-tile__value" data-stat="win_rate">—</span></div>
-          <div class="stat-tile"><span class="stat-tile__label">Проведено як ведучий</span><span class="stat-tile__value" data-stat="games_hosted">—</span></div>
-        </div>
-        <p class="profile-placeholder-note">Статистика з'явиться після ваших перших завершених ігор.</p>
+      <div class="profile-panel" id="profile-panel-themes" role="tabpanel" aria-labelledby="profile-tab-themes" hidden>
+        <fieldset class="theme-picker-group">
+          <legend class="theme-picker-legend">Тема оформлення інтерфейсу</legend>
+          <div class="theme-picker-grid" role="radiogroup" aria-label="Вибір теми інтерфейсу">
+            ${themeCardsHtml}
+          </div>
+        </fieldset>
       </div>
 
       <div class="profile-panel" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history" hidden>
@@ -112,7 +111,7 @@ export function renderProfile() {
 // Активна вкладка запам'ятовується на час вкладки браузера (sessionStorage), а не в URL: зміна hash перемалювала би
 // всю сторінку через роутер і скидала би стан.
 const TAB_STORAGE_KEY = 'bunker-profile-tab';
-const TAB_NAMES = ['profile', 'stats', 'history'];
+const TAB_NAMES = ['profile', 'themes', 'history'];
 
 function setupProfileTabs() {
     const tabs = [...document.querySelectorAll('.profile-tab')];
@@ -148,7 +147,8 @@ function setupProfileTabs() {
 
     let initial = 'profile';
     try {
-        const saved = sessionStorage.getItem(TAB_STORAGE_KEY);
+        let saved = sessionStorage.getItem(TAB_STORAGE_KEY);
+        if (saved === 'stats') saved = 'themes';
         if (TAB_NAMES.includes(saved)) initial = saved;
     } catch (e) { /* лишаємося на «Профілі» */ }
     select(initial);
@@ -203,6 +203,34 @@ export async function initProfile() {
         avatarEl.style.paddingBottom = '9px'; // Тут зсув більший, бо аватарка велика (96px)
     } else {
         avatarEl.style.paddingBottom = '0';
+    }
+
+    // Дата реєстрації (день/місяць/рік): беремо напряму з session.user.created_at (0 звернень до БД)
+    const createdAtEl = document.getElementById('profile-created-at') || document.querySelector('[data-stat="created_at"]');
+    if (createdAtEl) {
+        let createdAt = session.user?.created_at;
+        if (!createdAt && session.user?.id) {
+            const cacheKey = `bunker_user_created_${session.user.id}`;
+            try { createdAt = sessionStorage.getItem(cacheKey); } catch (e) {}
+            if (!createdAt) {
+                const { data } = await supabase.from('users').select('created_at').eq('id', session.user.id).maybeSingle();
+                if (data?.created_at) {
+                    createdAt = data.created_at;
+                    try { sessionStorage.setItem(cacheKey, createdAt); } catch (e) {}
+                }
+            }
+        }
+        if (createdAt) {
+            const d = new Date(createdAt);
+            if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                const formatted = `${day}.${month}.${year}`;
+                createdAtEl.textContent = formatted;
+                createdAtEl.title = `Дата реєстрації: ${formatted}`;
+            }
+        }
     }
 
     // ===== Аватарка: вибір файла → стиснення → Storage → users.avatar_url (див. services/avatar-service.js) =====

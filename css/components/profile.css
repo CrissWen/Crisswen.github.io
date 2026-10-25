@@ -55,6 +55,62 @@
   display: none;
 }
 
+/* --- Макет "Профіль": аватар та нік зліва, статистика з правої сторони --- */
+.profile-identity-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+  margin: 6px 0 10px;
+}
+.profile-identity-layout .profile-avatar-row {
+  flex: 0 0 auto;
+  column-gap: 20px;
+}
+.profile-quick-stats {
+  flex: 0 1 246px;
+  max-width: 254px;
+  min-width: 0;
+}
+.profile-quick-stats .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.profile-quick-stats .stat-tile {
+  padding: 8px 11px;
+  gap: 1px;
+  min-height: 52px;
+}
+.profile-quick-stats .stat-tile__label {
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-quick-stats .stat-tile__value {
+  font-size: 18.5px;
+  line-height: 1.1;
+}
+.profile-quick-stats .stat-tile__value[data-stat="created_at"] {
+  font-size: 14px;
+  font-family: var(--mono);
+  letter-spacing: 0;
+}
+
+@media (max-width: 560px) {
+  .profile-identity-layout {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+  .profile-quick-stats {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+}
+
 /* --- Статистика: плитки --- */
 .stat-grid {
   display: grid;
