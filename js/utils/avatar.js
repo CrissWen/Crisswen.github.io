@@ -47,18 +47,34 @@ export function avatarBadgeHtml(userId, name, size = 28, { clickable = false } =
 // Заповнює готовий DOM-елемент (хедер, профіль): літера + за наявності фото
 export function setAvatarEl(el, letter, url) {
   if (!el) return;
-  el.textContent = letter;
   const safe = usableUrl(url);
-  if (!safe) return;
+  const currentImg = el.querySelector('img.avatar-img');
 
-  const img = document.createElement('img');
-  img.className = 'avatar-img';
-  img.alt = '';
-  img.decoding = 'async';
-  img.referrerPolicy = 'no-referrer';
-  img.draggable = false;
-  img.src = safe;
-  el.appendChild(img);
+  if (safe) {
+    // Якщо картинка вже намальована з цим самим URL — нічого не перемальовуємо, щоб уникнути блимання
+    if (currentImg && (currentImg.src === safe || currentImg.getAttribute('src') === safe)) {
+      return;
+    }
+    // Якщо картинка є, але змінився URL — оновлюємо src напряму
+    if (currentImg) {
+      currentImg.src = safe;
+      return;
+    }
+    // Перше малювання: літера підкладки + додавання img
+    el.textContent = letter;
+    const img = document.createElement('img');
+    img.className = 'avatar-img';
+    img.alt = '';
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    img.draggable = false;
+    img.src = safe;
+    el.appendChild(img);
+  } else {
+    // Фото немає або видалено — залишаємо лише літеру
+    if (!currentImg && el.textContent === letter) return;
+    el.textContent = letter;
+  }
 }
 
 // Малює аватарку поточного гравця: одразу з кешу, а якщо його ще немає — після одного запиту до БД

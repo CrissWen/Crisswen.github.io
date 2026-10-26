@@ -130,6 +130,25 @@ const TAB_STORAGE_KEY = 'bunker-profile-tab';
 const TAB_NAMES = ['profile', 'themes', 'history'];
 
 
+const STATS_STORAGE_PREFIX = 'bunker_user_stats:';
+
+function getCachedStats(userId) {
+  if (!userId || typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(`${STATS_STORAGE_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveCachedStats(userId, stats) {
+  if (!userId || !stats || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(`${STATS_STORAGE_PREFIX}${userId}`, JSON.stringify(stats));
+  } catch (_) {}
+}
+
 let historyLoaded = false;
 
 function formatProfTitle(val) {
@@ -381,12 +400,49 @@ export async function initProfile() {
     nameEl.textContent = username;
 
     const firstLetter = username.charAt(0);
-    avatarEl.textContent = firstLetter;
+    const userId = session.user.id;
+
+    // ===== Аватарка: ініціалізуємо і малюємо ОДРАЗУ, до будь-яких мережевих запитів =====
+    const fileInput = document.getElementById('avatar-file-input');
+    const changeBtn = document.getElementById('avatar-change-btn');
+    const removeBtn = document.getElementById('avatar-remove-btn');
+    const avatarStatus = document.getElementById('avatar-status');
+    const headerAvatarEl = document.getElementById('header-user-avatar');
+
+    let currentPaintedUrl = undefined;
+    const paintAvatar = (url) => {
+        if (currentPaintedUrl === url) return;
+        currentPaintedUrl = url;
+        setAvatarEl(avatarEl, firstLetter, url);
+        setAvatarEl(headerAvatarEl, firstLetter, url);
+        if (removeBtn) removeBtn.style.display = url ? '' : 'none';
+    };
+    const setAvatarStatus = (text, isError = false) => {
+        avatarStatus.textContent = text;
+        avatarStatus.style.color = isError ? 'var(--danger)' : 'var(--text-mute)';
+    };
+    const setAvatarBusy = (busy) => {
+        changeBtn.disabled = busy;
+        removeBtn.disabled = busy;
+    };
 
     applyAvatarLetterPadding(avatarEl, firstLetter, 9); // Зсув більший під велику аватарку (96px)
 
-    // Завантажуємо статистику з users: games_played, games_won та created_at
-    const userId = session.user.id;
+    // 1. Малюємо аватарку одразу зі збереженого локального кешу (миттєво, 0 мс)
+    paintAvatar(getCachedAvatar(userId));
+
+    // 2. Якщо в кеші взагалі ще немає аватарки — підтягуємо (без force: true, оскільки активна Realtime-підписка)
+    if (!hasCachedAvatar(userId)) {
+        fetchAvatars([userId]);
+    }
+
+    // 3. Будь-які зміни (з Realtime або фонового запиту) оновлюють аватарку на екрані
+    onAvatarChange((newUrl, changedUserId) => {
+        if (changedUserId === userId) {
+            paintAvatar(newUrl);
+        }
+    });
+
     historyLoaded = false;
     setupProfileTabs(userId);
     const historyContainer = document.getElementById('profile-history-content');
@@ -397,12 +453,45 @@ export async function initProfile() {
     const wonEl = document.querySelector('[data-stat="games_won"]');
     const winRateEl = document.querySelector('[data-stat="win_rate"]');
 
+    const renderStatsValues = (stats) => {
+        if (!stats) return;
+        const played = Number(stats.games_played) || 0;
+        const won = Number(stats.games_won) || 0;
+        if (playedEl) playedEl.textContent = played;
+        if (wonEl) wonEl.textContent = won;
+        if (winRateEl) {
+            const rate = played > 0 ? Math.round((won / played) * 100) : 0;
+            winRateEl.textContent = `${rate}%`;
+        }
+        const createdAt = stats.created_at || session.user?.created_at;
+        if (createdAt && createdAtEl) {
+            const d = new Date(createdAt);
+            if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                const formatted = `${day}.${month}.${year}`;
+                createdAtEl.textContent = formatted;
+                createdAtEl.title = `Дата реєстрації: ${formatted}`;
+            }
+        }
+    };
+
+    // 1. Миттєво відображаємо з локального кешу (0 мс, без миготіння та очікування 0.5с)
+    const initialCached = getCachedStats(userId);
+    if (initialCached) {
+        renderStatsValues(initialCached);
+    } else if (session.user?.created_at) {
+        renderStatsValues({ games_played: 0, games_won: 0, created_at: session.user.created_at });
+    }
+
+    // 2. Фонове оновлення з Supabase (Stale-While-Revalidate)
     try {
         let userStats = null;
         try {
             const { data, error } = await supabase
                 .from('users')
-                .select('created_at, games_played, games_won')
+                .select('created_at, games_played, games_won, avatar_url')
                 .eq('id', userId)
                 .maybeSingle();
             if (!error && data) {
@@ -417,66 +506,18 @@ export async function initProfile() {
             userStats = basic;
         }
 
-        const createdAt = userStats?.created_at || session.user?.created_at;
-        if (createdAt && createdAtEl) {
-            const d = new Date(createdAt);
-            if (!isNaN(d.getTime())) {
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear();
-                const formatted = `${day}.${month}.${year}`;
-                createdAtEl.textContent = formatted;
-                createdAtEl.title = `Дата реєстрації: ${formatted}`;
+        if (userStats) {
+            renderStatsValues(userStats);
+            saveCachedStats(userId, userStats);
+            if (userStats.avatar_url !== undefined) {
+                paintAvatar(userStats.avatar_url);
             }
-        }
-
-        const played = Number(userStats?.games_played) || 0;
-        const won = Number(userStats?.games_won) || 0;
-        if (playedEl) playedEl.textContent = played;
-        if (wonEl) wonEl.textContent = won;
-        if (winRateEl) {
-            const rate = played > 0 ? Math.round((won / played) * 100) : 0;
-            winRateEl.textContent = `${rate}%`;
         }
     } catch (err) {
         console.warn('Не вдалося завантажити статистику користувача:', err);
     }
 
-    // ===== Аватарка: вибір файла → стиснення → Storage → users.avatar_url (див. services/avatar-service.js) =====
-    const fileInput = document.getElementById('avatar-file-input');
-    const changeBtn = document.getElementById('avatar-change-btn');
-    const removeBtn = document.getElementById('avatar-remove-btn');
-    const avatarStatus = document.getElementById('avatar-status');
-    const headerAvatarEl = document.getElementById('header-user-avatar');
 
-    const paintAvatar = (url) => {
-        setAvatarEl(avatarEl, firstLetter, url);
-        setAvatarEl(headerAvatarEl, firstLetter, url);
-        removeBtn.style.display = url ? '' : 'none';
-    };
-    const setAvatarStatus = (text, isError = false) => {
-        avatarStatus.textContent = text;
-        avatarStatus.style.color = isError ? 'var(--danger)' : 'var(--text-mute)';
-    };
-    const setAvatarBusy = (busy) => {
-        changeBtn.disabled = busy;
-        removeBtn.disabled = busy;
-    };
-
-    // 1. Малюємо аватарку одразу зі збереженого локального кешу (миттєво, 0 мс)
-    paintAvatar(getCachedAvatar(userId));
-
-    // 2. Якщо в кеші ще немає або запис застарів — підтягуємо у фоні
-    if (!hasCachedAvatar(userId) || isAvatarStale(userId)) {
-        fetchAvatars([userId], { force: true });
-    }
-
-    // 3. Будь-які зміни (з Realtime або фонового запиту) оновлюють аватарку на екрані
-    onAvatarChange((newUrl, changedUserId) => {
-        if (changedUserId === userId) {
-            paintAvatar(newUrl);
-        }
-    });
 
     changeBtn.addEventListener('click', () => fileInput.click());
 
