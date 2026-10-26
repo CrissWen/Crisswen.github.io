@@ -124,6 +124,25 @@ const TAB_NAMES = ['profile', 'themes', 'history'];
 
 let historyLoaded = false;
 
+function formatProfTitle(val) {
+  if (!val) return 'Невідома професія';
+  if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(p => {
+          const title = p?.title || p?.value || 'Невідома';
+          return p?.stage ? `${title} (${p.stage})` : title;
+        }).join(', ');
+      } else if (typeof parsed === 'object' && parsed !== null) {
+        const title = parsed?.title || parsed?.value || 'Невідома';
+        return parsed?.stage ? `${title} (${parsed.stage})` : title;
+      }
+    } catch (_) {}
+  }
+  return val;
+}
+
 function renderHistoryCards(container, items) {
   if (!items || items.length === 0) {
     container.innerHTML = `
@@ -149,7 +168,7 @@ function renderHistoryCards(container, items) {
           ? `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()}`
           : '';
         const cataclysm = item.cataclysm_title || 'Катаклізм';
-        const prof = item.profession_title || 'Невідома професія';
+        const prof = formatProfTitle(item.profession_title);
         const code = (item.room_code || '').toUpperCase();
 
         return `
@@ -178,7 +197,7 @@ function renderHistoryCards(container, items) {
 }
 
 async function loadHistoryTab(userId) {
-  if (historyLoaded || !userId) return;
+  if (!userId) return;
   const container = document.getElementById('profile-history-content');
   if (!container) return;
 
@@ -355,11 +374,24 @@ export async function initProfile() {
     const winRateEl = document.querySelector('[data-stat="win_rate"]');
 
     try {
-        const { data: userStats } = await supabase
-            .from('users')
-            .select('created_at, games_played, games_won')
-            .eq('id', userId)
-            .maybeSingle();
+        let userStats = null;
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('created_at, games_played, games_won')
+                .eq('id', userId)
+                .maybeSingle();
+            if (!error && data) {
+                userStats = data;
+            } else if (error) {
+                // Якщо на games_played ще немає прав (403), довантажуємо хоча б created_at
+                const { data: basic } = await supabase.from('users').select('created_at').eq('id', userId).maybeSingle();
+                userStats = basic;
+            }
+        } catch (fetchErr) {
+            const { data: basic } = await supabase.from('users').select('created_at').eq('id', userId).maybeSingle();
+            userStats = basic;
+        }
 
         const createdAt = userStats?.created_at || session.user?.created_at;
         if (createdAt && createdAtEl) {

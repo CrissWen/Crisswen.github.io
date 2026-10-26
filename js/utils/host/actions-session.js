@@ -146,9 +146,16 @@ export async function closeRoom(roomCode, stoppedTimer = null) {
 
   // Записуємо результати гри в історію кожного учасника через RPC
   try {
-    const { error: rpcError } = await supabase.rpc('record_game_results', { p_room_code: roomCode });
-    if (rpcError) console.warn('Помилка фіксації результатів гри в історії:', rpcError);
+    const { data: rpcRes, error: rpcError } = await supabase.rpc('record_game_results', { p_room_code: roomCode });
+    if (rpcError) {
+      console.error('Помилка фіксації результатів гри в історії:', rpcError.message || rpcError);
+    } else {
+      console.log('Результат фіксації гри в історії (record_game_results):', rpcRes);
+      if (rpcRes && rpcRes.recorded_players === 0 && !rpcRes.already_recorded) {
+        console.warn('Жодного гравця не було зафіксовано в історії. Деталі помилок:', JSON.stringify(rpcRes.errors, null, 2));
+      }
+    }
   } catch (err) {
-    console.warn('Не вдалося викликати record_game_results:', err);
+    console.error('Не вдалося викликати record_game_results:', err);
   }
 }
