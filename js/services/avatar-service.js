@@ -210,6 +210,17 @@ export async function fetchAvatars(userIds, { force = false } = {}) {
 
 // ===== Підготовка картинки =====
 
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/pjpeg']);
+
+function isAllowedImageFormat(file) {
+  if (!file) return false;
+  if (file.type && ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) return true;
+  if (file.name && /\.(jpe?g|png|webp)$/i.test(file.name)) return true;
+  return false;
+}
+
+
+
 async function loadImage(file) {
   if (window.createImageBitmap) {
     try {
@@ -232,7 +243,7 @@ function canvasToBlob(canvas, type, quality) {
 // Центральна квадратна обрізка → 256×256 → webp (або jpeg, якщо браузер не вміє webp).
 // Перекодування прибирає метадані (EXIF, геолокацію) і будь-який «зайвий» вміст файла.
 async function processImage(file) {
-  if (!file || !file.type.startsWith('image/')) throw new Error('Оберіть файл із зображенням');
+  if (!isAllowedImageFormat(file)) throw new Error('Дозволені лише формати JPEG, PNG, WebP');
   if (file.size > MAX_SOURCE_BYTES) throw new Error('Файл завеликий (максимум 30 МБ)');
 
   const source = await loadImage(file);

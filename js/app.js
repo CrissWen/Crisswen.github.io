@@ -7,7 +7,7 @@ import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
 import { applyStoredTheme } from './utils/theme-manager.js';
 import { syncGameTab } from './utils/last-session.js';
-import { showUserAvatar, setAvatarEl } from './utils/avatar.js';
+import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
@@ -69,11 +69,7 @@ async function router() {
     const firstLetter = username.charAt(0);
     headerUserAvatar.textContent = firstLetter;
 
-    if (/^[gjpqyуфщц]/i.test(firstLetter)) {
-      headerUserAvatar.style.paddingBottom = '3px';
-    } else {
-      headerUserAvatar.style.paddingBottom = '0';
-    }
+    applyAvatarLetterPadding(headerUserAvatar, firstLetter, 3);
 
     // Фото аватарки поверх літери (з кешу одразу, а якщо його ще немає — після одного запиту до БД)
     showUserAvatar(headerUserAvatar, session.user.id, firstLetter);

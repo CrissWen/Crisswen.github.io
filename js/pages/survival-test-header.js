@@ -6,7 +6,7 @@
 // у обох файлах хедер має лишатися однаковим (за потреби посилання треба вести на index.html#/..., бо
 // ця сторінка не є частиною SPA-роутера).
 import { supabase } from '../services/supabase.js';
-import { showUserAvatar } from '../utils/avatar.js';
+import { showUserAvatar, applyAvatarLetterPadding } from '../utils/avatar.js';
 
 const profileLink = document.getElementById('header-profile-link');
 const nameEl = document.getElementById('header-user-name');
@@ -22,7 +22,7 @@ async function initHeader() {
 
     nameEl.textContent = username;
     avatarEl.textContent = firstLetter;
-    avatarEl.style.paddingBottom = /^[gjpqyуфщц]/i.test(firstLetter) ? '3px' : '0'; // як в app.js
+    applyAvatarLetterPadding(avatarEl, firstLetter, 3);
     profileLink.style.display = 'flex';
     showUserAvatar(avatarEl, session.user.id, firstLetter); // фото аватарки поверх літери
   } catch (err) {

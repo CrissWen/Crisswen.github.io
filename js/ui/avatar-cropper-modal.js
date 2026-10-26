@@ -1,3 +1,12 @@
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/pjpeg']);
+
+function isAllowedImageFormat(file) {
+  if (!file) return false;
+  if (file.type && ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) return true;
+  if (file.name && /\.(jpe?g|png|webp)$/i.test(file.name)) return true;
+  return false;
+}
+
 /**
  * Модальне вікно інтерактивного обрізання (crop & zoom) аватарки.
  * Працює на базі нативного <dialog> та HTML5 Canvas.
@@ -328,8 +337,8 @@ async function readAndDownscaleImage(file) {
  * @returns {Promise<Blob|null>} Обрізаний Blob або null у разі скасування
  */
 export async function openAvatarCropper(file) {
-  if (!file || !file.type.startsWith('image/')) {
-    throw new Error('Оберіть коректний файл зображення (PNG, JPEG, WebP тощо)');
+  if (!isAllowedImageFormat(file)) {
+    throw new Error('Дозволені лише формати JPEG, PNG, WebP');
   }
 
   initDialog();

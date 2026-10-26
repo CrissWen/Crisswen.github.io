@@ -61,3 +61,20 @@ export function showUserAvatar(el, userId, letter) {
   }
   fetchAvatars([userId]).then(paint);
 }
+
+// Літери з нижнім виносним елементом («хвостиком»), для яких потрібен оптичний зсув у крузі
+const DESCENDER_REGEX = /^[gjpqyуфщц]/i;
+
+export function hasLetterDescender(text) {
+  const char = String(text ?? '').trim().charAt(0);
+  return DESCENDER_REGEX.test(char);
+}
+
+export function applyAvatarLetterPadding(el, text, paddingPx = 3) {
+  if (!el) return;
+  el.style.paddingBottom = hasLetterDescender(text) ? `${paddingPx}px` : '0';
+}
+
+export function getAvatarPaddingStyle(text, paddingPx = 2) {
+  return hasLetterDescender(text) ? `padding-bottom: ${paddingPx}px;` : 'padding-bottom: 0;';
+}

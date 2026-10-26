@@ -1,6 +1,6 @@
 import { describeScale } from '../../utils/experience.js';
 import { esc, unescapeApos, renderSafeNodes } from '../../utils/security.js';
-import { avatarImgHtml } from '../../utils/avatar.js';
+import { avatarImgHtml, getAvatarPaddingStyle } from '../../utils/avatar.js';
 import { getPlayersViewMode, isPlayerCardExpanded } from './board-ui-state.js';
 
 // Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
@@ -83,7 +83,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
       const rowClass = p.isKicked ? 'kicked-player' : '';
       const cleanName = unescapeApos(p.name);
       const firstLetter = (cleanName || '').charAt(0);
-      const avatarPadding = /^[gjpqyуфщц]/i.test(firstLetter) ? 'padding-bottom: 2px;' : 'padding-bottom: 0;';
+      const avatarPadding = getAvatarPaddingStyle(firstLetter, 2);
       return `
         <tr data-player="${esc(cleanName)}" class="${rowClass}">
           <td class="player-cell">
@@ -110,7 +110,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
       playerKeys.push(playerKey);
       const isExpanded = isPlayerCardExpanded(playerKey);
       const firstLetter = (cleanName || '').charAt(0);
-      const avatarPadding = /^[gjpqyуфщц]/i.test(firstLetter) ? 'padding-bottom: 2px;' : 'padding-bottom: 0;';
+      const avatarPadding = getAvatarPaddingStyle(firstLetter, 2);
       const kickedClass = p.isKicked ? ' kicked-player' : '';
       const expandedClass = isExpanded ? ' is-expanded' : '';
 

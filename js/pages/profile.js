@@ -1,14 +1,9 @@
 import { supabase } from '../services/supabase.js';
 import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
-import { setAvatarEl } from '../utils/avatar.js';
+import { setAvatarEl, applyAvatarLetterPadding } from '../utils/avatar.js';
 import { openAvatarCropper } from '../ui/avatar-cropper-modal.js';
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
+import { esc } from '../utils/security.js';
 
 export function renderProfile() {
     const themeCardsHtml = THEMES.map(t => `
@@ -61,7 +56,7 @@ export function renderProfile() {
             </button>
             <div class="profile-avatar-actions">
               <button type="button" id="avatar-remove-btn" class="avatar-action avatar-action--danger" style="display: none;">Видалити</button>
-              <input type="file" id="avatar-file-input" accept="image/*" hidden>
+              <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
             </div>
             <div>
               <p style="margin: 0; font-size: 13px; color: var(--text-mute);">Ім'я гравця</p>
@@ -201,11 +196,7 @@ export async function initProfile() {
     const firstLetter = username.charAt(0);
     avatarEl.textContent = firstLetter;
 
-    if (/^[gjpqyуфщц]/i.test(firstLetter)) {
-        avatarEl.style.paddingBottom = '9px'; // Тут зсув більший, бо аватарка велика (96px)
-    } else {
-        avatarEl.style.paddingBottom = '0';
-    }
+    applyAvatarLetterPadding(avatarEl, firstLetter, 9); // Зсув більший під велику аватарку (96px)
 
     // Дата реєстрації (день/місяць/рік): беремо напряму з session.user.created_at (0 звернень до БД)
     const createdAtEl = document.getElementById('profile-created-at') || document.querySelector('[data-stat="created_at"]');
