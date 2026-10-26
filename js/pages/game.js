@@ -157,8 +157,8 @@ function mountOfflineReplayBanner(roomCode) {
   banner.className = 'offline-replay-banner';
   banner.innerHTML = `
     <div class="offline-replay-banner__content">
-      <span class="offline-replay-banner__badge">📼 ОФЛАЙН-ЗАПИС</span>
-      <span class="offline-replay-banner__text">Локальний перегляд гри <strong>[${esc(roomCode)}]</strong></span>
+      <span class="offline-replay-banner__badge">РЕЗУЛЬТАТИ ЗБЕРЕЖЕНОЇ ГРИ</span>
+      <span class="offline-replay-banner__text">Кімната <strong>[${esc(roomCode)}]</strong></span>
     </div>
     <button type="button" class="offline-replay-banner__exit" id="offline-replay-exit-btn">Повернутися в профіль</button>
   `;

@@ -96,11 +96,19 @@ export function renderProfile() {
       </div>
 
       <div class="profile-panel" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history" hidden>
-        <div class="history-header-actions">
-          <input type="file" id="history-file-input" accept=".bunker" hidden>
-          <button type="button" class="history-open-btn" id="history-open-file-btn">
-            📂 Відкрити файл гри (.bunker)
-          </button>
+        <div class="history-toolbar">
+          <span class="history-toolbar__title">Збережені партії</span>
+          <div class="history-toolbar__actions">
+            <input type="file" id="history-file-input" accept=".bunker" hidden>
+            <button type="button" class="history-toolbar__btn" id="history-open-file-btn" title="Завантажити та переглянути локальний файл гри">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span>Відкрити .bunker</span>
+            </button>
+          </div>
         </div>
         <div id="profile-history-content">
           <div class="profile-empty">
@@ -173,21 +181,28 @@ function renderHistoryCards(container, items) {
 
         return `
           <div class="history-card ${cardClass}" data-room="${esc(code)}">
-            <div class="history-card-header">
-              ${statusBadge}
-              <span class="history-card-date">${esc(dateFormatted)} • Код: ${esc(code)}</span>
+            <div class="history-card__meta">
+              <div class="history-card__tags">
+                ${statusBadge}
+                <span class="history-card__code">КОД: ${esc(code)}</span>
+              </div>
+              <span class="history-card__date">${esc(dateFormatted)}</span>
             </div>
-            <div class="history-card-body">
-              <h4 class="history-card-cataclysm">${esc(cataclysm)}</h4>
-              <p class="history-card-prof">Професія: <strong>${esc(prof)}</strong></p>
-            </div>
-            <div class="history-card-actions">
-              <button type="button" class="history-card-btn history-card-btn--primary" data-action="view-game" data-room="${esc(code)}">
-                Переглянути гру →
-              </button>
-              <button type="button" class="history-card-btn" data-action="export-game" data-room="${esc(code)}">
-                💾 Зберегти реплей
-              </button>
+            <div class="history-card__main">
+              <div class="history-card__info">
+                <h4 class="history-card__cataclysm">${esc(cataclysm)}</h4>
+                <p class="history-card__prof">Професія: <strong>${esc(prof)}</strong></p>
+              </div>
+              <div class="history-card__actions">
+                <button type="button" class="history-btn history-btn--primary" data-action="view-game" data-room="${esc(code)}">
+                  <span>Переглянути</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button type="button" class="history-btn history-btn--secondary" data-action="export-game" data-room="${esc(code)}" title="Зберегти локальний файл реплею (.bunker)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Зберегти</span>
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -252,18 +267,27 @@ function bindHistoryEvents(container) {
     if (exportBtn) {
       const roomCode = exportBtn.dataset.room;
       exportBtn.disabled = true;
-      const origText = exportBtn.textContent;
-      exportBtn.textContent = 'Завантаження...';
+      const origHtml = exportBtn.innerHTML;
+      exportBtn.innerHTML = `
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Завантаження...</span>
+      `;
       try {
         const roomData = await fetchRoomDataForExport(roomCode);
         if (!roomData) throw new Error('Кімнату вже видалено з бази даних');
         exportGameReplay(roomData);
-        exportBtn.textContent = '✓ Збережено';
-        setTimeout(() => { exportBtn.disabled = false; exportBtn.textContent = origText; }, 2000);
+        exportBtn.innerHTML = `
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Збережено</span>
+        `;
+        setTimeout(() => {
+          exportBtn.disabled = false;
+          exportBtn.innerHTML = origHtml;
+        }, 2000);
       } catch (err) {
         showGlobalToast(err.message || 'Не вдалося експортувати гру');
         exportBtn.disabled = false;
-        exportBtn.textContent = origText;
+        exportBtn.innerHTML = origHtml;
       }
       return;
     }

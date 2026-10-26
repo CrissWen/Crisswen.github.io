@@ -324,43 +324,61 @@
 
 /* ===== Історія ігор та офлайн-реплеї ===== */
 
-.history-header-actions {
+.history-toolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 2px 2px 0;
 }
 
-.history-open-btn {
+.history-toolbar__title {
+  font-family: var(--head);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.history-toolbar__btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 5px 11px;
   background: var(--bg);
-  border: 1px dashed var(--metal-lt);
+  border: 1px solid var(--metal-lt);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-family: var(--body);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: border-color .15s ease, background-color .15s ease, color .15s ease;
 }
-.history-open-btn:hover {
+.history-toolbar__btn:hover {
   border-color: var(--hazard);
   color: var(--hazard);
   background: rgba(255, 255, 255, .04);
+}
+.history-toolbar__btn svg {
+  flex-shrink: 0;
+  opacity: .85;
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .history-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 10px 12px;
   background: var(--bg);
   border: 1px solid var(--metal);
   border-radius: var(--radius-sm);
@@ -372,118 +390,166 @@
 }
 
 .history-card.is-survived {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--ok);
 }
 .history-card.is-kicked {
   border-left: 3px solid var(--danger);
 }
 
-.history-card-header {
+.history-card__meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.history-card__tags {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
 }
 
 .history-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 4px;
   font-family: var(--head);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
+  line-height: 1.2;
 }
 .history-badge.is-survived {
-  background: rgba(95, 205, 176, .15);
-  color: var(--accent);
-  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  color: var(--ok);
+  border: 1px solid var(--ok);
 }
 .history-badge.is-kicked {
-  background: rgba(230, 80, 70, .15);
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
   color: var(--danger);
   border: 1px solid var(--danger);
 }
 
-.history-card-date {
+.history-card__code {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: .02em;
+}
+
+.history-card__date {
+  font-family: var(--mono);
+  font-size: 11px;
   color: var(--text-mute);
 }
 
-.history-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.history-card-cataclysm {
-  font-family: var(--head);
-  font-size: 16px;
-  color: var(--text);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.history-card-prof {
-  font-size: 13px;
-  color: var(--text-mute);
-  margin: 0;
-}
-.history-card-prof strong {
-  color: var(--text);
-}
-
-.history-card-actions {
+.history-card__main {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.history-card-btn {
-  display: inline-flex;
+.history-card__info {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.history-card__cataclysm {
+  font-family: var(--head);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-card__prof {
+  font-size: 12px;
+  color: var(--text-mute);
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-card__prof strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.history-card__actions {
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  flex-shrink: 0;
+}
+
+.history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
   border-radius: var(--radius-sm);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid var(--metal-lt);
   background: var(--bg);
   color: var(--text);
+  line-height: 1.2;
   transition: border-color .15s ease, background-color .15s ease, color .15s ease;
 }
-.history-card-btn:hover {
+.history-btn:hover {
   background: rgba(255, 255, 255, .05);
   border-color: var(--hazard);
 }
-.history-card-btn--primary {
+.history-btn--primary {
   background: rgba(240, 168, 104, .12);
   border-color: var(--hazard);
   color: var(--hazard);
 }
-.history-card-btn--primary:hover {
+.history-btn--primary:hover {
   background: var(--hazard);
   color: #1a0806;
 }
-
-.history-card-btn:disabled {
+.history-btn--secondary {
+  background: rgba(0, 0, 0, .2);
+  border-color: var(--metal-lt);
+  color: var(--text);
+}
+.history-btn--secondary:hover {
+  border-color: var(--hazard);
+  color: var(--hazard);
+}
+.history-btn:disabled {
   opacity: .5;
   cursor: not-allowed;
   border-color: var(--metal);
 }
 
-/* --- Плашка офлайн-реплею в game.js --- */
+@media (max-width: 440px) {
+  .history-card__main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .history-card__actions {
+    justify-content: flex-end;
+  }
+}
+
+/* --- Плашка збереженої гри в game.js --- */
 .offline-replay-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   margin-bottom: 16px;
   background: var(--panel-2, var(--panel));
   border: 1px solid var(--hazard);
@@ -500,23 +566,24 @@
   background: var(--hazard);
   color: #1a0806;
   font-family: var(--head);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 4px;
   letter-spacing: .04em;
+  text-transform: uppercase;
 }
 .offline-replay-banner__text {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text);
 }
 .offline-replay-banner__exit {
-  padding: 6px 12px;
+  padding: 5px 11px;
   background: var(--bg);
   border: 1px solid var(--metal-lt);
   color: var(--text);
   border-radius: var(--radius-sm);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
