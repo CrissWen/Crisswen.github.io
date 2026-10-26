@@ -149,6 +149,18 @@ function saveCachedStats(userId, stats) {
   } catch (_) {}
 }
 
+let currentTabSelector = null;
+
+export function selectProfileTab(name = 'profile', focus = false) {
+  if (typeof currentTabSelector === 'function') {
+    currentTabSelector(name, focus);
+  }
+}
+
+export function cleanupProfile() {
+  currentTabSelector = null;
+}
+
 let historyLoaded = false;
 
 function formatProfTitle(val) {
@@ -333,6 +345,8 @@ function setupProfileTabs(userId = null) {
             sessionStorage.setItem(TAB_STORAGE_KEY, name);
         } catch (e) { /* sessionStorage недоступний — просто не запам'ятовуємо вкладку */ }
     };
+
+    currentTabSelector = select;
 
     tabs.forEach((tab, index) => {
         tab.addEventListener('click', () => select(tab.dataset.tab));

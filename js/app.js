@@ -2,7 +2,7 @@ import { supabase } from './services/supabase.js';
 import { renderAuth, initAuth } from './pages/auth.js';
 import { renderLobby, initLobby } from './pages/lobby.js';
 import { renderGame, initGame, cleanupGame } from './pages/game.js';
-import { renderProfile, initProfile } from './pages/profile.js'; // Підключаємо сторінку профілю
+import { renderProfile, initProfile, cleanupProfile, selectProfileTab } from './pages/profile.js'; // Підключаємо сторінку профілю
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
 import { applyStoredTheme } from './utils/theme-manager.js';
@@ -32,7 +32,7 @@ const routes = {
   '#/login': { render: renderAuth, init: initAuth, cleanup: null },
   '#/lobby': { render: renderLobby, init: initLobby, cleanup: null },
   '#/game': { render: renderGame, init: initGame, cleanup: cleanupGame },
-  '#/profile': { render: renderProfile, init: initProfile, cleanup: null },
+  '#/profile': { render: renderProfile, init: initProfile, cleanup: cleanupProfile },
   '#/packs': { render: renderPacks, init: initPacks, cleanup: cleanupPacks },
   '#/pack-editor': { render: renderPackEditor, init: initPackEditor, cleanup: cleanupPackEditor },
 };
@@ -117,3 +117,15 @@ async function router() {
 
 window.addEventListener('hashchange', router);
 window.addEventListener('DOMContentLoaded', router);
+// Повторне натискання на профіль у шапці: якщо гравець уже на сторінці профілю,
+// повертає його на першу вкладку «Профіль»
+document.addEventListener('click', (e) => {
+  const profileLink = e.target.closest('.header-profile-link, a[href="#/profile"]');
+  if (profileLink) {
+    const currentPath = (window.location.hash || '').split('?')[0];
+    if (currentPath === '#/profile') {
+      selectProfileTab('profile', true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+});
