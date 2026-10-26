@@ -1,3 +1,5 @@
+import { esc } from '../utils/security.js';
+import { REPLAY_STORAGE_KEY } from '../services/replay-service.js';
 import { supabase } from '../services/supabase.js';
 import { cataclysm } from '../game-modules/board/cataclysm.js';
 import { bunkerInfo } from '../game-modules/board/bunker-info.js';
@@ -146,9 +148,60 @@ export function renderGame() {
   `;
 }
 
+
+function mountOfflineReplayBanner(roomCode) {
+  document.getElementById('offline-replay-banner')?.remove();
+  const banner = document.createElement('div');
+  banner.id = 'offline-replay-banner';
+  banner.className = 'offline-replay-banner';
+  banner.innerHTML = `
+    <div class="offline-replay-banner__content">
+      <span class="offline-replay-banner__badge">📼 ОФЛАЙН-ЗАПИС</span>
+      <span class="offline-replay-banner__text">Локальний перегляд гри <strong>[${esc(roomCode)}]</strong></span>
+    </div>
+    <button type="button" class="offline-replay-banner__exit" id="offline-replay-exit-btn">Повернутися в профіль</button>
+  `;
+  banner.querySelector('#offline-replay-exit-btn').addEventListener('click', () => {
+    window.location.hash = '#/profile';
+  });
+  document.querySelector('.layout-large-centered')?.prepend(banner);
+}
+
 export async function initGame() {
   const statusEl = document.getElementById('game-status');
   const boardEl = document.getElementById('game-board');
+  const isOfflineReplay = window.location.hash.includes('mode=offline_replay');
+  if (isOfflineReplay) {
+    try {
+      const raw = sessionStorage.getItem(REPLAY_STORAGE_KEY);
+      if (!raw) throw new Error('Запис гри не знайдено або термін сесії вичерпано');
+      const replayRoom = JSON.parse(raw);
+      localRoomState = { ...replayRoom, status: 'closed' };
+      currentRoomCode = (replayRoom.room_code || 'REPLAY').toUpperCase();
+      currentUserId = 'offline-viewer';
+      currentUserName = 'Глядач';
+      isSpectator = true;
+
+      await Promise.all([getGameConfig(), syncServerTime()]);
+      await fetchAvatars(Object.keys(localRoomState.players_state || {}));
+
+      updateGameBoard(localRoomState, boardEl);
+      statusEl.style.display = 'none';
+      boardEl.style.display = 'block';
+
+      mountOfflineReplayBanner(currentRoomCode);
+
+      mountGameTimer(() => localRoomState?.bunker_state);
+      mountCataclysmTimer(onCataclysmTimerExpired);
+      syncCataclysm(localRoomState.bunker_state, localRoomState.status);
+      return;
+    } catch (err) {
+      statusEl.textContent = 'Помилка завантаження запису: ' + err.message;
+      statusEl.style.color = 'var(--danger)';
+      return;
+    }
+  }
+
   const hashParts = window.location.hash.split('?room=');
 
   if (hashParts.length < 2 || !hashParts[1]) {
@@ -563,6 +616,7 @@ export function cleanupGame() {
   unmountHeaderCollapseTab();
   resetBoardUiState();
   document.getElementById('spectator-badge')?.classList.add('is-hidden');
+  document.getElementById('offline-replay-banner')?.remove();
   removeHostPanel();
   HostActions.clearSnapshot(); // знімок «Скасувати» живе в пам'яті модуля: без цього після виходу й повернення в ту саму кімнату він би лишився
   unmountGameTimer();

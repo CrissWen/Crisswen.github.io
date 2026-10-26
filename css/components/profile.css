@@ -321,3 +321,207 @@
     gap: 8px;
   }
 }
+
+/* ===== Історія ігор та офлайн-реплеї ===== */
+
+.history-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.history-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 1px dashed var(--metal-lt);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+.history-open-btn:hover {
+  border-color: var(--hazard);
+  color: var(--hazard);
+  background: rgba(255, 255, 255, .04);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .4);
+  transition: border-color .15s ease;
+}
+.history-card:hover {
+  border-color: var(--metal-lt);
+}
+
+.history-card.is-survived {
+  border-left: 3px solid var(--accent);
+}
+.history-card.is-kicked {
+  border-left: 3px solid var(--danger);
+}
+
+.history-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--head);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.history-badge.is-survived {
+  background: rgba(95, 205, 176, .15);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.history-badge.is-kicked {
+  background: rgba(230, 80, 70, .15);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.history-card-date {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-mute);
+}
+
+.history-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-card-cataclysm {
+  font-family: var(--head);
+  font-size: 16px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.history-card-prof {
+  font-size: 13px;
+  color: var(--text-mute);
+  margin: 0;
+}
+.history-card-prof strong {
+  color: var(--text);
+}
+
+.history-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.history-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--metal-lt);
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+.history-card-btn:hover {
+  background: rgba(255, 255, 255, .05);
+  border-color: var(--hazard);
+}
+.history-card-btn--primary {
+  background: rgba(240, 168, 104, .12);
+  border-color: var(--hazard);
+  color: var(--hazard);
+}
+.history-card-btn--primary:hover {
+  background: var(--hazard);
+  color: #1a0806;
+}
+
+.history-card-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  border-color: var(--metal);
+}
+
+/* --- Плашка офлайн-реплею в game.js --- */
+.offline-replay-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--hazard);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
+}
+.offline-replay-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.offline-replay-banner__badge {
+  background: var(--hazard);
+  color: #1a0806;
+  font-family: var(--head);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: .04em;
+}
+.offline-replay-banner__text {
+  font-size: 13.5px;
+  color: var(--text);
+}
+.offline-replay-banner__exit {
+  padding: 6px 12px;
+  background: var(--bg);
+  border: 1px solid var(--metal-lt);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.offline-replay-banner__exit:hover {
+  border-color: var(--hazard);
+}

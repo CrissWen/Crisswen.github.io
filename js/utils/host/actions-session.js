@@ -1,3 +1,4 @@
+import { supabase } from '../../services/supabase.js';
 import { pushLog } from '../log-writer.js';
 import { randInt } from '../random.js';
 import { getRoom, saveRoom, snapshot, clearSnapshot } from './room-store.js';
@@ -142,4 +143,12 @@ export async function closeRoom(roomCode, stoppedTimer = null) {
   }
   await saveRoom(roomCode, patch);
   clearSnapshot();
+
+  // Записуємо результати гри в історію кожного учасника через RPC
+  try {
+    const { error: rpcError } = await supabase.rpc('record_game_results', { p_room_code: roomCode });
+    if (rpcError) console.warn('Помилка фіксації результатів гри в історії:', rpcError);
+  } catch (err) {
+    console.warn('Не вдалося викликати record_game_results:', err);
+  }
 }

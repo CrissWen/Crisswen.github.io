@@ -1,3 +1,6 @@
+import { getCachedUserHistory, fetchUserGameHistory, checkRoomExists, fetchRoomDataForExport } from '../services/game-history-service.js';
+import { exportGameReplay, readReplayFile, launchOfflineReplay } from '../services/replay-service.js';
+import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { supabase } from '../services/supabase.js';
 import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
@@ -93,10 +96,18 @@ export function renderProfile() {
       </div>
 
       <div class="profile-panel" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history" hidden>
-        <div class="profile-empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          <p class="profile-empty__title">Ігор поки немає</p>
-          <p class="profile-empty__text">Тут з'явиться список ваших завершених ігор з результатами.</p>
+        <div class="history-header-actions">
+          <input type="file" id="history-file-input" accept=".bunker" hidden>
+          <button type="button" class="history-open-btn" id="history-open-file-btn">
+            📂 Відкрити файл гри (.bunker)
+          </button>
+        </div>
+        <div id="profile-history-content">
+          <div class="profile-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            <p class="profile-empty__title">Ігор поки немає</p>
+            <p class="profile-empty__text">Тут з'явиться список ваших останніх 5 завершених ігор.</p>
+          </div>
         </div>
       </div>
       </div>
@@ -110,7 +121,137 @@ export function renderProfile() {
 const TAB_STORAGE_KEY = 'bunker-profile-tab';
 const TAB_NAMES = ['profile', 'themes', 'history'];
 
-function setupProfileTabs() {
+
+let historyLoaded = false;
+
+function renderHistoryCards(container, items) {
+  if (!items || items.length === 0) {
+    container.innerHTML = `
+      <div class="profile-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        <p class="profile-empty__title">Ігор поки немає</p>
+        <p class="profile-empty__text">Тут з'явиться список ваших останніх 5 завершених ігор.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="history-list">
+      ${items.map(item => {
+        const survived = !!item.survived;
+        const statusBadge = survived
+          ? '<span class="history-badge is-survived">ВИЖИВ</span>'
+          : '<span class="history-badge is-kicked">ВИГНАНИЙ</span>';
+        const cardClass = survived ? 'is-survived' : 'is-kicked';
+        const dateObj = new Date(item.played_at);
+        const dateFormatted = !isNaN(dateObj.getTime())
+          ? `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()}`
+          : '';
+        const cataclysm = item.cataclysm_title || 'Катаклізм';
+        const prof = item.profession_title || 'Невідома професія';
+        const code = (item.room_code || '').toUpperCase();
+
+        return `
+          <div class="history-card ${cardClass}" data-room="${esc(code)}">
+            <div class="history-card-header">
+              ${statusBadge}
+              <span class="history-card-date">${esc(dateFormatted)} • Код: ${esc(code)}</span>
+            </div>
+            <div class="history-card-body">
+              <h4 class="history-card-cataclysm">${esc(cataclysm)}</h4>
+              <p class="history-card-prof">Професія: <strong>${esc(prof)}</strong></p>
+            </div>
+            <div class="history-card-actions">
+              <button type="button" class="history-card-btn history-card-btn--primary" data-action="view-game" data-room="${esc(code)}">
+                Переглянути гру →
+              </button>
+              <button type="button" class="history-card-btn" data-action="export-game" data-room="${esc(code)}">
+                💾 Зберегти реплей
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function loadHistoryTab(userId) {
+  if (historyLoaded || !userId) return;
+  const container = document.getElementById('profile-history-content');
+  if (!container) return;
+
+  const cached = getCachedUserHistory(userId);
+  if (cached && cached.length > 0) {
+    renderHistoryCards(container, cached);
+  }
+
+  const items = await fetchUserGameHistory(userId);
+  historyLoaded = true;
+  renderHistoryCards(container, items);
+}
+
+function bindHistoryEvents(container) {
+  const fileInput = document.getElementById('history-file-input');
+  const openBtn = document.getElementById('history-open-file-btn');
+
+  if (openBtn && fileInput) {
+    openBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file) return;
+      try {
+        const roomData = await readReplayFile(file);
+        launchOfflineReplay(roomData);
+      } catch (err) {
+        showGlobalToast(err.message || 'Помилка відкриття файлу реплею');
+      }
+    });
+  }
+
+  container.addEventListener('click', async (e) => {
+    const viewBtn = e.target.closest('[data-action="view-game"]');
+    if (viewBtn) {
+      const roomCode = viewBtn.dataset.room;
+      viewBtn.disabled = true;
+      const origText = viewBtn.textContent;
+      viewBtn.textContent = 'Перевірка...';
+      const exists = await checkRoomExists(roomCode);
+      if (exists) {
+        window.location.hash = `#/game?room=${roomCode}`;
+      } else {
+        viewBtn.disabled = true;
+        viewBtn.textContent = 'Заархівовано';
+        showGlobalToast('Кімнату вже видалено з бази або заархівовано');
+      }
+      return;
+    }
+
+    const exportBtn = e.target.closest('[data-action="export-game"]');
+    if (exportBtn) {
+      const roomCode = exportBtn.dataset.room;
+      exportBtn.disabled = true;
+      const origText = exportBtn.textContent;
+      exportBtn.textContent = 'Завантаження...';
+      try {
+        const roomData = await fetchRoomDataForExport(roomCode);
+        if (!roomData) throw new Error('Кімнату вже видалено з бази даних');
+        exportGameReplay(roomData);
+        exportBtn.textContent = '✓ Збережено';
+        setTimeout(() => { exportBtn.disabled = false; exportBtn.textContent = origText; }, 2000);
+      } catch (err) {
+        showGlobalToast(err.message || 'Не вдалося експортувати гру');
+        exportBtn.disabled = false;
+        exportBtn.textContent = origText;
+      }
+      return;
+    }
+  });
+}
+
+function setupProfileTabs(userId = null) {
     const tabs = [...document.querySelectorAll('.profile-tab')];
     if (!tabs.length) return;
 
@@ -123,6 +264,9 @@ function setupProfileTabs() {
             if (panel) panel.hidden = !active;
             if (active && focus) tab.focus();
         });
+        if (name === 'history' && userId) {
+            loadHistoryTab(userId);
+        }
         try {
             sessionStorage.setItem(TAB_STORAGE_KEY, name);
         } catch (e) { /* sessionStorage недоступний — просто не запам'ятовуємо вкладку */ }
@@ -153,7 +297,7 @@ function setupProfileTabs() {
 
 export async function initProfile() {
     // Вкладки працюють одразу, без очікування сесії та запитів до БД
-    setupProfileTabs();
+    // setupProfileTabs буде ініціалізовано з userId нижче
 
     const nameEl = document.getElementById('profile-page-name');
     const avatarEl = document.getElementById('profile-page-avatar');
@@ -198,22 +342,27 @@ export async function initProfile() {
 
     applyAvatarLetterPadding(avatarEl, firstLetter, 9); // Зсув більший під велику аватарку (96px)
 
-    // Дата реєстрації (день/місяць/рік): беремо напряму з session.user.created_at (0 звернень до БД)
+    // Завантажуємо статистику з users: games_played, games_won та created_at
+    const userId = session.user.id;
+    historyLoaded = false;
+    setupProfileTabs(userId);
+    const historyContainer = document.getElementById('profile-history-content');
+    if (historyContainer) bindHistoryEvents(historyContainer);
+
     const createdAtEl = document.getElementById('profile-created-at') || document.querySelector('[data-stat="created_at"]');
-    if (createdAtEl) {
-        let createdAt = session.user?.created_at;
-        if (!createdAt && session.user?.id) {
-            const cacheKey = `bunker_user_created_${session.user.id}`;
-            try { createdAt = sessionStorage.getItem(cacheKey); } catch (e) {}
-            if (!createdAt) {
-                const { data } = await supabase.from('users').select('created_at').eq('id', session.user.id).maybeSingle();
-                if (data?.created_at) {
-                    createdAt = data.created_at;
-                    try { sessionStorage.setItem(cacheKey, createdAt); } catch (e) {}
-                }
-            }
-        }
-        if (createdAt) {
+    const playedEl = document.querySelector('[data-stat="games_played"]');
+    const wonEl = document.querySelector('[data-stat="games_won"]');
+    const winRateEl = document.querySelector('[data-stat="win_rate"]');
+
+    try {
+        const { data: userStats } = await supabase
+            .from('users')
+            .select('created_at, games_played, games_won')
+            .eq('id', userId)
+            .maybeSingle();
+
+        const createdAt = userStats?.created_at || session.user?.created_at;
+        if (createdAt && createdAtEl) {
             const d = new Date(createdAt);
             if (!isNaN(d.getTime())) {
                 const day = String(d.getDate()).padStart(2, '0');
@@ -224,10 +373,20 @@ export async function initProfile() {
                 createdAtEl.title = `Дата реєстрації: ${formatted}`;
             }
         }
+
+        const played = Number(userStats?.games_played) || 0;
+        const won = Number(userStats?.games_won) || 0;
+        if (playedEl) playedEl.textContent = played;
+        if (wonEl) wonEl.textContent = won;
+        if (winRateEl) {
+            const rate = played > 0 ? Math.round((won / played) * 100) : 0;
+            winRateEl.textContent = `${rate}%`;
+        }
+    } catch (err) {
+        console.warn('Не вдалося завантажити статистику користувача:', err);
     }
 
     // ===== Аватарка: вибір файла → стиснення → Storage → users.avatar_url (див. services/avatar-service.js) =====
-    const userId = session.user.id;
     const fileInput = document.getElementById('avatar-file-input');
     const changeBtn = document.getElementById('avatar-change-btn');
     const removeBtn = document.getElementById('avatar-remove-btn');
