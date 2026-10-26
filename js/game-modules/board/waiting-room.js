@@ -21,7 +21,7 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
   const playersListHtml = Object.entries(pState)
     .map(([playerId, p]) => `
       <li class="lobby-player-item" style="padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="display: flex; align-items: center; min-width: 0;">${avatarBadgeHtml(playerId, p.name, 28)}${esc(p.name)}</span>
+        <span style="display: flex; align-items: center; min-width: 0;">${avatarBadgeHtml(playerId, p.name, 28, { clickable: true })}${esc(p.name)}</span>
         ${isHost && playerId !== myId ? `<button data-lobby-kick="${playerId}" class="lobby-kick-btn" title="Вигнати з лобі" style="background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 0 4px;">✕</button>` : ''}
       </li>
     `)

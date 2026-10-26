@@ -36,6 +36,7 @@ import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.j
 import { syncServerTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
+import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -465,6 +466,17 @@ function setupActionListeners() {
   document.addEventListener("change", handleGlobalChange);
   document.removeEventListener("focusout", handleGlobalFocusOut);
   document.addEventListener("focusout", handleGlobalFocusOut);
+  document.removeEventListener("keydown", handleGlobalKeydown);
+  document.addEventListener("keydown", handleGlobalKeydown);
+}
+
+// Відкриття профілю гравця з клавіатури: Enter / Пробіл на аватарці у фокусі (аватарки з tabindex робить profileTriggerAttrs)
+function handleGlobalKeydown(e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const trigger = e.target.closest?.('[data-profile-user][tabindex]');
+  if (!trigger) return;
+  e.preventDefault(); // Пробіл не має прокручувати сторінку
+  openPlayerProfile({ userId: trigger.dataset.profileUser, name: trigger.dataset.profileName, opener: trigger });
 }
 
 // Диспетчер змін у полях: вибір пака в кімнаті очікування або радіо-плитка голосування
@@ -537,6 +549,18 @@ async function handleGlobalClick(e) {
     const nextCollapsed = !document.body.classList.contains('is-header-collapsed');
     headerManuallyCollapsed = nextCollapsed;
     setHeaderCollapsed(nextCollapsed);
+    return;
+  }
+
+  // Клік по аватарці будь-якого гравця (навіть своєї) — коротке вікно профілю. Перевірка стоїть до акордеону карток:
+  // аватарка у мобільній картці живе всередині кнопки розгортання, і без цього клік розгорнув би картку.
+  const profileTrigger = e.target.closest('[data-profile-user]');
+  if (profileTrigger) {
+    openPlayerProfile({
+      userId: profileTrigger.dataset.profileUser,
+      name: profileTrigger.dataset.profileName,
+      opener: profileTrigger
+    });
     return;
   }
 
@@ -628,6 +652,8 @@ export function cleanupGame() {
   document.removeEventListener("click", handleGlobalClick);
   document.removeEventListener("change", handleGlobalChange);
   document.removeEventListener("focusout", handleGlobalFocusOut);
+  document.removeEventListener("keydown", handleGlobalKeydown);
+  closePlayerProfile({ immediate: true });
   resetVotingState();
   resetPackSelect();
   renderSkippedForPackSelect = false;

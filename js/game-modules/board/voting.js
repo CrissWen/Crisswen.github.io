@@ -45,7 +45,7 @@ function resultsTableHtml(votes, players, totalVoters) {
       const percent = totalVoters > 0 ? Math.round((voterIds.length / totalVoters) * 100) : 0;
       return `
         <tr>
-          <td>${avatarBadgeHtml(candidateId, nameOf(players, candidateId), 22)}${esc(nameOf(players, candidateId))}</td>
+          <td>${avatarBadgeHtml(candidateId, nameOf(players, candidateId), 22, { clickable: true })}${esc(nameOf(players, candidateId))}</td>
           <td>${voterIds.map(id => esc(nameOf(players, id))).join(', ')}</td>
           <td>${percent}%</td>
         </tr>

@@ -1,6 +1,6 @@
 import { describeScale } from '../../utils/experience.js';
 import { esc, unescapeApos, renderSafeNodes } from '../../utils/security.js';
-import { avatarImgHtml, getAvatarPaddingStyle } from '../../utils/avatar.js';
+import { avatarImgHtml, getAvatarPaddingStyle, profileTriggerAttrs } from '../../utils/avatar.js';
 import { getPlayersViewMode, isPlayerCardExpanded } from './board-ui-state.js';
 
 // Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
@@ -89,7 +89,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
           <td class="player-cell">
             <div class="player-info-wrapper">
               <span class="player-num">${index + 1}</span>
-              <span class="avatar" style="${avatarPadding}">${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
+              <span class="avatar" style="${avatarPadding}" ${profileTriggerAttrs(p.id, cleanName, { focusable: true })}>${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
               <div class="player-name-wrapper">
                 <div class="player-nickname">${esc(cleanName)}</div>
                 ${kickToggle(p)}
@@ -143,7 +143,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
             <button type="button" class="player-acc-card__toggle" data-player-card-toggle="${esc(playerKey)}" aria-expanded="${isExpanded}">
               <div class="player-acc-card__identity">
                 <span class="player-num">${index + 1}</span>
-                <span class="avatar" style="${avatarPadding}">${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
+                <span class="avatar" style="${avatarPadding}" ${profileTriggerAttrs(p.id, cleanName)}>${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
                 <span class="player-nickname">${esc(cleanName)}</span>
               </div>
               <div class="player-acc-card__meta">

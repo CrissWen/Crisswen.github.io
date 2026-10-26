@@ -27,11 +27,21 @@ export function avatarImgHtml(userId) {
   return `<img class="avatar-img" src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" draggable="false">`;
 }
 
-// Готовий круглий бейдж (літера + фото) заданого розміру — для списків, де окремого контейнера аватарки ще немає
-export function avatarBadgeHtml(userId, name, size = 28) {
+// Атрибути, за якими аватарка відкриває коротке вікно профілю гравця (js/ui/player-profile-modal.js, диспетчер кліків у pages/game.js).
+// Порожній рядок, якщо id невідомий. focusable=true додає role="button" і tabindex — для аватарок поза кнопками (усередині <button> не потрібно).
+export function profileTriggerAttrs(userId, name, { focusable = false } = {}) {
+  if (!userId) return '';
+  const base = `data-profile-user="${esc(userId)}" data-profile-name="${esc(name ?? '')}"`;
+  return focusable ? `${base} role="button" tabindex="0" aria-label="Профіль гравця ${esc(name ?? '')}"` : base;
+}
+
+// Готовий круглий бейдж (літера + фото) заданого розміру — для списків, де окремого контейнера аватарки ще немає.
+// clickable=true — бейдж відкриває вікно профілю гравця.
+export function avatarBadgeHtml(userId, name, size = 28, { clickable = false } = {}) {
   const letter = String(name ?? '').charAt(0);
   const fontSize = Math.max(10, Math.round(size * 0.46));
-  return `<span class="avatar-badge" style="--avatar-size:${size}px;font-size:${fontSize}px;">${esc(letter)}${avatarImgHtml(userId)}</span>`;
+  const trigger = clickable ? ` ${profileTriggerAttrs(userId, name, { focusable: true })}` : '';
+  return `<span class="avatar-badge" style="--avatar-size:${size}px;font-size:${fontSize}px;"${trigger}>${esc(letter)}${avatarImgHtml(userId)}</span>`;
 }
 
 // Заповнює готовий DOM-елемент (хедер, профіль): літера + за наявності фото
