@@ -4,7 +4,8 @@
 /* Контейнери, куди js/utils/avatar.js кладе <img>: фото має накривати весь круг */
 .header-user-avatar,
 #profile-page-avatar,
-table.bunker-table td.player-cell .avatar {
+table.bunker-table td.player-cell .avatar,
+.player-acc-card__identity .avatar {
   position: relative;
   overflow: hidden;
 }
