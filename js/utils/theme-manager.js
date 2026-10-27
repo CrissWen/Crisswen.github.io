@@ -23,7 +23,7 @@ export const THEMES = [
     label: 'Сталкер (Grimdark)',
     name: 'Сталкер',
     tag: 'Grimdark',
-    palette: ['#0a0b0a', '#141613', '#d6b022', '#4f6e43']
+    palette: ['#0a0b0a', '#141613', '#d6b022', '#6f9a5e']
   },
   {
     value: 'fallout',
@@ -51,7 +51,7 @@ export const THEMES = [
     label: 'Потужність (Patriot)',
     name: 'Потужність',
     tag: 'Patriot',
-    palette: ['#001838', '#003882', '#ffa700', '#197bff']
+    palette: ['#001838', '#003882', '#ffa700', '#69b0ff']
   }
 ];
 

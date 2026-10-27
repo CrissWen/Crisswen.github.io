@@ -38,7 +38,7 @@ export function renderAuth() {
           <input type="text" id="username" placeholder="Ім'я гравця" maxlength="12" style="${inputStyle}">
           <input type="password" id="password" placeholder="Пароль" style="${inputStyle}">
 
-          <button id="login-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--ok); color: #000; font-weight: bold; cursor: pointer; border: none;">${BUTTON_TEXT.login}</button>
+          <button id="login-btn" class="menu-btn menu-btn--ok">${BUTTON_TEXT.login}</button>
           <p id="auth-error" style="color: var(--danger); font-size: 13px; display: none;"></p>
         </div>
 
@@ -46,8 +46,8 @@ export function renderAuth() {
              якщо supabase.auth.getSession() поверне активну сесію (наприклад, гравець зайшов сюди через кнопку "Профіль" у хедері). -->
         <div id="auth-profile-container" style="display: none; flex-direction: column; gap: 14px;">
           <p id="auth-profile-text" style="margin: 0; font-size: 15px; color: var(--text);"></p>
-          <button id="profile-lobby-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none;">Повернутися в лобі</button>
-          <button id="profile-logout-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none;">Вийти з акаунта</button>
+          <button id="profile-lobby-btn" class="menu-btn menu-btn--accent">Повернутися в лобі</button>
+          <button id="profile-logout-btn" class="menu-btn menu-btn--danger">Вийти з акаунта</button>
         </div>
 
       </div>

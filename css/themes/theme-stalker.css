@@ -3,21 +3,25 @@
    та інлайн-стилі в host-panel.js, waiting-room.js, lobby.js, auth.js, profile.js, game.js тощо).
    Тут же — фоновий ефект body, специфічний саме для цієї теми (зерниста текстура + віньєтка). */
 :root{
-  --on-ok:     var(--text);
-  --on-danger: var(--text);
+  --on-ok:     #0b1408;
+  --on-danger: #1a0806;
+  --danger-strong:    #b8382e;
+  --on-danger-strong: #fff3ef;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--hazard) 40%, transparent);
   --bg:        #0a0b0a;
   --panel:     #141613;
   --panel-2:   #1d211a;
   --metal:     #2f362a;
   --metal-lt:  #3c4535;
   --hazard:    #d6b022;
-  --danger:    #9e2a22;
-  --ok:        #4f6e43;
+  --danger:    #d9534a; /* було #9e2a22: контраст на панелі був 2.4, тепер ≥4.5 */
+  --ok:        #6f9a5e; /* було #4f6e43: контраст на панелі був 3.2 */
   --accent:    #7b8c72;
   --text:      #c4cdc0;
-  --text-mute: #6b7562;
+  --text-mute: #8c9784; /* було #6b7562: контраст був 3.8 */
   --radius:    4px;
   --radius-sm: 2px;
+  --radius-xs: 1px;
   --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
   --head: 'Oswald', 'Arial Narrow', sans-serif;
   --body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
@@ -271,6 +275,81 @@ button#login-btn:focus-visible,
 button#profile-lobby-btn:focus-visible,
 button#profile-logout-btn:focus-visible,
 button.auth-mode-tab:focus-visible{
+  outline:2px solid var(--hazard);
+  outline-offset:2px;
+}
+
+
+/* ===== Нові кнопки (історія ігор, реплеї, редактор паків) — та сама система --btn-* ===== */
+button.history-btn:not(.history-btn--primary),
+button.history-toolbar__btn,
+button.offline-replay-banner__exit,
+button.pe-delete-pill-btn--ghost,
+button.pe-delete-pill-btn--cancel{
+  background:var(--btn-bg);
+  color:var(--btn-text);
+  border:1px solid var(--btn-border);
+  box-shadow:var(--btn-shadow);
+  transition:background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+button.history-btn:not(.history-btn--primary):hover:not(:disabled),
+button.history-toolbar__btn:hover:not(:disabled),
+button.offline-replay-banner__exit:hover:not(:disabled),
+button.pe-delete-pill-btn--ghost:hover:not(:disabled),
+button.pe-delete-pill-btn--cancel:hover:not(:disabled){
+  background:var(--btn-hover-bg);
+  border-color:var(--btn-hover-border);
+  color:var(--btn-hover-text);
+  box-shadow:var(--btn-shadow), var(--btn-glow);
+}
+/* Головні (жовті) */
+button.history-btn.history-btn--primary,
+button.pe-mobile-add-btn{
+  border:1px solid #f0cf3c;
+  box-shadow:var(--btn-shadow);
+  font-weight:700;
+}
+button.history-btn.history-btn--primary{
+  background:color-mix(in srgb, var(--hazard) 14%, var(--btn-bg));
+  color:#ead77a;
+}
+button.history-btn.history-btn--primary:hover:not(:disabled){
+  background:var(--hazard);
+  color:#000;
+  box-shadow:var(--btn-shadow), 0 0 10px rgba(214,176,34,.45);
+}
+button.pe-mobile-add-btn:hover:not(:disabled){
+  filter:brightness(1.12);
+  box-shadow:var(--btn-shadow), 0 0 10px rgba(214,176,34,.45);
+}
+/* Небезпечна кнопка у плаваючій панелі */
+button.pe-delete-pill-btn--danger{
+  border:1px solid color-mix(in srgb, var(--danger-strong) 70%, #000);
+  box-shadow:var(--btn-shadow);
+}
+button.history-btn:active:not(:disabled),
+button.history-toolbar__btn:active:not(:disabled),
+button.offline-replay-banner__exit:active:not(:disabled),
+button.pe-delete-pill-btn:active:not(:disabled){
+  transform:translate(1px,1px);
+  box-shadow:1px 1px 0 rgba(0,0,0,.5);
+}
+button.history-btn:disabled,
+button.history-toolbar__btn:disabled,
+button.pe-delete-pill-btn:disabled{
+  background:var(--btn-disabled-bg);
+  color:var(--btn-disabled-text);
+  border-color:var(--btn-disabled-border);
+  box-shadow:none;
+  opacity:1;
+  filter:none;
+  cursor:not-allowed;
+}
+button.history-btn:focus-visible,
+button.history-toolbar__btn:focus-visible,
+button.offline-replay-banner__exit:focus-visible,
+button.pe-delete-pill-btn:focus-visible,
+button.pe-mobile-add-btn:focus-visible{
   outline:2px solid var(--hazard);
   outline-offset:2px;
 }

@@ -11,15 +11,21 @@
   --metal-lt:  #2c5c2c;
   --hazard:    #ffb000;
   --danger:    #ff3b30;
-  --ok:        #39ff6a;
+  --ok:        #b8ff5a; /* лаймовий: «успіх» відрізняється від основного зеленого тексту */
   --accent:    #39ff6a;
   --text:      #39ff6a;
-  --text-mute: #1f7a3a;
+  --text-mute: #33b35c; /* було #1f7a3a: контраст на панелі був 3.5 */
   --radius:    0px;
   --radius-sm: 0px;
-  --mono: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
-  --head: 'VT323', 'Courier New', monospace;
-  --body: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
+  --radius-xs: 0px;
+  --on-ok:     #050a05;
+  --on-danger: #1a0806;
+  --danger-strong:    #ff3b30;
+  --on-danger-strong: #1a0806;
+  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--text) 55%, transparent);
+  --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --head: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --body: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace; /* VT323 не має кирилиці й дуже малий x-height — текст стрибав у розмірі при перемиканні тем */
   --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
 }
 

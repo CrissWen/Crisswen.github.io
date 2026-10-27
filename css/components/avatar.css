@@ -316,7 +316,7 @@ table.bunker-table td.player-cell .avatar,
 
 .avatar-crop-btn--apply {
   background: var(--hazard);
-  color: #1a0806;
+  color: var(--bg);
 }
 
 @media (max-width: 340px) {

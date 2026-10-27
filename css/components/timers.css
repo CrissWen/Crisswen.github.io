@@ -48,7 +48,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 18px;
-  background: linear-gradient(180deg, #2a1210, #1a0b0a);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 16%, var(--bg)), var(--bg));
   border: 2px solid var(--danger);
   border-radius: var(--radius);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
@@ -68,7 +68,7 @@ body.is-header-collapsed .cataclysm-timer {
   align-items: center;
   justify-content: center;
   color: var(--danger);
-  filter: drop-shadow(0 0 6px rgba(239, 111, 97, .6));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--danger) 60%, transparent));
   animation: cataclysm-timer-pulse 1.8s ease-in-out infinite;
 }
 .cataclysm-timer__hazard {

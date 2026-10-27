@@ -10,13 +10,19 @@
   --metal:     #33285a;
   --metal-lt:  #4a3b82;
   --hazard:    #f6019d;
-  --danger:    #ff2952;
+  --danger:    #ff6a3d; /* було #ff2952 — майже збігався з магентою --hazard; тепер помаранчево-червоний */
   --ok:        #00f0ff;
   --accent:    #b46bff;
   --text:      #eae6ff;
   --text-mute: #8478ad;
   --radius:    2px;
   --radius-sm: 0px;
+  --radius-xs: 0px;
+  --on-ok:     #03121a;
+  --on-danger: #1a0806;
+  --danger-strong:    #ff2952;
+  --on-danger-strong: #1a0806;
+  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--ok) 60%, transparent);
   --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
   --head: 'Orbitron', 'Oswald', sans-serif;
   --body: 'Rajdhani', 'IBM Plex Sans', -apple-system, sans-serif;

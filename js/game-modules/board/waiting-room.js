@@ -90,7 +90,7 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
           <p class="lobby-start-hint ${canStart ? 'is-ready' : ''}" id="lobby-start-hint">
             Щоб почати гру, потрібно як мінімум ${MIN_PLAYERS_TO_START} осіб. (${playersCount}/${MAX_PLAYERS_IN_LOBBY})
           </p>
-          <button id="start-game-btn" ${canStart ? '' : 'disabled'} style="width: 100%; padding: 12px; border-radius: var(--radius-sm); background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none; font-size: 15px;">
+          <button id="start-game-btn" ${canStart ? '' : 'disabled'} class="menu-btn menu-btn--hazard menu-btn--block">
             Почати гру
           </button>
         ` : ` 

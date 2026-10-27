@@ -19,13 +19,19 @@
   --metal:     var(--cryo-3);
   --metal-lt:  var(--cryo-4);
   --hazard:    var(--cryo-4);
-  --danger:    var(--cryo-4);
+  --danger:    #ff7a85; /* холодний корал: тривога тепер відрізняється від ціанового --hazard */
   --ok:        var(--cryo-5);
-  --accent:    var(--cryo-4);
+  --accent:    var(--cryo-5);
   --text:      #e6f9f9;
-  --text-mute: var(--cryo-4);
+  --text-mute: #9cc4d2; /* окремий приглушений відтінок, щоб не виглядав як акцент */
   --radius:    16px;
   --radius-sm: 8px;
+  --radius-xs: 4px;
+  --on-ok:     #021019;
+  --on-danger: #1a0806;
+  --danger-strong:    #ff5a68;
+  --on-danger-strong: #1a0806;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--cryo-5) 40%, transparent);
   --mono: 'JetBrains Mono', 'Share Tech Mono', 'Courier New', monospace;
   --head: 'Orbitron', 'Oswald', sans-serif;
   --body: 'Rajdhani', 'IBM Plex Sans', -apple-system, sans-serif;
@@ -139,4 +145,26 @@ select option:checked,
 select option:hover{
   background-color: var(--cryo-3);
   color: #fff;
+}
+
+
+/* ===== Спливаючі поверхні: щільний «морський» фон замість напівпрозорого --panel =====
+   --panel/--panel-2 тут rgba, тому меню, картка профілю, діалог аватарки та плаваюча панель вибору
+   просвічували вміст позаду. Задаємо лише background-color (не shorthand), щоб не зачепити текстури. */
+.pp-card,
+.avatar-crop-dialog,
+.pe-sort-menu,
+.pack-card__dropdown,
+.pe-delete-floating-bar{
+  background-color: color-mix(in srgb, var(--cryo-2) 45%, var(--cryo-1));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+/* Язичок згортання хедера (мобільні): header.css вантажиться після теми, тож специфічність піднято через body */
+body .header-collapse-tab,
+body .header-collapse-tab:hover{
+  background-color: color-mix(in srgb, var(--cryo-2) 55%, var(--cryo-1));
+}
+.offline-replay-banner{
+  background-color: color-mix(in srgb, var(--cryo-2) 40%, var(--cryo-1));
 }

@@ -20,22 +20,27 @@
      --border-metal, --text-main — таких змінних у проєкті немає, тут замінено на реальні --bg/--metal/--text,
      інакше тема просто нічого б не перефарбувала. */
   --bg:        #001838; /* Затемнений синій — щоб панелі кольору --patriot-1 на ньому виділялись, а не зливались */
-  --on-ok:     var(--text);
+  --on-ok:     #001838;
+  --on-danger: #1a0806;
+  --danger-strong:    #ff6b5e;
+  --on-danger-strong: #1a0806;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--patriot-5) 40%, transparent);
   --panel:     var(--patriot-1);
   --panel-2:   rgba(178, 117, 0, .15); /* Дуже м'який бронзовий фон для вторинних блоків */
   --metal:     var(--patriot-4);
   --metal-lt:  var(--patriot-3);
 
   --hazard:    var(--patriot-5);
-  --danger:    var(--patriot-5); /* Тут свідомо бурштиновий замість класичного червоного — тактична тривога, не кров */
-  --ok:        var(--patriot-3);
-  --accent:    var(--patriot-5);
+  --danger:    #ff8579; /* червоно-кораловий: раніше збігався з бурштиновим --hazard, помилка не відрізнялась від попередження */
+  --ok:        #69b0ff; /* світліший синій: на --panel контраст був 2.8, тепер ≥4.5 */
+  --accent:    #a9d4ff; /* блідо-синій: відрізняється від бурштинового --hazard */
 
   --text:      #f0f4f8; /* М'який біло-синій текст */
   --text-mute: #8ba8cc;
 
   --radius:    6px; /* Трохи м'якші кути для органічності (було 4px) */
   --radius-sm: 4px; /* було 2px */
+  --radius-xs: 3px;
 
   /* Шрифти теж системний токен (кожна тема в проєкті задає свою трійку) — лишив без змін, ТЗ їх не
      торкається; без них усе, що звертається до var(--mono)/var(--head)/var(--body), впало б на дефолтний
@@ -123,4 +128,16 @@ body {
 .cataclysm-timer__icon, .cataclysm-timer__time {
   color: var(--patriot-5) !important;
   text-shadow: 0 2px 5px rgba(0, 0, 0, .8) !important;
+}
+
+
+/* ===== Поверхні, що в цій темі лишались напівпрозорими (--panel-2 = rgba бронза) =====
+   Суцільний бронзово-синій фон, щоб текст не зливався з вмістом позаду. Для язичка хедера
+   специфічність піднято через body, бо header.css вантажиться після теми. */
+body .header-collapse-tab,
+body .header-collapse-tab:hover{
+  background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
+}
+.offline-replay-banner{
+  background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
 }

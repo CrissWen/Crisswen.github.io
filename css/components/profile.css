@@ -428,7 +428,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs, 4px);
   font-family: var(--head);
   font-size: 10.5px;
   font-weight: 700;
@@ -524,13 +524,13 @@
   border-color: var(--hazard);
 }
 .history-btn--primary {
-  background: rgba(240, 168, 104, .12);
+  background: color-mix(in srgb, var(--hazard) 12%, transparent);
   border-color: var(--hazard);
   color: var(--hazard);
 }
 .history-btn--primary:hover {
   background: var(--hazard);
-  color: #1a0806;
+  color: var(--bg);
 }
 .history-btn--secondary {
   background: rgba(0, 0, 0, .2);
@@ -579,12 +579,12 @@
 }
 .offline-replay-banner__badge {
   background: var(--hazard);
-  color: #1a0806;
+  color: var(--bg);
   font-family: var(--head);
   font-size: 10.5px;
   font-weight: 700;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs, 4px);
   letter-spacing: .04em;
   text-transform: uppercase;
 }

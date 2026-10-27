@@ -14,8 +14,8 @@
 /* Примусово заливаємо сірим фоном усі комірки рядка таблиці */
 tr.kicked-player td,
 tr.kicked-player th {
-  background-color: #050605 !important;
-  border-color: #1a1e1a !important;
+  background-color: color-mix(in srgb, var(--bg) 85%, #000) !important;
+  border-color: color-mix(in srgb, var(--metal) 40%, var(--bg)) !important;
 }
 
 /* ===== Шапка блоку гравців і перемикач виду (Картки / Таблиця — ТІЛЬКИ на мобільних/планшетах) ===== */
@@ -554,8 +554,8 @@ table.bunker-table td.player-cell .avatar {
   max-width: min(320px, calc(100dvw - 24px));
   white-space: normal;
   overflow-wrap: break-word;
-  background: #edeff5;
-  color: #10121a;
+  background: var(--text);
+  color: var(--bg);
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   font-size: 12px;
@@ -585,13 +585,13 @@ table.bunker-table td.player-cell .avatar {
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
-  border-color: #edeff5 transparent transparent transparent;
+  border-color: var(--text) transparent transparent transparent;
 }
 
 .global-info-popup.is-flipped::after {
   top: auto;
   bottom: 100%;
-  border-color: transparent transparent #edeff5 transparent;
+  border-color: transparent transparent var(--text) transparent;
 }
 
 /* Сама іконка "i" в заголовку таблиці або картці */

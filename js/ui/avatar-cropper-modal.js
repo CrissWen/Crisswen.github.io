@@ -216,7 +216,7 @@ function renderCrop() {
   ctx.fill();
 
   // 3. Тонка рамка видошукача
-  ctx.strokeStyle = '#f0a868'; // колір акценту/попередження
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--hazard').trim() || '#f0a868'; // колір акценту поточної теми
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);

@@ -164,7 +164,7 @@
 
 /* Стиль для тексту помилки */
 .error-text {
-    color: #ff4d4d;
+    color: var(--danger);
     font-size: 0.9em;
     margin-top: 4px;
     height: 18px;
@@ -243,3 +243,23 @@
 .lobby-kick-btn:hover {
   transform: scale(1.2);
 }
+
+
+/* ===== Кнопки меню (вхід, лобі, профіль, кімната очікування) =====
+   Раніше стилі були inline у JS, тому теми (Сталкер) змушені були перебивати їх через !important.
+   Тепер це звичайні класи: колір береться зі змінних теми, текст — з --bg / --on-ok / --on-danger. */
+.menu-btn{
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: bold;
+  cursor: pointer;
+  transition: filter .2s ease;
+}
+.menu-btn:hover:not(:disabled){ filter: brightness(1.1); }
+.menu-btn:focus-visible{ outline: 2px solid var(--text); outline-offset: 2px; }
+.menu-btn--accent{ background: var(--accent); color: var(--bg); }
+.menu-btn--ok{ background: var(--ok); color: var(--on-ok); }
+.menu-btn--hazard{ background: var(--hazard); color: var(--bg); }
+.menu-btn--danger{ background: var(--danger); color: var(--on-danger); }
+.menu-btn--block{ width: 100%; padding: 12px; font-size: 15px; }
