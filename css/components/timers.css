@@ -64,9 +64,20 @@ body.is-header-collapsed .cataclysm-timer {
 .cataclysm-timer__icon {
   font-size: 22px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--danger);
   filter: drop-shadow(0 0 6px rgba(239, 111, 97, .6));
   animation: cataclysm-timer-pulse 1.8s ease-in-out infinite;
+}
+.cataclysm-timer__hazard {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: currentColor;
+  -webkit-mask: url('../../icons/Hazard.svg') no-repeat center / contain;
+  mask: url('../../icons/Hazard.svg') no-repeat center / contain;
 }
 .cataclysm-timer__time {
   font-family: var(--mono);
@@ -92,6 +103,7 @@ body.is-header-collapsed .cataclysm-timer {
     top: 10px;
   }
   .cataclysm-timer__icon { font-size: 16px; }
+  .cataclysm-timer__hazard { width: 15px; height: 15px; }
   .cataclysm-timer__time { font-size: 1.2rem; }
 
   .game-timer {

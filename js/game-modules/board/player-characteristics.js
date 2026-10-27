@@ -6,6 +6,7 @@
 // їх завжди рівно 2.
 
 import { isBlockCollapsed } from './board-ui-state.js';
+import { ICONS } from '../../constants/icons.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
@@ -41,8 +42,8 @@ export function playerCharacteristics(data) {
         </div>
         <button type="button" class="char-lock" aria-label="Показати або приховати">
           <!-- Вказуємо шлях до папки з іконками -->
-          <img src="./icons/Locked-lock.svg" alt="Закрито" class="lock-icon lock-closed">
-          <img src="./icons/Unlocked-lock.svg" alt="Відкрито" class="lock-icon lock-open">
+          <img src="${ICONS.LOCKED_LOCK}" alt="Закрито" class="lock-icon lock-closed">
+          <img src="${ICONS.UNLOCKED_LOCK}" alt="Відкрито" class="lock-icon lock-open">
         </button>
       </div>`;
 

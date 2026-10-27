@@ -1,9 +1,18 @@
 import { isBlockCollapsed } from './board-ui-state.js';
+import { ICONS } from '../../constants/icons.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
   ));
+}
+
+function renderCataclysmIcon(icon) {
+  const isHazard = !icon || icon === '☢' || icon === ICONS.HAZARD || String(icon).includes('Hazard.svg');
+  if (isHazard) {
+    return '<span class="cataclysm-hazard-icon" aria-hidden="true"></span>';
+  }
+  return `<span class="cataclysm-emoji-icon">${esc(String(icon).replace(/\uFE0F/g, '\uFE0E'))}</span>`;
 }
 
 export function cataclysm(data) {
@@ -52,7 +61,7 @@ export function cataclysm(data) {
       <div class="block-body" id="${blockId}-body">
         <div class="cataclysm-row">
           <div class="cataclysm-main">
-            <div class="cataclysm-icon">${esc((data.icon || "☢").replace(/\uFE0F/g, '\uFE0E'))}</div>
+            <div class="cataclysm-icon">${renderCataclysmIcon(data.icon)}</div>
             <div class="cataclysm-content">
               <p class="cataclysm-title">${esc(data.title)}</p>
               <p class="cataclysm-desc">${esc(data.desc)}</p>

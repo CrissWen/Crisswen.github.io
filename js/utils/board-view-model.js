@@ -1,4 +1,5 @@
 import { mapPlayerState } from './player-parser.js';
+import { ICONS } from '../constants/icons.js';
 
 // Гравці у порядку, випадково визначеному при старті гри (generateGameState → bunker_state.players_order).
 // Гравці, яких у списку немає (стара гра без players_order або хтось доєднався пізніше), йдуть в кінці у звичному порядку.
@@ -40,7 +41,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
 
   // ===== Катаклізм =====
   const cataclysmData = bState.cataclysm ? {
-    icon: '☢',
+    icon: bState.cataclysm.icon || ICONS.HAZARD,
     title: bState.cataclysm.text,
     desc: bState.cataclysm.description,
     population: bState.cataclysm.population

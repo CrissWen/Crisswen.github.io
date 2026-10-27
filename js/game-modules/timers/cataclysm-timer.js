@@ -1,4 +1,5 @@
 import { getGlobalTime } from '../../services/server-time.js';
+import { ICONS } from '../../constants/icons.js';
 
 // Таймер катаклізму — окремий від таймера обговорень (game-timer.js), синхронізований через
 // bunker_state.cataclysm_timer_end. Живе поза #game-board (як і game-timer/host-panel), у лівому
@@ -26,7 +27,7 @@ function formatHMS(totalSeconds) {
 function widgetHtml() {
   return `
     <div id="${WIDGET_ID}" class="cataclysm-timer" hidden aria-live="off">
-      <span class="cataclysm-timer__icon" aria-hidden="true">☢</span>
+      <span class="cataclysm-timer__icon" aria-hidden="true"><span class="cataclysm-timer__hazard" aria-hidden="true"></span></span>
       <span class="cataclysm-timer__time" data-cata-time>00:00:00</span>
     </div>
   `;
