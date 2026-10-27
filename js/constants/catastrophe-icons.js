@@ -155,7 +155,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'war',
     frame: 'circle',
     path: './icons/catastrophe/ember-shot.svg',
-    tags: Object.freeze(["метеор", "астероїд", "снаряд", "вогонь", "плазм", "постріл", "артилері", "вибух", "куля"]),
+    tags: Object.freeze(["метеор", "астероїд", "снаряд", "вогонь", "плазм", "постріл", "артилері", "вибух", "куля", "вогн"]),
   }),
   TATTERED_BANNER: Object.freeze({
     id: 'TATTERED_BANNER',
@@ -179,7 +179,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'square',
     path: './icons/catastrophe/caldera.svg',
-    tags: Object.freeze(["вулкан", "кальдер", "магм", "лав", "вивержен", "пепл", "попіл", "супервулкан"]),
+    tags: Object.freeze(["вулкан", "кальдер", "магм", "лав", "вивержен", "пепл", "попіл", "супервулкан", "попел", "виверг"]),
   }),
   EARTH_CRACK: Object.freeze({
     id: 'EARTH_CRACK',
@@ -187,7 +187,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'square',
     path: './icons/catastrophe/earth-crack.svg',
-    tags: Object.freeze(["землетрус", "тріщин", "розлом", "провал", "тектоніч", "літосфер", "катастроф"]),
+    tags: Object.freeze(["землетрус", "тріщин", "розлом", "провал", "тектоніч", "літосфер", "катастроф", "сейсм", "поштовх"]),
   }),
   EARTH_SPIT: Object.freeze({
     id: 'EARTH_SPIT',
@@ -203,7 +203,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'square',
     path: './icons/catastrophe/tsunami.svg',
-    tags: Object.freeze(["цунам", "хвил", "потоп", "затоплен", "океан", "повін", "приплив"]),
+    tags: Object.freeze(["цунам", "хвил", "потоп", "затоплен", "океан", "повін", "приплив", "повен", "павод", "затоп"]),
   }),
   WAVE: Object.freeze({
     id: 'WAVE',
@@ -211,7 +211,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'circle',
     path: './icons/catastrophe/wave.svg',
-    tags: Object.freeze(["хвил", "вод", "потоп", "море", "шторм", "затоплен", "шква"]),
+    tags: Object.freeze(["хвил", "вод", "потоп", "море", "шторм", "затоплен", "шква", "затоп"]),
   }),
   STORM_CLOUD: Object.freeze({
     id: 'STORM_CLOUD',
@@ -235,7 +235,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'circle',
     path: './icons/catastrophe/ice-cube.svg',
-    tags: Object.freeze(["лід", "кубик", "заморозк", "холод", "температур", "криг", "замерзан"]),
+    tags: Object.freeze(["лід", "кубик", "заморозк", "холод", "температур", "криг", "замерзан", "льод", "леден", "криж"]),
   }),
   SNOWFLAKE: Object.freeze({
     id: 'SNOWFLAKE',
@@ -243,7 +243,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'circle',
     path: './icons/catastrophe/snowflake.svg',
-    tags: Object.freeze(["сніжинк", "сніг", "мороз", "зима", "хуртовин", "льодовик", "вічна мерзлота"]),
+    tags: Object.freeze(["сніжинк", "сніг", "мороз", "зима", "хуртовин", "льодовик", "вічна мерзлота", "леден", "криж", "криг"]),
   }),
   ESKIMO: Object.freeze({
     id: 'ESKIMO',
@@ -251,7 +251,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'circle',
     path: './icons/catastrophe/eskimo.svg',
-    tags: Object.freeze(["ескімос", "мороз", "холод", "арктик", "льодовик", "зима", "полярн", "буран"]),
+    tags: Object.freeze(["ескімос", "мороз", "холод", "арктик", "льодовик", "зима", "полярн", "буран", "леден", "криж", "криг"]),
   }),
   SUN: Object.freeze({
     id: 'SUN',
@@ -275,7 +275,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/virus.svg',
-    tags: Object.freeze(["вірус", "пандемі", "інфекці", "епідемі", "заражен", "коронавірус", "хвороб", "штам"]),
+    tags: Object.freeze(["вірус", "пандемі", "інфекці", "епідемі", "заражен", "коронавірус", "хвороб", "штам", "інфік"]),
   }),
   CHEMICAL_DROP: Object.freeze({
     id: 'CHEMICAL_DROP',
@@ -283,7 +283,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/chemical-drop.svg',
-    tags: Object.freeze(["хімі", "крапл", "кислот", "токсин", "отрут", "реагент", "забруднення"]),
+    tags: Object.freeze(["хімі", "крапл", "кислот", "токсин", "отрут", "реагент", "забруднення", "отруєн", "отруй", "токсич"]),
   }),
   FIZZING_FLASK: Object.freeze({
     id: 'FIZZING_FLASK',
@@ -291,7 +291,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/fizzing-flask.svg',
-    tags: Object.freeze(["колб", "хімі", "реактив", "лабораторі", "отрут", "експеримент", "розчин"]),
+    tags: Object.freeze(["колб", "хімі", "реактив", "лабораторі", "отрут", "експеримент", "розчин", "отруєн", "отруй", "токсич"]),
   }),
   MOLECULE: Object.freeze({
     id: 'MOLECULE',
@@ -395,7 +395,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/zombie.svg',
-    tags: Object.freeze(["зомб", "мерц", "мертв", "упир", "інфікован", "ходяч", "живі мерці", "мутант"]),
+    tags: Object.freeze(["зомб", "мерц", "мертв", "упир", "інфікован", "ходяч", "живі мерці", "мутант", "інфекц"]),
   }),
   BESTIAL_FANGS: Object.freeze({
     id: 'BESTIAL_FANGS',
@@ -475,7 +475,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/jellyfish.svg',
-    tags: Object.freeze(["медуз", "імла", "туман", "щупальц", "океан", "отрут", "глибин", "планктон", "вимір"]),
+    tags: Object.freeze(["медуз", "імла", "туман", "щупальц", "океан", "отрут", "глибин", "планктон", "вимір", "отруєн", "отруй", "токсич"]),
   }),
   EGG_CLUTCH: Object.freeze({
     id: 'EGG_CLUTCH',
@@ -499,7 +499,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/wasp-sting.svg',
-    tags: Object.freeze(["ос", "жало", "укус", "шершен", "отрут", "комах"]),
+    tags: Object.freeze(["ос", "жало", "укус", "шершен", "отрут", "комах", "отруєн", "отруй", "токсич"]),
   }),
   DRAGONFLY: Object.freeze({
     id: 'DRAGONFLY',
@@ -539,7 +539,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/skull-and-crossbones.svg',
-    tags: Object.freeze(["череп", "пірат", "кістк", "смертельн", "отрут", "чорна мітка"]),
+    tags: Object.freeze(["череп", "пірат", "кістк", "смертельн", "отрут", "чорна мітка", "отруєн", "отруй", "токсич"]),
   }),
   CROWNED_SKULL: Object.freeze({
     id: 'CROWNED_SKULL',
@@ -763,7 +763,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/poison-gas.svg',
-    tags: Object.freeze(["газ", "отрут", "токсин", "смог", "хмар", "випар", "задух", "нейротоксин", "череп", "туман"]),
+    tags: Object.freeze(["газ", "отрут", "токсин", "смог", "хмар", "випар", "задух", "нейротоксин", "череп", "туман", "отруєн", "отруй", "токсич"]),
   }),
   SABER_TOOTH: Object.freeze({
     id: 'SABER_TOOTH',
@@ -796,6 +796,38 @@ export const CATASTROPHE_ICONS = Object.freeze({
     frame: 'circle',
     path: './icons/catastrophe/octopus.svg',
     tags: Object.freeze(["восьминіг", "кракен", "щупальц", "океан", "глибин", "чудовиськ", "морськ", "спрут"]),
+  }),
+  ANGLER_FISH: Object.freeze({
+    id: 'ANGLER_FISH',
+    label: 'Глибоководна риба-вудильник / Морський хижак',
+    category: 'monsters',
+    frame: 'circle',
+    path: './icons/catastrophe/angler-fish.svg',
+    tags: Object.freeze(["вудильник", "риба", "глибоководн", "океан", "безодн", "хижак", "чудовиськ", "морськ", "пащ", "зуб", "істот", "глибин"]),
+  }),
+  SHIP_WHEEL: Object.freeze({
+    id: 'SHIP_WHEEL',
+    label: 'Штурвал корабля / Морська катастрофа',
+    category: 'natural',
+    frame: 'circle',
+    path: './icons/catastrophe/ship-wheel.svg',
+    tags: Object.freeze(["штурвал", "кораб", "судно", "судноплавств", "море", "океан", "флот", "кораблетрощ", "капітан", "риболовл"]),
+  }),
+  TORNADO: Object.freeze({
+    id: 'TORNADO',
+    label: 'Торнадо / Смерч / Буря',
+    category: 'natural',
+    frame: 'circle',
+    path: './icons/catastrophe/tornado.svg',
+    tags: Object.freeze(["торнадо", "смерч", "ураган", "вихор", "буря", "шторм", "буран", "негод", "стихі", "вітер", "вітр"]),
+  }),
+  BLACK_HOLE: Object.freeze({
+    id: 'BLACK_HOLE',
+    label: 'Чорна діра / Гравітаційна сингулярність',
+    category: 'natural',
+    frame: 'circle',
+    path: './icons/catastrophe/black-hole.svg',
+    tags: Object.freeze(["чорна діра", "гравітаці", "сингулярність", "аномалі", "космос", "вир", "колапс", "затягуван", "фізик", "простір"]),
   }),
 });
 
