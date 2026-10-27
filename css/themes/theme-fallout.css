@@ -19,6 +19,8 @@
   --radius-sm: 0px;
   --radius-xs: 0px;
   --on-ok:     #050a05;
+  --on-hazard: #050a05;
+  --on-accent: #050a05;
   --on-danger: #1a0806;
   --danger-strong:    #ff3b30;
   --on-danger-strong: #1a0806;
@@ -52,4 +54,33 @@ body{
 .header-logo-icon {
   /* hue-rotate(90deg) зсуває палітру іконки в зелену зону, saturate робить її яскравішою */
   filter: drop-shadow(0 0 6px #4af626) hue-rotate(90deg) saturate(2) !important;
+}
+
+/* Кастомні випадаючі списки та комбобокси в редакторі паків у стилістиці Fallout */
+.pe-select-custom__btn,
+.pe-combo__input{
+  border-radius: 0px !important;
+  font-family: var(--mono);
+}
+.pe-select-custom__dropdown,
+.pe-combo__dropdown{
+  border-radius: 0px !important;
+  border-color: var(--metal-lt);
+  box-shadow: 0 0 10px rgba(57,255,106,.2), 0 8px 24px rgba(0,0,0,.9);
+}
+.pe-select-custom__item,
+.pe-combo__item{
+  border-radius: 0px !important;
+  font-family: var(--mono);
+}
+.pe-select-custom__item:hover,
+.pe-combo__item:hover{
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected{
+  background: var(--metal);
+  color: #ffffff;
+  font-weight: 700;
 }

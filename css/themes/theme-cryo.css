@@ -28,6 +28,8 @@
   --radius-sm: 8px;
   --radius-xs: 4px;
   --on-ok:     #021019;
+  --on-hazard: #030b26;
+  --on-accent: #030b26;
   --on-danger: #1a0806;
   --danger-strong:    #ff5a68;
   --on-danger-strong: #1a0806;
@@ -155,10 +157,22 @@ select option:hover{
 .avatar-crop-dialog,
 .pe-sort-menu,
 .pack-card__dropdown,
-.pe-delete-floating-bar{
+.pe-delete-floating-bar,
+.pe-select-custom__dropdown,
+.pe-combo__dropdown{
   background-color: color-mix(in srgb, var(--cryo-2) 45%, var(--cryo-1));
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+}
+.pe-select-custom__item:hover,
+.pe-combo__item:hover{
+  background-color: rgba(23, 174, 194, .25);
+  color: var(--cryo-5);
+}
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected{
+  background-color: var(--cryo-3);
+  color: #fff;
 }
 /* Язичок згортання хедера (мобільні): header.css вантажиться після теми, тож специфічність піднято через body */
 body .header-collapse-tab,

@@ -380,8 +380,19 @@ select.pe-input {
   border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));
 }
 .pe-stage-row.is-warning{
-  border-color: color-mix(in srgb, var(--hazard) 60%, transparent) !important;
-  background: color-mix(in srgb, var(--hazard) 6%, var(--panel)) !important;
+  border-color: rgba(245, 158, 11, .75) !important;
+  background: rgba(245, 158, 11, .08) !important;
+  animation: pe-stage-warning-pulse 1.4s ease-in-out infinite !important;
+}
+@keyframes pe-stage-warning-pulse{
+  0%, 100%{
+    border-color: rgba(245, 158, 11, .75);
+    background: rgba(245, 158, 11, .09);
+  }
+  50%{
+    border-color: rgba(245, 158, 11, .25);
+    background: rgba(245, 158, 11, .02);
+  }
 }
 .pe-stage-row--card .pe-stage-name{
   background:transparent;
@@ -585,8 +596,19 @@ body.is-stage-dragging * {
   box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .pe-time-field.is-warning{
-  border-color:var(--hazard) !important;
-  box-shadow:0 0 0 1px var(--hazard) !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, .45) !important;
+  animation: pe-warning-pulse 1.4s ease-in-out infinite !important;
+}
+@keyframes pe-warning-pulse{
+  0%, 100%{
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, .5), 0 0 10px rgba(245, 158, 11, .35);
+  }
+  50%{
+    border-color: rgba(245, 158, 11, .35);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, .15);
+  }
 }
 .pe-time-field.is-disabled{
   opacity:0.65;

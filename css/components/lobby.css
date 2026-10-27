@@ -257,9 +257,10 @@
   transition: filter .2s ease;
 }
 .menu-btn:hover:not(:disabled){ filter: brightness(1.1); }
-.menu-btn:focus-visible{ outline: 2px solid var(--text); outline-offset: 2px; }
-.menu-btn--accent{ background: var(--accent); color: var(--bg); }
+.menu-btn:disabled{ opacity: .45; cursor: not-allowed; filter: none; }
+.menu-btn:focus-visible{ outline: none; box-shadow: var(--focus-ring, 0 0 0 2px var(--text)); }
+.menu-btn--accent{ background: var(--accent); color: var(--on-accent, var(--bg)); }
 .menu-btn--ok{ background: var(--ok); color: var(--on-ok); }
-.menu-btn--hazard{ background: var(--hazard); color: var(--bg); }
+.menu-btn--hazard{ background: var(--hazard); color: var(--on-hazard, var(--bg)); }
 .menu-btn--danger{ background: var(--danger); color: var(--on-danger); }
 .menu-btn--block{ width: 100%; padding: 12px; font-size: 15px; }

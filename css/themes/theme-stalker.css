@@ -4,6 +4,8 @@
    Тут же — фоновий ефект body, специфічний саме для цієї теми (зерниста текстура + віньєтка). */
 :root{
   --on-ok:     #0b1408;
+  --on-hazard: #000000;
+  --on-accent: #0b1408;
   --on-danger: #1a0806;
   --danger-strong:    #b8382e;
   --on-danger-strong: #fff3ef;
@@ -352,4 +354,112 @@ button.pe-delete-pill-btn:focus-visible,
 button.pe-mobile-add-btn:focus-visible{
   outline:2px solid var(--hazard);
   outline-offset:2px;
+}
+/* Кнопки меню (вхід, лобі, кімната очікування) у стилістиці Сталкера */
+button.menu-btn{
+  border-radius:var(--radius-sm);
+  transition:background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+button.menu-btn.menu-btn--accent{
+  background:var(--btn-bg);
+  color:var(--btn-text);
+  border:1px solid var(--btn-border);
+  box-shadow:var(--btn-shadow);
+}
+button.menu-btn.menu-btn--accent:hover:not(:disabled){
+  background:var(--btn-hover-bg);
+  border-color:var(--btn-hover-border);
+  color:var(--btn-hover-text);
+  box-shadow:var(--btn-shadow), var(--btn-glow);
+}
+button.menu-btn.menu-btn--hazard{
+  background:var(--hazard);
+  color:#000000;
+  border:1px solid #f0cf3c;
+  box-shadow:var(--btn-shadow);
+}
+button.menu-btn.menu-btn--hazard:hover:not(:disabled){
+  background:#f0cf3c;
+  color:#000000;
+  box-shadow:var(--btn-shadow), 0 0 10px rgba(214,176,34,.45);
+}
+button.menu-btn.menu-btn--ok{
+  background:color-mix(in srgb, var(--ok) 30%, var(--btn-bg));
+  color:#e0eed8;
+  border:1px solid var(--ok);
+  box-shadow:var(--btn-shadow);
+}
+button.menu-btn.menu-btn--ok:hover:not(:disabled){
+  background:var(--ok);
+  color:var(--on-ok);
+  box-shadow:var(--btn-shadow), 0 0 10px rgba(111,154,94,.45);
+}
+button.menu-btn.menu-btn--danger{
+  background:color-mix(in srgb, var(--danger) 25%, var(--btn-bg));
+  color:#fbd0cc;
+  border:1px solid color-mix(in srgb, var(--danger-strong) 70%, #000);
+  box-shadow:var(--btn-shadow);
+}
+button.menu-btn.menu-btn--danger:hover:not(:disabled){
+  background:var(--danger);
+  color:var(--on-danger);
+  box-shadow:var(--btn-shadow), 0 0 10px rgba(217,83,74,.45);
+}
+button.menu-btn:active:not(:disabled){
+  transform:translate(1px,1px);
+  box-shadow:1px 1px 0 rgba(0,0,0,.5);
+}
+button.menu-btn:disabled{
+  background:var(--btn-disabled-bg);
+  color:var(--btn-disabled-text);
+  border-color:var(--btn-disabled-border);
+  box-shadow:none;
+  opacity:1;
+  filter:none;
+  cursor:not-allowed;
+}
+button.menu-btn:focus-visible{
+  outline:2px solid var(--hazard);
+  outline-offset:2px;
+}
+
+/* Кастомні випадаючі списки та комбобокси в редакторі паків у стилістиці Сталкера */
+.pe-select-custom__btn,
+.pe-combo__input{
+  background: var(--panel-2);
+  border: 1px solid var(--btn-border);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,.6);
+  color: var(--text);
+}
+.pe-select-custom__btn:hover,
+.pe-combo__input:hover{
+  border-color: var(--btn-hover-border);
+}
+.pe-select-custom__btn.is-open{
+  border-color: var(--hazard);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,.6), 0 0 8px rgba(214,176,34,.35);
+}
+.pe-combo__toggle{
+  color: var(--btn-text);
+}
+.pe-combo__toggle:hover{
+  color: var(--hazard);
+  background: var(--btn-hover-bg);
+}
+.pe-select-custom__dropdown,
+.pe-combo__dropdown{
+  background: var(--panel);
+  border: 1px solid var(--btn-border);
+  box-shadow: 0 8px 24px rgba(0,0,0,.8), 2px 2px 0 rgba(0,0,0,.5);
+}
+.pe-select-custom__item:hover,
+.pe-combo__item:hover{
+  background: var(--btn-hover-bg);
+  color: var(--hazard);
+}
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected{
+  background: color-mix(in srgb, var(--hazard) 15%, var(--panel));
+  color: #f0cf3c;
+  font-weight: 700;
 }

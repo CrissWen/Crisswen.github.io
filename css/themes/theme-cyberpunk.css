@@ -19,6 +19,8 @@
   --radius-sm: 0px;
   --radius-xs: 0px;
   --on-ok:     #03121a;
+  --on-hazard: #08060f;
+  --on-accent: #08060f;
   --on-danger: #1a0806;
   --danger-strong:    #ff2952;
   --on-danger-strong: #1a0806;
@@ -55,4 +57,29 @@ body{
 .header-logo-icon {
   /* hue-rotate(240deg) перетворює початковий жовтий/помаранчевий на глибокий фіолетовий */
   filter: drop-shadow(0 0 8px #d827f5) hue-rotate(240deg) saturate(1.5) !important;
+}
+
+/* Кастомні випадаючі списки та комбобокси в редакторі паків у стилістиці Кіберпанку */
+.pe-select-custom__btn:hover,
+.pe-combo__input:hover{
+  border-color: var(--ok);
+}
+.pe-select-custom__btn.is-open{
+  border-color: var(--ok);
+  box-shadow: 0 0 10px rgba(0, 240, 255, .35);
+}
+.pe-select-custom__dropdown,
+.pe-combo__dropdown{
+  border-color: var(--ok);
+  box-shadow: 0 10px 30px rgba(0,0,0,.8), 0 0 15px rgba(0, 240, 255, .2);
+}
+.pe-select-custom__item:hover,
+.pe-combo__item:hover{
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok);
+}
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected{
+  background: color-mix(in srgb, var(--hazard) 20%, transparent);
+  color: var(--hazard);
 }

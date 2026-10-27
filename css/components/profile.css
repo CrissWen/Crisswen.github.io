@@ -63,17 +63,18 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 36px;
+  gap: 20px;
   margin: 0;
 }
 .profile-identity-layout .profile-avatar-row {
-  flex: 0 0 auto;
-  column-gap: 20px;
+  flex: 1 1 auto;
+  min-width: 0;
+  column-gap: 16px;
   row-gap: 6px;
 }
 .profile-quick-stats {
-  flex: 0 1 246px;
-  max-width: 254px;
+  flex: 0 0 244px;
+  max-width: 244px;
   min-width: 0;
 }
 .profile-quick-stats .stat-grid {
@@ -85,7 +86,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 8px 11px;
+  padding: 8px 9px;
   gap: 2px;
   min-height: 56px;
 }
@@ -97,18 +98,19 @@
   text-overflow: ellipsis;
 }
 .profile-quick-stats .stat-tile__value {
-  font-size: 18.5px;
+  font-size: 17.5px;
   line-height: 1.1;
   margin-top: auto;
   display: flex;
   align-items: flex-end;
 }
 .profile-quick-stats .stat-tile__value[data-stat="created_at"] {
-  font-size: 16.5px;
+  font-size: 14px;
   font-family: var(--head);
   font-weight: 600;
-  letter-spacing: .02em;
+  letter-spacing: 0;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 @media (max-width: 560px) {
@@ -530,7 +532,7 @@
 }
 .history-btn--primary:hover {
   background: var(--hazard);
-  color: var(--bg);
+  color: var(--on-hazard, var(--bg));
 }
 .history-btn--secondary {
   background: rgba(0, 0, 0, .2);
@@ -579,7 +581,7 @@
 }
 .offline-replay-banner__badge {
   background: var(--hazard);
-  color: var(--bg);
+  color: var(--on-hazard, var(--bg));
   font-family: var(--head);
   font-size: 10.5px;
   font-weight: 700;
