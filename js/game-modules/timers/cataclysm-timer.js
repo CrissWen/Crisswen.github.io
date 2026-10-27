@@ -27,7 +27,7 @@ function formatHMS(totalSeconds) {
 function widgetHtml() {
   return `
     <div id="${WIDGET_ID}" class="cataclysm-timer" hidden aria-live="off">
-      <span class="cataclysm-timer__icon" aria-hidden="true"><span class="cataclysm-timer__hazard" aria-hidden="true"></span></span>
+      <span class="cataclysm-timer__icon" aria-hidden="true"><span class="cataclysm-timer__hazard" style="-webkit-mask-image: url('${ICONS.HAZARD}'); mask-image: url('${ICONS.HAZARD}');" aria-hidden="true"></span></span>
       <span class="cataclysm-timer__time" data-cata-time>00:00:00</span>
     </div>
   `;
@@ -134,6 +134,13 @@ export function syncCataclysmTimer(bunkerState, roomStatus) {
   }
 
   root.hidden = false;
+
+  const hazardEl = root.querySelector('.cataclysm-timer__hazard');
+  if (hazardEl) {
+    const iconPath = bunkerState?.cataclysm?.icon || ICONS.HAZARD;
+    hazardEl.style.webkitMaskImage = `url('${iconPath}')`;
+    hazardEl.style.maskImage = `url('${iconPath}')`;
+  }
 
   if (end !== trackedEnd) {
     trackedEnd = end;

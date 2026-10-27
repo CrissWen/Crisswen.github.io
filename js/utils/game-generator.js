@@ -2,6 +2,7 @@ import { getGameConfig } from '../config/config-manager.js';
 import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray, generateHeight } from './random.js';
 import { getGlobalTime } from '../services/server-time.js';
 import { rollExperience, getMonthStages, serializeScale } from './experience.js';
+import { detectCataclysmIcon } from './cataclysm-detector.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";
@@ -149,9 +150,10 @@ export async function generateGameState(playersList, pack, config) {
     items: bunkerItems,
     cataclysm: {
       text: cataclysm.value,
-      description: cataclysm.meta.description || "",
+      description: cataclysm.meta?.description || "",
       timer_minutes: cataclysmTimerMinutes,
-      population: cataclysm.meta.population || "Невідомо" // <--- ДОДАЄМО ЦЕ
+      population: cataclysm.meta?.population || "Невідомо",
+      icon: cataclysm.meta?.icon || detectCataclysmIcon(cataclysm.value, cataclysm.meta?.description)
     }
   };
 

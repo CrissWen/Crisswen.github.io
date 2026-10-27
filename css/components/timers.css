@@ -76,8 +76,12 @@ body.is-header-collapsed .cataclysm-timer {
   width: 20px;
   height: 20px;
   background-color: currentColor;
-  -webkit-mask: url('../../icons/Hazard.svg') no-repeat center / contain;
-  mask: url('../../icons/Hazard.svg') no-repeat center / contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 .cataclysm-timer__time {
   font-family: var(--mono);

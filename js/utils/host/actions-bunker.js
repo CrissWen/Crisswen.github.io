@@ -5,6 +5,7 @@ import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';
 import { randomBunkerFieldValue } from '../game-generator.js';
 import { getGlobalTime } from '../../services/server-time.js';
+import { detectCataclysmIcon } from '../cataclysm-detector.js';
 
 // ===== Дії з бункером =====
 
@@ -103,7 +104,8 @@ export async function changeCataclysm(roomCode) {
     text: card.value,
     description: card.meta?.description || '',
     timer_minutes: timerMinutes,
-    population: card.meta?.population || 'Невідомо' // так само, як у generateGameState: інакше після зміни катаклізму населення зникло б з дошки
+    population: card.meta?.population || 'Невідомо',
+    icon: card.meta?.icon || detectCataclysmIcon(card.value, card.meta?.description)
   };
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.

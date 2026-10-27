@@ -1,5 +1,5 @@
 import { isBlockCollapsed } from './board-ui-state.js';
-import { ICONS } from '../../constants/icons.js';
+import { ICONS, isSquareFrameIcon } from '../../constants/icons.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
@@ -8,11 +8,17 @@ function esc(str) {
 }
 
 function renderCataclysmIcon(icon) {
-  const isHazard = !icon || icon === '☢' || icon === ICONS.HAZARD || String(icon).includes('Hazard.svg');
-  if (isHazard) {
-    return '<span class="cataclysm-hazard-icon" aria-hidden="true"></span>';
+  const iconSrc = icon || ICONS.HAZARD;
+  const isSvg = typeof iconSrc === 'string' && (iconSrc.toLowerCase().includes('.svg') || iconSrc === ICONS.HAZARD);
+
+  if (isSvg) {
+    const isSquare = isSquareFrameIcon(iconSrc);
+    const fitClass = isSquare ? ' cataclysm-mask-icon--square-fit' : '';
+    return `<span class="cataclysm-mask-icon${fitClass}" style="-webkit-mask-image: url('${esc(iconSrc)}'); mask-image: url('${esc(iconSrc)}');" aria-hidden="true"></span>`;
   }
-  return `<span class="cataclysm-emoji-icon">${esc(String(icon).replace(/\uFE0F/g, '\uFE0E'))}</span>`;
+
+  // Аварійна заглушка для текстових емодзі (на випадок сторонніх даних)
+  return `<span class="cataclysm-emoji-icon">${esc(String(iconSrc).replace(/\uFE0F/g, '\uFE0E'))}</span>`;
 }
 
 export function cataclysm(data) {

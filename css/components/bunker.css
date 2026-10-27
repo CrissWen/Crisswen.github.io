@@ -45,14 +45,23 @@
   box-shadow: 0 0 15px color-mix(in srgb, var(--danger) 50%, transparent), inset 0 0 10px color-mix(in srgb, var(--danger) 40%, transparent);
   animation: pulse-danger 2s infinite;
 }
-.cataclysm-hazard-icon {
+.cataclysm-hazard-icon,
+.cataclysm-mask-icon {
   width: 58px;
   height: 58px;
   display: block;
   flex: none;
   background-color: currentColor;
-  -webkit-mask: url('../../icons/Hazard.svg') no-repeat center / contain;
-  mask: url('../../icons/Hazard.svg') no-repeat center / contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.cataclysm-mask-icon--square-fit {
+  width: 50px;
+  height: 50px;
 }
 .cataclysm-emoji-icon {
   display: inline-flex;
@@ -256,9 +265,14 @@
   .cataclysm-icon {
     padding: 0;
   }
-  .cataclysm-hazard-icon {
+  .cataclysm-hazard-icon,
+  .cataclysm-mask-icon {
     width: 32px;
     height: 32px;
+  }
+  .cataclysm-mask-icon--square-fit {
+    width: 27px;
+    height: 27px;
   }
   .cataclysm-emoji-icon {
     padding-bottom: 2px;
