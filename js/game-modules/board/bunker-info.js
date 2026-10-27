@@ -49,6 +49,7 @@ export function bunkerInfo(data) {
 
           <!-- Права колонка: Характеристики (Сітка 2х2) -->
           <div class="bunker-stats-col">
+            <h3 class="equipment-title">Характеристики бункера</h3>
             <div class="info-grid">
               <div class="info-stat">
                 <div class="k">Площа</div>
