@@ -6,6 +6,9 @@
 .layout-small-centered.profile-block {
   max-width: 560px;
 }
+.layout-small-centered.profile-block .block-body {
+  padding: 14px 18px 16px;
+}
 
 /* --- Перемикач вкладок --- */
 .profile-tabs {
@@ -49,7 +52,7 @@
 .profile-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 .profile-panel[hidden] {
   display: none;
@@ -58,14 +61,15 @@
 /* --- Макет "Профіль": аватар та нік зліва, статистика з правої сторони --- */
 .profile-identity-layout {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 36px;
-  margin: 6px 0 10px;
+  margin: 0;
 }
 .profile-identity-layout .profile-avatar-row {
   flex: 0 0 auto;
   column-gap: 20px;
+  row-gap: 6px;
 }
 .profile-quick-stats {
   flex: 0 1 246px;
@@ -78,9 +82,12 @@
   gap: 8px;
 }
 .profile-quick-stats .stat-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   padding: 8px 11px;
-  gap: 1px;
-  min-height: 52px;
+  gap: 2px;
+  min-height: 56px;
 }
 .profile-quick-stats .stat-tile__label {
   font-size: 10.5px;
@@ -92,11 +99,16 @@
 .profile-quick-stats .stat-tile__value {
   font-size: 18.5px;
   line-height: 1.1;
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
 }
 .profile-quick-stats .stat-tile__value[data-stat="created_at"] {
-  font-size: 14px;
-  font-family: var(--mono);
-  letter-spacing: 0;
+  font-size: 16.5px;
+  font-family: var(--head);
+  font-weight: 600;
+  letter-spacing: .02em;
+  line-height: 1.1;
 }
 
 @media (max-width: 560px) {
@@ -324,22 +336,29 @@
 
 /* ===== Історія ігор та офлайн-реплеї ===== */
 
-.history-toolbar {
+/* --- Єдині заголовки розділів у вкладках профілю --- */
+.profile-tab-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   padding: 2px 2px 0;
+  min-height: 28px;
 }
 
-.history-toolbar__title {
+.profile-tab-title {
   font-family: var(--head);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--text-mute);
+  margin: 0;
+}
+
+.history-toolbar {
+  /* спадкує .profile-tab-header */
 }
 
 .history-toolbar__btn {

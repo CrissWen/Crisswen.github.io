@@ -47,7 +47,6 @@ export function renderProfile() {
       </nav>
       <div class="block-body">
       <div class="profile-panel" id="profile-panel-profile" role="tabpanel" aria-labelledby="profile-tab-profile">
-        
         <div class="profile-identity-layout">
           <div class="profile-avatar-row">
             <!-- Велика аватарка = кнопка: при наведенні з'являється рамка з олівцем, клік відкриває вибір файла -->
@@ -79,7 +78,7 @@ export function renderProfile() {
           </div>
         </div>
 
-        <hr style="width: 100%; border-color: var(--metal-lt); margin: 16px 0 12px;">
+        <hr style="width: 100%; border: none; border-top: 1px solid var(--metal-lt); margin: 0;">
         
         <button id="profile-logout-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--danger); color: #1a0806; font-weight: bold; cursor: pointer; border: none; transition: filter 0.2s ease;">
           Вийти з акаунта
@@ -87,8 +86,10 @@ export function renderProfile() {
       </div>
 
       <div class="profile-panel" id="profile-panel-themes" role="tabpanel" aria-labelledby="profile-tab-themes" hidden>
+        <div class="profile-tab-header">
+          <span class="profile-tab-title">Тема оформлення інтерфейсу</span>
+        </div>
         <fieldset class="theme-picker-group">
-          <legend class="theme-picker-legend">Тема оформлення інтерфейсу</legend>
           <div class="theme-picker-grid" role="radiogroup" aria-label="Вибір теми інтерфейсу">
             ${themeCardsHtml}
           </div>
@@ -96,8 +97,8 @@ export function renderProfile() {
       </div>
 
       <div class="profile-panel" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history" hidden>
-        <div class="history-toolbar">
-          <span class="history-toolbar__title">Збережені партії</span>
+        <div class="profile-tab-header history-toolbar">
+          <span class="profile-tab-title">Збережені партії</span>
           <div class="history-toolbar__actions">
             <input type="file" id="history-file-input" accept=".bunker" hidden>
             <button type="button" class="history-toolbar__btn" id="history-open-file-btn" title="Завантажити та переглянути локальний файл гри">
