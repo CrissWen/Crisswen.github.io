@@ -127,8 +127,11 @@
 .pp-stats .stat-tile {
   min-width: 0;
   min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   padding: 7px 9px;
-  gap: 1px;
+  gap: 2px;
 }
 .pp-stats .stat-tile__label {
   font-size: 10px;
@@ -140,11 +143,16 @@
 .pp-stats .stat-tile__value {
   font-size: 17px;
   line-height: 1.1;
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
 }
 .pp-stats .stat-tile__value[data-pp-stat="created_at"] {
-  font-size: 12.5px;
-  font-family: var(--mono);
-  letter-spacing: 0;
+  font-size: 14.5px;
+  font-family: var(--head);
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.1;
   white-space: nowrap;
 }
 
