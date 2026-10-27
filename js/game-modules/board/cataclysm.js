@@ -1,5 +1,5 @@
 import { isBlockCollapsed } from './board-ui-state.js';
-import { ICONS, isSquareFrameIcon } from '../../constants/icons.js';
+import { ICONS, isSquareFrameIcon, isWideFrameIcon } from '../../constants/icons.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
@@ -13,7 +13,10 @@ function renderCataclysmIcon(icon) {
 
   if (isSvg) {
     const isSquare = isSquareFrameIcon(iconSrc);
-    const fitClass = isSquare ? ' cataclysm-mask-icon--square-fit' : '';
+    const isWide = isWideFrameIcon(iconSrc);
+    const fitClass = isSquare
+      ? ' cataclysm-mask-icon--square-fit'
+      : (isWide ? ' cataclysm-mask-icon--wide-fit' : '');
     return `<span class="cataclysm-mask-icon${fitClass}" style="-webkit-mask-image: url('${esc(iconSrc)}'); mask-image: url('${esc(iconSrc)}');" aria-hidden="true"></span>`;
   }
 

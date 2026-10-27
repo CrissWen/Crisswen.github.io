@@ -30,6 +30,7 @@ export {
   getCatastropheIconsByCategory,
   getCatastropheIconsByFrame,
   isSquareFrameIcon,
+  isWideFrameIcon,
   getCatastropheIconById,
   getCatastropheIconByPath,
 } from './catastrophe-icons.js';

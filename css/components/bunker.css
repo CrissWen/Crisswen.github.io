@@ -63,6 +63,10 @@
   width: 50px;
   height: 50px;
 }
+.cataclysm-mask-icon--wide-fit {
+  width: 72px;
+  height: 72px;
+}
 .cataclysm-emoji-icon {
   display: inline-flex;
   align-items: center;
@@ -273,6 +277,10 @@
   .cataclysm-mask-icon--square-fit {
     width: 27px;
     height: 27px;
+  }
+  .cataclysm-mask-icon--wide-fit {
+    width: 42px;
+    height: 42px;
   }
   .cataclysm-emoji-icon {
     padding-bottom: 2px;

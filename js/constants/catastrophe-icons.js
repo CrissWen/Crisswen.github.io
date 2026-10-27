@@ -123,7 +123,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'war',
     frame: 'circle',
     path: './icons/catastrophe/rocket.svg',
-    tags: Object.freeze(["ракет", "корабел", "інопланет", "прибульц", "нло", "балістичн", "пуск", "обстріл", "шахед", "крилат", "ппо"]),
+    tags: Object.freeze(["ракет", "корабел", "балістичн", "пуск", "обстріл", "шахед", "крилат", "ппо"]),
   }),
   PISTOL: Object.freeze({
     id: 'PISTOL',
@@ -163,7 +163,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'war',
     frame: 'circle',
     path: './icons/catastrophe/tattered-banner.svg',
-    tags: Object.freeze(["прапор", "стяг", "руїн", "поразк", "окупаці", "занепад", "війна"]),
+    tags: Object.freeze(["знамен","прапор","війна","поразк","бунт","падінн","руїн","імперія","королівство","орда","падіння королівства","війна богів","фентезі"]),
   }),
   FIST: Object.freeze({
     id: 'FIST',
@@ -259,7 +259,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'circle',
     path: './icons/catastrophe/sun.svg',
-    tags: Object.freeze(["сонц", "спек", "посух", "спалах", "сонячн", "соляріс", "жар", "пустеля"]),
+    tags: Object.freeze(["сонц","спека","посух","пустел","вигоранн","жар","промін","ультрафіолет","сонячний суперспалах","сонячний спалах","корональний викид","гамма-сплеск","геомагнітна буря","наднова"]),
   }),
   GROUND_SPROUT: Object.freeze({
     id: 'GROUND_SPROUT',
@@ -299,7 +299,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/molecule.svg',
-    tags: Object.freeze(["цвіль", "плісняв", "молекул", "днк", "генетик", "мутаген", "атом", "біотех", "синтез"]),
+    tags: Object.freeze(["молекул","атом","хімі","реактив","мутаген","наук","лабораторі","експеримент","сірий слиз","наноробот","наніт","генетичний колапс","ретровірус","біоінженерія","біопанк"]),
   }),
   PARAMECIA: Object.freeze({
     id: 'PARAMECIA',
@@ -323,7 +323,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/android-mask.svg',
-    tags: Object.freeze(["робот", "андроїд", "кіборг", "ші", "машин", "кібер", "синтет"]),
+    tags: Object.freeze(["робот","андроїд","кіборг","ші","штучний інтелект","машин","кібер","синтет","автоматизаці","повстанн","сингулярність","техноколапс","кіберпанк","дрон","автономні дрони","матриця","нейромережа","термінатор"]),
   }),
   PROCESSOR: Object.freeze({
     id: 'PROCESSOR',
@@ -331,7 +331,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/processor.svg',
-    tags: Object.freeze(["симуляці", "процесор", "чіп", "ші", "комп'ютер", "сервер", "кібернет", "алгоритм", "мейнфрейм", "нейромереж"]),
+    tags: Object.freeze(["процесор","чіп","компютер","кібер","електронік","збій","хакер","вірус","мережа","кібервірус","нейроімплант","нейропсихоз","цифровий апокаліпсис","сірий слиз","наноробот","наніт","збій матриці"]),
   }),
   RADAR_DISH: Object.freeze({
     id: 'RADAR_DISH',
@@ -339,7 +339,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/radar-dish.svg',
-    tags: Object.freeze(["радар", "антен", "зв'язок", "супутник", "орбіт", "кесслер", "виявлен", "сигнал", "сканер"]),
+    tags: Object.freeze(["радар","антен","звязок","супутник","сигнал","спостережен","космос","глушінн","радіотелескоп","позаземний сигнал","орбіта","емі","геомагнітн","сонячний спалах"]),
   }),
   ELECTRICAL: Object.freeze({
     id: 'ELECTRICAL',
@@ -371,7 +371,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/laser-precision.svg',
-    tags: Object.freeze(["лазер", "приціл", "наведен", "точність", "промінь", "орбітальн"]),
+    tags: Object.freeze(["лазер","промінь","приціл","точніст","фокус","збро","орбітальне бомбардування","орбітальний лазер","променева зброя","плазмов","іонна гармата"]),
   }),
   LASER_WARNING: Object.freeze({
     id: 'LASER_WARNING',
@@ -387,7 +387,19 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/embrassed-energy.svg',
-    tags: Object.freeze(["енергі", "сфер", "плазм", "поле", "генератор", "ядро", "реактор"]),
+    tags: Object.freeze(["енергі","сфер","плазм","поле","генератор","ядро","реактор","техномагія","квантов","силове поле","аномалі","реактор душ","магічний реактор","витік ефіру","кристалічний зрив"]),
+  }),
+  ALIEN: Object.freeze({
+    id: 'ALIEN',
+    label: 'Прибулець / Вторгнення інопланетян',
+    category: 'monsters',
+    frame: 'circle',
+    path: './icons/catastrophe/alien-stare-svgrepo-com.svg',
+    tags: Object.freeze([
+      "прибульц", "прибулець", "інопланет", "іншопланет", "алієн", "нло",
+      "позаземн", "гуманоїд", "марсіан", "літаюча тарілка", "чужі",
+      "викраден", "вторгнен", "космос"
+    ]),
   }),
   ZOMBIE: Object.freeze({
     id: 'ZOMBIE',
@@ -407,11 +419,11 @@ export const CATASTROPHE_ICONS = Object.freeze({
   }),
   PRETTY_FANGS: Object.freeze({
     id: 'PRETTY_FANGS',
-    label: 'Вампірські ікла',
+    label: 'Вампірські ікла / Вампіризм / Дракула',
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/pretty-fangs.svg',
-    tags: Object.freeze(["вампір", "ікла", "кровопивц", "упир", "ніч", "укус", "дракула"]),
+    tags: Object.freeze(["вампір","вампіризм","дракул","вурдалак","упир","носферату","кровопив","жага крові","ікла","укус","ніч","діти ночі","клан вампірів","знекровлен","морок"]),
   }),
   DINOSAUR_REX: Object.freeze({
     id: 'DINOSAUR_REX',
@@ -447,11 +459,11 @@ export const CATASTROPHE_ICONS = Object.freeze({
   }),
   DAEMON_SKULL: Object.freeze({
     id: 'DAEMON_SKULL',
-    label: 'Череп демона',
+    label: 'Череп демона / Варп-шторм',
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/daemon-skull.svg',
-    tags: Object.freeze(["демон", "роги", "пекло", "диявол", "сатан", "бестія", "пекельн"]),
+    tags: Object.freeze(["демон","роги","пекло","диявол","сатан","бестія","пекельн","варп","варп-шторм","інферно","одержимість","прорив демонів","пекельні ворота","первородний хаос"]),
   }),
   IMP_LAUGH: Object.freeze({
     id: 'IMP_LAUGH',
@@ -477,13 +489,21 @@ export const CATASTROPHE_ICONS = Object.freeze({
     path: './icons/catastrophe/jellyfish.svg',
     tags: Object.freeze(["медуз", "імла", "туман", "щупальц", "океан", "отрут", "глибин", "планктон", "вимір", "отруєн", "отруй", "токсич"]),
   }),
+  MUSHROOM_CLUSTER: Object.freeze({
+    id: 'MUSHROOM_CLUSTER',
+    label: 'Грибковий спалах / Кордицепс',
+    category: 'bio',
+    frame: 'circle',
+    path: './icons/catastrophe/mushrooms-cluster-svgrepo-com.svg',
+    tags: Object.freeze(["гриб", "спор", "кордицепс", "міцелій", "цвіль", "грибков", "заражен", "інфекц"]),
+  }),
   EGG_CLUTCH: Object.freeze({
     id: 'EGG_CLUTCH',
     label: 'Кладка яєць чужих',
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/egg-clutch.svg',
-    tags: Object.freeze(["гриб", "спор", "кордицепс", "яйц", "кладк", "чужі", "кокон", "інкубатор", "личинк", "заражен", "вулик"]),
+    tags: Object.freeze(["яйц", "кладк", "чужі", "кокон", "інкубатор", "личинк", "заражен", "вулик", "паразит"]),
   }),
   BEE: Object.freeze({
     id: 'BEE',
@@ -547,7 +567,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/crowned-skull.svg',
-    tags: Object.freeze(["корон", "череп", "тирані", "король", "ліч", "влад", "падіння імперії"]),
+    tags: Object.freeze(["корон","череп","монарх","тиран","влада","диктатор","ліч","король-ліч","некромант","нежить","темний владика","повелитель нежиті"]),
   }),
   CHEWED_SKULL: Object.freeze({
     id: 'CHEWED_SKULL',
@@ -587,7 +607,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/haunting.svg',
-    tags: Object.freeze(["привид", "примар", "дух", "полтергейст", "жах", "паранормальн"]),
+    tags: Object.freeze(["привид","дух","страх","переляк","жах","замок","будинок","полтергейст","потойбіч","проклята земля","шепіт безодні","лавкрафт","колективне божевілля"]),
   }),
   EVIL_BOOK: Object.freeze({
     id: 'EVIL_BOOK',
@@ -595,7 +615,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/evil-book.svg',
-    tags: Object.freeze(["книг", "некрономікон", "гримуар", "заклятт", "магі", "окульт", "демонолог"]),
+    tags: Object.freeze(["книга","гримуар","окультизм","заклятт","ритуал","проклятт","магі","фоліант","некрономікон","чародій","темна магія","демонолог","заборонені знання","шепіт безодні"]),
   }),
   ANKH: Object.freeze({
     id: 'ANKH',
@@ -603,15 +623,15 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/ankh.svg',
-    tags: Object.freeze(["анкх", "єгипет", "безсмертя", "культ", "древн", "проклятт", "фараон"]),
+    tags: Object.freeze(["анкх","єгипет","безсмертя","культ","древній культ","проклятт","фараон","жерці","храм","таємне знання","ритуал"]),
   }),
   LATIN_CROSS: Object.freeze({
     id: 'LATIN_CROSS',
-    label: 'Латинський хрест',
+    label: 'Латинський хрест / Церква / Релігійний фанатизм',
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/latin-cross.svg',
-    tags: Object.freeze(["хрест", "релігі", "церкв", "віра", "християнств", "молитв", "інквізиці"]),
+    tags: Object.freeze(["хрест","релігі","релігійна організація","церкв","віра","християнств","молитв","інквізиці","хрестовий похід","фанатизм","священн","патріарх","догм","єрес"]),
   }),
   STAR_OF_DAVID: Object.freeze({
     id: 'STAR_OF_DAVID',
@@ -635,7 +655,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/fairy-wand.svg',
-    tags: Object.freeze(["паличк", "магі", "чари", "чародій", "фе", "заклинання", "зірк"]),
+    tags: Object.freeze(["паличк","магі","заклятт","чари","іскр","казк","фея","магічний розлом","дика магія","витік мани","мана","аркана","лей-лінії","ефір","магічний колапс","планарне злиття"]),
   }),
   POINTY_HAT: Object.freeze({
     id: 'POINTY_HAT',
@@ -643,15 +663,15 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/pointy-hat.svg',
-    tags: Object.freeze(["відьм", "чаклун", "капелюх", "магі", "шабаш", "зілл", "маг"]),
+    tags: Object.freeze(["капелюх","відьм","чаклун","маг","шапка","ковпак","чародій","архімаг","шабаш","чари","фентезі"]),
   }),
   ROBE: Object.freeze({
     id: 'ROBE',
-    label: 'Мантія сектанта',
+    label: 'Мантія сектанта / Культ судного дня / Таємний орден',
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/robe.svg',
-    tags: Object.freeze(["манті", "культ", "сект", "капюшон", "чернець", "ритуал", "орден"]),
+    tags: Object.freeze(["сект","сектант","культ","культист","культ судного дня","релігійна організація","таємна організація","таємне товариство","орден","братство","ложа","фанат","гуру","пастир","манті","капюшон","ритуал","обряд","жертвопринесення","єрес","єретик"]),
   }),
   HOURGLASS: Object.freeze({
     id: 'HOURGLASS',
@@ -659,7 +679,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/hourglass.svg',
-    tags: Object.freeze(["час", "часов", "годинник", "пісок", "епох", "дедлайн", "термін", "вічніст", "судний"]),
+    tags: Object.freeze(["годинник","час","судний","відлік","пісок","термін","апокаліпсис","часовий парадокс","хроно-колапс","петля часу","часова аномалія","тахіон","ентропі"]),
   }),
   SCALES: Object.freeze({
     id: 'SCALES',
@@ -679,11 +699,11 @@ export const CATASTROPHE_ICONS = Object.freeze({
   }),
   THORNY_TRISKELION: Object.freeze({
     id: 'THORNY_TRISKELION',
-    label: 'Тернистий трискеліон',
+    label: 'Тернистий трискеліон / Окультний орден',
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/thorny-triskelion.svg',
-    tags: Object.freeze(["трискеліон", "символ", "руна", "окульт", "шипи", "древн", "знак"]),
+    tags: Object.freeze(["трискеліон","символ","руна","окульт","окультна організація","шипи","древн","знак","секта","таємний орден","прокляття"]),
   }),
   TURD: Object.freeze({
     id: 'TURD',
@@ -797,13 +817,29 @@ export const CATASTROPHE_ICONS = Object.freeze({
     path: './icons/catastrophe/octopus.svg',
     tags: Object.freeze(["восьминіг", "кракен", "щупальц", "океан", "глибин", "чудовиськ", "морськ", "спрут"]),
   }),
-  ANGLER_FISH: Object.freeze({
-    id: 'ANGLER_FISH',
-    label: 'Глибоководна риба-вудильник / Морський хижак',
+  SEA_DRAGON: Object.freeze({
+    id: 'SEA_DRAGON',
+    label: 'Морський дракон / Доісторичне чудовисько',
     category: 'monsters',
     frame: 'circle',
-    path: './icons/catastrophe/angler-fish.svg',
-    tags: Object.freeze(["вудильник", "риба", "глибоководн", "океан", "безодн", "хижак", "чудовиськ", "морськ", "пащ", "зуб", "істот", "глибин"]),
+    path: './icons/catastrophe/sea-dragon.svg',
+    tags: Object.freeze(["морськ", "чудовиськ", "доісторичн", "дракон", "левіафан", "істот", "океан", "глибин", "западин", "підводн", "глибоководн", "рев", "хижак", "монстр"]),
+  }),
+  KRAKEN_TENTACLE: Object.freeze({
+    id: 'KRAKEN_TENTACLE',
+    label: 'Щупальце кракена / Морський монстр',
+    category: 'monsters',
+    frame: 'circle',
+    path: './icons/catastrophe/kraken-tentacle.svg',
+    tags: Object.freeze(["кракен", "щупальц", "морськ", "чудовиськ", "кораб", "судно", "судноплавств", "море", "океан", "глибин", "топити", "руйнуван"]),
+  }),
+  SEA_SERPENT: Object.freeze({
+    id: 'SEA_SERPENT',
+    label: 'Морський змій / Водяний змій',
+    category: 'monsters',
+    frame: 'circle',
+    path: './icons/catastrophe/sea-serpent.svg',
+    tags: Object.freeze(["морськ", "змій", "водян", "океан", "море", "чудовиськ", "хвил"]),
   }),
   SHIP_WHEEL: Object.freeze({
     id: 'SHIP_WHEEL',
@@ -825,9 +861,12 @@ export const CATASTROPHE_ICONS = Object.freeze({
     id: 'BLACK_HOLE',
     label: 'Чорна діра / Гравітаційна сингулярність',
     category: 'natural',
-    frame: 'circle',
+    frame: 'wide',
     path: './icons/catastrophe/black-hole.svg',
-    tags: Object.freeze(["чорна діра", "гравітаці", "сингулярність", "аномалі", "космос", "вир", "колапс", "затягуван", "фізик", "простір"]),
+    tags: Object.freeze([
+      "чорна діра", "гравітаці", "сингулярність", "аномалі", "космос", "вир", "колапс", "затягуван", "фізик", "простір",
+      "квантов", "розрив континууму", "розпад хибного вакууму", "астрофізик", "зірка-ізгой", "викривлення простору"
+    ]),
   }),
 });
 
@@ -866,6 +905,18 @@ export function isSquareFrameIcon(iconOrId) {
   if (typeof iconOrId === 'object') return iconOrId.frame === 'square';
   const icon = getCatastropheIconById(iconOrId) || getCatastropheIconByPath(iconOrId);
   return icon?.frame === 'square';
+}
+
+/**
+ * Перевірити, чи іконка має широку горизонтальну форму (wide)
+ * @param {string | object} iconOrId
+ * @returns {boolean}
+ */
+export function isWideFrameIcon(iconOrId) {
+  if (!iconOrId) return false;
+  if (typeof iconOrId === 'object') return iconOrId.frame === 'wide';
+  const icon = getCatastropheIconById(iconOrId) || getCatastropheIconByPath(iconOrId);
+  return icon?.frame === 'wide';
 }
 
 /**
