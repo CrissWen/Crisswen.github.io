@@ -1271,7 +1271,7 @@ body.is-stage-dragging * {
   pointer-events:auto;
   border-radius:inherit;
   border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
-  background:linear-gradient(180deg, color-mix(in srgb, var(--hazard) 8%, var(--panel)) 0%, var(--panel) 48%, color-mix(in srgb, var(--panel-2) 90%, #080c14) 100%);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--hazard) 8%, var(--panel)) 0%, var(--panel) 48%, color-mix(in srgb, var(--panel-2) 90%, #080c14) 100%), var(--bg); /* суцільна підкладка: у Кріо/Патріоті --panel/--panel-2 прозорі, і форма під оверлеєм просвічувала */
   display:flex;
   align-items:center;
   justify-content:center;

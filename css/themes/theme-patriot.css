@@ -169,3 +169,10 @@ body .header-collapse-tab:hover{
   color: var(--patriot-5);
   font-weight: 600;
 }
+
+
+/* Плаваюча кнопка та тост панелі ведучого лежать поверх сторінки, а --panel-2 тут прозорий */
+.hp-fab,
+.hp-toast{
+  background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
+}

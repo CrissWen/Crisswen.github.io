@@ -182,3 +182,9 @@ body .header-collapse-tab:hover{
 .offline-replay-banner{
   background-color: color-mix(in srgb, var(--cryo-2) 40%, var(--cryo-1));
 }
+
+/* Плаваюча кнопка та тост панелі ведучого лежать поверх сторінки, а --panel-2 тут прозорий */
+.hp-fab,
+.hp-toast{
+  background-color: color-mix(in srgb, var(--cryo-2) 45%, var(--cryo-1));
+}

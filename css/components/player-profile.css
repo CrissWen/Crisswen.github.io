@@ -25,7 +25,7 @@
   position: fixed;
   z-index: 10005; /* вище за підтвердження (10003) і панель ведучого (10002), нижче за редактор аватарки (10006) */
   box-sizing: border-box;
-  width: min(360px, calc(100vw - 16px));
+  width: min(620px, calc(100vw - 16px)); /* достатньо широка, щоб дата реєстрації широким шрифтом тем (Orbitron у Кріо/Cyberpunk) не обрізалась */
   display: flex;
   align-items: center;
   gap: 16px;
@@ -157,7 +157,7 @@
 }
 
 /* На вузьких екранах плитки йдуть під аватаркою */
-@media (max-width: 380px) {
+@media (max-width: 440px) {
   .pp-card {
     flex-direction: column;
     padding: 16px 12px 12px;
