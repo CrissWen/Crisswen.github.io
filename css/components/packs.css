@@ -224,6 +224,22 @@
   animation: pe-select-fade .12s ease-out;
   max-height: 240px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal-lt) transparent;
+}
+.pe-select-custom__dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.pe-select-custom__dropdown::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.pe-select-custom__dropdown::-webkit-scrollbar-thumb {
+  background: var(--metal-lt);
+  border-radius: var(--radius-sm);
+}
+.pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--hazard) 60%, var(--metal-lt));
 }
 @keyframes pe-select-fade {
   from { opacity: 0; transform: translateY(-4px); }
