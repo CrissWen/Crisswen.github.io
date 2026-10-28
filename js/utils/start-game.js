@@ -5,6 +5,8 @@ import { generateGameState } from './game-generator.js';
 import { loadGamePools } from './host/card-pools.js';
 import { describeFallback } from './pack-fallback.js';
 import { pushLog } from './log-writer.js';
+import { attachCataclysmSpin } from './cataclysm-spin.js';
+import { getGlobalTime } from '../services/server-time.js';
 
 // Старт гри: читає гравців і обраний пак кімнати, генерує стан за його картками і записує його в БД одним UPDATE.
 // Без DOM: кнопку, її текст і показ помилки веде викликач (game.js -> handleStartGame).
@@ -38,6 +40,9 @@ export async function startGame(roomCode) {
 
   const cardsData = { bunker: pools.bunker, character: pools.character };
   const { bunkerState, playersState } = await generateGameState(playersList, cardsData, pools.config);
+  // Рулетка катаклізму: результат уже в bunkerState.cataclysm, спін лише додає час старту й іконки для стрічки (та зсуває таймер катаклізму).
+  // Усе це йде в тому ж UPDATE, що й стан гри, тож гравці отримують катаклізм і рулетку одночасно.
+  await attachCataclysmSpin(bunkerState, pools.bunker?.cataclysm, getGlobalTime());
 
   if (added.length > 0) {
     const packName = packDisplayName(room.selected_pack_id, room.selected_pack_title);
