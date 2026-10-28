@@ -28,6 +28,8 @@ import { ensurePackOptions, getPackOptions, handlePackChange, resetPackSelect } 
 import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/controllers/cataclysm-end-modal.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
+import { playCataclysmRoulette, hideCataclysmRoulette } from '../game-modules/overlays/cataclysm-roulette.js';
+import { isCataclysmSpinActive, getSpinTimeline } from '../utils/cataclysm-spin.js';
 import { showOrientationPrompt, hideOrientationPrompt } from '../game-modules/overlays/orientation-prompt.js';
 import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-modules/board/event-log.js';
 import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-modules/board/personal-notes.js';
@@ -35,7 +37,7 @@ import { buildBoardViewModel } from '../utils/board-view-model.js';
 import { startGame } from '../utils/start-game.js';
 import { initCustomSelects } from '../ui/custom-select.js';
 import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.js';
-import { syncServerTime } from '../services/server-time.js';
+import { syncServerTime, getGlobalTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
@@ -53,6 +55,8 @@ let isSpectator = false; // глядач: гра вже йде, а гравця 
 let localRoomState = null;
 let pendingDiceLogId = null; // id запису в лозі про кидок, який прихований до зупинки кубика
 let pendingDiceLogTimer = null;
+let playedSpinId = null; // id спіну рулетки катаклізму, який цей клієнт уже показав (або пропустив як старий)
+let spinRefreshTimer = null; // перемальовує дошку в момент, коли рулетка закінчилась і катаклізм уже можна показати
 let renderSkippedForPackSelect = false; // оновлення кімнати очікування пропущено, бо ведучий тримає у фокусі список паків
 
 // Згортання верхньої навігаційної панелі під час гри (особливо важливо на телефонах)
@@ -277,6 +281,7 @@ export async function initGame() {
     if (isGameStarted && room.status !== 'closed') showOrientationPrompt();
 
     subscribeToRoomUpdates();
+    maybePlayCataclysmRoulette(localRoomState); // зайшли посеред рулетки (перезавантаження сторінки) — вона продовжується з потрібного місця
     setupActionListeners();
     mountGameTimer(() => localRoomState?.bunker_state);
     mountCataclysmTimer(onCataclysmTimerExpired);
@@ -375,6 +380,9 @@ function renderActiveGame(roomData, container) {
   const pState = roomData.players_state || {};
   const isHost = isHostOf(roomData);
   const vm = buildBoardViewModel(roomData, currentUserId);
+  // Поки крутиться рулетка катаклізму, результат на дошці й у лозі прихований: інакше він видав би себе ще до зупинки стрічки.
+  // Перемальовування в момент розблокування запускає spinRefreshTimer (maybePlayCataclysmRoulette).
+  const spinActive = isCataclysmSpinActive(bState, getGlobalTime());
 
   // Кожен блок рендериться окремо: помилка в одному не ламає решту столу
   const safe = (title, fn) => {
@@ -387,7 +395,7 @@ function renderActiveGame(roomData, container) {
   };
 
   const order = [
-    safe('Катаклізм', () => cataclysm(vm.cataclysmData)),
+    safe('Катаклізм', () => cataclysm(spinActive ? null : vm.cataclysmData)),
     safe('Бункер', () => bunkerInfo(vm.bunkerData)),
     isSpectator ? '' : safe('Мої характеристики', () => playerCharacteristics({ ownerName: vm.myData.name, characteristics: vm.myData.characteristics, abilities: vm.myData.abilities })),
     safe('Гравці', () => playersTable(vm.columns.length ? vm.columns : ["Очікування роздачі..."], vm.tableRows, vm.alivePlayers, vm.totalPlayers, isHost, bState.stage_scales)),
@@ -402,7 +410,7 @@ function renderActiveGame(roomData, container) {
     // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
     safe('Особисті замітки', () => personalNotes()),
     // Лог подій — самий низ сторінки, одразу після блоку голосування
-    safe('Лог подій', () => eventLog(bState.logs, pendingDiceLogId ? [pendingDiceLogId] : []))
+    safe('Лог подій', () => eventLog(bState.logs, [pendingDiceLogId, spinActive ? bState.cataclysm_spin?.id : null].filter(Boolean)))
   ];
 
   captureVoteSelection(); // запам'ятовуємо обрану радіокнопку голосування, бо innerHTML нижче створить її заново без checked
@@ -414,6 +422,27 @@ function renderActiveGame(roomData, container) {
 
   syncVotingScroll(pState, bState, ctx); // автоскрол до голосування рівно один раз на його запуск
   maybeAutoFinishVoting(roomData, ctx); // лише клієнт ведучого фіксує фінал голосування
+}
+
+// Рулетка катаклізму (bunker_state.cataclysm_spin, див. utils/cataclysm-spin.js). Новий спін (інший id) програється на клієнті один раз;
+// хто зайшов посеред кручення, бачить його з потрібного місця, а після кінця — одразу катаклізм (старий спін не показуємо).
+function maybePlayCataclysmRoulette(roomData) {
+  const spin = roomData.bunker_state?.cataclysm_spin;
+  if (!spin || roomData.status === 'closed' || spin.id === playedSpinId) return;
+  playedSpinId = spin.id;
+
+  const now = getGlobalTime();
+  const timeline = getSpinTimeline(spin, now);
+  if (!timeline || now >= timeline.unlockAt) return;
+
+  // Дошка перемальовується в момент розблокування, навіть якщо оверлей не показався (помилка, вкладка у фоні)
+  clearTimeout(spinRefreshTimer);
+  spinRefreshTimer = setTimeout(() => ctx.refreshBoard(), timeline.unlockAt - now + 60);
+
+  playCataclysmRoulette(spin, { onFinish: () => ctx.refreshBoard() }).catch(err => {
+    console.error('Рулетка катаклізму:', err);
+    hideCataclysmRoulette(); // збій не повинен лишати інтерфейс заблокованим
+  });
 }
 
 function subscribeToRoomUpdates() {
@@ -442,6 +471,7 @@ function handleRoomUpdate(patch) {
   // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
   if (localRoomState.status === 'closed') {
     freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
+    hideCataclysmRoulette(); // рулетка не повинна блокувати вихід із закритої кімнати
     if (localRoomState.host_id !== currentUserId) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
@@ -455,6 +485,14 @@ function handleRoomUpdate(patch) {
   const hostEvent = localRoomState.bunker_state?.latest_host_event;
   if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
     showGlobalToast(hostEvent.text);
+  }
+
+  // Рулетка катаклізму: новий спін програється в усіх клієнтів за серверним часом; порожній стан (гру скинуто) прибирає оверлей
+  if (isGameStartedNow) {
+    maybePlayCataclysmRoulette(localRoomState);
+  } else {
+    hideCataclysmRoulette();
+    playedSpinId = null;
   }
 
   // Новий кидок кубика від ведучого — у всіх клієнтів (включно з ведучим і глядачами) локально запускається анімація.
@@ -673,6 +711,9 @@ export function cleanupGame() {
   closePlayerProfile({ immediate: true });
   resetVotingState();
   resetPackSelect();
+  hideCataclysmRoulette();
+  clearTimeout(spinRefreshTimer);
+  playedSpinId = null;
   renderSkippedForPackSelect = false;
   clearTimeout(pendingDiceLogTimer);
   pendingDiceLogId = null;
