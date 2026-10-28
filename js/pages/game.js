@@ -1,3 +1,4 @@
+import { ICONS } from '../constants/icons.js';
 import { esc } from '../utils/security.js';
 import { REPLAY_STORAGE_KEY } from '../services/replay-service.js';
 import { supabase } from '../services/supabase.js';
@@ -302,7 +303,16 @@ function updateGameBoard(roomData, container) {
   const isHost = isHostOf(roomData);
   // Закрита кімната — кожен, навіть колишній гравець/ведучий, примусово глядач (режим лише для читання)
   isSpectator = roomData.status === 'closed' || (isGameStarted && !roomData.players_state?.[currentUserId]);
-  document.getElementById('spectator-badge')?.classList.toggle('is-hidden', !isSpectator);
+  const specBadge = document.getElementById('spectator-badge');
+  if (specBadge) {
+    specBadge.classList.toggle('is-hidden', !isSpectator);
+    if (isSpectator) {
+      const specIcon = specBadge.querySelector('.spectator-badge__icon');
+      if (specIcon && specIcon.getAttribute('src') !== ICONS.EYE) {
+        specIcon.src = ICONS.EYE;
+      }
+    }
+  }
   syncHostPanel(roomData, isHost, ctx);
   syncCataclysm(roomData.bunker_state, roomData.status);
 

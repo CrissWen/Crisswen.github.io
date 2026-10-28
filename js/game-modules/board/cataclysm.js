@@ -57,7 +57,7 @@ export function cataclysm(data) {
       <div class="cataclysm-pop-wrapper">
         <div class="cataclysm-pop-label">Населення</div>
         <div class="cataclysm-pop-section">
-          <div class="pop-mask"></div>
+          <div class="pop-mask" style="-webkit-mask-image: url('${ICONS.POPULATION}'); mask-image: url('${ICONS.POPULATION}');" aria-hidden="true"></div>
           <p class="cataclysm-population">${esc(formattedPop)}</p>
         </div>
       </div>
