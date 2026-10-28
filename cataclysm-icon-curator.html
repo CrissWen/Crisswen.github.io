@@ -83,8 +83,6 @@
       flex-direction: column;
       gap: 14px;
       padding-right: 4px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--metal-lt) transparent;
     }
 
     .curator-dialog__foot {
@@ -123,45 +121,35 @@
       margin: 0;
     }
 
-    /* Кастомний красивий скролбар для всіх списків, таблиць та діалогів куратора */
-    .pe-select-custom__dropdown,
-    .curator-table-wrap,
-    .wizard-list,
-    #report-markdown-output,
-    .curator-dialog__body {
+    /* ==========================================================================
+       GLOBAL CUSTOM SCROLLBARS (Кастомні скролбари для всіх елементів сторінки)
+       ========================================================================== */
+    html, body, *, *::before, *::after {
       scrollbar-width: thin;
       scrollbar-color: var(--metal-lt) transparent;
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar,
-    .curator-table-wrap::-webkit-scrollbar,
-    .wizard-list::-webkit-scrollbar,
-    #report-markdown-output::-webkit-scrollbar,
-    .curator-dialog__body::-webkit-scrollbar {
+
+    ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar-track,
-    .curator-table-wrap::-webkit-scrollbar-track,
-    .wizard-list::-webkit-scrollbar-track,
-    #report-markdown-output::-webkit-scrollbar-track,
-    .curator-dialog__body::-webkit-scrollbar-track {
+
+    ::-webkit-scrollbar-track {
       background: transparent;
       margin: 4px;
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar-thumb,
-    .curator-table-wrap::-webkit-scrollbar-thumb,
-    .wizard-list::-webkit-scrollbar-thumb,
-    #report-markdown-output::-webkit-scrollbar-thumb,
-    .curator-dialog__body::-webkit-scrollbar-thumb {
+
+    ::-webkit-scrollbar-thumb {
       background: var(--metal-lt);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-sm, 6px);
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover,
-    .curator-table-wrap::-webkit-scrollbar-thumb:hover,
-    .wizard-list::-webkit-scrollbar-thumb:hover,
-    #report-markdown-output::-webkit-scrollbar-thumb:hover,
-    .curator-dialog__body::-webkit-scrollbar-thumb:hover {
+
+    ::-webkit-scrollbar-thumb:hover {
       background: color-mix(in srgb, var(--hazard) 60%, var(--metal-lt));
+    }
+
+    ::-webkit-scrollbar-corner {
+      background: transparent;
     }
 
     .hotkey-badge {
@@ -350,8 +338,6 @@
       gap: 6px;
       padding-right: 4px;
       max-height: 520px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--metal-lt) transparent;
     }
 
     .wizard-item {
@@ -1230,11 +1216,17 @@
       </form>
     </div>
 
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <input type="search" id="picker-search-input" class="pe-input" style="flex: 1; min-width: 200px;" placeholder="Пошук іконки за назвою, ID або тегом..." autofocus>
-      <select id="picker-cat-select" class="pe-input" style="width: 220px;">
-        <option value="all">Усі категорії (93)</option>
-      </select>
+      <!-- Кастомний комбобокс категорій у діалозі вибору -->
+      <div class="pe-select-custom" id="picker-cat-wrap" style="width: 220px; flex-shrink: 0; z-index: 25;">
+        <button type="button" class="pe-select-custom__btn" id="picker-cat-btn" aria-haspopup="listbox" aria-expanded="false">
+          <span class="pe-select-custom__label" id="picker-cat-label">Усі категорії</span>
+          <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="pe-select-custom__dropdown" id="picker-cat-dropdown" role="listbox" hidden></div>
+        <input type="hidden" id="picker-cat-select" value="all">
+      </div>
     </div>
 
     <div class="curator-dialog__body">
@@ -2324,13 +2316,19 @@
         }
       });
 
-      // Заповнення категорій у селекті діалогу вибору
-      const pickerSel = document.getElementById('picker-cat-select');
-      Object.values(CATASTROPHE_CATEGORIES).forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat.id;
-        opt.textContent = cat.label;
-        pickerSel.appendChild(opt);
+      // Кастомний комбобокс категорій у діалозі вибору
+      const pickerCatOptions = [
+        { value: 'all', label: 'Усі категорії (101)' },
+        ...Object.values(CATASTROPHE_CATEGORIES).map(c => ({ value: c.id, label: c.label }))
+      ];
+      setupCustomSelect({
+        wrapId: 'picker-cat-wrap',
+        btnId: 'picker-cat-btn',
+        labelId: 'picker-cat-label',
+        dropId: 'picker-cat-dropdown',
+        inputId: 'picker-cat-select',
+        options: pickerCatOptions,
+        onChange: () => renderPickerGrid()
       });
 
       // Хелпер створення кастомного селекта
@@ -2358,6 +2356,7 @@
               btn.classList.remove('is-open');
               btn.setAttribute('aria-expanded', 'false');
               renderDrop();
+              input.dispatchEvent(new Event('change', { bubbles: true }));
               if (onChange) onChange(opt.value);
             });
             drop.appendChild(item);
@@ -2475,10 +2474,6 @@
       }
 
       document.getElementById('btn-reset-current-review').addEventListener('click', resetCurrentCataReview);
-
-      document.getElementById('btn-mark-ok')?.addEventListener('click', () => {
-        updateCurrentCataReview({ status: 'ok', suggestedIconId: null });
-      });
 
       document.getElementById('btn-approve-and-next').addEventListener('click', () => {
         const cata = packCataclysms[currentCataIndex];
@@ -2715,52 +2710,19 @@
       document.getElementById('wizard-search').addEventListener('input', renderWizardSidebar);
 
       // Кастомний селект фільтра у сайдбарі візарду
-      const wizFilterOptions = [
-        { value: 'all', label: 'Усі' },
-        { value: 'unreviewed', label: 'Не оцінені' },
-        { value: 'reviewed', label: 'Оцінені' },
-        { value: 'changed', label: 'Змінені / Дефект' }
-      ];
-      const wizFilterInput = document.getElementById('wizard-filter');
-      const wizFilterBtn = document.getElementById('wizard-filter-btn');
-      const wizFilterLabel = document.getElementById('wizard-filter-label');
-      const wizFilterDrop = document.getElementById('wizard-filter-dropdown');
-
-      function renderWizardFilterDropdown() {
-        wizFilterDrop.innerHTML = '';
-        wizFilterOptions.forEach(opt => {
-          const item = document.createElement('div');
-          const isSel = wizFilterInput.value === opt.value;
-          item.className = 'pe-select-custom__item' + (isSel ? ' is-selected' : '');
-          item.innerHTML = `
-            <span class="pe-select-custom__check">${isSel ? '✓' : ''}</span>
-            <span class="pe-select-custom__text">${opt.label}</span>
-          `;
-          item.addEventListener('click', () => {
-            wizFilterInput.value = opt.value;
-            wizFilterLabel.textContent = opt.label;
-            wizFilterDrop.hidden = true;
-            wizFilterBtn.classList.remove('is-open');
-            wizFilterBtn.setAttribute('aria-expanded', 'false');
-            renderWizardFilterDropdown();
-            renderWizardSidebar();
-          });
-          wizFilterDrop.appendChild(item);
-        });
-      }
-      renderWizardFilterDropdown();
-      wizFilterBtn.addEventListener('click', () => {
-        const isOpen = !wizFilterDrop.hidden;
-        wizFilterDrop.hidden = isOpen;
-        wizFilterBtn.classList.toggle('is-open', !isOpen);
-        wizFilterBtn.setAttribute('aria-expanded', String(!isOpen));
-      });
-      document.addEventListener('click', (e) => {
-        if (!document.getElementById('wizard-filter-wrap').contains(e.target)) {
-          wizFilterDrop.hidden = true;
-          wizFilterBtn.classList.remove('is-open');
-          wizFilterBtn.setAttribute('aria-expanded', 'false');
-        }
+      setupCustomSelect({
+        wrapId: 'wizard-filter-wrap',
+        btnId: 'wizard-filter-btn',
+        labelId: 'wizard-filter-label',
+        dropId: 'wizard-filter-dropdown',
+        inputId: 'wizard-filter',
+        options: [
+          { value: 'all', label: 'Усі' },
+          { value: 'unreviewed', label: 'Не оцінені' },
+          { value: 'reviewed', label: 'Оцінені' },
+          { value: 'changed', label: 'Змінені / Дефект' }
+        ],
+        onChange: () => renderWizardSidebar()
       });
 
       // Каталог пошук
