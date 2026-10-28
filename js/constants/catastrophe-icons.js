@@ -359,11 +359,14 @@ export const CATASTROPHE_ICONS = Object.freeze({
   }),
   MAGNETISM: Object.freeze({
     id: 'MAGNETISM',
-    label: 'Магнітна аномалія',
+    label: 'Магнітна аномалія / Електромагнітне поле',
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/magnetism.svg',
-    tags: Object.freeze(["магніт", "полюс", "геомагніт", "аномалі", "інверсі", "поле", "імпульс", "emp"]),
+    tags: Object.freeze([
+      "електромагніт", "магніт", "магнітна буря", "магнітне поле", "геомагніт",
+      "аномал", "полюс", "інверсі", "імпульс", "емі", "emp", "галюцинаці"
+    ]),
   }),
   LASER_PRECISION: Object.freeze({
     id: 'LASER_PRECISION',

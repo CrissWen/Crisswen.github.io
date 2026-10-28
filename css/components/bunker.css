@@ -42,6 +42,7 @@
   background: var(--bg);
   border: 2px solid var(--danger);
   border-radius: 50%;
+  overflow: hidden;
   box-shadow: 0 0 15px color-mix(in srgb, var(--danger) 50%, transparent), inset 0 0 10px color-mix(in srgb, var(--danger) 40%, transparent);
   animation: pulse-danger 2s infinite;
 }
