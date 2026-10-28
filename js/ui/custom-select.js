@@ -43,6 +43,8 @@ export function closeAllCustomSelects(exceptWrap = null) {
     if (wrap && wrap === exceptWrap) return;
     drop.hidden = true;
     drop.style.display = 'none';
+    drop.classList.remove('is-drop-up');
+    if (wrap) wrap.classList.remove('is-open');
     const btn = wrap?.querySelector('.pe-select-custom__btn');
     if (btn) {
       btn.classList.remove('is-open');
@@ -119,6 +121,7 @@ export function initCustomSelect(selectEl, options = {}) {
   if (initialFlex) wrap.style.flex = initialFlex;
   if (initialFlexShrink) wrap.style.flexShrink = initialFlexShrink;
   if (initialZIndex) wrap.style.zIndex = initialZIndex;
+  if (selectEl.style.display === 'none') wrap.style.display = 'none';
 
   // Insert wrapper into DOM right where the select is
   selectEl.parentNode.insertBefore(wrap, selectEl);
@@ -164,9 +167,21 @@ export function initCustomSelect(selectEl, options = {}) {
   function openDropdown() {
     if (btn.disabled) return;
     closeAllCustomSelects(wrap);
+
+    // Smart flip: check if space below is too small (< 220px) and space above is larger
+    const rect = btn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (spaceBelow < 220 && spaceAbove > spaceBelow) {
+      dropdown.classList.add('is-drop-up');
+    } else {
+      dropdown.classList.remove('is-drop-up');
+    }
+
     dropdown.hidden = false;
     dropdown.style.display = '';
     btn.classList.add('is-open');
+    wrap.classList.add('is-open');
     btn.setAttribute('aria-expanded', 'true');
     const sel = dropdown.querySelector('.pe-select-custom__item.is-selected');
     if (sel) {
@@ -177,7 +192,9 @@ export function initCustomSelect(selectEl, options = {}) {
   function closeDropdown() {
     dropdown.hidden = true;
     dropdown.style.display = 'none';
+    dropdown.classList.remove('is-drop-up');
     btn.classList.remove('is-open');
+    wrap.classList.remove('is-open');
     btn.setAttribute('aria-expanded', 'false');
   }
 
@@ -280,20 +297,40 @@ export function initCustomSelect(selectEl, options = {}) {
     btn.disabled = Boolean(selectEl.disabled);
   }
 
-  // Sync when native select changes programmatically
+  // Sync when native select changes programmatically via change/input events
   selectEl.addEventListener('change', () => {
     renderItems();
   });
 
-  // Watch for dynamic DOM changes to <option> tags or disabled state
+  // Intercept programmatic .value assignments to automatically sync custom UI
+  const protoDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  if (protoDescriptor && protoDescriptor.set) {
+    Object.defineProperty(selectEl, 'value', {
+      get() {
+        return protoDescriptor.get.call(this);
+      },
+      set(newVal) {
+        protoDescriptor.set.call(this, newVal);
+        renderItems();
+      },
+      configurable: true
+    });
+  }
+
+  // Watch for dynamic DOM changes to <option> tags, disabled, and style.display
   const observer = new MutationObserver(() => {
     renderItems();
+    if (selectEl.style.display === 'none') {
+      wrap.style.display = 'none';
+    } else if (wrap.style.display === 'none' && selectEl.style.display !== 'none') {
+      wrap.style.display = '';
+    }
   });
   observer.observe(selectEl, {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['disabled', 'selected', 'value']
+    attributeFilter: ['disabled', 'selected', 'value', 'style']
   });
 
   // Initial render
@@ -316,6 +353,7 @@ export function initCustomSelect(selectEl, options = {}) {
       selectEl.classList.remove('pe-hidden-select');
       selectEl.removeAttribute('tabindex');
       selectEl.removeAttribute('aria-hidden');
+      delete selectEl.value;
       delete selectEl._customSelect;
     }
   };

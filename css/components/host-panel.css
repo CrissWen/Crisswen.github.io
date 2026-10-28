@@ -126,8 +126,12 @@
 
 .hp-acc{
   border:1px solid var(--metal);border-radius:var(--radius-sm);
-  background:var(--panel);margin-bottom:8px;overflow:hidden;
+  background:var(--panel);margin-bottom:8px;
 }
+.hp-acc:not([open]){overflow:hidden;}
+.hp-acc[open]{overflow:visible;}
+.hp-acc[open]:has(.pe-select-custom.is-open),
+.hp-acc[open]:focus-within{position:relative;z-index:50;}
 .hp-acc summary{
   cursor:pointer;padding:12px 14px;font-size:14px;font-weight:600;
   list-style:none;display:flex;align-items:center;justify-content:space-between;
@@ -146,6 +150,9 @@
   font-family:var(--mono);font-size:14px;
 }
 .hp-select:focus,.hp-input:focus{outline:none;border-color:var(--ok);box-shadow:0 0 8px color-mix(in srgb, var(--ok) 30%, transparent);}
+.hp-panel .pe-select-custom{width:100%;}
+.hp-panel .pe-select-custom__btn{font-family:var(--mono);font-size:13.5px;background:var(--bg);border-color:var(--metal);}
+.hp-panel .pe-select-custom__item{font-family:var(--mono);font-size:13px;}
 
 .hp-dice-result{
   font-family:var(--head);font-size:34px;text-align:center;

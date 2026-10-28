@@ -11,6 +11,7 @@ import {
 } from '../host-panel/host-panel.js';
 import { showCustomConfirm } from '../overlays/confirm-dialog.js';
 import { getCataclysmTimerText } from '../timers/cataclysm-timer.js';
+import { initCustomSelects } from '../../ui/custom-select.js';
 
 // ===== Панель ведучого: монтування, події, виклик дій =====
 // Контролер не володіє станом гри: усе потрібне (код кімнати, id користувача, поточний стан кімнати) читається
@@ -52,6 +53,7 @@ export function syncHostPanel(roomData, isHost, ctx) {
   if (!root) {
     document.body.insertAdjacentHTML('beforeend', renderHostPanel(hostPanelData(roomData, ctx)));
     root = getHostPanelRoot();
+    initCustomSelects(root);
     bindHostEvents(root, ctx);
   }
 
