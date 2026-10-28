@@ -33,6 +33,7 @@ import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-module
 import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-modules/board/personal-notes.js';
 import { buildBoardViewModel } from '../utils/board-view-model.js';
 import { startGame } from '../utils/start-game.js';
+import { initCustomSelects } from '../ui/custom-select.js';
 import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.js';
 import { syncServerTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
@@ -320,7 +321,8 @@ function updateGameBoard(roomData, container) {
     unmountHeaderCollapseTab();
     // Ведучий саме обирає пак у розкритому списку: не перемальовуємо кімнату, щоб список не закрився посеред вибору.
     // Стан кімнати вже оновлено, а перемалювання відбудеться, щойно список втратить фокус (handleGlobalFocusOut).
-    if (isHost && document.activeElement?.id === 'wr-pack-select') {
+    const isPackSelectOpen = document.querySelector('#wr-pack-select')?.closest('.pe-select-custom')?.querySelector('.pe-select-custom__btn.is-open') || document.activeElement?.id === 'wr-pack-select';
+    if (isHost && isPackSelectOpen) {
       renderSkippedForPackSelect = true;
       return;
     }
@@ -337,8 +339,11 @@ function updateGameBoard(roomData, container) {
       selectedPackId: roomData.selected_pack_id,
       selectedPackTitle: roomData.selected_pack_title,
       packOptions: isHost ? getPackOptions() : null,
-      myId: currentUserId
+      myId: currentUserId,
+      _needsInit: Boolean(setTimeout(() => initCustomSelects(container), 0))
     });
+    initCustomSelects(container);
+
 
     if (isHost) {
       document.getElementById('start-game-btn')?.addEventListener('click', handleStartGame);
@@ -391,6 +396,7 @@ function renderActiveGame(roomData, container) {
       voting: bState.voting,
       players: vm.votingPlayers,
       myId: currentUserId,
+      _needsInit: Boolean(setTimeout(() => initCustomSelects(container), 0)),
       amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false && !pState[currentUserId]?.is_kicked
     })),
     // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
@@ -571,6 +577,7 @@ async function handleGlobalClick(e) {
       name: profileTrigger.dataset.profileName,
       opener: profileTrigger
     });
+
     return;
   }
 

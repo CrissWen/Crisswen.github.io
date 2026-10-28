@@ -35,7 +35,7 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
   if (!options.some(o => o.id === currentPackId)) options.unshift({ id: currentPackId, name: packName });
   const packSelectHtml = isHost ? `
     <label class="wr-pack__label" for="wr-pack-select">Змінити пак гри</label>
-    <select id="wr-pack-select" class="hp-select wr-pack__select" ${packOptions === null ? 'disabled' : ''}>
+    <select id="wr-pack-select" class="pe-select-custom wr-pack__select" ${packOptions === null ? 'disabled' : ''}>
       ${options.map(o => `<option value="${esc(o.id)}" ${o.id === currentPackId ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}
     </select>
   ` : '';

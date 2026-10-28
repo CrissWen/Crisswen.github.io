@@ -9,6 +9,7 @@ import { applyStoredTheme } from './utils/theme-manager.js';
 import { syncGameTab } from './utils/last-session.js';
 import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
+import { initCustomSelects } from './ui/custom-select.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -113,6 +114,7 @@ async function router() {
   currentRouteObj = route;
   appContainer.innerHTML = route.render();
   if (route.init) route.init();
+  initCustomSelects(appContainer);
 }
 
 window.addEventListener('hashchange', router);

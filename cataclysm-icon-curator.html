@@ -842,16 +842,12 @@
     <!-- ВЕРХНЯ ПАНЕЛЬ: ВИБІР ПАКА ТА ПРОФІЛЬ ТЕСТУВАЛЬНИКА -->
     <section class="curator-topbar" aria-label="Панель керування паком і профілем">
       <div class="curator-topbar__group">
-        <!-- Кастомний селект пака (.pe-select-custom з packs.css) -->
+        <!-- Селект пака -->
         <div class="pe-field" style="min-width: 280px; flex: 1.2;">
-          <label class="pe-label">Активний пак для перевірки катаклізмів</label>
-          <div class="pe-select-custom" id="pack-select-wrap">
-            <button type="button" class="pe-select-custom__btn" id="pack-select-btn" aria-haspopup="listbox" aria-expanded="false">
-              <span class="pe-select-custom__label" id="pack-select-label">Завантаження паків...</span>
-              <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="pe-select-custom__dropdown" id="pack-select-dropdown" role="listbox" hidden></div>
-          </div>
+          <label class="pe-label" for="pack-select">Активний пак для перевірки катаклізмів</label>
+          <select id="pack-select" class="pe-select-custom" style="width: 100%;">
+            <option value="">Завантаження паків...</option>
+          </select>
         </div>
 
         <!-- Ім'я тестувальника -->
@@ -914,14 +910,12 @@
 
           <div class="pe-field-row" style="gap: 6px;">
             <input type="search" id="wizard-search" class="pe-input" style="padding: 6px 10px; font-size: 13px; flex: 1; min-width: 0;" placeholder="Пошук катаклізму...">
-            <div class="pe-select-custom" id="wizard-filter-wrap" style="width: 145px; flex-shrink: 0;">
-              <button type="button" class="pe-select-custom__btn" id="wizard-filter-btn" style="height: 36px; font-size: 12.5px;" aria-haspopup="listbox" aria-expanded="false">
-                <span class="pe-select-custom__label" id="wizard-filter-label">Усі</span>
-                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              <div class="pe-select-custom__dropdown" id="wizard-filter-dropdown" role="listbox" hidden></div>
-            </div>
-            <input type="hidden" id="wizard-filter" value="all">
+            <select id="wizard-filter" class="pe-select-custom" style="width: 145px; flex-shrink: 0;">
+              <option value="all" selected>Усі</option>
+              <option value="unreviewed">Не оцінені</option>
+              <option value="reviewed">Оцінені</option>
+              <option value="changed">Змінені / Дефект</option>
+            </select>
           </div>
 
           <div class="wizard-list" id="wizard-cata-list" role="listbox" aria-label="Список катаклізмів"></div>
@@ -1102,35 +1096,25 @@
           <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; align-items: center;">
             <input type="search" id="catalog-search" class="pe-input" style="max-width: 280px; height: 38px; box-sizing: border-box;" placeholder="Пошук за ID, назвою або тегом...">
 
-            <!-- Кастомний комбобокс: Категорії -->
-            <div class="pe-select-custom" id="catalog-cat-wrap" style="width: 220px; flex-shrink: 0;">
-              <button type="button" class="pe-select-custom__btn" id="catalog-cat-btn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="pe-select-custom__label" id="catalog-cat-label">Усі категорії</span>
-                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              <div class="pe-select-custom__dropdown" id="catalog-cat-dropdown" role="listbox" hidden></div>
-            </div>
-            <input type="hidden" id="catalog-cat-filter" value="all">
+            <!-- Селект категорій -->
+            <select id="catalog-cat-filter" class="pe-select-custom" style="width: 220px; flex-shrink: 0;"></select>
 
-            <!-- Кастомний комбобокс: Форма рамки -->
-            <div class="pe-select-custom" id="catalog-frame-wrap" style="width: 170px; flex-shrink: 0;">
-              <button type="button" class="pe-select-custom__btn" id="catalog-frame-btn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="pe-select-custom__label" id="catalog-frame-label">Усі форми рамки</span>
-                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              <div class="pe-select-custom__dropdown" id="catalog-frame-dropdown" role="listbox" hidden></div>
-            </div>
-            <input type="hidden" id="catalog-frame-filter" value="all">
+            <!-- Селект форми рамки -->
+            <select id="catalog-frame-filter" class="pe-select-custom" style="width: 170px; flex-shrink: 0;">
+              <option value="all" selected>Усі форми рамки</option>
+              <option value="circle">circle (58px)</option>
+              <option value="square">square (50px)</option>
+              <option value="wide">wide (72px)</option>
+            </select>
 
-            <!-- Кастомний комбобокс: Фільтр дефектів -->
-            <div class="pe-select-custom" id="catalog-defect-wrap" style="width: 200px; flex-shrink: 0;">
-              <button type="button" class="pe-select-custom__btn" id="catalog-defect-btn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="pe-select-custom__label" id="catalog-defect-label">Усі іконки</span>
-                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              <div class="pe-select-custom__dropdown" id="catalog-defect-dropdown" role="listbox" hidden></div>
-            </div>
-            <input type="hidden" id="catalog-defect-filter" value="all">
+            <!-- Селект фільтра дефектів -->
+            <select id="catalog-defect-filter" class="pe-select-custom" style="width: 200px; flex-shrink: 0;">
+              <option value="all" selected>Усі іконки</option>
+              <option value="has_defect">Лише з дефектами</option>
+              <option value="off_center">Криве розташування</option>
+              <option value="bad_size">Проблема з розміром</option>
+              <option value="clipped">Обрізається колом</option>
+            </select>
           </div>
           <button type="button" id="btn-export-catalog-js" class="pk-btn" style="min-height: 38px;">
             <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
@@ -1218,15 +1202,8 @@
 
     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <input type="search" id="picker-search-input" class="pe-input" style="flex: 1; min-width: 200px;" placeholder="Пошук іконки за назвою, ID або тегом..." autofocus>
-      <!-- Кастомний комбобокс категорій у діалозі вибору -->
-      <div class="pe-select-custom" id="picker-cat-wrap" style="width: 220px; flex-shrink: 0; z-index: 25;">
-        <button type="button" class="pe-select-custom__btn" id="picker-cat-btn" aria-haspopup="listbox" aria-expanded="false">
-          <span class="pe-select-custom__label" id="picker-cat-label">Усі категорії</span>
-          <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-        <div class="pe-select-custom__dropdown" id="picker-cat-dropdown" role="listbox" hidden></div>
-        <input type="hidden" id="picker-cat-select" value="all">
-      </div>
+      <!-- Селект категорій у діалозі вибору -->
+      <select id="picker-cat-select" class="pe-select-custom" style="width: 220px; flex-shrink: 0; z-index: 25;"></select>
     </div>
 
     <div class="curator-dialog__body">
@@ -1364,6 +1341,7 @@
   <script type="module" id="curator-main-script">
     import { CATASTROPHE_ICONS, CATASTROPHE_ICONS_LIST, CATASTROPHE_CATEGORIES } from './js/constants/icons.js';
     import { detectCataclysm, normalizeText } from './js/utils/cataclysm-detector.js';
+    import { initCustomSelects } from './js/ui/custom-select.js';
 
     // MANDATORY fallback from modern-web-guidance 'dialog' guide for <dialog closedby="any">
     if (!('closedBy' in HTMLDialogElement.prototype)) {
@@ -1508,33 +1486,12 @@
     }
 
     function renderPackCustomSelect() {
-      const btn = document.getElementById('pack-select-btn');
-      const label = document.getElementById('pack-select-label');
-      const dropdown = document.getElementById('pack-select-dropdown');
-
-      const current = packsList.find(p => p.id === currentPackId) || packsList[0];
-      label.textContent = current ? current.title : 'Базовий пак';
-
-      dropdown.innerHTML = '';
-      packsList.forEach(pack => {
-        const item = document.createElement('div');
-        item.className = 'pe-select-custom__item' + (pack.id === currentPackId ? ' is-selected' : '');
-        item.setAttribute('role', 'option');
-        item.innerHTML = `
-          <span class="pe-select-custom__check">${pack.id === currentPackId ? '✓' : ''}</span>
-          <span class="pe-select-custom__text">${pack.title}</span>
-        `;
-        item.addEventListener('click', async () => {
-          currentPackId = pack.id;
-          currentPackTitle = pack.title;
-          dropdown.hidden = true;
-          btn.classList.remove('is-open');
-          btn.setAttribute('aria-expanded', 'false');
-          renderPackCustomSelect();
-          await loadCataclysmsForPack(currentPackId);
-        });
-        dropdown.appendChild(item);
-      });
+      const select = document.getElementById('pack-select');
+      if (!select) return;
+      select.innerHTML = packsList.map(pack => 
+        `<option value="${pack.id}" ${pack.id === currentPackId ? 'selected' : ''}>${pack.title}</option>`
+      ).join('');
+      select.value = currentPackId;
     }
 
     async function loadCataclysmsForPack(packId) {
@@ -2291,6 +2248,9 @@
     }
 
     async function initCuratorApp() {
+      // Ініціалізація всіх кастомних селектів на сторінці (.pe-select-custom)
+      initCustomSelects(document);
+
       const revInput = document.getElementById('reviewer-name-input');
       revInput.value = reviewerName;
       revInput.addEventListener('input', () => {
@@ -2299,146 +2259,34 @@
         renderReportAndCompare();
       });
 
-      // Custom select toggle
-      const selectBtn = document.getElementById('pack-select-btn');
-      const selectDrop = document.getElementById('pack-select-dropdown');
-      selectBtn.addEventListener('click', () => {
-        const isOpen = !selectDrop.hidden;
-        selectDrop.hidden = isOpen;
-        selectBtn.classList.toggle('is-open', !isOpen);
-        selectBtn.setAttribute('aria-expanded', String(!isOpen));
-      });
-      document.addEventListener('click', (e) => {
-        if (!document.getElementById('pack-select-wrap').contains(e.target)) {
-          selectDrop.hidden = true;
-          selectBtn.classList.remove('is-open');
-          selectBtn.setAttribute('aria-expanded', 'false');
-        }
+      // Селект пака
+      document.getElementById('pack-select')?.addEventListener('change', async (e) => {
+        currentPackId = e.target.value;
+        const p = packsList.find(x => x.id === currentPackId);
+        if (p) currentPackTitle = p.title;
+        await loadCataclysmsForPack(currentPackId);
       });
 
-      // Кастомний комбобокс категорій у діалозі вибору
-      const pickerCatOptions = [
-        { value: 'all', label: 'Усі категорії (101)' },
-        ...Object.values(CATASTROPHE_CATEGORIES).map(c => ({ value: c.id, label: c.label }))
-      ];
-      setupCustomSelect({
-        wrapId: 'picker-cat-wrap',
-        btnId: 'picker-cat-btn',
-        labelId: 'picker-cat-label',
-        dropId: 'picker-cat-dropdown',
-        inputId: 'picker-cat-select',
-        options: pickerCatOptions,
-        onChange: () => renderPickerGrid()
-      });
-
-      // Хелпер створення кастомного селекта
-      function setupCustomSelect({ wrapId, btnId, labelId, dropId, inputId, options, onChange }) {
-        const wrap = document.getElementById(wrapId);
-        const btn = document.getElementById(btnId);
-        const label = document.getElementById(labelId);
-        const drop = document.getElementById(dropId);
-        const input = document.getElementById(inputId);
-
-        function renderDrop() {
-          drop.innerHTML = '';
-          options.forEach(opt => {
-            const item = document.createElement('div');
-            const isSel = input.value === opt.value;
-            item.className = 'pe-select-custom__item' + (isSel ? ' is-selected' : '');
-            item.innerHTML = `
-              <span class="pe-select-custom__check">${isSel ? '✓' : ''}</span>
-              <span class="pe-select-custom__text">${opt.label}</span>
-            `;
-            item.addEventListener('click', () => {
-              input.value = opt.value;
-              label.textContent = opt.label;
-              drop.hidden = true;
-              btn.classList.remove('is-open');
-              btn.setAttribute('aria-expanded', 'false');
-              renderDrop();
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              if (onChange) onChange(opt.value);
-            });
-            drop.appendChild(item);
-          });
-        }
-
-        renderDrop();
-        btn.addEventListener('click', () => {
-          const isOpen = !drop.hidden;
-          drop.hidden = isOpen;
-          btn.classList.toggle('is-open', !isOpen);
-          btn.setAttribute('aria-expanded', String(!isOpen));
-        });
-
-        document.addEventListener('click', (e) => {
-          if (!wrap.contains(e.target)) {
-            drop.hidden = true;
-            btn.classList.remove('is-open');
-            btn.setAttribute('aria-expanded', 'false');
-          }
-        });
-
-        return {
-          updateOptions(newOptions) {
-            options = newOptions;
-            const current = options.find(o => o.value === input.value) || options[0];
-            if (current) {
-              input.value = current.value;
-              label.textContent = current.label;
-            }
-            renderDrop();
-          }
-        };
+      // Селект категорій у діалозі вибору
+      const pickerCatSelect = document.getElementById('picker-cat-select');
+      if (pickerCatSelect) {
+        pickerCatSelect.innerHTML = [
+          '<option value="all">Усі категорії (101)</option>',
+          ...Object.values(CATASTROPHE_CATEGORIES).map(c => `<option value="${c.id}">${c.label}</option>`)
+        ].join('');
       }
 
-      // Кастомні комбобокси вкладки "Каталог і нормалізація іконок"
-      const catalogCatOptions = [
-        { value: 'all', label: 'Усі категорії' },
-        ...Object.values(CATASTROPHE_CATEGORIES).map(c => ({ value: c.id, label: c.label }))
-      ];
-      setupCustomSelect({
-        wrapId: 'catalog-cat-wrap',
-        btnId: 'catalog-cat-btn',
-        labelId: 'catalog-cat-label',
-        dropId: 'catalog-cat-dropdown',
-        inputId: 'catalog-cat-filter',
-        options: catalogCatOptions,
-        onChange: () => renderCatalogGrid()
-      });
-
-      const catalogFrameOptions = [
-        { value: 'all', label: 'Усі форми рамки' },
-        { value: 'circle', label: 'circle (58px)' },
-        { value: 'square', label: 'square (50px)' },
-        { value: 'wide', label: 'wide (72px)' }
-      ];
-      setupCustomSelect({
-        wrapId: 'catalog-frame-wrap',
-        btnId: 'catalog-frame-btn',
-        labelId: 'catalog-frame-label',
-        dropId: 'catalog-frame-dropdown',
-        inputId: 'catalog-frame-filter',
-        options: catalogFrameOptions,
-        onChange: () => renderCatalogGrid()
-      });
-
-      const catalogDefectOptions = [
-        { value: 'all', label: 'Усі іконки' },
-        { value: 'has_defect', label: 'Лише з дефектами' },
-        { value: 'off_center', label: 'Криве розташування' },
-        { value: 'bad_size', label: 'Проблема з розміром' },
-        { value: 'clipped', label: 'Обрізається колом' }
-      ];
-      setupCustomSelect({
-        wrapId: 'catalog-defect-wrap',
-        btnId: 'catalog-defect-btn',
-        labelId: 'catalog-defect-label',
-        dropId: 'catalog-defect-dropdown',
-        inputId: 'catalog-defect-filter',
-        options: catalogDefectOptions,
-        onChange: () => renderCatalogGrid()
-      });
+      // Селекти вкладки "Каталог і нормалізація іконок"
+      const catalogCatSelect = document.getElementById('catalog-cat-filter');
+      if (catalogCatSelect) {
+        catalogCatSelect.innerHTML = [
+          '<option value="all">Усі категорії</option>',
+          ...Object.values(CATASTROPHE_CATEGORIES).map(c => `<option value="${c.id}">${c.label}</option>`)
+        ].join('');
+        catalogCatSelect.addEventListener('change', () => renderCatalogGrid());
+      }
+      document.getElementById('catalog-frame-filter')?.addEventListener('change', () => renderCatalogGrid());
+      document.getElementById('catalog-defect-filter')?.addEventListener('change', () => renderCatalogGrid());
 
       // Вкладки
       document.querySelectorAll('.curator-tab-btn').forEach(btn => {
@@ -2709,21 +2557,8 @@
 
       document.getElementById('wizard-search').addEventListener('input', renderWizardSidebar);
 
-      // Кастомний селект фільтра у сайдбарі візарду
-      setupCustomSelect({
-        wrapId: 'wizard-filter-wrap',
-        btnId: 'wizard-filter-btn',
-        labelId: 'wizard-filter-label',
-        dropId: 'wizard-filter-dropdown',
-        inputId: 'wizard-filter',
-        options: [
-          { value: 'all', label: 'Усі' },
-          { value: 'unreviewed', label: 'Не оцінені' },
-          { value: 'reviewed', label: 'Оцінені' },
-          { value: 'changed', label: 'Змінені / Дефект' }
-        ],
-        onChange: () => renderWizardSidebar()
-      });
+      // Селект фільтра у сайдбарі візарду
+      document.getElementById('wizard-filter')?.addEventListener('change', renderWizardSidebar);
 
       // Каталог пошук
       document.getElementById('catalog-search').addEventListener('input', renderCatalogGrid);
