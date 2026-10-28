@@ -105,23 +105,62 @@
       overflow: hidden;
     }
 
-    /* Кастомний красивий скролбар для випадаючого списку паків */
-    .pe-select-custom__dropdown {
+    /* Мінімалістичні квадратні кнопки з іконками */
+    .pk-btn--icon-only {
+      padding: 0;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pk-btn--icon-only .svg-icon {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+    }
+
+    /* Кастомний красивий скролбар для всіх списків, таблиць та діалогів куратора */
+    .pe-select-custom__dropdown,
+    .curator-table-wrap,
+    .wizard-list,
+    #report-markdown-output,
+    .curator-dialog__body {
       scrollbar-width: thin;
       scrollbar-color: var(--metal-lt) transparent;
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar {
+    .pe-select-custom__dropdown::-webkit-scrollbar,
+    .curator-table-wrap::-webkit-scrollbar,
+    .wizard-list::-webkit-scrollbar,
+    #report-markdown-output::-webkit-scrollbar,
+    .curator-dialog__body::-webkit-scrollbar {
       width: 6px;
+      height: 6px;
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar-track {
+    .pe-select-custom__dropdown::-webkit-scrollbar-track,
+    .curator-table-wrap::-webkit-scrollbar-track,
+    .wizard-list::-webkit-scrollbar-track,
+    #report-markdown-output::-webkit-scrollbar-track,
+    .curator-dialog__body::-webkit-scrollbar-track {
       background: transparent;
-      margin: 4px 0;
+      margin: 4px;
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar-thumb {
+    .pe-select-custom__dropdown::-webkit-scrollbar-thumb,
+    .curator-table-wrap::-webkit-scrollbar-thumb,
+    .wizard-list::-webkit-scrollbar-thumb,
+    #report-markdown-output::-webkit-scrollbar-thumb,
+    .curator-dialog__body::-webkit-scrollbar-thumb {
       background: var(--metal-lt);
       border-radius: var(--radius-sm);
     }
-    .pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover {
+    .pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover,
+    .curator-table-wrap::-webkit-scrollbar-thumb:hover,
+    .wizard-list::-webkit-scrollbar-thumb:hover,
+    #report-markdown-output::-webkit-scrollbar-thumb:hover,
+    .curator-dialog__body::-webkit-scrollbar-thumb:hover {
       background: color-mix(in srgb, var(--hazard) 60%, var(--metal-lt));
     }
 
@@ -973,17 +1012,10 @@
               <div class="tag-chips" id="stage-winner-tags"></div>
 
               <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 8px;">
-                <button type="button" class="pk-btn" id="btn-mark-ok" style="flex: 1 1 180px; justify-content: space-between;" title="Підтвердити іконку (Хоткей: Y)">
-                  <span style="display:inline-flex;align-items:center;gap:6px;">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    Підтвердити іконку
-                  </span>
-                  <kbd class="hotkey-badge">Y</kbd>
-                </button>
-                <button type="button" class="pk-btn pk-btn--primary" id="btn-open-picker" style="flex: 1 1 180px; justify-content: space-between;" title="Обрати іншу іконку (Хоткей: P або I)">
-                  <span style="display:inline-flex;align-items:center;gap:6px;">
+                <button type="button" class="pk-btn pk-btn--primary" id="btn-open-picker" style="width: 100%; justify-content: space-between;" title="Обрати іншу іконку з повного каталогу (Хоткей: P або I)">
+                  <span style="display:inline-flex;align-items:center;gap:8px;">
                     <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    Обрати іншу іконку
+                    Обрати іншу іконку з каталогу...
                   </span>
                   <kbd class="hotkey-badge">P</kbd>
                 </button>
@@ -1081,26 +1113,40 @@
     <section id="section-catalog" class="curator-section">
       <div class="pack-card">
         <div class="catalog-toolbar">
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1;">
-            <input type="search" id="catalog-search" class="pe-input" style="max-width: 300px;" placeholder="Пошук за ID, назвою або тегом...">
-            <select id="catalog-cat-filter" class="pe-input" style="width: 210px;">
-              <option value="all">Усі категорії</option>
-            </select>
-            <select id="catalog-frame-filter" class="pe-input" style="width: 165px;">
-              <option value="all">Усі форми рамки</option>
-              <option value="circle">circle (58px)</option>
-              <option value="square">square (50px)</option>
-              <option value="wide">wide (72px)</option>
-            </select>
-            <select id="catalog-defect-filter" class="pe-input" style="width: 185px;">
-              <option value="all">Усі іконки</option>
-              <option value="has_defect">Лише з дефектами</option>
-              <option value="off_center">Криве розташування</option>
-              <option value="bad_size">Проблема з розміром</option>
-              <option value="clipped">Обрізається колом</option>
-            </select>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; align-items: center;">
+            <input type="search" id="catalog-search" class="pe-input" style="max-width: 280px; height: 38px; box-sizing: border-box;" placeholder="Пошук за ID, назвою або тегом...">
+
+            <!-- Кастомний комбобокс: Категорії -->
+            <div class="pe-select-custom" id="catalog-cat-wrap" style="width: 220px; flex-shrink: 0;">
+              <button type="button" class="pe-select-custom__btn" id="catalog-cat-btn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="pe-select-custom__label" id="catalog-cat-label">Усі категорії</span>
+                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="pe-select-custom__dropdown" id="catalog-cat-dropdown" role="listbox" hidden></div>
+            </div>
+            <input type="hidden" id="catalog-cat-filter" value="all">
+
+            <!-- Кастомний комбобокс: Форма рамки -->
+            <div class="pe-select-custom" id="catalog-frame-wrap" style="width: 170px; flex-shrink: 0;">
+              <button type="button" class="pe-select-custom__btn" id="catalog-frame-btn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="pe-select-custom__label" id="catalog-frame-label">Усі форми рамки</span>
+                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="pe-select-custom__dropdown" id="catalog-frame-dropdown" role="listbox" hidden></div>
+            </div>
+            <input type="hidden" id="catalog-frame-filter" value="all">
+
+            <!-- Кастомний комбобокс: Фільтр дефектів -->
+            <div class="pe-select-custom" id="catalog-defect-wrap" style="width: 200px; flex-shrink: 0;">
+              <button type="button" class="pe-select-custom__btn" id="catalog-defect-btn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="pe-select-custom__label" id="catalog-defect-label">Усі іконки</span>
+                <svg class="pe-select-custom__arrow svg-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="pe-select-custom__dropdown" id="catalog-defect-dropdown" role="listbox" hidden></div>
+            </div>
+            <input type="hidden" id="catalog-defect-filter" value="all">
           </div>
-          <button type="button" id="btn-export-catalog-js" class="pk-btn">
+          <button type="button" id="btn-export-catalog-js" class="pk-btn" style="min-height: 38px;">
             <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             Копіювати код catastrophe-icons.js
           </button>
@@ -1121,13 +1167,15 @@
               <h2 class="pack-card__title">Звіт що треба підправити (Fix Report)</h2>
               <p class="pe-hint">Готовий структурований чек-лист усіх катаклізмів із заміною іконки та іконок із кривим розташуванням або розміром.</p>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" id="btn-copy-markdown-report" class="pk-btn pk-btn--primary">
-                <svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Копіювати Markdown
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" id="btn-export-json-report" class="pk-btn pk-btn--primary pk-btn--icon-only" title="Експорт звіту (.json)" aria-label="Експорт звіту (.json)">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               </button>
-              <button type="button" id="btn-reset-all-local" class="pk-btn pk-btn--danger" title="Очистити всі збережені оцінки у браузері">
-                Скинути все
+              <button type="button" id="btn-copy-markdown-report" class="pk-btn pk-btn--icon-only" title="Скопіювати звіт у Markdown" aria-label="Скопіювати Markdown">
+                <svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+              <button type="button" id="btn-reset-all-local" class="pk-btn pk-btn--danger pk-btn--icon-only" title="Скинути всі збережені оцінки у браузері" aria-label="Скинути все">
+                <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
               </button>
             </div>
           </div>
@@ -1268,6 +1316,55 @@
         <button type="submit" value="cancel" class="pk-btn">Скасувати</button>
         <button type="submit" value="save" class="pk-btn pk-btn--primary" id="btn-inspector-save">Зберегти зміни</button>
       </form>
+    </div>
+  </dialog>
+
+    <!-- ==================== NATIVE <dialog>: УСПІШНЕ ЗАВЕРШЕННЯ ОЦІНКИ ==================== -->
+  <dialog id="completion-dialog" class="curator-dialog curator-dialog--narrow" closedby="any" aria-labelledby="completion-dialog-title">
+    <div class="curator-dialog__head">
+      <div>
+        <h3 id="completion-dialog-title" class="curator-dialog__title">Аудит пака завершено! 🎉</h3>
+        <p class="pe-hint" id="completion-dialog-subtitle" style="margin: 3px 0 0;">Всі катаклізми пака успішно оцінено.</p>
+      </div>
+      <button type="button" class="pk-btn pk-btn--icon-only" id="btn-close-completion" title="Закрити вікно" aria-label="Закрити">
+        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="curator-dialog__body" style="padding: 16px 0; gap: 16px;">
+      <div style="background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius); padding: 14px 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center;">
+        <div>
+          <div style="font-size: 24px; font-weight: 700; color: var(--hazard);" id="stat-total-reviewed">0</div>
+          <div style="font-size: 11.5px; color: var(--text-mute); margin-top: 2px;">Оцінено всього</div>
+        </div>
+        <div>
+          <div style="font-size: 24px; font-weight: 700; color: var(--ok, #5fcdb0);" id="stat-approved-ok">0</div>
+          <div style="font-size: 11.5px; color: var(--text-mute); margin-top: 2px;">Підходить (OK)</div>
+        </div>
+        <div>
+          <div style="font-size: 24px; font-weight: 700; color: var(--warning, #e6a23c);" id="stat-suggested-changes">0</div>
+          <div style="font-size: 11.5px; color: var(--text-mute); margin-top: 2px;">Правки / Заміни</div>
+        </div>
+      </div>
+
+      <p style="font-size: 13.5px; color: var(--text); line-height: 1.5; margin: 0;">
+        Чудова робота! Ви оцінили всі катаклізми у поточному паку. Тепер можна експортувати підсумковий звіт у форматі <strong>.json</strong> або скопіювати згенерований <strong>Markdown</strong> для розробників.
+      </p>
+    </div>
+
+    <div class="curator-dialog__foot" style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+      <button type="button" class="pk-btn" id="btn-completion-view-report">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Переглянути звіт
+      </button>
+      <button type="button" class="pk-btn" id="btn-completion-copy-md">
+        <svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Копіювати Markdown
+      </button>
+      <button type="button" class="pk-btn pk-btn--primary" id="btn-completion-download-json">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Завантажити звіт (.json)
+      </button>
     </div>
   </dialog>
 
@@ -1470,6 +1567,7 @@
       }
       packCataclysms = rows;
       currentCataIndex = 0;
+      completionShownPacks.delete(currentPackId);
       renderWizardSidebar();
       renderCurrentStage();
       renderBatchTable();
@@ -1586,6 +1684,12 @@
         });
         listEl.appendChild(btn);
       });
+
+      // Автоскрол списку катаклізмів до активного елемента
+      const activeItem = listEl.querySelector('.wizard-item.is-current');
+      if (activeItem) {
+        activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
     }
 
     function renderCurrentStage() {
@@ -1730,6 +1834,7 @@
       saveState();
       renderWizardSidebar();
       renderCurrentStage();
+      checkAndShowCompletionDialog();
     }
 
     function selectAlternativeIconForCurrent(iconId) {
@@ -1885,6 +1990,39 @@
     // ==================== 7. МОДАЛЬНІ ДІАЛОГИ (<dialog>) ====================
     const pickerDialog = document.getElementById('icon-picker-dialog');
     const inspectorDialog = document.getElementById('icon-inspector-dialog');
+    const completionDialog = document.getElementById('completion-dialog');
+    const completionShownPacks = new Set();
+
+    function checkAndShowCompletionDialog(force = false) {
+      if (!packCataclysms.length) return;
+      const total = packCataclysms.length;
+      let reviewed = 0;
+      let okCount = 0;
+      let changedCount = 0;
+
+      packCataclysms.forEach(c => {
+        const rev = cataReviews[reviewKeyOf(c)];
+        if (rev && (rev.status === 'ok' || rev.status === 'changed')) {
+          reviewed++;
+          if (rev.suggestedIconId || (rev.defects && rev.defects.length > 0) || rev.note) {
+            changedCount++;
+          } else {
+            okCount++;
+          }
+        }
+      });
+
+      if (reviewed === total && (!completionShownPacks.has(currentPackId) || force)) {
+        completionShownPacks.add(currentPackId);
+        document.getElementById('stat-total-reviewed').textContent = reviewed;
+        document.getElementById('stat-approved-ok').textContent = okCount;
+        document.getElementById('stat-suggested-changes').textContent = changedCount;
+        document.getElementById('completion-dialog-subtitle').textContent = `Всі ${total} катаклізмів пака «${currentPackTitle}» успішно оцінено.`;
+        if (completionDialog && !completionDialog.open) {
+          completionDialog.showModal();
+        }
+      }
+    }
     let inspectedIcon = null;
 
     function openPickerDialog() {
@@ -2186,15 +2324,121 @@
         }
       });
 
-      // Заповнення категорій у селектах
-      const catSelects = [document.getElementById('catalog-cat-filter'), document.getElementById('picker-cat-select')];
+      // Заповнення категорій у селекті діалогу вибору
+      const pickerSel = document.getElementById('picker-cat-select');
       Object.values(CATASTROPHE_CATEGORIES).forEach(cat => {
-        catSelects.forEach(sel => {
-          const opt = document.createElement('option');
-          opt.value = cat.id;
-          opt.textContent = cat.label;
-          sel.appendChild(opt);
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.label;
+        pickerSel.appendChild(opt);
+      });
+
+      // Хелпер створення кастомного селекта
+      function setupCustomSelect({ wrapId, btnId, labelId, dropId, inputId, options, onChange }) {
+        const wrap = document.getElementById(wrapId);
+        const btn = document.getElementById(btnId);
+        const label = document.getElementById(labelId);
+        const drop = document.getElementById(dropId);
+        const input = document.getElementById(inputId);
+
+        function renderDrop() {
+          drop.innerHTML = '';
+          options.forEach(opt => {
+            const item = document.createElement('div');
+            const isSel = input.value === opt.value;
+            item.className = 'pe-select-custom__item' + (isSel ? ' is-selected' : '');
+            item.innerHTML = `
+              <span class="pe-select-custom__check">${isSel ? '✓' : ''}</span>
+              <span class="pe-select-custom__text">${opt.label}</span>
+            `;
+            item.addEventListener('click', () => {
+              input.value = opt.value;
+              label.textContent = opt.label;
+              drop.hidden = true;
+              btn.classList.remove('is-open');
+              btn.setAttribute('aria-expanded', 'false');
+              renderDrop();
+              if (onChange) onChange(opt.value);
+            });
+            drop.appendChild(item);
+          });
+        }
+
+        renderDrop();
+        btn.addEventListener('click', () => {
+          const isOpen = !drop.hidden;
+          drop.hidden = isOpen;
+          btn.classList.toggle('is-open', !isOpen);
+          btn.setAttribute('aria-expanded', String(!isOpen));
         });
+
+        document.addEventListener('click', (e) => {
+          if (!wrap.contains(e.target)) {
+            drop.hidden = true;
+            btn.classList.remove('is-open');
+            btn.setAttribute('aria-expanded', 'false');
+          }
+        });
+
+        return {
+          updateOptions(newOptions) {
+            options = newOptions;
+            const current = options.find(o => o.value === input.value) || options[0];
+            if (current) {
+              input.value = current.value;
+              label.textContent = current.label;
+            }
+            renderDrop();
+          }
+        };
+      }
+
+      // Кастомні комбобокси вкладки "Каталог і нормалізація іконок"
+      const catalogCatOptions = [
+        { value: 'all', label: 'Усі категорії' },
+        ...Object.values(CATASTROPHE_CATEGORIES).map(c => ({ value: c.id, label: c.label }))
+      ];
+      setupCustomSelect({
+        wrapId: 'catalog-cat-wrap',
+        btnId: 'catalog-cat-btn',
+        labelId: 'catalog-cat-label',
+        dropId: 'catalog-cat-dropdown',
+        inputId: 'catalog-cat-filter',
+        options: catalogCatOptions,
+        onChange: () => renderCatalogGrid()
+      });
+
+      const catalogFrameOptions = [
+        { value: 'all', label: 'Усі форми рамки' },
+        { value: 'circle', label: 'circle (58px)' },
+        { value: 'square', label: 'square (50px)' },
+        { value: 'wide', label: 'wide (72px)' }
+      ];
+      setupCustomSelect({
+        wrapId: 'catalog-frame-wrap',
+        btnId: 'catalog-frame-btn',
+        labelId: 'catalog-frame-label',
+        dropId: 'catalog-frame-dropdown',
+        inputId: 'catalog-frame-filter',
+        options: catalogFrameOptions,
+        onChange: () => renderCatalogGrid()
+      });
+
+      const catalogDefectOptions = [
+        { value: 'all', label: 'Усі іконки' },
+        { value: 'has_defect', label: 'Лише з дефектами' },
+        { value: 'off_center', label: 'Криве розташування' },
+        { value: 'bad_size', label: 'Проблема з розміром' },
+        { value: 'clipped', label: 'Обрізається колом' }
+      ];
+      setupCustomSelect({
+        wrapId: 'catalog-defect-wrap',
+        btnId: 'catalog-defect-btn',
+        labelId: 'catalog-defect-label',
+        dropId: 'catalog-defect-dropdown',
+        inputId: 'catalog-defect-filter',
+        options: catalogDefectOptions,
+        onChange: () => renderCatalogGrid()
       });
 
       // Вкладки
@@ -2232,7 +2476,7 @@
 
       document.getElementById('btn-reset-current-review').addEventListener('click', resetCurrentCataReview);
 
-      document.getElementById('btn-mark-ok').addEventListener('click', () => {
+      document.getElementById('btn-mark-ok')?.addEventListener('click', () => {
         updateCurrentCataReview({ status: 'ok', suggestedIconId: null });
       });
 
@@ -2246,6 +2490,8 @@
           currentCataIndex++;
           renderWizardSidebar();
           renderCurrentStage();
+        } else {
+          checkAndShowCompletionDialog();
         }
       });
 
@@ -2287,7 +2533,30 @@
       });
 
       document.getElementById('stage-note-input').addEventListener('input', (e) => {
-        updateCurrentCataReview({ note: e.target.value.trim(), status: 'changed' });
+        // Зберігаємо оригінальне значення з усіма пробілами (НЕ робимо .trim())
+        const val = e.target.value;
+        const cata = packCataclysms[currentCataIndex];
+        if (!cata) return;
+        const key = reviewKeyOf(cata);
+        const existing = cataReviews[key] || {
+          packId: currentPackId,
+          packTitle: currentPackTitle,
+          cataclysmTitle: cata.value,
+          status: 'unreviewed',
+          suggestedIconId: null,
+          note: ''
+        };
+        cataReviews[key] = {
+          ...existing,
+          note: val,
+          status: val.trim() ? 'changed' : (existing.suggestedIconId ? 'changed' : existing.status),
+          updatedAt: new Date().toISOString()
+        };
+        saveState();
+        // Оновлюємо лічильники та бічні індикатори без перерендерингу сцени,
+        // щоб не скидати фокус і позицію курсора під час набору тексту
+        updateCounters();
+        renderWizardSidebar();
       });
 
       // Хоткей Ctrl+Enter або Cmd+Enter на textarea коментаря для збереження і переходу далі
@@ -2300,7 +2569,7 @@
           const existing = cataReviews[reviewKeyOf(cata)];
           updateCurrentCataReview({
             status: 'changed',
-            note: e.target.value.trim()
+            note: e.target.value
           });
           if (currentCataIndex < packCataclysms.length - 1) {
             currentCataIndex++;
@@ -2313,7 +2582,7 @@
       // ==================== ГЛОБАЛЬНІ ХОТКЕЇ ДЛЯ ШВИДКОЇ РОБОТИ ====================
       window.addEventListener('keydown', (e) => {
         // Якщо відкритий будь-який модальний діалог — не перехоплюємо навігаційні хоткеї
-        if (pickerDialog.open || inspectorDialog.open) return;
+        if (pickerDialog?.open || inspectorDialog?.open || completionDialog?.open) return;
 
         const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
         const isInputFocused = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
@@ -2494,14 +2763,10 @@
         }
       });
 
-      // Каталог фільтри
+      // Каталог пошук
       document.getElementById('catalog-search').addEventListener('input', renderCatalogGrid);
-      document.getElementById('catalog-cat-filter').addEventListener('change', renderCatalogGrid);
-      document.getElementById('catalog-frame-filter').addEventListener('change', renderCatalogGrid);
-      document.getElementById('catalog-defect-filter').addEventListener('change', renderCatalogGrid);
 
-      // Експорт JSON-звіту тестувальника
-      document.getElementById('btn-export-review-json').addEventListener('click', () => {
+      function exportReportAsJson() {
         const payload = {
           version: 1,
           reviewer: reviewerName || 'Tester',
@@ -2519,6 +2784,66 @@
         a.download = `truebunker-review-${safeName}.json`;
         a.click();
         URL.revokeObjectURL(url);
+      }
+
+      function copyMarkdownReport() {
+        renderReportAndCompare();
+        const text = document.getElementById('report-markdown-output').value;
+        const copyBtn = document.getElementById('btn-copy-markdown-report');
+        const compCopyBtn = document.getElementById('btn-completion-copy-md');
+
+        const showSuccess = () => {
+          if (copyBtn) {
+            const orig = copyBtn.getAttribute('title');
+            copyBtn.setAttribute('title', 'Скопійовано! ✓');
+            copyBtn.style.borderColor = 'var(--ok, #5fcdb0)';
+            setTimeout(() => {
+              copyBtn.setAttribute('title', orig);
+              copyBtn.style.borderColor = '';
+            }, 1800);
+          }
+          if (compCopyBtn) {
+            const orig = compCopyBtn.innerHTML;
+            compCopyBtn.innerHTML = '✓ Скопійовано!';
+            compCopyBtn.style.borderColor = 'var(--ok, #5fcdb0)';
+            setTimeout(() => {
+              compCopyBtn.innerHTML = orig;
+              compCopyBtn.style.borderColor = '';
+            }, 1800);
+          }
+        };
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(showSuccess).catch(() => {
+            const ta = document.getElementById('report-markdown-output');
+            ta.select();
+            document.execCommand('copy');
+            showSuccess();
+          });
+        } else {
+          const ta = document.getElementById('report-markdown-output');
+          ta.select();
+          document.execCommand('copy');
+          showSuccess();
+        }
+      }
+
+      // Експорт JSON-звіту тестувальника (з шапки, з Fix Report та з Completion Dialog)
+      document.getElementById('btn-export-review-json')?.addEventListener('click', exportReportAsJson);
+      document.getElementById('btn-export-json-report')?.addEventListener('click', exportReportAsJson);
+      document.getElementById('btn-completion-download-json')?.addEventListener('click', exportReportAsJson);
+
+      // Копіювання Markdown-звіту
+      document.getElementById('btn-copy-markdown-report')?.addEventListener('click', copyMarkdownReport);
+      document.getElementById('btn-completion-copy-md')?.addEventListener('click', copyMarkdownReport);
+
+      // Кнопки діалогу завершення
+      document.getElementById('btn-close-completion')?.addEventListener('click', () => {
+        completionDialog?.close();
+      });
+      document.getElementById('btn-completion-view-report')?.addEventListener('click', () => {
+        completionDialog?.close();
+        switchTab('reports');
       });
 
       // Імпорт JSON-звітів інших тестувальників
@@ -2537,12 +2862,6 @@
         }
         e.target.value = '';
         renderMultiReviewerMatrix();
-      });
-
-      // Копіювання Markdown-звіту
-      document.getElementById('btn-copy-markdown-report').addEventListener('click', () => {
-        const text = document.getElementById('report-markdown-output').value;
-        navigator.clipboard.writeText(text);
       });
 
       // Копіювання коду catastrophe-icons.js
