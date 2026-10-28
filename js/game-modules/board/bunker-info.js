@@ -1,4 +1,5 @@
 import { isBlockCollapsed } from './board-ui-state.js';
+import { ICONS } from '../../constants/icons.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
@@ -52,18 +53,22 @@ export function bunkerInfo(data) {
             <h3 class="equipment-title">Характеристики бункера</h3>
             <div class="info-grid">
               <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.BUNKER_SIZE}'); mask-image: url('${ICONS.BUNKER_SIZE}');" aria-hidden="true"></span>
                 <div class="k">Площа</div>
                 <div class="v">${esc(data.size)}</div>
               </div>
               <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.STAY_TIME}'); mask-image: url('${ICONS.STAY_TIME}');" aria-hidden="true"></span>
                 <div class="k">Час перебування</div>
                 <div class="v">${esc(data.yearsInBunker)}</div>
               </div>
               <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.FOOD}'); mask-image: url('${ICONS.FOOD}');" aria-hidden="true"></span>
                 <div class="k">Запасів їжі/води на</div>
                 <div class="v">${esc(data.foodSupply)}</div>
               </div>
               <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.CAPACITY}'); mask-image: url('${ICONS.CAPACITY}');" aria-hidden="true"></span>
                 <div class="k">Кількість місць</div>
                 <div class="v">${esc(data.capacity)}</div>
               </div>
