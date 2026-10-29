@@ -328,7 +328,7 @@
   top: 0;
   bottom: 0;
   right: 12px;
-  width: 68px;
+  width: 100px;
   z-index: 5;
   pointer-events: none;
 }
@@ -336,7 +336,7 @@
 .bunker-door__bolt {
   position: absolute;
   right: 0;
-  width: 64px;
+  width: 76px;
   height: clamp(14px, 2vh, 22px);
   border-radius: 3px;
   border: 1px solid var(--metal-lt);

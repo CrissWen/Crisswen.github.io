@@ -464,7 +464,7 @@ export async function playBunkerDoorTransition({
   const boltAnimations = boltsEls.map((boltEl, idx) =>
     animateElement(
       boltEl,
-      [{ transform: 'translate3d(-26px, 0, 0)' }, { transform: 'translate3d(22px, 0, 0)' }],
+      [{ transform: 'translate3d(-26px, 0, 0)' }, { transform: 'translate3d(56px, 0, 0)' }],
       { duration: 380, delay: idx * 120, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       signal
     )
@@ -497,7 +497,7 @@ export async function playBunkerDoorTransition({
   boltsEls.forEach((boltEl) => {
     animateElement(
       boltEl,
-      [{ transform: 'translate3d(22px, 0, 0)' }, { transform: 'translate3d(-26px, 0, 0)' }],
+      [{ transform: 'translate3d(56px, 0, 0)' }, { transform: 'translate3d(-26px, 0, 0)' }],
       { duration: 250, easing: 'ease-in' },
       signal
     );
