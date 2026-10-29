@@ -22,6 +22,7 @@ import { configureSfx, playTick, playReveal, playHeartbeat, unlockAudio } from '
 const OVERLAY_CLASS = 'cr-overlay';
 const EMERGENCY_LIMIT_MS = 30000;  // страховка: що б не сталося, інтерфейс не лишається заблокованим довше
 const UNLOCK_PAD_MS = 30;          // розблокування трохи після кінця паузи: усі клієнти встигають показати результат
+const FADE_OUT_DURATION_MS = 800;   // плавний fade-out оверлея після показу результату
 const MAX_PRELOAD = 100;
 const BEAT_START_MS = 660;          // інтервал між першими «серцебиттями» перед ривком
 const BEAT_STEP_MS = 45;            // на скільки кожен наступний інтервал коротший: серце б'ється дедалі частіше
@@ -240,7 +241,7 @@ function setTitle(titleEl, text, animated) {
 // ===== Публічний API =====
 
 export function isRouletteOverlayShown() {
-  return !!current;
+  return !!current && !current.fading;
 }
 
 // Прибирає оверлей, розблоковує сторінку. Безпечно викликати будь-коли й повторно.
@@ -254,7 +255,10 @@ export function hideRouletteOverlay() {
   state.reel?.destroy();
   document.removeEventListener('keydown', state.onKeydown, true);
   state.overlay.remove();
-  state.restore();
+  if (typeof state.restore === 'function') {
+    state.restore();
+    state.restore = null;
+  }
 }
 
 // Для виклику з жесту користувача (клік): дозволяє браузеру програти звук рулетки, що стартує пізніше
@@ -323,22 +327,85 @@ export async function playRouletteOverlay({
   document.addEventListener('keydown', onKeydown, true);
   overlay.focus({ preventScroll: true });
 
-  const state = { overlay, reel: null, timers: [], cleanups: [], restore, onKeydown, fxBack, fxFront, beatTimer: 0 };
+  const state = { overlay, backdrop, stage, reel: null, timers: [], cleanups: [], restore, onKeydown, fxBack, fxFront, beatTimer: 0 };
   state.cleanups.push(() => clearTimeout(state.beatTimer));
   current = state;
 
   preloadIcons(preload);
 
   // Аварійний ліміт від показу, а не від таймлайну: навіть при зламаному годиннику інтерфейс розблокується
-  state.timers.push(setTimeout(() => finish(), EMERGENCY_LIMIT_MS));
+  state.timers.push(setTimeout(() => finish({ immediate: true }), EMERGENCY_LIMIT_MS));
 
   let finished = false;
-  function finish() {
+  function finish({ immediate = false } = {}) {
     if (finished) return;
     finished = true;
     const callback = onFinish;
-    hideRouletteOverlay();
+
+    const overlay = state.overlay;
+    const isReduced = prefersReducedMotion();
+
+    if (immediate || isReduced || !overlay || !overlay.isConnected) {
+      hideRouletteOverlay();
+      callback?.();
+      return;
+    }
+
+    state.fading = true;
+    overlay.classList.add('is-fading-out');
+    overlay.style.pointerEvents = 'none';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('inert', '');
+
+    // Web Animations API: апаратно розчиняємо розмиття фону (backdrop-filter) і сцену без різких обривів
+    try {
+      if (typeof overlay.animate === 'function') {
+        overlay.animate(
+          [{ opacity: 1 }, { opacity: 0 }],
+          { duration: FADE_OUT_DURATION_MS, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+        );
+      }
+      if (state.backdrop && typeof state.backdrop.animate === 'function') {
+        state.backdrop.animate(
+          [
+            { opacity: 1, backdropFilter: 'blur(14px) saturate(0.85)', webkitBackdropFilter: 'blur(14px) saturate(0.85)' },
+            { opacity: 0, backdropFilter: 'blur(0px) saturate(1)', webkitBackdropFilter: 'blur(0px) saturate(1)' }
+          ],
+          { duration: FADE_OUT_DURATION_MS, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+        );
+      }
+      if (state.stage && typeof state.stage.animate === 'function') {
+        state.stage.animate(
+          [
+            { opacity: 1, transform: 'scale(1) translateY(0)' },
+            { opacity: 0, transform: 'scale(0.92) translateY(-12px)' }
+          ],
+          { duration: FADE_OUT_DURATION_MS, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+        );
+      }
+    } catch {
+      // WAAPI необов'язковий — паралельно працюють чисті CSS-переходи
+    }
+
+    // Знімаємо блокування клавіатури й сторінки одразу, щоб інтерфейс ожив під оверлеєм
+    document.removeEventListener('keydown', state.onKeydown, true);
+    if (typeof state.restore === 'function') {
+      state.restore();
+      state.restore = null;
+    }
+
+    // Сповіщаємо гру про розблокування (дошка оновлюється під оверлеєм)
     callback?.();
+
+    // Після завершення fade-out остаточно прибираємо оверлей із DOM
+    const fadeTimer = setTimeout(() => {
+      if (current === state) {
+        hideRouletteOverlay();
+      } else {
+        overlay.remove();
+      }
+    }, FADE_OUT_DURATION_MS);
+    state.timers.push(fadeTimer);
   }
 
   // ----- Режим (LDM) -----
