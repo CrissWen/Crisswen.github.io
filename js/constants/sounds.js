@@ -79,7 +79,7 @@ export const SOUND_IDS = Object.freeze({
  * - maxInstances: максимальна кількість одночасно активних копій цього звуку
  * - pitchShift: діапазон випадкової мікро-варіації висоти тону (напр. 0.04 = ±4%) для природності
  * - loop: чи зациклювати доріжку (для ембієнту)
- * - preload: чи завантажувати наперед (false за замовчуванням, поки файли додаються поступово)
+ * - preload: чи завантажувати наперед (ВАЖЛИВО: обов'язково ставити true, щойно аудіофайл додано на диск, інакше перший клік буде без звуку через асинхронне завантаження!)
  * - synthType: тип процедурного Web Audio сигналу-фоллбеку, якщо аудіофайл ще відсутній на диску
  */
 export const SOUND_CATALOG = Object.freeze({
@@ -101,28 +101,28 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.LOCK_TOGGLE]: Object.freeze({
     id: SOUND_IDS.LOCK_TOGGLE,
     label: 'Відкриття / закриття замка',
-    src: ['./audio/sfx/ui/lock-toggle.mp3'],
+    src: ['./audio/ui/lock-toggle.mp3'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.65,
+    baseVolume: 0.85,
     throttleMs: 80,
     interrupt: true,
     maxInstances: 1,
     pitchShift: 0.03,
-    preload: false,
+    preload: true,
     synthType: 'lock-toggle',
   }),
 
   [SOUND_IDS.UI_CLICK]: Object.freeze({
     id: SOUND_IDS.UI_CLICK,
     label: 'Клік кнопки',
-    src: ['./audio/sfx/ui/ui-click.mp3'],
+    src: ['./audio/ui/ui-click.mp3'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.55,
+    baseVolume: 0.85,
     throttleMs: 45,
     interrupt: true,
     maxInstances: 2,
     pitchShift: 0.03,
-    preload: false,
+    preload: true,
     synthType: 'click',
   }),
 
@@ -144,14 +144,14 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.DICE_ROLL]: Object.freeze({
     id: SOUND_IDS.DICE_ROLL,
     label: 'Кидок кубика',
-    src: ['./audio/sfx/ui/dice-roll.wav'],
+    src: ['./audio/ui/dice-roll.wav'],
     channel: AUDIO_CHANNELS.SFX,
     baseVolume: 0.85,
     throttleMs: 250,
     interrupt: true,
     maxInstances: 1,
     pitchShift: 0.03,
-    preload: false,
+    preload: true,
     synthType: 'dice',
   }),
 
