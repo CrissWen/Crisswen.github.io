@@ -19,6 +19,10 @@ export const ICONS = Object.freeze({
   PORK: './icons/board/pork.svg',
   USER: './icons/board/user.svg',
 
+  // Іконки рулетки тесту виживання (/icons/survival)
+  SURVIVAL_ALIVE: './icons/survival/heart.svg',
+  SURVIVAL_DEAD: './icons/survival/skull.svg',
+
   // Семантичні аліаси для характеристик бункера
   FOOD: './icons/board/pork.svg',
   BUNKER_SIZE: './icons/board/area.svg',
@@ -41,6 +45,8 @@ export const ICON_FOOD = ICONS.FOOD;
 export const ICON_BUNKER_SIZE = ICONS.BUNKER_SIZE;
 export const ICON_STAY_TIME = ICONS.STAY_TIME;
 export const ICON_CAPACITY = ICONS.CAPACITY;
+export const ICON_SURVIVAL_ALIVE = ICONS.SURVIVAL_ALIVE;
+export const ICON_SURVIVAL_DEAD = ICONS.SURVIVAL_DEAD;
 
 // Експорт каталогу катаклізмів та катастроф
 export {
