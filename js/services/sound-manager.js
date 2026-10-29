@@ -282,6 +282,11 @@ class SoundManager {
 
     if (this._settings.muted) return null;
 
+    // Спроба автоматично розблокувати Howler AudioContext (актуально при виклику з консолі або передчасному запуску)
+    if (typeof window !== 'undefined' && window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
+      window.Howler.ctx.resume().catch(() => {});
+    }
+
     // 1. Захист на тач-пристроях: ховер-звуки не повинні спрацьовувати від синтетичного mouseenter при тапі
     if (soundId.endsWith('-hover') && !options.bypassThrottle) {
       if (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(hover: hover)').matches) {
@@ -419,7 +424,14 @@ class SoundManager {
       onstop: (id) => {
         activeSet.delete(id);
       },
-      onloaderror: () => {
+      onplayerror: (id, err) => {
+        console.warn(`[SoundManager] Відтворення "${config.id}" заблоковане політикою браузера (Autoplay). Клікніть на сторінці для розблокування:`, err);
+        howl.once('unlock', () => {
+          howl.play(id);
+        });
+      },
+      onloaderror: (id, err) => {
+        console.warn(`[SoundManager] Помилка завантаження аудіофайлу для "${config.id}":`, err);
         // Якщо аудіофайл ще фізично не поклали у папку /audio — перемикаємо цей звук на синтезатор
         if (!this._missingFiles.has(config.id)) {
           this._missingFiles.add(config.id);
@@ -954,6 +966,11 @@ class SoundManager {
 }
 
 export const soundManager = new SoundManager();
+
+if (typeof window !== 'undefined') {
+  window.soundManager = soundManager;
+  window.SOUND_IDS = SOUND_IDS;
+}
 
 export {
   AUDIO_CHANNELS,

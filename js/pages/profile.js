@@ -172,8 +172,8 @@ export function renderProfile() {
                 <button
                   type="button"
                   class="audio-test-icon-btn"
-                  data-test-sound="${SOUND_IDS.DICE_ROLL}"
-                  title="Прослухати ефект"
+                  data-test-sound="${SOUND_IDS.BUNKER_DOOR_SLAM}"
+                  title="Прослухати ефект шлюзу"
                   aria-label="Прослухати ігровий ефект"
                 >
                   <img src="${esc(ICONS.AUDIO_PLAY)}" alt="">

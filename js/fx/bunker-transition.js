@@ -573,3 +573,7 @@ export async function playBunkerDoorTransition({
   cleanupDOM();
   runCompleteCallback();
 }
+
+if (typeof window !== 'undefined') {
+  window.playBunkerDoorTransition = playBunkerDoorTransition;
+}
