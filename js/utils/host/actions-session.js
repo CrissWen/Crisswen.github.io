@@ -124,11 +124,13 @@ export async function kickPlayerFromLobby(roomCode, playerId) {
 
 export async function restartGame(roomCode) {
   const room = await getRoom(roomCode);
-  snapshot(room);
   const pState = room.players_state || {};
   const resetPlayers = {};
   Object.entries(pState).forEach(([id, p]) => { resetPlayers[id] = { name: p.name }; });
   await saveRoom(roomCode, { players_state: resetPlayers, bunker_state: {} });
+  // Після скидання панель ведучого зникає, тож скасувати його неможливо. Старий знімок не лишаємо:
+  // інакше в новій грі «Скасувати» була б активна й відкотила б її до минулої гри.
+  clearSnapshot();
 }
 
 export async function closeRoom(roomCode, stoppedTimer = null) {

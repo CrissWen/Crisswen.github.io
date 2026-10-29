@@ -7,6 +7,7 @@ import { describeFallback } from './pack-fallback.js';
 import { pushLog } from './log-writer.js';
 import { attachCataclysmSpin } from './cataclysm-spin.js';
 import { getGlobalTime } from '../services/server-time.js';
+import { clearSnapshot } from './host/room-store.js';
 
 // Старт гри: читає гравців і обраний пак кімнати, генерує стан за його картками і записує його в БД одним UPDATE.
 // Без DOM: кнопку, її текст і показ помилки веде викликач (game.js -> handleStartGame).
@@ -54,4 +55,6 @@ export async function startGame(roomCode) {
     .update({ bunker_state: bunkerState, players_state: playersState })
     .eq('room_code', roomCode);
   if (updateError) throw new Error(updateError.message || 'Не вдалося зберегти стан гри');
+  // Нова гра починається з порожньої історії дій: «Скасувати» неактивне до першої дії ведучого
+  clearSnapshot();
 }

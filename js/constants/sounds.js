@@ -101,7 +101,7 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.LOCK_TOGGLE]: Object.freeze({
     id: SOUND_IDS.LOCK_TOGGLE,
     label: 'Відкриття / закриття замка',
-    src: ['./audio/ui/lock-toggle.webm', './audio/ui/lock-toggle.mp3'],
+    src: ['./audio/sfx/ui/lock-toggle.mp3'],
     channel: AUDIO_CHANNELS.UI,
     baseVolume: 0.65,
     throttleMs: 80,
@@ -115,7 +115,7 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.UI_CLICK]: Object.freeze({
     id: SOUND_IDS.UI_CLICK,
     label: 'Клік кнопки',
-    src: ['./audio/ui/click.webm', './audio/ui/click.mp3'],
+    src: ['./audio/sfx/ui/ui-click.mp3'],
     channel: AUDIO_CHANNELS.UI,
     baseVolume: 0.55,
     throttleMs: 45,
@@ -144,7 +144,7 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.DICE_ROLL]: Object.freeze({
     id: SOUND_IDS.DICE_ROLL,
     label: 'Кидок кубика',
-    src: ['./audio/sfx/dice-roll.webm', './audio/sfx/dice-roll.mp3'],
+    src: ['./audio/sfx/ui/dice-roll.wav'],
     channel: AUDIO_CHANNELS.SFX,
     baseVolume: 0.85,
     throttleMs: 250,

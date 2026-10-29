@@ -962,6 +962,21 @@ class SoundManager {
       },
       { passive: true }
     );
+
+    // Клік кнопки: фаза capture, щоб звук спрацьовував до обробників, які можуть одразу вимкнути кнопку (напр. панель ведучого).
+    // Винятки: замки (у них свій звук lock-toggle), тест-кнопки налаштувань звуку (вони грають свій звук),
+    // неактивні кнопки та будь-який елемент з data-no-click-sound.
+    document.addEventListener(
+      'click',
+      (e) => {
+        const target = e.target.closest?.('button, [role="button"], summary, a.header-nav-link');
+        if (!target) return;
+        if (target.disabled || target.getAttribute('aria-disabled') === 'true') return;
+        if (target.closest('.char-lock, [data-test-sound], [data-no-click-sound]')) return;
+        this.play(SOUND_IDS.UI_CLICK);
+      },
+      true
+    );
   }
 }
 

@@ -2,6 +2,7 @@ import { supabase } from '../../services/supabase.js';
 import { showCustomConfirm } from '../overlays/confirm-dialog.js';
 import { showGlobalToast } from '../overlays/global-toast.js';
 import { addLog } from '../../utils/log-writer.js';
+import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
 
 // ===== Замок характеристики: гравець відкриває/ховає свою картку від інших =====
 // ctx = { getRoomCode, getUserId, getUserName, getRoomState, refreshBoard } з game.js.
@@ -70,6 +71,7 @@ export async function handleCharLockClick(lockBtn, ctx) {
 
     if (!toggleCharacteristicReveal(state[userId], dbKey, item.dataset.idx)) return;
 
+    soundManager.play(SOUND_IDS.LOCK_TOGGLE); // клацання замка — лише коли перемикання реально відбулося
     ctx.refreshBoard(); // оптимістично: картка відкривається одразу
 
     const { error } = await supabase.rpc('update_single_player_state', {

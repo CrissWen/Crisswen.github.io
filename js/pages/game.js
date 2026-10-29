@@ -469,6 +469,8 @@ function handleRoomUpdate(patch) {
 
   // Якщо гра ще не почалася, і нас видалили з players_state, значить нас вигнали з лобі
   const isGameStartedNow = Object.keys(localRoomState.bunker_state || {}).length > 0;
+  // Старт або скидання гри (з цієї чи іншої вкладки) закриває історію дій: знімок «Скасувати» з минулої гри не має переходити в нову
+  if (wasGameStarted !== isGameStartedNow) HostActions.clearSnapshot();
   if (!isGameStartedNow && localRoomState.host_id !== currentUserId && !localRoomState.players_state?.[currentUserId]) {
     showGlobalToast('Вас вигнали з кімнати.');
     clearLastRoom(currentUserId);
