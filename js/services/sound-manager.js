@@ -908,10 +908,12 @@ class SoundManager {
       }
       window.removeEventListener('pointerdown', unlock, true);
       window.removeEventListener('keydown', unlock, true);
+      window.removeEventListener('click', unlock, true);
     };
 
     window.addEventListener('pointerdown', unlock, true);
     window.addEventListener('keydown', unlock, true);
+    window.addEventListener('click', unlock, true);
   }
 
   _setupVisibilityListener() {
