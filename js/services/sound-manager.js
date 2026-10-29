@@ -377,6 +377,9 @@ class SoundManager {
     if (rate !== 1) {
       howl.rate(rate, instanceId);
     }
+    if (options.loop !== undefined && instanceId !== null && instanceId !== undefined) {
+      howl.loop(Boolean(options.loop), instanceId);
+    }
 
     if (activeSet && instanceId !== null && instanceId !== undefined) {
       activeSet.add(instanceId);

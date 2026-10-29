@@ -313,9 +313,21 @@ export async function playBunkerDoorTransition({
     if (subEl) subEl.textContent = sub;
   };
 
+  let sirenTimer = null;
+  let sirenFadeTimer = null;
+
+  const stopSiren = () => {
+    if (sirenTimer) clearTimeout(sirenTimer);
+    if (sirenFadeTimer) clearTimeout(sirenFadeTimer);
+    sirenTimer = null;
+    sirenFadeTimer = null;
+    soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
+  };
+
   const cleanupDOM = () => {
     if (cleanedUp) return;
     cleanedUp = true;
+    stopSiren();
     window.removeEventListener('keydown', onKeyDown, true);
     overlay.remove();
     if (activeTransition?.overlay === overlay) {
@@ -325,6 +337,7 @@ export async function playBunkerDoorTransition({
 
   const skipToEnd = async () => {
     if (cleanedUp) return;
+    stopSiren();
     abortController.abort();
     await runSealedCallback();
     cleanupDOM();
@@ -333,6 +346,7 @@ export async function playBunkerDoorTransition({
 
   const cancel = () => {
     if (cleanedUp) return;
+    stopSiren();
     abortController.abort();
     cleanupDOM();
   };
@@ -340,7 +354,8 @@ export async function playBunkerDoorTransition({
   function onKeyDown(e) {
     if (!allowSkip) return;
     if (e.key === 'Escape') {
-      e.preventDefault();
+
+      e.preventDefault();
       e.stopPropagation();
       skipToEnd();
 
@@ -392,7 +407,16 @@ export async function playBunkerDoorTransition({
   // ===========================================================================
 
   // --- Фаза 0 + 1: Передчуття, сирена та повільне масивне насування стулок (0.0s -> 1.60s) ---
+  soundManager.play(SOUND_IDS.CATACLYSM_ALERT, { bypassThrottle: true, loop: true });
   soundManager.play(SOUND_IDS.BUNKER_DOOR_CLOSE, { bypassThrottle: true });
+
+  // Зациклена сирена триває перші 2.5 секунди переходу, після чого плавно згасає
+  sirenFadeTimer = setTimeout(() => {
+    soundManager.fade(SOUND_IDS.CATACLYSM_ALERT, 1, 0, 300);
+  }, 2200);
+  sirenTimer = setTimeout(() => {
+    soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
+  }, 2500);
 
   const closeEasing = 'cubic-bezier(0.82, 0, 0.18, 1)';
 

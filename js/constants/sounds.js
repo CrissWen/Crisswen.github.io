@@ -92,7 +92,7 @@ export const SOUND_CATALOG = Object.freeze({
     src: ['./audio/ui/lock-hover.wav'],
     channel: AUDIO_CHANNELS.UI,
     baseVolume: 0.15,   // делікатний тихий відгук при наведенні
-    throttleMs: 75,     // анти-спам: не частіше ніж раз на 65 мс при проведенні мишею по таблиці
+    throttleMs: 85,     // анти-спам: не частіше ніж раз на 65 мс при проведенні мишею по таблиці
     interrupt: true,    // обривати попередній семпл, щоб не накладалися
     maxInstances: 1,
     pitchShift: 0.05,   // ±5% варіація тону, щоб серія замків звучала живо, а не механічно
@@ -214,13 +214,14 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.CATACLYSM_ALERT]: Object.freeze({
     id: SOUND_IDS.CATACLYSM_ALERT,
     label: 'Сирена катаклізму',
-    src: ['./audio/sfx/cataclysm-siren.webm', './audio/sfx/cataclysm-siren.mp3'],
+    src: ['./audio/sfx/bunker-door/cataclysm-siren.wav'],
     channel: AUDIO_CHANNELS.SFX,
     baseVolume: 0.45,   // сирени зазвичай дуже гучні по LUFS, тому калібруємо нижче
     throttleMs: 1000,
     interrupt: true,
     maxInstances: 1,
-    preload: false,
+    loop: true,
+    preload: true,
     synthType: 'alarm',
   }),
 
