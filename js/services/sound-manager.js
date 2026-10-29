@@ -30,6 +30,16 @@ class SoundManager {
     this._initialized = false;
 
     this._loadFromStorage();
+    // Також працює на окремій сторінці тесту виживання, де init() не викликається.
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (event) => {
+        if (event.key !== STORAGE_KEY_SETTINGS && event.key !== null) return;
+        this._loadFromStorage();
+        this._applyGlobalHowlerState();
+        this._refreshAllActiveVolumes();
+        this._notifyListeners();
+      });
+    }
   }
 
   /**
@@ -50,6 +60,7 @@ class SoundManager {
   // ===========================================================================
 
   _loadFromStorage() {
+    this._settings = { ...DEFAULT_AUDIO_SETTINGS };
     if (typeof localStorage === 'undefined') return;
     try {
       const rawSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);

@@ -1,5 +1,4 @@
 import { createRouletteReel, resolveReelMode } from './roulette-reel.js';
-import { createSoundSwitch } from './sound-switch.js';
 import { configureSfx, playTick, playReveal, playHeartbeat, unlockAudio } from '../utils/sfx.js';
 
 // ===== Оверлей рулетки (спільний для рулетки катаклізму й рулетки тесту виживання) =====
@@ -9,7 +8,7 @@ import { configureSfx, playTick, playReveal, playHeartbeat, unlockAudio } from '
 //   • тест виживання — js/pages/survival-roulette.js (локальний час, дві іконки).
 //
 // Шари оверлея (знизу вгору): .cr-backdrop (нерухомий розмитий фон) → .cr-stage { .cr-fx--back (світло), .cr-panel (стрічка й
-// назва), .cr-fx--front («герой» й іскри) } → перемикач звуку. Ефект «випадіння» малюється в .cr-fx--*, а не всередині стрічки
+// назва), .cr-fx--front («герой» й іскри) }. Ефект «випадіння» малюється в .cr-fx--*, а не всередині стрічки
 // (див. пояснення на початку css/components/roulette.css).
 //
 // Приклад:
@@ -55,7 +54,7 @@ function lockPage(overlay) {
   return () => locked.forEach(node => { node.inert = false; });
 }
 
-// Tab не виходить за межі оверлея. Фокусованих елементів тут мало (перемикач звуку), тож це радше «утримати фокус», ніж цикл.
+// Tab не виходить за межі оверлея, навіть коли в ньому немає кнопок.
 function trapFocus(event, overlay) {
   if (event.key !== 'Tab') return;
   const focusable = Array.from(overlay.querySelectorAll('button:not([disabled])'));
@@ -299,6 +298,7 @@ export async function playRouletteOverlay({
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', ariaLabel);
+  overlay.tabIndex = -1;
 
   const backdrop = el('div', 'cr-backdrop');
   const vignette = el('div', 'cr-vignette'); // темні краї: з'являються, коли наростає напруження
@@ -313,17 +313,15 @@ export async function playRouletteOverlay({
   titleEl.setAttribute('role', 'status');
   titleEl.setAttribute('aria-live', 'polite');
 
-  const soundSwitch = createSoundSwitch();
-
   panel.append(kicker, reelHost, titleEl);
   stage.append(fxBack, panel, fxFront);
-  overlay.append(backdrop, vignette, pulse, stage, soundSwitch);
+  overlay.append(backdrop, vignette, pulse, stage);
   document.body.appendChild(overlay);
 
   const restore = lockPage(overlay);
   const onKeydown = event => trapFocus(event, overlay);
   document.addEventListener('keydown', onKeydown, true);
-  soundSwitch.focus({ preventScroll: true });
+  overlay.focus({ preventScroll: true });
 
   const state = { overlay, reel: null, timers: [], cleanups: [], restore, onKeydown, fxBack, fxFront, beatTimer: 0 };
   state.cleanups.push(() => clearTimeout(state.beatTimer));

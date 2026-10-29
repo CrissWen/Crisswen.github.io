@@ -164,7 +164,7 @@ export function renderProfile() {
                 </span>
                 <div class="audio-mixer-card__info">
                   <span class="audio-mixer-card__title">Ігрові ефекти</span>
-                  <span class="audio-mixer-card__sub">Кубик, розкриття карток, таймер і сирени</span>
+                  <span class="audio-mixer-card__sub">Рулетки, кубик, розкриття карток, таймер і сирени</span>
                 </div>
               </div>
               <div class="audio-mixer-card__actions">

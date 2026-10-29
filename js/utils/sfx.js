@@ -2,26 +2,24 @@
 // Звуки синтезуються в браузері, тож нічого не вантажать і не мають питань з ліцензіями. За бажання будь-який з них
 // можна замінити власним mp3/ogg через configureSfx({ files: { tick, reveal } }) (див. cataclysmRoulette.sounds у game-config.base.js);
 // якщо файл не завантажився, лишається синтез.
-// Перемикач «без звуку» зберігається в localStorage й діє на всі звуки гри, тож кнопку можна повісити де завгодно.
+// Гучність і вимкнення звуку задає спільний SoundManager: канал «Ігрові ефекти» (SFX) та Master.
 
-const MUTE_KEY = 'bunker-sfx-muted';
+import { soundManager, AUDIO_CHANNELS } from '../services/sound-manager.js';
+
 const MIN_TICK_GAP_MS = 30; // «тіки» частіші за це зливаються в тріск, тож пропускаємо зайві
 
 let audioCtx = null;
 let masterGain = null;
-let muted = readMuted();
 let enabled = true;
 let volume = 0.5;
 const fileUrls = new Map();    // назва звуку → URL власного файлу
 const fileBuffers = new Map(); // назва звуку → AudioBuffer (або null, якщо завантаження не вдалося)
 let lastTickAt = 0;
 
-function readMuted() {
-  try {
-    return localStorage.getItem(MUTE_KEY) === '1';
-  } catch {
-    return false;
-  }
+function getVolume() {
+  if (!enabled || soundManager.isMuted()) return 0;
+  return volume * soundManager.getChannelVolume(AUDIO_CHANNELS.MASTER)
+    * soundManager.getChannelVolume(AUDIO_CHANNELS.SFX);
 }
 
 // Контекст створюється ліниво і лише після першої дії користувача: інакше браузер пише в консоль попередження про автозапуск
@@ -33,7 +31,7 @@ function ensureContext() {
   try {
     audioCtx = new AudioContextClass();
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = muted || !enabled ? 0 : volume;
+    masterGain.gain.value = getVolume();
     masterGain.connect(audioCtx.destination);
     fileUrls.forEach((url, name) => loadFile(name, url));
   } catch {
@@ -56,15 +54,10 @@ async function loadFile(name, url) {
 }
 
 function applyGain() {
-  if (masterGain) masterGain.gain.value = muted || !enabled ? 0 : volume;
+  if (masterGain) masterGain.gain.value = getVolume();
 }
 
-// Перемикач звуку в іншій вкладці (напр. у грі, поки тест відкритий окремо): події storage приходять лише в інші вкладки
-window.addEventListener('storage', event => {
-  if (event.key !== MUTE_KEY) return;
-  muted = event.newValue === '1';
-  applyGain();
-});
+soundManager.subscribe(applyGain);
 
 // Браузери вмикають звук лише після жесту користувача; iOS Safari вимагає resume() саме всередині обробника жесту
 export function unlockAudio() {
@@ -92,21 +85,8 @@ export function configureSfx({ enabled: isEnabled = true, volume: level = 0.5, f
   });
 }
 
-export function isSfxMuted() {
-  return muted;
-}
-
-export function setSfxMuted(value) {
-  muted = !!value;
-  try {
-    localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
-  } catch { /* приватний режим: вимкнення діє до перезавантаження */ }
-  applyGain();
-  if (!muted) unlockAudio();
-}
-
 function ready() {
-  if (muted || !enabled) return null;
+  if (getVolume() === 0) return null;
   const ctx = ensureContext();
   if (!ctx) return null;
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});

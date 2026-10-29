@@ -20,7 +20,7 @@ export const AUDIO_CHANNEL_META = Object.freeze({
   [AUDIO_CHANNELS.SFX]: {
     id: AUDIO_CHANNELS.SFX,
     label: 'Ігрові ефекти (SFX)',
-    description: 'Кидок кубика, розкриття карток, таймер, голосування та сирени',
+    description: 'Рулетки, кидок кубика, розкриття карток, таймер, голосування та сирени',
   },
   [AUDIO_CHANNELS.UI]: {
     id: AUDIO_CHANNELS.UI,
