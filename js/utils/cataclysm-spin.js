@@ -67,7 +67,7 @@ function randomSeed() {
 // на момент, коли рулетка зупиниться та розблокує інтерфейс: гравці не втрачають час відліку, поки дивляться на стрічку.
 // cards — картки катаклізмів пака (звідти беруться іконки стрічки); now — getGlobalTime() ведучого.
 // Повертає створений спін, а коли рулетку вимкнено в конфігу (enabled: false) — null: катаклізм з'являється одразу, як раніше.
-export async function attachCataclysmSpin(bunkerState, cards, now) {
+export async function attachCataclysmSpin(bunkerState, cards, now, options = {}) {
   if (!bunkerState || !bunkerState.cataclysm) return null;
 
   const cfg = normalizeRouletteConfig((await getGameConfig()).cataclysmRoulette);
@@ -85,7 +85,7 @@ export async function attachCataclysmSpin(bunkerState, cards, now) {
 
   const spin = {
     id: Date.now(),
-    started_at: Math.round(now + cfg.startLeadMs),
+    started_at: Math.round(now + (typeof options?.leadMs === 'number' ? options.leadMs : Math.max(cfg.startLeadMs, 4600))),
     duration_ms: durationMs,
     hold_ms: Math.round(cfg.holdAfterMs),
     stop_index: stopIndex,

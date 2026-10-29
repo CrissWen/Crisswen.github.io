@@ -10,7 +10,7 @@ let activeTransition = null;
 /**
  * Повертає HTML-розмітку векторного оверлею шлюзу бункера.
  */
-function buildBunkerOverlayMarkup(allowSkip = true) {
+function buildBunkerOverlayMarkup() {
   return `
     <div class="bunker-vault-stage" data-vault-stage>
       <div class="bunker-vault-backdrop" data-vault-backdrop></div>
@@ -106,12 +106,12 @@ function buildBunkerOverlayMarkup(allowSkip = true) {
         </div>
       </div>
 
-      ${allowSkip ? `
-        <button type="button" class="bunker-vault-skip" data-vault-skip aria-label="Пропустити анімацію переходу">
-          <span>Пропустити</span>
-          <span class="bunker-vault-skip__kbd">Esc</span>
-        </button>
-      ` : ''}
+
+
+
+
+
+
     </div>
   `;
 }
@@ -252,7 +252,7 @@ export async function playBunkerDoorTransition({
   overlay.setAttribute('aria-live', 'polite');
   overlay.setAttribute('aria-label', 'Запуск гри: герметизація бункера');
   overlay.dataset.phase = 'closing';
-  overlay.innerHTML = buildBunkerOverlayMarkup(allowSkip);
+  overlay.innerHTML = buildBunkerOverlayMarkup();
   document.body.appendChild(overlay);
 
   const stageEl = overlay.querySelector('[data-vault-stage]');
@@ -269,7 +269,7 @@ export async function playBunkerDoorTransition({
   const beaconTextEl = overlay.querySelector('[data-vault-beacon-text]');
   const titleEl = overlay.querySelector('[data-vault-title]');
   const subEl = overlay.querySelector('[data-vault-sub]');
-  const skipBtn = overlay.querySelector('[data-vault-skip]');
+
 
   const setHudPhase = (phase, beacon, title, sub) => {
     if (signal.aborted) return;
@@ -306,18 +306,19 @@ export async function playBunkerDoorTransition({
   function onKeyDown(e) {
     if (!allowSkip) return;
     if (e.key === 'Escape') {
-      e.preventDefault();
+      e.preventDefault();
       e.stopPropagation();
       skipToEnd();
+
     }
   }
 
   if (allowSkip) {
     window.addEventListener('keydown', onKeyDown, true);
-    skipBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      skipToEnd();
-    });
+
+
+
+
   }
 
   activeTransition = {

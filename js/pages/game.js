@@ -28,7 +28,7 @@ import { ensurePackOptions, getPackOptions, handlePackChange, resetPackSelect } 
 import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/controllers/cataclysm-end-modal.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
-import { playCataclysmRoulette, hideCataclysmRoulette } from '../game-modules/overlays/cataclysm-roulette.js';
+import { playCataclysmRoulette, hideCataclysmRoulette, isCataclysmRouletteShown, primeCataclysmRouletteAudio } from '../game-modules/overlays/cataclysm-roulette.js';
 import { isCataclysmSpinActive, getSpinTimeline } from '../utils/cataclysm-spin.js';
 import { showOrientationPrompt, hideOrientationPrompt } from '../game-modules/overlays/orientation-prompt.js';
 import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-modules/board/event-log.js';
@@ -365,6 +365,7 @@ async function handleStartGame(e) {
   const btn = e.currentTarget;
   btn.disabled = true;
   btn.textContent = "Генерація...";
+  primeCataclysmRouletteAudio();
 
   try {
     await startGame(currentRoomCode);
@@ -441,7 +442,12 @@ function maybePlayCataclysmRoulette(roomData) {
   clearTimeout(spinRefreshTimer);
   spinRefreshTimer = setTimeout(() => ctx.refreshBoard(), timeline.unlockAt - now + 60);
 
-  playCataclysmRoulette(spin, { onFinish: () => ctx.refreshBoard() }).catch(err => {
+  playCataclysmRoulette(spin, {
+    onFinish: () => {
+      ctx.refreshBoard();
+      showOrientationPrompt();
+    }
+  }).catch(err => {
     console.error('Рулетка катаклізму:', err);
     hideCataclysmRoulette(); // збій не повинен лишати інтерфейс заблокованим
   });
@@ -486,10 +492,13 @@ function handleRoomUpdate(patch) {
     playBunkerDoorTransition({
       onSealed: () => {
         awaitingDoorSeal = false;
-        if (!awaitingDoorSeal) ctx.refreshBoard();
+        ctx.refreshBoard();
+        maybePlayCataclysmRoulette(localRoomState);
       },
       onComplete: () => {
-        showOrientationPrompt();
+        if (!isCataclysmRouletteShown() && !isCataclysmSpinActive(localRoomState?.bunker_state, getGlobalTime())) {
+          showOrientationPrompt();
+        }
       },
     });
     return;

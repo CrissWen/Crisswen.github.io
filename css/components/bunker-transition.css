@@ -8,7 +8,7 @@
   width: calc(100vw + 8px);
   height: calc(100vh + 8px);
   height: calc(100dvh + 8px);
-  z-index: 9500;
+  z-index: 10050;
   pointer-events: all;
   overflow: hidden;
   user-select: none;
@@ -538,44 +538,6 @@
   opacity: 0;
   transform: scale3d(0.25, 0.7, 1);
   will-change: transform, opacity;
-}
-
-/* ===== КНОПКА ПРОПУСКУ АНІМАЦІЇ (SKIP / ESC) ===== */
-.bunker-vault-skip {
-  position: absolute;
-  right: clamp(14px, 2.5vw, 28px);
-  bottom: clamp(14px, 2.5vh, 24px);
-  z-index: 10;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 13px;
-  border-radius: var(--radius-xs);
-  border: 1px solid color-mix(in srgb, var(--metal-lt) 75%, transparent);
-  background: color-mix(in srgb, var(--bg) 82%, rgba(0, 0, 0, 0.6));
-  color: var(--text-mute);
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
-}
-
-.bunker-vault-skip:hover,
-.bunker-vault-skip:focus-visible {
-  color: var(--text);
-  border-color: var(--hazard);
-  background: color-mix(in srgb, var(--panel) 92%, #000 8%);
-  outline: none;
-}
-
-.bunker-vault-skip__kbd {
-  padding: 1px 6px;
-  border-radius: 3px;
-  border: 1px solid var(--metal-lt);
-  background: var(--panel-2);
-  color: var(--text);
-  font-size: 11px;
 }
 
 /* ===== АДАПТАЦІЯ ДЛЯ МОБІЛЬНИХ ЕКРАНІВ ===== */
