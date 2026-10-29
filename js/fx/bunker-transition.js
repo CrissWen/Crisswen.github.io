@@ -7,10 +7,32 @@ import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 
 let activeTransition = null;
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function resolveRoomCode(roomCode) {
+  let code = roomCode;
+  if (!code && typeof window !== 'undefined' && window.location?.hash) {
+    const match = window.location.hash.match(/#\/game\/([a-zA-Z0-9_-]+)/i);
+    if (match?.[1]) code = match[1];
+  }
+  if (!code) return 'БУНКЕР-01';
+  const clean = String(code).trim().replace(/^#/, '').toUpperCase();
+  return clean ? `БУНКЕР-${clean}` : 'БУНКЕР-01';
+}
+
 /**
  * Повертає HTML-розмітку векторного оверлею шлюзу бункера.
  */
-function buildBunkerOverlayMarkup() {
+function buildBunkerOverlayMarkup({ roomCode } = {}) {
+  const displayCode = resolveRoomCode(roomCode);
   return `
     <div class="bunker-vault-stage" data-vault-stage>
       <div class="bunker-vault-backdrop" data-vault-backdrop></div>
@@ -37,7 +59,7 @@ function buildBunkerOverlayMarkup() {
           <div class="bunker-door__piston"></div>
           <div class="bunker-door__stencil">
             <span class="bunker-door__stencil-sub">ЗАХИСНИЙ КОНТУР // СЕКТОР 01</span>
-            <span class="bunker-door__stencil-code">БУНКЕР-01</span>
+            <span class="bunker-door__stencil-code" data-vault-room-code>${escapeHtml(displayCode)}</span>
             <!-- Емблема радіаційної/біологічної ізоляції -->
             <svg class="bunker-door__watermark" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
               <circle cx="32" cy="32" r="6" />
@@ -204,12 +226,14 @@ export function cancelBunkerDoorTransition() {
  * Запускає повноекранний перехід старту гри «Бункерні двері».
  *
  * @param {object} [options]
+ * @param {string} [options.roomCode] - Код кімнати гри (відображається трафаретом на дверях замість Бункер-01)
  * @param {() => void | Promise<void>} [options.onSealed] - Викликається в момент повної герметизації (екран 100% перекритий)
  * @param {() => void} [options.onComplete] - Викликається після повного відкриття дверей або пропуску
  * @param {boolean} [options.allowSkip=true] - Дозволити пропуск по Esc або кнопці
  * @returns {Promise<void>}
  */
 export async function playBunkerDoorTransition({
+  roomCode,
   onSealed,
   onComplete,
   allowSkip = true,
@@ -262,7 +286,7 @@ export async function playBunkerDoorTransition({
   overlay.setAttribute('aria-live', 'polite');
   overlay.setAttribute('aria-label', 'Запуск гри: герметизація бункера');
   overlay.dataset.phase = 'closing';
-  overlay.innerHTML = buildBunkerOverlayMarkup();
+  overlay.innerHTML = buildBunkerOverlayMarkup({ roomCode });
   document.body.appendChild(overlay);
 
   const stageEl = overlay.querySelector('[data-vault-stage]');

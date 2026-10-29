@@ -490,6 +490,7 @@ function handleRoomUpdate(patch) {
   if (!wasGameStarted && isGameStartedNow) {
     awaitingDoorSeal = true;
     playBunkerDoorTransition({
+      roomCode: currentRoomCode || localRoomState?.room_code,
       onSealed: () => {
         awaitingDoorSeal = false;
         ctx.refreshBoard();
