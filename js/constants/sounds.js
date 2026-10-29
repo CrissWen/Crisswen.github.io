@@ -57,6 +57,8 @@ export const SOUND_IDS = Object.freeze({
   TIMER_END: 'timer-end',
   CATACLYSM_ALERT: 'cataclysm-alert',
   PLAYER_KICK: 'player-kick',
+  ROULETTE_TICK: 'roulette-tick',
+  ROULETTE_REVEAL: 'roulette-reveal',
   BUNKER_DOOR_CLOSE: 'bunker-door-close',
   BUNKER_DOOR_SLAM: 'bunker-door-slam',
   BUNKER_HYDRAULIC: 'bunker-hydraulic',
@@ -115,7 +117,7 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.UI_CLICK]: Object.freeze({
     id: SOUND_IDS.UI_CLICK,
     label: 'Клік кнопки',
-    src: ['./audio/ui/ui-click.mp3'],
+    src: ['./audio/ui/ui-click.wav'],
     channel: AUDIO_CHANNELS.UI,
     baseVolume: 0.85,
     throttleMs: 45,
@@ -129,14 +131,14 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.TAB_SWITCH]: Object.freeze({
     id: SOUND_IDS.TAB_SWITCH,
     label: 'Перемикання вкладки',
-    src: ['./audio/ui/tab-switch.webm', './audio/ui/tab-switch.mp3'],
+    src: ['./audio/ui/tab-switch.mp3'],
     channel: AUDIO_CHANNELS.UI,
     baseVolume: 0.45,
     throttleMs: 50,
     interrupt: true,
     maxInstances: 1,
     pitchShift: 0.02,
-    preload: false,
+    preload: true,
     synthType: 'tab',
   }),
 
@@ -186,13 +188,13 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.TIMER_TICK]: Object.freeze({
     id: SOUND_IDS.TIMER_TICK,
     label: 'Відлік таймера',
-    src: ['./audio/sfx/timer-tick.webm', './audio/sfx/timer-tick.mp3'],
+    src: ['./audio/sfx/bunker-inside/timer-tick.mp3'],
     channel: AUDIO_CHANNELS.SFX,
     baseVolume: 0.4,    // цокання не має глушити розмову гравців
     throttleMs: 400,
     interrupt: true,
     maxInstances: 1,
-    preload: false,
+    preload: true,
     synthType: 'tick',
   }),
 
@@ -233,6 +235,33 @@ export const SOUND_CATALOG = Object.freeze({
     maxInstances: 1,
     preload: false,
     synthType: 'kick',
+  }),
+
+  // Рулетка катаклізму / тесту виживання (ui/roulette-overlay.js). Гучність додатково множиться на cataclysmRoulette.sounds.volume з конфігу гри.
+  [SOUND_IDS.ROULETTE_TICK]: Object.freeze({
+    id: SOUND_IDS.ROULETTE_TICK,
+    label: 'Клацання стрічки рулетки',
+    src: ['./audio/sfx/roulette/click.mp3'],
+    channel: AUDIO_CHANNELS.SFX,
+    baseVolume: 1,
+    throttleMs: 30,     // тіки частіші за 30 мс зливаються в тріск (раніше MIN_TICK_GAP_MS у sfx.js)
+    interrupt: false,   // тіки йдуть серією й можуть накладатися
+    maxInstances: 4,
+    preload: true,
+    synthType: 'tick',
+  }),
+
+  [SOUND_IDS.ROULETTE_REVEAL]: Object.freeze({
+    id: SOUND_IDS.ROULETTE_REVEAL,
+    label: 'Результат рулетки',
+    src: ['./audio/sfx/roulette/choose.mp3'],
+    channel: AUDIO_CHANNELS.SFX,
+    baseVolume: 1,
+    throttleMs: 500,
+    interrupt: true,
+    maxInstances: 1,
+    preload: true,
+    synthType: 'card',
   }),
 
   [SOUND_IDS.BUNKER_DOOR_CLOSE]: Object.freeze({
@@ -291,10 +320,11 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.BUNKER_AMBIENT]: Object.freeze({
     id: SOUND_IDS.BUNKER_AMBIENT,
     label: 'Атмосфера бункера',
-    src: ['./audio/music/bunker-ambient.webm', './audio/music/bunker-ambient.mp3'],
+    src: ['./audio/sfx/bunker-inside/bunker-ambient.mp3'],
     channel: AUDIO_CHANNELS.MUSIC,
     baseVolume: 0.4,
     loop: true,
+    html5: true,        // файл ~4 МБ: стрімінг через <audio> замість повного декодування в пам'ять: стартує одразу й не їсть ~50 МБ RAM
     interrupt: true,
     maxInstances: 1,
     preload: false,

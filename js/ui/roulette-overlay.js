@@ -1,5 +1,6 @@
 import { createRouletteReel, resolveReelMode } from './roulette-reel.js';
-import { configureSfx, playTick, playReveal, playHeartbeat, unlockAudio } from '../utils/sfx.js';
+import { configureSfx, playHeartbeat, unlockAudio } from '../utils/sfx.js';
+import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 
 // ===== Оверлей рулетки (спільний для рулетки катаклізму й рулетки тесту виживання) =====
 // Не знає, що саме крутиться: приймає готову стрічку (reel), тексти, таймлайн і годинник. Показує оверлей на весь екран,
@@ -30,6 +31,23 @@ const BEAT_MIN_MS = 430;
 
 let current = null; // { overlay, reel, timers, cleanups, restore, onKeydown, fxBack, fxFront, beatTimer }
 let tokenCounter = 0;
+
+// Клацання стрічки й звук результату йдуть через SoundManager (js/constants/sounds.js: ROULETTE_TICK, ROULETTE_REVEAL, з preload).
+// Серцебиття лишається синтезованим у utils/sfx.js: окремого файлу для нього немає.
+let soundsEnabled = true;
+let soundsVolume = 0.5; // cataclysmRoulette.sounds.volume з конфігу: множник поверх каналів SoundManager
+
+// speed (0..1): швидка стрічка — вищий і тихіший тик, повільна наприкінці — глибший і виразніший («доповзання» як гальмування)
+function playRouletteTick(speed = 0) {
+  if (!soundsEnabled) return;
+  const s = Math.min(1, Math.max(0, Number(speed) || 0));
+  soundManager.play(SOUND_IDS.ROULETTE_TICK, { rate: 0.9 + s * 0.4, volume: soundsVolume * (1 - s * 0.45) });
+}
+
+function playRouletteReveal() {
+  if (!soundsEnabled) return;
+  soundManager.play(SOUND_IDS.ROULETTE_REVEAL, { volume: soundsVolume });
+}
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -270,7 +288,7 @@ export function primeRouletteAudio() {
 // onFinish викликається один раз, коли інтерфейс розблоковано (або спрацювала аварійна страховка).
 //   timeline — { startAt, unlockAt } у годиннику now(): початок кручення й кінець паузи після зупинки (стрічка зупиняється в startAt + reel.durationMs)
 //   reel     — параметри createRouletteReel (pool, fillers, result, seed, stopIndex, durationMs, easingPower, fillerZone, suspense, scatter)
-//   mode     — 'auto' | 'full' | 'light' (див. resolveReelMode); sounds — { enabled, volume, tickUrl, revealUrl }
+//   mode     — 'auto' | 'full' | 'light' (див. resolveReelMode); sounds — { enabled, volume }
 export async function playRouletteOverlay({
   ariaLabel = 'Рулетка',
   texts = {},
@@ -291,11 +309,9 @@ export async function playRouletteOverlay({
   const kickerTease = texts.tease ?? 'Невже це він…';
   const kickerDone = texts.done ?? 'Визначено';
 
-  configureSfx({
-    enabled: sounds.enabled !== false,
-    volume: sounds.volume,
-    files: { tick: sounds.tickUrl, reveal: sounds.revealUrl }
-  });
+  soundsEnabled = sounds.enabled !== false;
+  soundsVolume = Math.min(1, Math.max(0, Number(sounds.volume ?? 0.5) || 0));
+  configureSfx({ enabled: soundsEnabled, volume: sounds.volume }); // лише для серцебиття
 
   // ----- Розмітка -----
   const overlay = el('div', OVERLAY_CLASS);
@@ -420,7 +436,7 @@ export async function playRouletteOverlay({
   state.reel = createRouletteReel(reelHost, {
     ...reelOptions,
     mode,
-    onTick: ({ speed }) => playTick(speed),
+    onTick: ({ speed }) => playRouletteTick(speed),
     onPhase: (phase, { missed, swaps }) => {
       if (current !== state || mode === 'light' || prefersReducedMotion()) return;
       if (phase === 'approach') {
@@ -443,7 +459,7 @@ export async function playRouletteOverlay({
       if (late) overlay.classList.add('is-late'); // тим, хто зайшов після зупинки, ефекти вже ні до чого: одразу кінцевий стан
       if (mode !== 'light') revealHero(state, late); // LDM: без «героя», променів і іскор
       overlay.classList.add('is-revealed');
-      if (!late) playReveal();
+      if (!late) playRouletteReveal();
     }
   });
   state.reel.start({ startAt: timeline.startAt, now });

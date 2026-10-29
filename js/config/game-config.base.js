@@ -79,8 +79,6 @@ export const gameConfigBase = {
     sounds: {
       enabled: true,        // false — звуків рулетки немає зовсім (гравець також може вимкнути їх кнопкою в оверлеї)
       volume: 0.5,          // гучність 0..1
-      tickUrl: "sfx/click.mp3",        // власний звук «клацання» (mp3/ogg) замість синтезованого; null — синтез
-      revealUrl: "sfx/choose.mp3"       // власний звук показу результату; null — синтез
     }
   },
 

@@ -42,6 +42,7 @@ import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
+import { soundManager } from '../services/sound-manager.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -325,6 +326,7 @@ function updateGameBoard(roomData, container) {
   syncCataclysm(roomData.bunker_state, roomData.status);
 
   if (!isGameStarted) {
+    soundManager.stopAmbient(); // кімната очікування (або гру скинуто): атмосфери бункера тут немає
     unmountHeaderCollapseTab();
     // Ведучий саме обирає пак у розкритому списку: не перемальовуємо кімнату, щоб список не закрився посеред вибору.
     // Стан кімнати вже оновлено, а перемалювання відбудеться, щойно список втратить фокус (handleGlobalFocusOut).
@@ -356,6 +358,10 @@ function updateGameBoard(roomData, container) {
       document.getElementById('start-game-btn')?.addEventListener('click', handleStartGame);
     }
   } else {
+    // Атмосфера бункера грає все время, поки гра йде. Дошка монтується в момент герметизації дверей, тож звук стартує разом з ним.
+    // Виклик ідемпотентний, тому не дублюється при кожному оновленні кімнати. Закрита кімната (включно з записом збереженої гри) без атмосфери.
+    if (roomData.status === 'closed') soundManager.stopAmbient();
+    else soundManager.startAmbient();
     mountHeaderCollapseTab();
     renderActiveGame(roomData, container);
   }
@@ -745,4 +751,5 @@ export function cleanupGame() {
   pendingDiceLogId = null;
   awaitingDoorSeal = false;
   cancelBunkerDoorTransition();
+  soundManager.stopAmbient(); // вийшли з кімнати — атмосфера зупиняється
 }

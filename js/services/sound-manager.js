@@ -23,6 +23,8 @@ class SoundManager {
     this._lastPlayedAt = new Map(); // Час останнього відтворення (ms): soundId -> timestamp
     this._activeInstances = new Map(); // Активні ID звуків: soundId -> Set<number>
     this._missingFiles = new Set(); // Звуки, чиї файли ще не додані на диск (фоллбек на синт)
+    this._ambientWanted = false; // гра хоче грати атмосферу (startAmbient): відновлюється після роз-mute / підняття гучності
+    this._silentLoad = new Set(); // Звуки, що вантажаться наперед (preload): помилка завантаження не має грати синтез-фоллбек при старті
     this._listeners = new Set(); // Підписники на зміну налаштувань гучності
     this._audioCtx = null; // Web Audio API контекст для синтезованого фоллбеку
     this._ambientDroneNodes = null; // Активні вузли синтезованого ембієнту
@@ -53,6 +55,20 @@ class SoundManager {
     this._setupUnlockListeners();
     this._setupVisibilityListener();
     this._setupGlobalUIHooks();
+    this._preloadCatalog();
+  }
+
+  /**
+   * Створює Howl наперед для всіх звуків з preload: true, щоб файл був уже завантажений і декодований до першого play().
+   * Без цього Howl створювався б лише в момент першого відтворення, і прапорець preload нічого не давав.
+   */
+  _preloadCatalog() {
+    if (typeof window === 'undefined' || !window.Howl) return;
+    for (const config of Object.values(SOUND_CATALOG)) {
+      if (!config.preload || config.loop) continue;
+      this._silentLoad.add(config.id);
+      this._getOrCreateHowl(config);
+    }
   }
 
   // ===========================================================================
@@ -259,6 +275,17 @@ class SoundManager {
     for (const soundId of Object.keys(SOUND_CATALOG)) {
       this._refreshActiveVolumes(soundId);
     }
+    this._resumeAmbientIfWanted();
+  }
+
+  // play() мовчки виходить при mute або нульовій гучності, тому атмосферу, яку гра вже просила, запускаємо ще раз, коли звук з'явився
+  _resumeAmbientIfWanted() {
+    if (!this._ambientWanted || this._settings.muted) return;
+    if (this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT) <= 0.001) return;
+    if (this._ambientDroneNodes) return;
+    const howl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
+    if (howl && (howl.playing() || howl.state() === 'loading')) return;
+    this.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
   }
 
   // ===========================================================================
@@ -327,9 +354,13 @@ class SoundManager {
       return null;
     }
 
-    // Обмеження одночасних інстансів (interrupt / maxInstances)
+    // Обмеження одночасних інстансів (interrupt / maxInstances).
+    // Незавантаженому Howl stop()/volume() не викликаємо: вони стали б у чергу очікування завантаження перед play() і могли її збити.
+    const isLoaded = howl.state() === 'loaded';
     const activeSet = this._activeInstances.get(soundId);
-    if (config.interrupt) {
+    if (!isLoaded) {
+      // перший запуск: скасовувати нічого
+    } else if (config.interrupt) {
       howl.stop();
       activeSet?.clear();
     } else if (config.maxInstances && activeSet && activeSet.size >= config.maxInstances) {
@@ -340,8 +371,9 @@ class SoundManager {
       }
     }
 
-    howl.volume(effectiveVol);
+    if (isLoaded) howl.volume(effectiveVol);
     const instanceId = howl.play();
+    if (!isLoaded && instanceId !== null && instanceId !== undefined) howl.volume(effectiveVol, instanceId);
     if (rate !== 1) {
       howl.rate(rate, instanceId);
     }
@@ -382,6 +414,22 @@ class SoundManager {
   }
 
   /**
+   * Запускає атмосферу бункера (зациклену). Ідемпотентно: повторний виклик нічого не дублює, тому можна кликати при кожному оновленні кімнати.
+   * Якщо звук зараз вимкнено (mute / нульова гучність), атмосфера стартує, коли він з'явиться.
+   */
+  startAmbient() {
+    if (this._ambientWanted) return;
+    this._ambientWanted = true;
+    this.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
+  }
+
+  stopAmbient() {
+    if (!this._ambientWanted) return;
+    this._ambientWanted = false;
+    this.stop(SOUND_IDS.BUNKER_AMBIENT);
+  }
+
+  /**
    * Перевіряє, чи відтворюється зараз вказаний звук (зокрема ембієнт).
    */
   isPlaying(soundId) {
@@ -416,8 +464,12 @@ class SoundManager {
     const howl = new window.Howl({
       src: Array.isArray(config.src) ? config.src : [config.src],
       loop: Boolean(config.loop),
+      html5: Boolean(config.html5),
       preload: Boolean(config.preload),
       volume: this.getEffectiveVolume(config.id),
+      onload: () => {
+        this._silentLoad.delete(config.id);
+      },
       onend: (id) => {
         activeSet.delete(id);
       },
@@ -433,10 +485,11 @@ class SoundManager {
       onloaderror: (id, err) => {
         console.warn(`[SoundManager] Помилка завантаження аудіофайлу для "${config.id}":`, err);
         // Якщо аудіофайл ще фізично не поклали у папку /audio — перемикаємо цей звук на синтезатор
+        const wasSilent = this._silentLoad.delete(config.id); // помилка передзавантаження при старті не повинна грати звук
         if (!this._missingFiles.has(config.id)) {
           this._missingFiles.add(config.id);
           const effVol = this.getEffectiveVolume(config.id);
-          if (effVol > 0.001) {
+          if (!wasSilent && effVol > 0.001) {
             this._playSynthFallback(config, effVol, 1);
           }
         }
