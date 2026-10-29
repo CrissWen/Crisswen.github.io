@@ -534,25 +534,44 @@
   z-index: 5;
   top: 14px;
   right: 14px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font: inherit;
-  font-size: 13px;
+  width: 58px;
+  height: 32px;
+  padding: 0;
+  display: block;
   color: var(--text);
-  background: rgba(0, 0, 0, .35);
+  background: rgba(0, 0, 0, .45);
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  transition: background .2s ease, color .2s ease;
+  transition: background .25s ease;
 }
-.cr-sound:hover { background: rgba(0, 0, 0, .55); }
+/* Область натискання ширша за видиму доріжку (зручно пальцем) */
+.cr-sound::after { content: ''; position: absolute; inset: -7px -6px; }
+.cr-sound:hover { background: rgba(0, 0, 0, .6); }
 .cr-sound:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.cr-sound[aria-pressed="true"] { color: var(--text-mute); }
+.cr-sound[aria-checked="true"] { background: color-mix(in srgb, var(--hazard) 55%, rgba(0, 0, 0, .45)); }
+
+/* Ручка з іконкою: ліворуч — звук вимкнено, праворуч — увімкнено */
+.cr-sound-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-mute);
+  background: var(--panel);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+  transition: transform .25s cubic-bezier(.3, 1.3, .5, 1), color .25s ease;
+}
+.cr-sound-knob svg { width: 16px; height: 16px; }
+.cr-sound-on { display: none; }
+.cr-sound[aria-checked="true"] .cr-sound-knob { transform: translateX(26px); color: var(--hazard); }
+.cr-sound[aria-checked="true"] .cr-sound-on { display: block; }
+.cr-sound[aria-checked="true"] .cr-sound-off { display: none; }
 
 @keyframes cr-fade-in { from { opacity: 0; } to { opacity: 1; } }
 

@@ -26,6 +26,16 @@ const BEAT_START_MS = 660;          // інтервал між першими «
 const BEAT_STEP_MS = 45;            // на скільки кожен наступний інтервал коротший: серце б'ється дедалі частіше
 const BEAT_MIN_MS = 430;
 
+// Перемикач звуку: повзунок з іконкою-динаміком на ручці. Розмітка статична (без користувацьких даних), тому innerHTML безпечний.
+// Яку іконку видно, вирішує CSS за aria-checked (true — звук увімкнено)
+const SOUND_SWITCH_HTML =
+  '<span class="cr-sound-knob" aria-hidden="true">' +
+  '<svg class="cr-sound-on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>' +
+  '<path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+  '<svg class="cr-sound-off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>' +
+  '<path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+  '</span>';
+
 let current = null; // { overlay, reel, timers, cleanups, restore, onKeydown, fxBack, fxFront }
 let tokenCounter = 0;
 
@@ -327,11 +337,11 @@ export async function playCataclysmRoulette(spin, { onFinish = null } = {}) {
 
   const soundBtn = el('button', 'cr-sound');
   soundBtn.type = 'button';
+  soundBtn.setAttribute('role', 'switch');
+  soundBtn.setAttribute('aria-label', 'Звук');
+  soundBtn.innerHTML = SOUND_SWITCH_HTML;
   const syncSoundBtn = () => {
-    const muted = isSfxMuted();
-    soundBtn.setAttribute('aria-pressed', String(muted));
-    soundBtn.setAttribute('aria-label', muted ? 'Увімкнути звук' : 'Вимкнути звук');
-    soundBtn.textContent = muted ? '🔇 Звук вимк.' : '🔊 Звук';
+    soundBtn.setAttribute('aria-checked', String(!isSfxMuted())); // стан зберігає sfx.js у localStorage, тож він пам'ятається між іграми
   };
   syncSoundBtn();
   soundBtn.addEventListener('click', () => {
