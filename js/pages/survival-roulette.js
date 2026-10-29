@@ -1,4 +1,5 @@
 import { getGameConfig } from '../config/config-manager.js';
+import { ICONS } from '../constants/icons.js';
 import { normalizeRouletteConfig } from '../utils/roulette-config.js';
 import { playRouletteOverlay, primeRouletteAudio } from '../ui/roulette-overlay.js';
 
@@ -11,8 +12,8 @@ import { playRouletteOverlay, primeRouletteAudio } from '../ui/roulette-overlay.
 // Тривалість, гальмування, звуки й режим (LDM) беруться з блоку cataclysmRoulette: одна «ручка» на всі рулетки гри.
 // Спільний рушій оверлея — ui/roulette-overlay.js. Час локальний (Date.now): тест — окрема сторінка без синхронізації.
 
-const ALIVE = { key: 'alive', src: 'icons/survival/heart.svg' };
-const DEAD = { key: 'dead', src: 'icons/survival/skull.svg' };
+const ALIVE = { key: 'alive', src: ICONS.SURVIVAL_ALIVE };
+const DEAD = { key: 'dead', src: ICONS.SURVIVAL_DEAD };
 
 const STOP_INDEX_RANGE = { min: 24, max: 90 };
 const MS_PER_STRIP_ITEM = 105; // як у рулетці катаклізму: швидкість стрічки лишається схожою за будь-якої тривалості
