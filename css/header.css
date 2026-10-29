@@ -50,6 +50,126 @@
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--hazard) 50%, transparent));
 }
 
+/* Права частина хедера: віджет звуку + профіль */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Швидке керування звуком у хедері */
+.header-audio-widget {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.header-audio-btn {
+  width: 40px;
+  height: 40px;
+}
+
+.header-audio-widget:focus-within .header-audio-btn:not(.is-muted) {
+  border-color: var(--hazard);
+  background: var(--panel-2);
+  color: var(--hazard);
+}
+
+/* Попап швидкого регулювання гучності */
+.header-audio-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 224px;
+  padding: 13px 15px;
+  background: var(--panel);
+  border: 1px solid var(--metal-lt, var(--metal));
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .85), inset 0 0 12px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+  z-index: 10005;
+}
+
+/* Місток зверху, щоб курсор не втрачав hover при переході від кнопки до попапа */
+.header-audio-popover::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+
+@media (hover: hover) {
+  .header-audio-widget:hover .header-audio-popover,
+  .header-audio-widget:focus-within .header-audio-popover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+.header-audio-widget.is-open .header-audio-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.header-audio-popover__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.header-audio-popover__title {
+  font-family: var(--head);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.header-audio-popover__val {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hazard);
+}
+
+.header-audio-popover__foot {
+  border-top: 1px solid var(--metal);
+  padding-top: 7px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header-audio-link {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: color .15s ease;
+}
+
+.header-audio-link:hover {
+  color: var(--hazard);
+}
+
 /* Клікабельний блок профілю */
 .header-profile-link {
   display: flex;
@@ -188,6 +308,9 @@ body {
 
   .header-left { gap: 12px; }
   .header-nav { gap: 12px; }
+  .header-right { gap: 6px; }
+  .header-audio-btn { width: 32px; height: 32px; }
+  .header-audio-icon { width: 16px; height: 16px; }
   .header-logo { font-size: 18px; gap: 6px; }
   .header-logo-icon { width: 22px; height: 22px; }
   .header-nav-link { font-size: 14px; }

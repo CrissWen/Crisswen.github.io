@@ -10,15 +10,76 @@ import { syncGameTab } from './utils/last-session.js';
 import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
 import { initCustomSelects } from './ui/custom-select.js';
+import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
+import { soundManager } from './services/sound-manager.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
 applyStoredTheme();
+soundManager.init();
+initRangeSliders(document);
 
 const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");
 const headerUserName = document.getElementById("header-user-name");
 const headerUserAvatar = document.getElementById("header-user-avatar");
+
+// --- Ініціалізація швидкого керування звуком у хедері ---
+(function initHeaderAudioWidget() {
+  const widget = document.getElementById('header-audio-widget');
+  const muteBtn = document.getElementById('header-audio-btn');
+  const slider = document.getElementById('header-audio-master-slider');
+  const valEl = document.getElementById('header-audio-master-val');
+  const openSettingsBtn = document.getElementById('header-audio-open-settings');
+
+  const syncHeaderAudioUI = (settings) => {
+    const pct = Math.round(settings.masterVolume * 100);
+    const isMuted = settings.muted || pct === 0;
+    if (muteBtn) {
+      muteBtn.classList.toggle('is-muted', isMuted);
+      muteBtn.title = settings.muted ? 'Звук вимкнено (клік — увімкнути)' : `Гучність: ${pct}% (клік — вимкнути)`;
+    }
+    if (slider) {
+      slider.classList.toggle('is-muted', isMuted);
+      setRangeSliderValue(slider, pct);
+    }
+    if (valEl) {
+      valEl.textContent = settings.muted ? 'MUTE' : `${pct}%`;
+    }
+  };
+
+  syncHeaderAudioUI(soundManager.getSettings());
+  soundManager.subscribe(syncHeaderAudioUI);
+
+  if (muteBtn) {
+    muteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      soundManager.toggleMute();
+    });
+  }
+
+  if (slider) {
+    slider.addEventListener('input', () => {
+      const pct = Number(slider.value) || 0;
+      soundManager.setMasterVolume(pct / 100);
+    });
+  }
+
+  if (openSettingsBtn) {
+    openSettingsBtn.addEventListener('click', () => {
+      if (widget) widget.classList.remove('is-open');
+      try {
+        sessionStorage.setItem('bunker-profile-tab', 'audio');
+      } catch (_) {}
+      const currentPath = (window.location.hash || '').split('?')[0];
+      if (currentPath === '#/profile') {
+        selectProfileTab('audio', true);
+      } else {
+        window.location.hash = '#/profile';
+      }
+    });
+  }
+})();
 
 // Автоматичне оновлення аватарки в хедері при надходженні Realtime-події
 onAvatarChange((newUrl) => {
@@ -115,6 +176,7 @@ async function router() {
   appContainer.innerHTML = route.render();
   if (route.init) route.init();
   initCustomSelects(appContainer);
+  initRangeSliders(appContainer);
 }
 
 window.addEventListener('hashchange', router);

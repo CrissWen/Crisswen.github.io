@@ -609,3 +609,190 @@
 .offline-replay-banner__exit:hover {
   border-color: var(--hazard);
 }
+
+/* ===== Вкладка «Звук» у профілі: картки каналів мікшера ===== */
+.audio-mixer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audio-mixer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .55);
+  transition: border-color .2s ease, background-color .2s ease;
+}
+
+.audio-mixer-card:hover {
+  border-color: var(--metal-lt, var(--hazard));
+  background: color-mix(in srgb, var(--panel-2) 45%, var(--bg));
+}
+
+.audio-mixer-card--master {
+  border-left: 3px solid var(--hazard);
+  background: color-mix(in srgb, var(--panel-2) 30%, var(--bg));
+}
+
+.audio-mixer-list.is-muted .audio-mixer-card--master {
+  border-left-color: var(--danger, #e05252);
+}
+
+.audio-mixer-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.audio-mixer-card__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.audio-mixer-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  color: var(--hazard);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, .5);
+  transition: color .2s ease, border-color .2s ease;
+}
+
+.audio-mixer-card__icon img,
+.audio-mixer-card__icon svg {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.audio-mixer-list.is-muted .audio-mixer-card__icon {
+  opacity: .5;
+}
+
+.audio-mixer-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.audio-mixer-card__title {
+  font-family: var(--head);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.audio-mixer-card__sub {
+  font-size: 11.5px;
+  color: var(--text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audio-mixer-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.audio-mixer-card__val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hazard);
+  text-align: center;
+}
+
+.audio-mixer-list.is-muted .audio-mixer-card__val {
+  color: var(--text-mute);
+}
+
+/* Компактна SVG-кнопка прослуховування звуку каналу */
+.audio-test-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .15s ease;
+}
+
+.audio-test-icon-btn img,
+.audio-test-icon-btn svg {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.audio-test-icon-btn:hover {
+  color: var(--hazard);
+  border-color: var(--hazard);
+  background: var(--panel-2);
+}
+
+.audio-test-icon-btn:active {
+  transform: scale(0.94);
+}
+
+.audio-test-icon-btn__stop {
+  display: none;
+}
+
+.audio-test-icon-btn.is-playing {
+  color: var(--hazard);
+  border-color: var(--hazard);
+  background: color-mix(in srgb, var(--hazard) 14%, var(--panel));
+}
+
+.audio-test-icon-btn.is-playing .audio-test-icon-btn__play {
+  display: none;
+}
+
+.audio-test-icon-btn.is-playing .audio-test-icon-btn__stop {
+  display: block;
+}
+
+@media (max-width: 440px) {
+  .audio-mixer-card {
+    padding: 10px 11px;
+  }
+  .audio-mixer-card__sub {
+    display: none;
+  }
+}

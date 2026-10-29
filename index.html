@@ -42,12 +42,50 @@
         <a class="header-nav-link" id="header-game-link" data-nav-path="#/game" hidden>Гра</a>
       </nav>
     </div>
-    
-    <a href="#/profile" class="header-profile-link">
-      <!-- Додали id="header-user-avatar" і прибрали смайлик -->
-      <span class="header-user-avatar" id="header-user-avatar">?</span>
-      <span class="header-user-name" id="header-user-name">Завантаження...</span>
-    </a>
+
+    <div class="header-right">
+      <a href="#/profile" class="header-profile-link">
+        <!-- Додали id="header-user-avatar" і прибрали смайлик -->
+        <span class="header-user-avatar" id="header-user-avatar">?</span>
+        <span class="header-user-name" id="header-user-name">Завантаження...</span>
+      </a>
+
+      <!-- Швидке керування звуком у хедері (праворуч від профілю) -->
+      <div class="header-audio-widget" id="header-audio-widget">
+        <button
+          type="button"
+          class="bunker-mute-btn header-audio-btn"
+          id="header-audio-btn"
+          aria-label="Увімкнути або вимкнути звук"
+          title="Клік — вимкнути/увімкнути звук"
+        >
+          <img class="bunker-mute-btn__icon bunker-mute-btn__icon--on" src="icons/audio/volume-on.svg" alt="" aria-hidden="true">
+          <img class="bunker-mute-btn__icon bunker-mute-btn__icon--off" src="icons/audio/volume-off.svg" alt="" aria-hidden="true">
+        </button>
+
+        <div class="header-audio-popover" id="header-audio-popover" role="region" aria-label="Швидкі налаштування гучності">
+          <div class="header-audio-popover__head">
+            <span class="header-audio-popover__title">Загальна гучність</span>
+            <span class="header-audio-popover__val" id="header-audio-master-val">80%</span>
+          </div>
+          <input
+            type="range"
+            class="bunker-slider header-audio-slider"
+            id="header-audio-master-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="80"
+            aria-label="Загальна гучність"
+          >
+          <div class="header-audio-popover__foot">
+            <button type="button" class="header-audio-link" id="header-audio-open-settings">
+              Налаштування звуку →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div class="wrap">
@@ -71,6 +109,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/vendor/howler.min.js"></script>
   <!-- Router -->
   <script type="module" src="js/app.js"></script>
 </body>

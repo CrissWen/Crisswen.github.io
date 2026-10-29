@@ -24,6 +24,15 @@ export const ICONS = Object.freeze({
   BUNKER_SIZE: './icons/board/area.svg',
   STAY_TIME: './icons/board/alarm.svg',
   CAPACITY: './icons/board/user.svg',
+
+  // Іконки аудіосистеми (/icons/audio)
+  VOLUME_ON: './icons/audio/volume-on.svg',
+  VOLUME_OFF: './icons/audio/volume-off.svg',
+  AUDIO_SFX: './icons/audio/sfx.svg',
+  AUDIO_UI: './icons/audio/ui.svg',
+  AUDIO_MUSIC: './icons/audio/music.svg',
+  AUDIO_PLAY: './icons/audio/play.svg',
+  AUDIO_STOP: './icons/audio/stop.svg',
 });
 
 // Іменовані експорти для зручного прямого імпорту
@@ -41,6 +50,15 @@ export const ICON_FOOD = ICONS.FOOD;
 export const ICON_BUNKER_SIZE = ICONS.BUNKER_SIZE;
 export const ICON_STAY_TIME = ICONS.STAY_TIME;
 export const ICON_CAPACITY = ICONS.CAPACITY;
+
+// Іменовані експорти аудіоіконок
+export const ICON_VOLUME_ON = ICONS.VOLUME_ON;
+export const ICON_VOLUME_OFF = ICONS.VOLUME_OFF;
+export const ICON_AUDIO_SFX = ICONS.AUDIO_SFX;
+export const ICON_AUDIO_UI = ICONS.AUDIO_UI;
+export const ICON_AUDIO_MUSIC = ICONS.AUDIO_MUSIC;
+export const ICON_AUDIO_PLAY = ICONS.AUDIO_PLAY;
+export const ICON_AUDIO_STOP = ICONS.AUDIO_STOP;
 
 // Експорт каталогу катаклізмів та катастроф
 export {

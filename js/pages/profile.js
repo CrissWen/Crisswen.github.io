@@ -7,8 +7,19 @@ import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAv
 import { setAvatarEl, applyAvatarLetterPadding } from '../utils/avatar.js';
 import { openAvatarCropper } from '../ui/avatar-cropper-modal.js';
 import { esc } from '../utils/security.js';
+import { soundManager, AUDIO_CHANNELS, SOUND_IDS } from '../services/sound-manager.js';
+import { initRangeSliders, setRangeSliderValue } from '../ui/range-slider.js';
+import { ICONS } from '../constants/icons.js';
 
 export function renderProfile() {
+    const settings = soundManager.getSettings();
+
+    const masterPct = Math.round(settings.masterVolume * 100);
+    const sfxPct = Math.round(settings.sfxVolume * 100);
+    const uiPct = Math.round(settings.uiVolume * 100);
+    const musicPct = Math.round(settings.musicVolume * 100);
+    const isMuted = Boolean(settings.muted);
+    const isAmbientPlaying = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
     const themeCardsHtml = THEMES.map(t => `
       <label class="theme-card" for="theme-radio-${esc(t.value)}">
         <input
@@ -43,6 +54,7 @@ export function renderProfile() {
       <nav class="profile-tabs" role="tablist" aria-label="Розділи профілю">
         <button type="button" role="tab" class="profile-tab" id="profile-tab-profile" data-tab="profile" aria-controls="profile-panel-profile">Профіль</button>
         <button type="button" role="tab" class="profile-tab" id="profile-tab-themes" data-tab="themes" aria-controls="profile-panel-themes">Теми</button>
+        <button type="button" role="tab" class="profile-tab" id="profile-tab-audio" data-tab="audio" aria-controls="profile-panel-audio">Звук</button>
         <button type="button" role="tab" class="profile-tab" id="profile-tab-history" data-tab="history" aria-controls="profile-panel-history">Історія ігор</button>
       </nav>
       <div class="block-body">
@@ -96,6 +108,171 @@ export function renderProfile() {
         </fieldset>
       </div>
 
+      <div class="profile-panel" id="profile-panel-audio" role="tabpanel" aria-labelledby="profile-tab-audio" hidden>
+        <div class="profile-tab-header history-toolbar">
+          <span class="profile-tab-title">Мікшер гучності</span>
+          <div class="history-toolbar__actions">
+            <button
+              type="button"
+              class="bunker-mute-btn ${isMuted ? 'is-muted' : ''}"
+              id="profile-audio-mute-btn"
+              aria-label="${isMuted ? 'Увімкнути звук' : 'Вимкнути звук'}"
+              title="${isMuted ? 'Звук вимкнено (клік — увімкнути)' : 'Вимкнути весь звук'}"
+            >
+              <img class="bunker-mute-btn__icon bunker-mute-btn__icon--on" src="${esc(ICONS.VOLUME_ON)}" alt="" aria-hidden="true">
+              <img class="bunker-mute-btn__icon bunker-mute-btn__icon--off" src="${esc(ICONS.VOLUME_OFF)}" alt="" aria-hidden="true">
+            </button>
+          </div>
+        </div>
+
+        <div class="audio-mixer-list ${isMuted ? 'is-muted' : ''}" id="profile-audio-mixer-list">
+          <!-- Master -->
+          <div class="audio-mixer-card audio-mixer-card--master">
+            <div class="audio-mixer-card__top">
+              <div class="audio-mixer-card__head">
+                <span class="audio-mixer-card__icon" aria-hidden="true">
+                  <img src="${esc(ICONS.VOLUME_ON)}" alt="">
+                </span>
+                <div class="audio-mixer-card__info">
+                  <span class="audio-mixer-card__title">Загальна гучність</span>
+                  <span class="audio-mixer-card__sub">Головний рівень усієї аудіосистеми</span>
+                </div>
+              </div>
+              <div class="audio-mixer-card__actions">
+                <span class="audio-mixer-card__val" id="audio-val-master">${isMuted ? 'MUTE' : `${masterPct}%`}</span>
+              </div>
+            </div>
+            <input
+              type="range"
+              class="bunker-slider"
+              id="audio-slider-master"
+              data-channel="${AUDIO_CHANNELS.MASTER}"
+              min="0"
+              max="100"
+              step="1"
+              value="${masterPct}"
+              aria-label="Загальна гучність"
+            >
+          </div>
+
+          <!-- SFX -->
+          <div class="audio-mixer-card">
+            <div class="audio-mixer-card__top">
+              <div class="audio-mixer-card__head">
+                <span class="audio-mixer-card__icon" aria-hidden="true">
+                  <img src="${esc(ICONS.AUDIO_SFX)}" alt="">
+                </span>
+                <div class="audio-mixer-card__info">
+                  <span class="audio-mixer-card__title">Ігрові ефекти</span>
+                  <span class="audio-mixer-card__sub">Кубик, розкриття карток, таймер і сирени</span>
+                </div>
+              </div>
+              <div class="audio-mixer-card__actions">
+                <span class="audio-mixer-card__val" id="audio-val-sfx">${sfxPct}%</span>
+                <button
+                  type="button"
+                  class="audio-test-icon-btn"
+                  data-test-sound="${SOUND_IDS.DICE_ROLL}"
+                  title="Прослухати ефект"
+                  aria-label="Прослухати ігровий ефект"
+                >
+                  <img src="${esc(ICONS.AUDIO_PLAY)}" alt="">
+                </button>
+              </div>
+            </div>
+            <input
+              type="range"
+              class="bunker-slider"
+              id="audio-slider-sfx"
+              data-channel="${AUDIO_CHANNELS.SFX}"
+              min="0"
+              max="100"
+              step="1"
+              value="${sfxPct}"
+              aria-label="Гучність ігрових ефектів"
+            >
+          </div>
+
+          <!-- UI -->
+          <div class="audio-mixer-card">
+            <div class="audio-mixer-card__top">
+              <div class="audio-mixer-card__head">
+                <span class="audio-mixer-card__icon" aria-hidden="true">
+                  <img src="${esc(ICONS.AUDIO_UI)}" alt="">
+                </span>
+                <div class="audio-mixer-card__info">
+                  <span class="audio-mixer-card__title">Інтерфейс</span>
+                  <span class="audio-mixer-card__sub">Наведення на замки, кнопки та перемикачі</span>
+                </div>
+              </div>
+              <div class="audio-mixer-card__actions">
+                <span class="audio-mixer-card__val" id="audio-val-ui">${uiPct}%</span>
+                <button
+                  type="button"
+                  class="audio-test-icon-btn"
+                  data-test-sound="${SOUND_IDS.LOCK_HOVER}"
+                  title="Прослухати звук замка"
+                  aria-label="Прослухати звук інтерфейсу"
+                >
+                  <img src="${esc(ICONS.AUDIO_PLAY)}" alt="">
+                </button>
+              </div>
+            </div>
+            <input
+              type="range"
+              class="bunker-slider"
+              id="audio-slider-ui"
+              data-channel="${AUDIO_CHANNELS.UI}"
+              min="0"
+              max="100"
+              step="1"
+              value="${uiPct}"
+              aria-label="Гучність звуків інтерфейсу"
+            >
+          </div>
+
+          <!-- Music / Ambient -->
+          <div class="audio-mixer-card">
+            <div class="audio-mixer-card__top">
+              <div class="audio-mixer-card__head">
+                <span class="audio-mixer-card__icon" aria-hidden="true">
+                  <img src="${esc(ICONS.AUDIO_MUSIC)}" alt="">
+                </span>
+                <div class="audio-mixer-card__info">
+                  <span class="audio-mixer-card__title">Атмосфера та музика</span>
+                  <span class="audio-mixer-card__sub">Фоновий гул вентиляції та ембієнт бункера</span>
+                </div>
+              </div>
+              <div class="audio-mixer-card__actions">
+                <span class="audio-mixer-card__val" id="audio-val-music">${musicPct}%</span>
+                <button
+                  type="button"
+                  class="audio-test-icon-btn ${isAmbientPlaying ? 'is-playing' : ''}"
+                  id="profile-audio-ambient-btn"
+                  data-test-sound="${SOUND_IDS.BUNKER_AMBIENT}"
+                  title="${isAmbientPlaying ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера'}"
+                  aria-label="Перевірити фоновий ембієнт"
+                >
+                  <img class="audio-test-icon-btn__play" src="${esc(ICONS.AUDIO_PLAY)}" alt="">
+                  <img class="audio-test-icon-btn__stop" src="${esc(ICONS.AUDIO_STOP)}" alt="">
+                </button>
+              </div>
+            </div>
+            <input
+              type="range"
+              class="bunker-slider"
+              id="audio-slider-music"
+              data-channel="${AUDIO_CHANNELS.MUSIC}"
+              min="0"
+              max="100"
+              step="1"
+              value="${musicPct}"
+              aria-label="Гучність фонової музики"
+            >
+          </div>
+        </div>
+      </div>
+
       <div class="profile-panel" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history" hidden>
         <div class="profile-tab-header history-toolbar">
           <span class="profile-tab-title">Збережені партії</span>
@@ -128,7 +305,7 @@ export function renderProfile() {
 // Активна вкладка запам'ятовується на час вкладки браузера (sessionStorage), а не в URL: зміна hash перемалювала би
 // всю сторінку через роутер і скидала би стан.
 const TAB_STORAGE_KEY = 'bunker-profile-tab';
-const TAB_NAMES = ['profile', 'themes', 'history'];
+const TAB_NAMES = ['profile', 'themes', 'audio', 'history'];
 
 
 const STATS_STORAGE_PREFIX = 'bunker_user_stats:';
@@ -151,6 +328,7 @@ function saveCachedStats(userId, stats) {
 }
 
 let currentTabSelector = null;
+let unsubscribeProfileAudio = null;
 
 export function selectProfileTab(name = 'profile', focus = false) {
   if (typeof currentTabSelector === 'function') {
@@ -160,6 +338,10 @@ export function selectProfileTab(name = 'profile', focus = false) {
 
 export function cleanupProfile() {
   currentTabSelector = null;
+  if (typeof unsubscribeProfileAudio === 'function') {
+    unsubscribeProfileAudio();
+    unsubscribeProfileAudio = null;
+  }
 }
 
 let historyLoaded = false;
@@ -326,6 +508,103 @@ function bindHistoryEvents(container) {
   });
 }
 
+function bindAudioEvents() {
+  const panel = document.getElementById('profile-panel-audio');
+  if (!panel) return;
+
+  const muteBtn = document.getElementById('profile-audio-mute-btn');
+  const ambientBtn = document.getElementById('profile-audio-ambient-btn');
+  const mixerList = document.getElementById('profile-audio-mixer-list');
+  const channelSliders = panel.querySelectorAll('.bunker-slider[data-channel]');
+
+  initRangeSliders(panel);
+
+  // Повзунки головних каналів (Master, SFX, UI, Music)
+  channelSliders.forEach(slider => {
+    slider.addEventListener('input', () => {
+      const ch = slider.dataset.channel;
+      const pct = Number(slider.value) || 0;
+      soundManager.setChannelVolume(ch, pct / 100);
+    });
+  });
+
+  // SVG-кнопка Mute у профілі
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      soundManager.toggleMute();
+    });
+  }
+
+  // Делегування кліків на кнопки прослуховування каналів
+  panel.addEventListener('click', (e) => {
+    const testBtn = e.target.closest('[data-test-sound]');
+    if (!testBtn) return;
+    const soundId = testBtn.dataset.testSound;
+    if (!soundId) return;
+
+    // Якщо звук вимкнено (Mute), автоматично розм'ючуємо при натисканні "Тест"
+    if (soundManager.isMuted()) {
+      soundManager.setMuted(false);
+    }
+
+    if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
+      if (soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT)) {
+        soundManager.stop(SOUND_IDS.BUNKER_AMBIENT);
+      } else {
+        soundManager.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
+      }
+      if (ambientBtn) {
+        const playing = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
+        ambientBtn.classList.toggle('is-playing', playing);
+        ambientBtn.title = playing ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера';
+      }
+      return;
+    }
+
+    soundManager.play(soundId, { bypassThrottle: true });
+  });
+
+  // Синхронізація стану UI, якщо гучність змінено через хедер або інший компонент
+  if (typeof unsubscribeProfileAudio === 'function') {
+    unsubscribeProfileAudio();
+  }
+  unsubscribeProfileAudio = soundManager.subscribe((settings) => {
+    const masterPct = Math.round(settings.masterVolume * 100);
+    const sfxPct = Math.round(settings.sfxVolume * 100);
+    const uiPct = Math.round(settings.uiVolume * 100);
+    const musicPct = Math.round(settings.musicVolume * 100);
+    const isMuted = Boolean(settings.muted);
+
+    if (mixerList) {
+      mixerList.classList.toggle('is-muted', isMuted);
+    }
+
+    const setChannelUI = (id, pct, isMaster = false) => {
+      const slider = document.getElementById(`audio-slider-${id}`);
+      const valEl = document.getElementById(`audio-val-${id}`);
+      if (slider) setRangeSliderValue(slider, pct);
+      if (valEl) valEl.textContent = isMaster && isMuted ? 'MUTE' : `${pct}%`;
+    };
+
+    setChannelUI('master', masterPct, true);
+    setChannelUI('sfx', sfxPct);
+    setChannelUI('ui', uiPct);
+    setChannelUI('music', musicPct);
+
+    if (muteBtn) {
+      muteBtn.classList.toggle('is-muted', isMuted);
+      muteBtn.setAttribute('aria-label', isMuted ? 'Увімкнути звук' : 'Вимкнути звук');
+      muteBtn.title = isMuted ? 'Звук вимкнено (клік — увімкнути)' : 'Вимкнути весь звук';
+    }
+
+    if (ambientBtn) {
+      const playing = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
+      ambientBtn.classList.toggle('is-playing', playing);
+      ambientBtn.title = playing ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера';
+    }
+  });
+}
+
 function setupProfileTabs(userId = null) {
     const tabs = [...document.querySelectorAll('.profile-tab')];
     if (!tabs.length) return;
@@ -391,9 +670,10 @@ export async function initProfile() {
         });
     }
 
-    // Тему можна перемкнути незалежно від сесії (хоча на цю сторінку і так не пускає неавторизованих —
+    // Тему та звук можна перемкнути незалежно від сесії (хоча на цю сторінку і так не пускає неавторизованих —
     // перевірка нижче), тож ініціалізуємо одразу, до await supabase.auth.getSession()
     updateSelectedCard(getCurrentTheme());
+    bindAudioEvents();
 
     themeRadios.forEach(radio => {
         radio.addEventListener('change', () => {
