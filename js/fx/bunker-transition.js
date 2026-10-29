@@ -21,9 +21,12 @@ function buildBunkerOverlayMarkup() {
       <!-- ЛІВА БРОНЕСТУЛКА -->
       <div class="bunker-door-leaf bunker-door-leaf--left" data-vault-left>
         <div class="bunker-door__hazard-edge"></div>
-        <div class="bunker-door__bolts">
-          <div class="bunker-door__bolt bunker-door__bolt--1" data-vault-bolt></div>
-          <div class="bunker-door__bolt bunker-door__bolt--2" data-vault-bolt></div>
+        <!-- Вертикальні запірні ригелі в раму (стелю та підлогу) -->
+        <div class="bunker-door__vbolt-sleeve bunker-door__vbolt-sleeve--top">
+          <div class="bunker-door__vbolt bunker-door__vbolt--top" data-vault-bolt></div>
+        </div>
+        <div class="bunker-door__vbolt-sleeve bunker-door__vbolt-sleeve--bottom">
+          <div class="bunker-door__vbolt bunker-door__vbolt--bottom" data-vault-bolt></div>
         </div>
         <div class="bunker-door__plate">
           <svg class="bunker-door__ribs" viewBox="0 0 400 600" preserveAspectRatio="none" aria-hidden="true">
@@ -49,6 +52,13 @@ function buildBunkerOverlayMarkup() {
       <!-- ПРАВА БРОНЕСТУЛКА -->
       <div class="bunker-door-leaf bunker-door-leaf--right" data-vault-right>
         <div class="bunker-door__hazard-edge"></div>
+        <!-- Вертикальні запірні ригелі в раму (стелю та підлогу) -->
+        <div class="bunker-door__vbolt-sleeve bunker-door__vbolt-sleeve--top">
+          <div class="bunker-door__vbolt bunker-door__vbolt--top" data-vault-bolt></div>
+        </div>
+        <div class="bunker-door__vbolt-sleeve bunker-door__vbolt-sleeve--bottom">
+          <div class="bunker-door__vbolt bunker-door__vbolt--bottom" data-vault-bolt></div>
+        </div>
         <div class="bunker-door__plate">
           <svg class="bunker-door__ribs" viewBox="0 0 400 600" preserveAspectRatio="none" aria-hidden="true">
             <line x1="0" y1="0" x2="400" y2="600" stroke="currentColor" stroke-width="3" />
@@ -461,14 +471,19 @@ export async function playBunkerDoorTransition({
 
   soundManager.play(SOUND_IDS.BUNKER_HYDRAULIC, { bypassThrottle: true });
 
-  const boltAnimations = boltsEls.map((boltEl, idx) =>
-    animateElement(
+  const boltAnimations = boltsEls.map((boltEl) => {
+    const isTop = boltEl?.classList?.contains?.('bunker-door__vbolt--top') ?? String(boltEl?.className || '').includes('bunker-door__vbolt--top');
+    const targetY = isTop ? -38 : 38;
+    return animateElement(
       boltEl,
-      [{ transform: 'translate3d(-26px, 0, 0)' }, { transform: 'translate3d(56px, 0, 0)' }],
-      { duration: 380, delay: idx * 120, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      [
+        { transform: 'translate3d(-50%, 0, 0)' },
+        { transform: `translate3d(-50%, ${targetY}px, 0)` },
+      ],
+      { duration: 380, delay: isTop ? 40 : 120, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       signal
-    )
-  );
+    );
+  });
 
   const wheelLockAnim = animateElement(
     wheelEl,
@@ -493,12 +508,17 @@ export async function playBunkerDoorTransition({
 
   soundManager.play(SOUND_IDS.BUNKER_DOOR_OPEN, { bypassThrottle: true });
 
-  // Втягуємо ригелі та розблоковуємо штурвал
+  // Втягуємо вертикальні ригелі та розблоковуємо штурвал
   boltsEls.forEach((boltEl) => {
+    const isTop = boltEl?.classList?.contains?.('bunker-door__vbolt--top') ?? String(boltEl?.className || '').includes('bunker-door__vbolt--top');
+    const fromY = isTop ? -38 : 38;
     animateElement(
       boltEl,
-      [{ transform: 'translate3d(56px, 0, 0)' }, { transform: 'translate3d(-26px, 0, 0)' }],
-      { duration: 250, easing: 'ease-in' },
+      [
+        { transform: `translate3d(-50%, ${fromY}px, 0)` },
+        { transform: 'translate3d(-50%, 0, 0)' },
+      ],
+      { duration: 240, easing: 'ease-in' },
       signal
     );
   });
