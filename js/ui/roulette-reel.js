@@ -134,7 +134,7 @@ function defaultRenderItem(item, node) {
 }
 
 // host — елемент, куди монтується рулетка. options:
-//   pool, fillers, result, seed, stopIndex, fillerZone — див. buildRibbon (utils/roulette-ribbon.js); item = { key, src, ... }
+//   pool, fillers, result, seed, stopIndex, fillerZone, scatter — див. buildRibbon (utils/roulette-ribbon.js); item = { key, src, ... }
 //   durationMs    — скільки триває кручення; easingPower — різкість гальмування (3 за замовчуванням)
 //   mode          — 'full' | 'light' (визначте через resolveReelMode)
 //   renderItem    — (item, node) => void, власна відмальовка елемента (за замовчуванням іконка)
@@ -155,6 +155,7 @@ export function createRouletteReel(host, options) {
     durationMs,
     easingPower = 3,
     fillerZone = 0.55,
+    scatter = false,
     mode = 'full',
     renderItem = defaultRenderItem,
     onTick = null,
@@ -242,14 +243,19 @@ export function createRouletteReel(host, options) {
     trackEl.removeChild(probe);
     const around = Math.ceil((root.clientWidth || 640) / 2 / step) + 2;
 
-    ribbon = buildRibbon({ pool, fillers, result, seed, stopIndex, head: around, tail: around, fillerZone });
+    // Криву рахуємо ДО стрічки: у режимі scatter стрічка має знати, в який бік підсунеться (decoyOffset),
+    // щоб з того боку гарантовано стояв «інший» елемент. stopRel збігається з ribbon.stopIndex - ribbon.startIndex
     curve = createTravelCurve({
-      stopRel: ribbon.stopIndex - ribbon.startIndex,
+      stopRel: Math.max(1, Math.floor(stopIndex)),
       landingOffset,
       seed,
       power: easingPower,
       durationMs,
       suspense
+    });
+    ribbon = buildRibbon({
+      pool, fillers, result, seed, stopIndex, head: around, tail: around, fillerZone,
+      scatter, decoySide: curve.decoyOffset
     });
 
     const fragment = document.createDocumentFragment();

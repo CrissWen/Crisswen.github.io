@@ -3,12 +3,14 @@
 // і не звертається до Supabase: усе рахується локально в цій вкладці.
 // (Хедер сторінки живе в survival-test-header.js — він єдиний читає сесію, лише для імені в профілі.)
 import { getGameConfig } from '../config/config-manager.js';
+import { playSurvivalRoulette, primeSurvivalRouletteAudio } from './survival-roulette.js';
 //
 // ЛОГІКА
 //   Крок 1: їжа.              «Ні» -> фінал "голод"
 //   Крок 2: хвороби/ізоляція. «Ні» -> фінал "загибель"
 //   Крок 3: ворожий бункер.   «Немає можливості відбитися» -> фінал "захоплення"
-//   Крок 4: решта питань списком + «Дізнатися результат» (бали сумуються)
+//   Крок 4: решта питань списком + «Дізнатися результат» (бали сумуються), далі рулетка «серце / череп» (survival-roulette.js)
+//           і лише після неї — вікно з підсумком
 // Усі відповіді за замовчуванням — «Ні» (останній варіант), тому «Далі» активна завжди.
 // Бали користувач не бачить — вони лише вирішують, який із двох фіналів показати наприкінці.
 // Поріг успіху і вага відповіді — у конфігу (survivalTest.passScore / survivalTest.goodAnswerPoints).
@@ -99,6 +101,7 @@ const RESULTS = {
 let step = 0;
 let resultKey = null;
 let answers = createDefaultAnswers();
+let spinning = false; // поки йде рулетка, повторні кліки по «Дізнатися результат» ігноруємо
 
 function createDefaultAnswers() {
   const a = {};
@@ -181,9 +184,18 @@ function goBack() {
 }
 
 async function finish() {
-  resultKey = await computeFinalResult();
-  step = 'result';
-  render();
+  if (spinning) return;
+  spinning = true;
+  try {
+    const result = await computeFinalResult(); // вердикт визначають бали; рулетка його лише розігрує
+    primeSurvivalRouletteAudio();               // клік — жест користувача: браузер дозволить звук рулетки
+    await playSurvivalRoulette(result === 'success');
+    resultKey = result;
+    step = 'result';
+    render();
+  } finally {
+    spinning = false;
+  }
 }
 
 function restart() {

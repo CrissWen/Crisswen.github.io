@@ -115,6 +115,10 @@ const NO_KEYS = new Set();
 //   head / tail — скільки елементів додати ліворуч від старту й праворуч від результату (залежить від ширини екрана)
 //   fillerZone  — частка шляху від старту (0..1), у межах якої дозволені декоративні елементи
 //   fillerShare — ймовірність обрати декоративний елемент у цій зоні
+//   scatter     — стрічка з дуже малого набору (напр. двох іконок): елементи йдуть у випадковому порядку, а не чергуються
+//                 (серія однакових не довша за 3). Біля результату стоїть хоча б один «інший» елемент: з боку підсуву — завжди,
+//                 з іншого боку — як випаде, тож підсув можливий вліво, вправо або в обидва боки
+//   decoySide   — куди підсунеться стрічка (curve.decoyOffset: -1 вліво, 1 вправо, 0 — нікуди); потрібен лише для scatter
 // Повертає { items, startIndex, stopIndex }: індекси — у масиві items.
 export function buildRibbon({
   pool,
@@ -125,7 +129,9 @@ export function buildRibbon({
   head = 0,
   tail = 0,
   fillerZone = 0.55,
-  fillerShare = 0.6
+  fillerShare = 0.6,
+  scatter = false,
+  decoySide = 0
 }) {
   if (!result) throw new Error('buildRibbon: потрібен результат рулетки');
 
@@ -146,6 +152,43 @@ export function buildRibbon({
     return list[Math.floor(rng() * list.length)];
   }
 
+  // Режим scatter: вільний випадковий порядок із обмеженням довжини серії однакових (інакше з двох іконок вийшло б чергування)
+  const MAX_RUN = 3;
+  function pickLoose(rng, recent) {
+    const candidate = real[Math.floor(rng() * real.length)];
+    const tailRun = recent.slice(-MAX_RUN);
+    if (real.length > 1 && tailRun.length === MAX_RUN && tailRun.every(item => item.key === candidate.key)) {
+      const others = real.filter(item => item.key !== candidate.key);
+      return others[Math.floor(rng() * others.length)];
+    }
+    return candidate;
+  }
+
+  // Сусіди результату в режимі scatter. З боку підсуву стоїть «інший» елемент, щоб підсув був помітний; з протилежного боку — випадково.
+  // Без підсуву (decoySide 0) візерунок теж випадковий: лише ліворуч, лише праворуч або з обох боків, тож за стрічкою не вгадати, чи буде підсув
+  function shapeResultNeighbors(items, rng) {
+    const others = real.filter(item => item.key !== resultKey);
+    if (others.length === 0) return;
+    let leftOther;
+    let rightOther;
+    if (decoySide < 0) {
+      leftOther = true;
+      rightOther = rng() < 0.5;
+    } else if (decoySide > 0) {
+      rightOther = true;
+      leftOther = rng() < 0.5;
+    } else {
+      const roll = Math.floor(rng() * 3); // 0 — лише ліворуч, 1 — лише праворуч, 2 — з обох боків
+      leftOther = roll !== 1;
+      rightOther = roll !== 0;
+    }
+    const place = (index, other) => {
+      items[index] = other ? others[Math.floor(rng() * others.length)] : { ...result };
+    };
+    place(stop - 1, leftOther);
+    place(stop + 1, rightOther);
+  }
+
   // Основна частина: однакова для всіх клієнтів, бо залежить лише від seed
   const rng = createRng(seed);
   const main = [];
@@ -155,18 +198,25 @@ export function buildRibbon({
       main.push({ ...result, isResult: true });
       continue;
     }
+    if (scatter) {
+      main.push(pickLoose(rng, main));
+      continue;
+    }
     const nearResult = Math.abs(i - stop) <= 1;
     const prevKey = i > 0 ? main[i - 1].key : null;
     const allowFillers = i / stop < fillerZone; // після результату i / stop > 1, тож там лише справжні
     main.push(pick(rng, prevKey, nearResult ? new Set([resultKey]) : NO_KEYS, allowFillers));
   }
+  if (scatter) shapeResultNeighbors(main, rng);
 
   // Голова (ліворуч від старту): на старті вона видна, але стрічка одразу від'їжджає, тож тут дозволені будь-які елементи
   const headItems = new Array(Math.max(0, head));
   const headRng = createRng((seed ^ 0xA5A5A5A5) >>> 0);
+  const recentHead = [main[0]]; // для scatter: що вже стоїть поруч (рахуємо серію однакових)
   let prevKey = main[0].key;
   for (let i = headItems.length - 1; i >= 0; i--) {
-    headItems[i] = pick(headRng, prevKey, NO_KEYS, true);
+    headItems[i] = scatter ? pickLoose(headRng, recentHead) : pick(headRng, prevKey, NO_KEYS, true);
+    recentHead.push(headItems[i]);
     prevKey = headItems[i].key;
   }
 
@@ -175,7 +225,7 @@ export function buildRibbon({
   const tailRng = createRng((seed ^ 0x5A5A5A5A) >>> 0);
   prevKey = main[main.length - 1].key;
   for (let i = 0; i < Math.max(0, tail - SHARED_TAIL); i++) {
-    const item = pick(tailRng, prevKey, NO_KEYS, false);
+    const item = scatter ? pickLoose(tailRng, [...main.slice(-MAX_RUN), ...extraTail]) : pick(tailRng, prevKey, NO_KEYS, false);
     extraTail.push(item);
     prevKey = item.key;
   }
