@@ -89,14 +89,14 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.LOCK_HOVER]: Object.freeze({
     id: SOUND_IDS.LOCK_HOVER,
     label: 'Наведення на замок',
-    src: ['./audio/ui/lock-hover.webm', './audio/ui/lock-hover.mp3'],
+    src: ['./audio/ui/lock-hover.wav'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.35,   // делікатний тихий відгук при наведенні
-    throttleMs: 65,     // анти-спам: не частіше ніж раз на 65 мс при проведенні мишею по таблиці
+    baseVolume: 0.15,   // делікатний тихий відгук при наведенні
+    throttleMs: 75,     // анти-спам: не частіше ніж раз на 65 мс при проведенні мишею по таблиці
     interrupt: true,    // обривати попередній семпл, щоб не накладалися
     maxInstances: 1,
     pitchShift: 0.05,   // ±5% варіація тону, щоб серія замків звучала живо, а не механічно
-    preload: false,
+    preload: true,
     synthType: 'lock-hover',
   }),
 
