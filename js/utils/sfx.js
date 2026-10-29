@@ -59,6 +59,13 @@ function applyGain() {
   if (masterGain) masterGain.gain.value = muted || !enabled ? 0 : volume;
 }
 
+// Перемикач звуку в іншій вкладці (напр. у грі, поки тест відкритий окремо): події storage приходять лише в інші вкладки
+window.addEventListener('storage', event => {
+  if (event.key !== MUTE_KEY) return;
+  muted = event.newValue === '1';
+  applyGain();
+});
+
 // Браузери вмикають звук лише після жесту користувача; iOS Safari вимагає resume() саме всередині обробника жесту
 export function unlockAudio() {
   const ctx = ensureContext();

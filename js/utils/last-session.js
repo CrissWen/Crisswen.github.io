@@ -21,13 +21,14 @@ export function getLastRoom(userId) {
   }
 }
 
-// Оновлює вкладку: code є → показуємо посилання на кімнату; немає → ховаємо вкладку
-export function applyGameTab(code) {
+// Оновлює вкладку: code є → показуємо посилання на кімнату; немає → ховаємо вкладку.
+// base — префікс href для сторінок поза SPA (survival-test.html передає 'index.html')
+export function applyGameTab(code, base = '') {
   const link = document.getElementById('header-game-link');
   if (!link) return;
 
   if (code) {
-    link.setAttribute('href', '#/game?room=' + encodeURIComponent(code));
+    link.setAttribute('href', base + '#/game?room=' + encodeURIComponent(code));
     link.title = 'Повернутися до кімнати ' + code;
     link.hidden = false;
   } else {
@@ -59,9 +60,9 @@ export function clearLastRoom(userId) {
 // Викликається роутером на кожній навігації: одразу показує стан за localStorage (без миготіння),
 // потім перевіряє в БД, що кімната досі існує і не закрита. Помилка мережі стан не міняє —
 // ховати вкладку лише через збій з'єднання ми не стаємо.
-export async function syncGameTab(userId) {
+export async function syncGameTab(userId, base = '') {
   const code = getLastRoom(userId);
-  applyGameTab(code);
+  applyGameTab(code, base);
   if (!code) return;
 
   const token = ++syncToken;
