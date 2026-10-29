@@ -57,6 +57,10 @@ export const SOUND_IDS = Object.freeze({
   TIMER_END: 'timer-end',
   CATACLYSM_ALERT: 'cataclysm-alert',
   PLAYER_KICK: 'player-kick',
+  BUNKER_DOOR_CLOSE: 'bunker-door-close',
+  BUNKER_DOOR_SLAM: 'bunker-door-slam',
+  BUNKER_HYDRAULIC: 'bunker-hydraulic',
+  BUNKER_DOOR_OPEN: 'bunker-door-open',
 
   // --- Музика та ембієнт (MUSIC) ---
   BUNKER_AMBIENT: 'bunker-ambient',
@@ -229,6 +233,58 @@ export const SOUND_CATALOG = Object.freeze({
     maxInstances: 1,
     preload: false,
     synthType: 'kick',
+  }),
+
+  [SOUND_IDS.BUNKER_DOOR_CLOSE]: Object.freeze({
+    id: SOUND_IDS.BUNKER_DOOR_CLOSE,
+    label: 'Рух гермодверей (закриття)',
+    src: ['./audio/sfx/bunker-door-close.webm', './audio/sfx/bunker-door-close.mp3'],
+    channel: AUDIO_CHANNELS.SFX,
+    baseVolume: 0.7,
+    throttleMs: 300,
+    interrupt: true,
+    maxInstances: 1,
+    preload: false,
+    synthType: 'door-close',
+  }),
+
+  [SOUND_IDS.BUNKER_DOOR_SLAM]: Object.freeze({
+    id: SOUND_IDS.BUNKER_DOOR_SLAM,
+    label: 'Удар зачинення шлюзу',
+    src: ['./audio/sfx/bunker-door-slam.webm', './audio/sfx/bunker-door-slam.mp3'],
+    channel: AUDIO_CHANNELS.SFX,
+    baseVolume: 0.85,
+    throttleMs: 300,
+    interrupt: true,
+    maxInstances: 1,
+    preload: false,
+    synthType: 'door-slam',
+  }),
+
+  [SOUND_IDS.BUNKER_HYDRAULIC]: Object.freeze({
+    id: SOUND_IDS.BUNKER_HYDRAULIC,
+    label: 'Гідравліка та ригелі шлюзу',
+    src: ['./audio/sfx/bunker-hydraulic.webm', './audio/sfx/bunker-hydraulic.mp3'],
+    channel: AUDIO_CHANNELS.SFX,
+    baseVolume: 0.65,
+    throttleMs: 250,
+    interrupt: true,
+    maxInstances: 1,
+    preload: false,
+    synthType: 'door-hydraulic',
+  }),
+
+  [SOUND_IDS.BUNKER_DOOR_OPEN]: Object.freeze({
+    id: SOUND_IDS.BUNKER_DOOR_OPEN,
+    label: 'Відкриття шлюзу бункера',
+    src: ['./audio/sfx/bunker-door-open.webm', './audio/sfx/bunker-door-open.mp3'],
+    channel: AUDIO_CHANNELS.SFX,
+    baseVolume: 0.75,
+    throttleMs: 300,
+    interrupt: true,
+    maxInstances: 1,
+    preload: false,
+    synthType: 'door-open',
   }),
 
   // ================= Музика та атмосфера (MUSIC) =================

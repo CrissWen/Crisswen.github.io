@@ -39,6 +39,7 @@ import { syncServerTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
+import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -54,6 +55,7 @@ let localRoomState = null;
 let pendingDiceLogId = null; // id запису в лозі про кидок, який прихований до зупинки кубика
 let pendingDiceLogTimer = null;
 let renderSkippedForPackSelect = false; // оновлення кімнати очікування пропущено, бо ведучий тримає у фокусі список паків
+let awaitingDoorSeal = false; // true, поки бронедвері старту гри ще зачиняються (дошку монтуємо в момент герметизації)
 
 // Згортання верхньої навігаційної панелі під час гри (особливо важливо на телефонах)
 let lastScrollY = 0;
@@ -449,7 +451,19 @@ function handleRoomUpdate(patch) {
   }
 
   // Гра щойно почалася (характеристики роздано) — пропонуємо повернути телефон горизонтально або продовжити вертикально
-  if (!wasGameStarted && isGameStartedNow) showOrientationPrompt();
+  if (!wasGameStarted && isGameStartedNow) {
+    awaitingDoorSeal = true;
+    playBunkerDoorTransition({
+      onSealed: () => {
+        awaitingDoorSeal = false;
+        if (!awaitingDoorSeal) ctx.refreshBoard();
+      },
+      onComplete: () => {
+        showOrientationPrompt();
+      },
+    });
+    return;
+  }
 
   // Нова подія від ведучого (крадіжка, зміна характеристики тощо) — показуємо всім гравцям тост по-центру екрана.
   const hostEvent = localRoomState.bunker_state?.latest_host_event;
@@ -468,11 +482,11 @@ function handleRoomUpdate(patch) {
     clearTimeout(pendingDiceLogTimer);
     pendingDiceLogTimer = setTimeout(() => {
       pendingDiceLogId = null;
-      ctx.refreshBoard();
+      if (!awaitingDoorSeal) ctx.refreshBoard();
     }, DICE_ROLL_MS);
   }
 
-  ctx.refreshBoard();
+  if (!awaitingDoorSeal) ctx.refreshBoard();
 }
 
 function setupActionListeners() {
@@ -509,7 +523,7 @@ function handleGlobalChange(e) {
 function handleGlobalFocusOut(e) {
   if (e.target.id !== 'wr-pack-select' || !renderSkippedForPackSelect) return;
   renderSkippedForPackSelect = false;
-  ctx.refreshBoard();
+  if (!awaitingDoorSeal) ctx.refreshBoard();
 }
 
 // Копіювання коду/посилання-запрошення з кімнати очікування (waiting-room.js). Відповідне вхідне поле шукається через
@@ -676,4 +690,6 @@ export function cleanupGame() {
   renderSkippedForPackSelect = false;
   clearTimeout(pendingDiceLogTimer);
   pendingDiceLogId = null;
+  awaitingDoorSeal = false;
+  cancelBunkerDoorTransition();
 }

@@ -657,6 +657,147 @@ class SoundManager {
         break;
       }
 
+      case 'door-close': {
+        // Важкий низькочастотний гул сервоприводів та рейок при повільному розгоні бронестулок (~1.45с)
+        const osc = ctx.createOscillator();
+        const sub = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(54 * rate, now);
+        osc.frequency.linearRampToValueAtTime(96 * rate, now + 0.95);
+        osc.frequency.linearRampToValueAtTime(60 * rate, now + 1.4);
+
+        sub.type = 'triangle';
+        sub.frequency.setValueAtTime(34 * rate, now);
+        sub.frequency.linearRampToValueAtTime(50 * rate, now + 1.35);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(160, now);
+        filter.frequency.linearRampToValueAtTime(380, now + 1.05);
+
+        masterGain.gain.setValueAtTime(0.001, now);
+        masterGain.gain.linearRampToValueAtTime(effectiveVol * 0.45, now + 0.18);
+        masterGain.gain.setValueAtTime(effectiveVol * 0.45, now + 1.15);
+        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.42);
+
+        osc.connect(filter);
+        sub.connect(filter);
+        filter.connect(masterGain);
+
+        osc.start(now);
+        sub.start(now);
+        osc.stop(now + 1.45);
+        sub.stop(now + 1.45);
+        break;
+      }
+
+      case 'door-slam': {
+        // Масивний удар зіткнення багатотонних стулок + металевий резонанс (~0.42с)
+        const subOsc = ctx.createOscillator();
+        const clangOsc = ctx.createOscillator();
+        const clangGain = ctx.createGain();
+
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(175 * rate, now);
+        subOsc.frequency.exponentialRampToValueAtTime(28 * rate, now + 0.36);
+
+        clangOsc.type = 'triangle';
+        clangOsc.frequency.setValueAtTime(320 * rate, now);
+        clangOsc.frequency.exponentialRampToValueAtTime(95 * rate, now + 0.18);
+
+        masterGain.gain.setValueAtTime(effectiveVol * 0.72, now);
+        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        clangGain.gain.setValueAtTime(effectiveVol * 0.38, now);
+        clangGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+
+        subOsc.connect(masterGain);
+        clangOsc.connect(clangGain);
+        clangGain.connect(ctx.destination);
+
+        subOsc.start(now);
+        clangOsc.start(now);
+        subOsc.stop(now + 0.42);
+        clangOsc.stop(now + 0.2);
+        break;
+      }
+
+      case 'door-hydraulic': {
+        // Подвійне клацання ригелів + пневматичне шипіння пари (декомпресія ~0.46с)
+        [0, 0.11].forEach((offset, idx) => {
+          const boltOsc = ctx.createOscillator();
+          const boltGain = ctx.createGain();
+          boltOsc.type = 'triangle';
+          const baseFreq = idx === 0 ? 440 : 560;
+          boltOsc.frequency.setValueAtTime(baseFreq * rate, now + offset);
+          boltOsc.frequency.exponentialRampToValueAtTime(170 * rate, now + offset + 0.065);
+
+          boltGain.gain.setValueAtTime(effectiveVol * 0.42, now + offset);
+          boltGain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07);
+
+          boltOsc.connect(boltGain);
+          boltGain.connect(ctx.destination);
+          boltOsc.start(now + offset);
+          boltOsc.stop(now + offset + 0.075);
+        });
+
+        // Генерація короткого шумового імпульсу пневматики
+        const bufferSize = Math.floor(ctx.sampleRate * 0.32);
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const bpFilter = ctx.createBiquadFilter();
+        bpFilter.type = 'bandpass';
+        bpFilter.frequency.setValueAtTime(1900, now + 0.14);
+        bpFilter.frequency.exponentialRampToValueAtTime(650, now + 0.44);
+        bpFilter.Q.setValueAtTime(2.2, now + 0.14);
+
+        const hissGain = ctx.createGain();
+        hissGain.gain.setValueAtTime(0.001, now + 0.14);
+        hissGain.gain.linearRampToValueAtTime(effectiveVol * 0.28, now + 0.18);
+        hissGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+        noise.connect(bpFilter);
+        bpFilter.connect(hissGain);
+        hissGain.connect(ctx.destination);
+        noise.start(now + 0.14);
+        noise.stop(now + 0.46);
+        break;
+      }
+
+      case 'door-open': {
+        // Розблокування замка + величний гідравлічний відкат стулок (~1.35с)
+        const osc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(48 * rate, now);
+        osc.frequency.exponentialRampToValueAtTime(116 * rate, now + 0.98);
+        osc.frequency.linearRampToValueAtTime(70 * rate, now + 1.32);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.linearRampToValueAtTime(460, now + 0.85);
+        filter.frequency.linearRampToValueAtTime(140, now + 1.32);
+
+        masterGain.gain.setValueAtTime(0.001, now);
+        masterGain.gain.linearRampToValueAtTime(effectiveVol * 0.42, now + 0.1);
+        masterGain.gain.setValueAtTime(effectiveVol * 0.38, now + 0.95);
+        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.34);
+
+        osc.connect(filter);
+        filter.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 1.36);
+        break;
+      }
+
       default: {
         const osc = ctx.createOscillator();
         osc.type = 'sine';

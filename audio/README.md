@@ -15,6 +15,10 @@
   - `timer-end.mp3` / `.webm` — завершення часу таймера
   - `cataclysm-siren.mp3` / `.webm` — сирена або оповіщення катаклізму
   - `player-kick.mp3` / `.webm` — вигнання гравця з бункера
+  - `bunker-door-close.mp3` / `.webm` — рух гермодверей при закритті
+  - `bunker-door-slam.mp3` / `.webm` — важкий удар зачинення шлюзу
+  - `bunker-hydraulic.mp3` / `.webm` — клацання ригелів та пневматичне шипіння
+  - `bunker-door-open.mp3` / `.webm` — розблокування та відкат шлюзу бункера
 - **`/audio/music/`** — Фонова музика та ембієнт:
   - `bunker-ambient.mp3` / `.webm` — фоновий гул / атмосфера бункера
 
