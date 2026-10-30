@@ -24,6 +24,11 @@ function renderCataclysmIcon(icon) {
   return `<span class="cataclysm-emoji-icon">${esc(String(iconSrc).replace(/\uFE0F/g, '\uFE0E'))}</span>`;
 }
 
+// Видаляємо тестове плаваюче віконце, якщо воно залишилось у DOM
+if (typeof document !== 'undefined') {
+  document.getElementById('cataclysm-floating-preview')?.remove();
+}
+
 export function cataclysm(data) {
   const blockId = 'block-cataclysm';
   const collapsed = isBlockCollapsed(blockId);
@@ -48,7 +53,6 @@ export function cataclysm(data) {
   // Форматуємо число населення
   let popDisplay = "";
   if (data.population && data.population !== "Невідомо") {
-    // Використовуємо toLocaleString для гарного форматування чисел, якщо це число
     const formattedPop = !isNaN(data.population) 
       ? Number(data.population).toLocaleString('uk-UA') 
       : data.population;
@@ -68,15 +72,28 @@ export function cataclysm(data) {
     <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
       ${headHtml}
       <div class="block-body" id="${blockId}-body">
-        <div class="cataclysm-row">
-          <div class="cataclysm-main">
-            <div class="cataclysm-icon">${renderCataclysmIcon(data.icon)}</div>
-            <div class="cataclysm-content">
+        <div class="cataclysm-card">
+          <div class="cataclysm-header">
+            <div class="cataclysm-title-row">
+              <div class="cataclysm-icon">${renderCataclysmIcon(data.icon)}</div>
               <p class="cataclysm-title">${esc(data.title)}</p>
+            </div>
+            ${popDisplay}
+          </div>
+          
+          <div class="cataclysm-desc-wrap">
+            <div class="cataclysm-formular">
+              <div class="cataclysm-corner cataclysm-corner-tl" aria-hidden="true"></div>
+              <div class="cataclysm-corner cataclysm-corner-tr" aria-hidden="true"></div>
+              <div class="cataclysm-corner cataclysm-corner-bl" aria-hidden="true"></div>
+              <div class="cataclysm-corner cataclysm-corner-br" aria-hidden="true"></div>
+              <div class="cataclysm-prefix">
+                <span class="cataclysm-chevron" aria-hidden="true">▶</span>
+                <span class="cataclysm-label">ПРОТОКОЛ СПОСТЕРЕЖЕННЯ ЗАГРОЗИ</span>
+              </div>
               <p class="cataclysm-desc">${esc(data.desc)}</p>
             </div>
           </div>
-          ${popDisplay}
         </div>
       </div>
     </section>
