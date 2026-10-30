@@ -168,8 +168,8 @@
   position: absolute;
   width: 10px;
   height: 10px;
-  border-color: var(--danger);
-  opacity: 0.85;
+  border-color: color-mix(in srgb, var(--metal) 85%, transparent);
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -229,21 +229,22 @@
 }
 
 /* ===== Bunker info block ===== */
-/* Верхній ярус: Повноширинний формуляр опису з фірмовими кутовими засічками */
-.bunker-formular {
+/* Базовий уніфікований відсік для всіх секторів (А, Б, В) */
+.bunker-sector-box {
   position: relative;
   background: color-mix(in srgb, var(--panel-2) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--metal) 60%, transparent);
   padding: 16px 20px;
   border-radius: var(--radius-sm);
-  margin-bottom: 20px;
+  box-sizing: border-box;
 }
 
 .bunker-corner {
   position: absolute;
   width: 10px;
   height: 10px;
-  border-color: var(--metal-lt, #8a99a8);
-  opacity: 0.85;
+  border-color: color-mix(in srgb, var(--metal) 85%, transparent);
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -275,33 +276,76 @@
   border-right: 2px solid;
 }
 
-.bunker-prefix {
+.bunker-sector-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--metal-lt, #8a99a8);
-  margin-bottom: 8px;
-  letter-spacing: 0.06em;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
-.bunker-chevron {
-  color: var(--ok, #4ade80);
-  font-size: 10px;
-}
-
-.bunker-status-pill {
-  margin-left: auto;
+.sector-badge {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--ok, #4ade80);
+  color: var(--text);
+  background: var(--metal);
+  border: 1px solid var(--metal-lt);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.sector-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.sector-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ok);
   background: color-mix(in srgb, var(--ok) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--ok) 25%, transparent);
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: var(--radius-xs);
   letter-spacing: 0.04em;
+}
+
+.sector-status .status-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+}
+
+.sector-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--hazard);
+  background: color-mix(in srgb, var(--hazard) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hazard) 25%, transparent);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+}
+
+/* Сектор А: Житловий блок на всю ширину */
+.bunker-sector-box--life {
+  margin-bottom: 16px;
 }
 
 .bunker-desc {
@@ -314,46 +358,24 @@
   word-break: break-word;
 }
 
-/* Нижній ярус: Інвентар зліва + Характеристики справа */
-.bunker-details-row {
+/* Нижній ярус: Сектори Б та В */
+.bunker-sectors-row {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: space-between;
-  gap: clamp(24px, 3.5cqi, 44px);
+  gap: 16px;
 }
 
-/* Ліва колонка: Інвентар */
-.bunker-equip-col {
-  flex: 1 1 280px;
-  max-width: 400px;
-  min-width: 220px;
+/* Сектор Б: Складський відсік */
+.bunker-sector-box--cargo {
+  flex: 1 1 340px;
+  max-width: 440px;
+  min-width: 240px;
   display: flex;
   flex-direction: column;
 }
 
-.bunker-col-title {
-  font-family: var(--mono);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-mute);
-  margin: 0 0 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.bunker-col-title .title-led {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background-color: var(--ok);
-  border-radius: 50%;
-  box-shadow: 0 0 6px var(--ok);
-}
-
-.equipment-list {
+.bunker-cargo-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -363,44 +385,82 @@
   width: 100%;
 }
 
-.equipment-item {
-  font-family: var(--mono);
-  font-size: 13.5px;
-  color: var(--text);
-  padding: 9px 16px 9px 12px;
+.bunker-cargo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--metal);
   border-left: 3px solid var(--ok);
-  background: var(--panel-2);
   border-radius: var(--radius-sm);
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
-  overflow-wrap: break-word;
-  word-break: break-word;
+  padding: 8px 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
   box-sizing: border-box;
 }
 
-.equipment-item--empty {
-  border-left-color: var(--metal);
-  color: var(--text-mute);
-  font-size: 12.5px;
-  opacity: 0.7;
+.bunker-cargo-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hazard);
+  background: color-mix(in srgb, var(--hazard) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hazard) 25%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
 }
 
-/* Права колонка: Характеристики */
-.bunker-stats-col {
-  flex: 1 1 360px;
-  max-width: 680px;
+.bunker-cargo-name {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: var(--text);
+  flex: 1;
+  word-break: break-word;
+}
+
+.bunker-cargo-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+  flex-shrink: 0;
+}
+
+.bunker-cargo-empty-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 16px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.bunker-cargo-empty-text {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: var(--text-mute);
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+/* Сектор В: Системи життєзабезпечення */
+.bunker-sector-box--systems {
+  flex: 1 1 420px;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-/* Сітка 2х2 для характеристик бункера */
 .info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 0;
-  margin-top: 0;
-  align-items: stretch;
+  margin: 0;
   flex: 1;
 }
 
@@ -551,39 +611,42 @@
     padding: 3px 8px;
   }
 
-  .bunker-formular {
+  .bunker-sector-box {
     padding: 12px 14px;
-    margin-bottom: 14px;
   }
-  .bunker-prefix {
+  .bunker-sector-box--life {
+    margin-bottom: 12px;
+  }
+  .sector-badge {
     font-size: 10px;
-    margin-bottom: 6px;
+    padding: 1px 5px;
+  }
+  .sector-title {
+    font-size: 10.5px;
   }
   .bunker-desc {
     font-size: 13.5px;
     line-height: 1.5;
   }
-  .bunker-details-row {
+  .bunker-sectors-row {
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
   }
-  .bunker-equip-col {
+  .bunker-sector-box--cargo,
+  .bunker-sector-box--systems {
     width: 100%;
     max-width: 100%;
   }
-  .bunker-col-title {
-    font-size: 11.5px;
-    margin-bottom: 8px;
+  .bunker-cargo-item {
+    padding: 7px 10px;
+    gap: 8px;
   }
-  .equipment-item {
-    padding: 7px 12px;
+  .bunker-cargo-tag {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+  .bunker-cargo-name {
     font-size: 12.5px;
-  }
-  .bunker-stats-col {
-    flex: none;
-    width: 100%;
-    max-width: 100%;
-    margin-left: 0;
   }
   .info-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

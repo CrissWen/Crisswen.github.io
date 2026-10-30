@@ -37,46 +37,78 @@ export function bunkerInfo(data) {
   }
 
   const features = data.features || [];
-  const featuresHtml = features.length > 0
-    ? features.map((f) => `<li class="equipment-item">${esc(f)}</li>`).join('')
-    : `<li class="equipment-item equipment-item--empty">Спорядження відсутнє</li>`;
+  const hasFeatures = features.length > 0;
+
+  const cargoContentHtml = hasFeatures
+    ? `
+      <ul class="bunker-cargo-list">
+        ${features.map((f, i) => `
+          <li class="bunker-cargo-item">
+            <span class="bunker-cargo-tag">CRG-0${i + 1}</span>
+            <span class="bunker-cargo-name">${esc(f)}</span>
+            <span class="bunker-cargo-led" aria-hidden="true"></span>
+          </li>
+        `).join('')}
+      </ul>
+    `
+    : `
+      <div class="bunker-cargo-empty-wrap">
+        <p class="bunker-cargo-empty-text">Відсік порожній</p>
+      </div>
+    `;
 
   return `
     <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
       ${headHtml}
       <div class="block-body" id="${blockId}-body">
         
-        <!-- Верхній ярус: Повноширинний формуляр опису з фірмовими кутовими засічками (як у катаклізмі) -->
-        <div class="bunker-formular">
+        <!-- Сектор А: Житловий блок (Верхній відсік на всю ширину) -->
+        <div class="bunker-sector-box bunker-sector-box--life">
           <div class="bunker-corner bunker-corner-tl" aria-hidden="true"></div>
           <div class="bunker-corner bunker-corner-tr" aria-hidden="true"></div>
           <div class="bunker-corner bunker-corner-bl" aria-hidden="true"></div>
           <div class="bunker-corner bunker-corner-br" aria-hidden="true"></div>
-          <div class="bunker-prefix">
-            <span class="bunker-chevron" aria-hidden="true">▶</span>
-            <span class="bunker-label">ПРОТОКОЛ СХОВИЩА</span>
-            <span class="bunker-status-pill">АКТИВНИЙ</span>
+          
+          <div class="bunker-sector-header">
+            <span class="sector-badge">СЕКТОР-А</span>
+            <span class="sector-title">ЖИТЛОВИЙ БЛОК ТА КОНФІГУРАЦІЯ</span>
+            <div class="sector-status">
+              <span class="status-led" aria-hidden="true"></span>
+              <span>АКТИВНИЙ</span>
+            </div>
           </div>
           <p class="bunker-desc">${esc(data.description)}</p>
         </div>
 
-        <!-- Нижній ярус: Інвентар зліва + Характеристики справа -->
-        <div class="bunker-details-row">
+        <!-- Нижній ярус модулів: Сектор Б (Карго) зліва + Сектор В (Життєзабезпечення) справа -->
+        <div class="bunker-sectors-row">
           
-          <!-- Ліва колонка: Що є в бункері (чистий фірмовий список) -->
-          <div class="bunker-equip-col">
-            <h3 class="bunker-col-title">
-              <span class="title-led" aria-hidden="true"></span>
-              Що є в бункері
-            </h3>
-            <ul class="equipment-list">
-              ${featuresHtml}
-            </ul>
+          <!-- Сектор Б: Складський відсік (Повністю вирівняний із Сектором А) -->
+          <div class="bunker-sector-box bunker-sector-box--cargo">
+            <div class="bunker-corner bunker-corner-tl" aria-hidden="true"></div>
+            <div class="bunker-corner bunker-corner-tr" aria-hidden="true"></div>
+            <div class="bunker-corner bunker-corner-bl" aria-hidden="true"></div>
+            <div class="bunker-corner bunker-corner-br" aria-hidden="true"></div>
+
+            <div class="bunker-sector-header">
+              <span class="sector-badge">СЕКТОР-Б</span>
+              <span class="sector-title">СКЛАДСЬКИЙ ВІДСІК</span>
+              <span class="sector-count">${features.length} ПОЗ.</span>
+            </div>
+            ${cargoContentHtml}
           </div>
 
-          <!-- Права колонка: Характеристики бункера (сітка 2х2 в базовому стилі) -->
-          <div class="bunker-stats-col">
-            <h3 class="bunker-col-title">Характеристики бункера</h3>
+          <!-- Сектор В: Системи життєзабезпечення -->
+          <div class="bunker-sector-box bunker-sector-box--systems">
+            <div class="bunker-corner bunker-corner-tl" aria-hidden="true"></div>
+            <div class="bunker-corner bunker-corner-tr" aria-hidden="true"></div>
+            <div class="bunker-corner bunker-corner-bl" aria-hidden="true"></div>
+            <div class="bunker-corner bunker-corner-br" aria-hidden="true"></div>
+
+            <div class="bunker-sector-header">
+              <span class="sector-badge">СЕКТОР-В</span>
+              <span class="sector-title">ЖИТТЄЗАБЕЗПЕЧЕННЯ</span>
+            </div>
             <div class="info-grid">
               <div class="info-stat">
                 <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.BUNKER_SIZE}'); mask-image: url('${ICONS.BUNKER_SIZE}');" aria-hidden="true"></span>
