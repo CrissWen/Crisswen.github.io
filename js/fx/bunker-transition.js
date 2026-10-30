@@ -556,7 +556,7 @@ export async function playBunkerDoorTransition({
 
   soundManager.play(SOUND_IDS.BUNKER_DOOR_OPEN, { bypassThrottle: true });
 
-  // Втягуємо вертикальні ригелі та розблоковуємо штурвал
+  // Втягуємо вертикальні ригелі та розблоковуємо штурвал (різкий пружний відкат засувів)
   boltsEls.forEach((boltEl) => {
     const isTop = boltEl?.classList?.contains?.('bunker-door__vbolt--top') ?? String(boltEl?.className || '').includes('bunker-door__vbolt--top');
     const fromY = isTop ? -38 : 38;
@@ -566,7 +566,7 @@ export async function playBunkerDoorTransition({
         { transform: `translate3d(-50%, ${fromY}px, 0)` },
         { transform: 'translate3d(-50%, 0, 0)' },
       ],
-      { duration: 240, easing: 'ease-in' },
+      { duration: 220, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
       signal
     );
   });
@@ -574,7 +574,7 @@ export async function playBunkerDoorTransition({
   await animateElement(
     wheelEl,
     [{ transform: 'rotate(90deg)' }, { transform: 'rotate(0deg)' }],
-    { duration: 340, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+    { duration: 320, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
     signal
   );
   if (signal.aborted) return;
@@ -583,7 +583,7 @@ export async function playBunkerDoorTransition({
   animateElement(
     backdropEl,
     [{ opacity: 1 }, { opacity: 0 }],
-    { duration: 420, easing: 'ease-out' },
+    { duration: 380, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
     signal
   );
 
@@ -591,9 +591,9 @@ export async function playBunkerDoorTransition({
     lockEl,
     [
       { opacity: 1, transform: 'scale3d(1, 1, 1)' },
-      { opacity: 0, transform: 'scale3d(0.72, 0.72, 1)' },
+      { opacity: 0, transform: 'scale3d(0.85, 0.85, 1)' },
     ],
-    { duration: 420, delay: 100, easing: 'ease-in' },
+    { duration: 320, delay: 60, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
     signal
   );
 
@@ -601,9 +601,9 @@ export async function playBunkerDoorTransition({
     hudEl,
     [
       { opacity: 1, transform: 'translate3d(0, 0, 0)' },
-      { opacity: 0, transform: 'translate3d(0, -14px, 0)' },
+      { opacity: 0, transform: 'translate3d(0, -12px, 0)' },
     ],
-    { duration: 420, delay: 140, easing: 'ease-in' },
+    { duration: 320, delay: 90, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
     signal
   );
 
@@ -625,13 +625,13 @@ export async function playBunkerDoorTransition({
     animateElement(
       topBarEl,
       [{ transform: 'translate3d(0, 0, 0)' }, { transform: 'translate3d(0, -100%, 0)' }],
-      { duration: 380, delay: 850, easing: 'ease-in' },
+      { duration: 360, delay: 850, easing: 'cubic-bezier(0.7, 0, 0.84, 0)' },
       signal
     ),
     animateElement(
       bottomBarEl,
       [{ transform: 'translate3d(0, 0, 0)' }, { transform: 'translate3d(0, 100%, 0)' }],
-      { duration: 380, delay: 850, easing: 'ease-in' },
+      { duration: 360, delay: 850, easing: 'cubic-bezier(0.7, 0, 0.84, 0)' },
       signal
     ),
   ]);
