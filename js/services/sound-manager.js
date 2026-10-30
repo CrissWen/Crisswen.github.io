@@ -1024,16 +1024,50 @@ class SoundManager {
       { passive: true }
     );
 
-    // Клік кнопки: фаза capture, щоб звук спрацьовував до обробників, які можуть одразу вимкнути кнопку (напр. панель ведучого).
+    // Клік по будь-чому клікабельному: фаза capture, щоб звук спрацьовував до обробників, які можуть одразу вимкнути/перемалювати елемент
+    // (напр. панель ведучого). Клікабельним вважається:
+    //  1) семантичний елемент (кнопка, вкладка, пункт меню, посилання, summary), або
+    //  2) будь-який елемент із cursor: pointer (картки, пункти кастомних списків, лейбли, іконки, лого тощо).
     // Винятки: замки (у них свій звук lock-toggle), тест-кнопки налаштувань звуку (вони грають свій звук),
-    // неактивні кнопки та будь-який елемент з data-no-click-sound.
+    // повзунки, неактивні елементи та будь-що з data-no-click-sound.
+    const CLICKABLE_SELECTOR = [
+      'button',
+      'a[href]',
+      'a.header-nav-link',
+      'summary',
+      '[role="button"]',
+      '[role="tab"]',
+      '[role="menuitem"]',
+      '[role="option"]',
+      '[role="switch"]',
+    ].join(', ');
+    const NO_CLICK_SOUND_SELECTOR = [
+      '.char-lock',
+      '[data-test-sound]',
+      '[data-no-click-sound]',
+      'input[type="range"]',
+      '.bunker-slider',
+      '[disabled]',
+      '[aria-disabled="true"]',
+    ].join(', ');
+
     document.addEventListener(
       'click',
       (e) => {
-        const target = e.target.closest?.('button, [role="button"], summary, a.header-nav-link');
-        if (!target) return;
-        if (target.disabled || target.getAttribute('aria-disabled') === 'true') return;
-        if (target.closest('.char-lock, [data-test-sound], [data-no-click-sound]')) return;
+        const el = e.target;
+        if (!(el instanceof Element)) return;
+        if (el.closest(NO_CLICK_SOUND_SELECTOR)) return;
+
+        let clickable = el.closest(CLICKABLE_SELECTOR);
+        if (!clickable) {
+          // cursor успадковується дочірніми елементами, тож клік по тексту/іконці всередині клікабельного блоку теж ловиться
+          try {
+            if (window.getComputedStyle(el).cursor === 'pointer') clickable = el;
+          } catch (_) {}
+        }
+        if (!clickable) return;
+
+        // Клік по <label> породжує другий, синтетичний клік по його input — throttleMs у UI_CLICK не дає звуку прозвучати двічі
         this.play(SOUND_IDS.UI_CLICK);
       },
       true

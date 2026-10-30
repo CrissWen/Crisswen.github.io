@@ -137,7 +137,7 @@ function unmountHeaderCollapseTab() {
 
 // Закрита кімната — режим лише для читання для будь-кого (навіть колишнього хоста/гравця): host_id ігнорується, панель ведучого не рендериться.
 function isHostOf(roomData) {
-  if (roomData.status === 'closed') return false;
+  if (roomData.status === 'closed' || roomData.status === 'finished') return false; // на фіналі гри панель ведучого не потрібна
   return roomData.host_id === currentUserId;
 }
 
@@ -270,8 +270,8 @@ export async function initGame() {
     }
 
     // Кімната успішно відкрита — запам'ятовуємо її для вкладки «Гра» в хедері
-    if (room.status !== 'closed') setLastRoom(currentUserId, currentRoomCode);
-    else clearLastRoom(currentUserId);
+    if (room.status !== 'closed' && room.status !== 'finished') setLastRoom(currentUserId, currentRoomCode);
+    else clearLastRoom(currentUserId); // закрита або завершена гра не є «активною»
 
     // Аватарки гравців кімнати — одним запитом ДО першого рендеру, щоб літери не підмінялися фото вже на екрані
     await fetchAvatars(Object.keys(room.players_state || {}));
@@ -281,7 +281,7 @@ export async function initGame() {
     boardEl.style.display = 'block';
 
     // Гравець зайшов (зокрема кнопкою «Повернутися» з лобі) у кімнату, де гра вже йде — пропонуємо повернути телефон горизонтально або продовжити вертикально
-    if (isGameStarted && room.status !== 'closed') showOrientationPrompt();
+    if (isGameStarted && room.status !== 'closed' && room.status !== 'finished') showOrientationPrompt();
 
     subscribeToRoomUpdates();
     maybePlayCataclysmRoulette(localRoomState); // зайшли посеред рулетки (перезавантаження сторінки) — вона продовжується з потрібного місця
@@ -360,7 +360,7 @@ function updateGameBoard(roomData, container) {
   } else {
     // Атмосфера бункера грає все время, поки гра йде. Дошка монтується в момент герметизації дверей, тож звук стартує разом з ним.
     // Виклик ідемпотентний, тому не дублюється при кожному оновленні кімнати. Закрита кімната (включно з записом збереженої гри) без атмосфери.
-    if (roomData.status === 'closed') soundManager.stopAmbient();
+    if (roomData.status === 'closed' || roomData.status === 'finished') soundManager.stopAmbient();
     else soundManager.startAmbient();
     mountHeaderCollapseTab();
     renderActiveGame(roomData, container);
@@ -388,7 +388,8 @@ function renderActiveGame(roomData, container) {
   const bState = roomData.bunker_state || {};
   const pState = roomData.players_state || {};
   const isHost = isHostOf(roomData);
-  const vm = buildBoardViewModel(roomData, currentUserId);
+  const isFinal = roomData.status === 'finished';
+  const vm = buildBoardViewModel(roomData, currentUserId, { reveal: isFinal });
   // Поки крутиться рулетка катаклізму, результат на дошці й у лозі прихований: інакше він видав би себе ще до зупинки стрічки.
   // Перемальовування в момент розблокування запускає spinRefreshTimer (maybePlayCataclysmRoulette).
   const spinActive = isCataclysmSpinActive(bState, getGlobalTime());
@@ -407,14 +408,14 @@ function renderActiveGame(roomData, container) {
     safe('Катаклізм', () => cataclysm(spinActive ? null : vm.cataclysmData)),
     safe('Бункер', () => bunkerInfo(vm.bunkerData)),
     isSpectator ? '' : safe('Мої характеристики', () => playerCharacteristics({ ownerName: vm.myData.name, characteristics: vm.myData.characteristics, abilities: vm.myData.abilities })),
-    safe('Гравці', () => playersTable(vm.columns.length ? vm.columns : ["Очікування роздачі..."], vm.tableRows, vm.alivePlayers, vm.totalPlayers, isHost, bState.stage_scales)),
-    safe('Спец. можливості', () => specialAbilitiesTable(vm.parsedAbilities)), // isKicked уже в кожному елементі
+    safe('Гравці', () => playersTable(vm.columns.length ? vm.columns : ["Очікування роздачі..."], vm.tableRows, vm.alivePlayers, vm.totalPlayers, isHost, bState.stage_scales, { final: isFinal })),
+    safe('Спец. можливості', () => specialAbilitiesTable(vm.parsedAbilities, { final: isFinal })), // isKicked уже в кожному елементі
     safe('Голосування', () => votingSection({
       voting: bState.voting,
       players: vm.votingPlayers,
       myId: currentUserId,
       _needsInit: Boolean(setTimeout(() => initCustomSelects(container), 0)),
-      amAlive: !isSpectator && pState[currentUserId]?.is_alive !== false && !pState[currentUserId]?.is_kicked
+      amAlive: !isFinal && !isSpectator && pState[currentUserId]?.is_alive !== false && !pState[currentUserId]?.is_kicked
     })),
     // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
     safe('Особисті замітки', () => personalNotes()),
@@ -424,7 +425,16 @@ function renderActiveGame(roomData, container) {
 
   captureVoteSelection(); // запам'ятовуємо обрану радіокнопку голосування, бо innerHTML нижче створить її заново без checked
   captureNotesFocus(); // запам'ятовуємо курсор у замітках, бо innerHTML нижче створить textarea заново
-  container.innerHTML = order.join("");
+  // Фінал завершеної гри: та ж дошка, що й у грі, лише в таблицях видно відкрите й закрите (замок), і вбудований режим тільки для читання
+  // (панелі ведучого немає, голосувати не можна). Кнопка «На головну» — під дошкою.
+  container.classList.toggle('final-screen', isFinal);
+  container.innerHTML = order.join("") + (isFinal
+    ? '<div class="final-actions"><button type="button" class="hp-btn hp-btn-red final-home-btn" data-final-home>На головну</button></div>'
+    : '');
+  container.querySelector('[data-final-home]')?.addEventListener('click', () => {
+    clearLastRoom(currentUserId);
+    window.location.hash = '#/lobby';
+  });
   restoreVoteSelection(); // повертаємо виділення і розблоковуємо «Проголосувати»
   restoreNotesFocus();
   scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
@@ -437,7 +447,8 @@ function renderActiveGame(roomData, container) {
 // хто зайшов посеред кручення, бачить його з потрібного місця, а після кінця — одразу катаклізм (старий спін не показуємо).
 function maybePlayCataclysmRoulette(roomData) {
   const spin = roomData.bunker_state?.cataclysm_spin;
-  if (!spin || roomData.status === 'closed' || spin.id === playedSpinId) return;
+  // Закрита або завершена гра: рулетка не запускається (ні при вході, ні при подальших оновленнях кімнати на фіналі)
+  if (!spin || roomData.status === 'closed' || roomData.status === 'finished' || spin.id === playedSpinId) return;
   playedSpinId = spin.id;
 
   const now = getGlobalTime();
@@ -469,6 +480,7 @@ function handleRoomUpdate(patch) {
   // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
   const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
   const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
+  const prevStatus = localRoomState?.status;
   const wasGameStarted = Object.keys(localRoomState?.bunker_state || {}).length > 0;
 
   localRoomState = mergeRoomState(localRoomState, patch);
@@ -488,10 +500,34 @@ function handleRoomUpdate(patch) {
   if (localRoomState.status === 'closed') {
     freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
     hideCataclysmRoulette(); // рулетка не повинна блокувати вихід із закритої кімнати
+    // Закриття кімнати — без анімації дверей: якщо вона вже грає (старт або фінал), прибираємо її, щоб оверлей не перейшов у лобі
+    awaitingDoorSeal = false;
+    cancelBunkerDoorTransition();
     if (localRoomState.host_id !== currentUserId) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
     return;
+  }
+
+  // Ведучий завершив гру (finishGame в host-actions.js): гравців не перекидаємо. Завершена гра більше не «активна» для вкладки «Гра».
+  // Анімація дверей грається лише в клієнтів, які були в кімнаті в момент переходу в finished (prevStatus !== 'finished');
+  // хто зайшов або оновив сторінку пізніше, потрапляє в initGame й одразу бачить фінал без анімації.
+  // Дошка монтується в момент герметизації (onSealed), як і на старті гри.
+  if (localRoomState.status === 'finished') {
+    hideCataclysmRoulette();
+    clearLastRoom(currentUserId);
+    if (prevStatus !== 'finished' && isGameStartedNow) {
+      awaitingDoorSeal = true;
+      playBunkerDoorTransition({
+        mode: 'finish',
+        roomCode: currentRoomCode || localRoomState?.room_code,
+        onSealed: () => {
+          awaitingDoorSeal = false;
+          ctx.refreshBoard();
+        }
+      });
+      return;
+    }
   }
 
   // Гра щойно почалася (характеристики роздано) — пропонуємо повернути телефон горизонтально або продовжити вертикально
@@ -717,7 +753,8 @@ async function handleGlobalClick(e) {
   }
 
   const lockBtn = e.target.closest('.char-lock');
-  if (lockBtn) await handleCharLockClick(lockBtn, ctx);
+  // Після завершення гри характеристики лише для читання: відкривати/ховати їх більше не можна
+  if (lockBtn && localRoomState?.status !== 'finished') await handleCharLockClick(lockBtn, ctx);
 }
 
 export function cleanupGame() {

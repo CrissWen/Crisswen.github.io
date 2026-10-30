@@ -89,7 +89,14 @@ function timerControlsHtml(timer = {}) {
   `;
 }
 
-export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = {}) {
+// Остання кнопка футера: «Завершити гру» (живих ≤ місць) або «Закрити кімнату» (живих > місць). Міняється через data-action і текст.
+function roomEndButtonHtml(canFinish) {
+  return canFinish
+    ? '<button type="button" class="hp-btn hp-btn-red" data-hp-room-end data-action="finishGame">Завершити гру</button>'
+    : '<button type="button" class="hp-btn hp-btn-red" data-hp-room-end data-action="closeRoom">Закрити кімнату</button>';
+}
+
+export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, canFinish = false } = {}) {
   return `
     <div id="${HOST_PANEL_ID}" class="hp-root">
       <button type="button" class="hp-fab" data-hp-toggle aria-label="Панель ведучого">
@@ -255,7 +262,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
         <footer class="hp-foot">
           <button type="button" class="hp-btn hp-btn-gray" data-action="undo" ${canUndo ? '' : 'disabled'}>Скасувати попередню дію</button>
           <button type="button" class="hp-btn hp-btn-green" data-action="restart">Почати гру наново</button>
-          <button type="button" class="hp-btn hp-btn-red" data-action="closeRoom">Закрити кімнату</button>
+          ${roomEndButtonHtml(canFinish)}
           <div class="hp-toast" data-hp-toast role="status"></div>
         </footer>
       </aside>
@@ -275,8 +282,13 @@ export function removeHostPanel() {
 
 // Оновлює лише списки гравців, лічильник, кнопку undo та блок керування таймером — сама панель не перемальовується,
 // тож відкриті акордеони та введений текст не губляться.
-export function refreshHostPanel(root, { players, currentUserId, capacity, canUndo, timer }) {
+export function refreshHostPanel(root, { players, currentUserId, capacity, canUndo, timer, canFinish }) {
   if (!root) return;
+
+  // Кнопка завершення/закриття: перемальовуємо лише коли режим справді змінився (не чіпаємо кнопку під час кліку/підтвердження)
+  const endBtn = root.querySelector('[data-hp-room-end]');
+  const wantAction = canFinish ? 'finishGame' : 'closeRoom';
+  if (endBtn && endBtn.dataset.action !== wantAction) endBtn.outerHTML = roomEndButtonHtml(canFinish);
 
   // Списки перебудовуємо, лише якщо склад гравців змінився (щоб не закривати відкритий dropdown)
   const sig = players.map(p => `${p.id}:${p.name}`).join('|');

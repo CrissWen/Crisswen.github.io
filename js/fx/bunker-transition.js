@@ -17,6 +17,25 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Тексти HUD на дверях за режимами: 'start' — старт гри, 'finish' — завершення гри (там сама анімація, інші написи).
+// closing — початок (закриття стулок), sealed — повна герметизація, opening — відкриття.
+const TRANSITION_TEXTS = {
+  start: {
+    aria: 'Запуск гри: герметизація бункера',
+    closing: ['ТРИВОГА // ПРОТОКОЛ ІЗОЛЯЦІЇ', 'УВАГА! ЗАКРИТТЯ ШЛЮЗУ', 'LOCKDOWN PROTOCOL // INITIATED'],
+    sealed: ['СТАТУС: ГЕРМЕТИЧНО', 'ГЕРМЕТИЗАЦІЯ ЗАВЕРШЕНА', 'СИНХРОНІЗАЦІЯ СИСТЕМ БУНКЕРА // 100%'],
+    sealedReduced: ['СТАТУС: ГЕРМЕТИЧНО', 'ГЕРМЕТИЗАЦІЯ ЗАВЕРШЕНА', 'ДОСТУП ДО БУНКЕРА НАДАНО'],
+    opening: ['ДОСТУП ДОЗВОЛЕНО', 'ДОСТУП НАДАНО', 'ЛАСКАВО ПРОСИМО У БУНКЕР']
+  },
+  finish: {
+    aria: 'Завершення гри: підсумки',
+    closing: ['ЗАВЕРШЕННЯ ПРОТОКОЛУ // ФІНАЛ', 'ПІДСУМКИ ГРИ', 'FINAL REPORT // COMPILING'],
+    sealed: ['СТАТУС: ЗАФІКСОВАНО', 'ПІДРАХУНОК ЗАВЕРШЕНО', 'ФОРМУВАННЯ ЗВІТУ // 100%'],
+    sealedReduced: ['СТАТУС: ЗАФІКСОВАНО', 'ПІДРАХУНОК ЗАВЕРШЕНО', 'ЗВІТ ГОТОВИЙ'],
+    opening: ['ДОСТУП ДОЗВОЛЕНО', 'ДВЕРІ ВІДЧИНЯЮТЬСЯ', 'ПІДСУМКИ ГРИ']
+  }
+};
+
 function resolveRoomCode(roomCode) {
   let code = roomCode;
   if (!code && typeof window !== 'undefined' && window.location?.hash) {
@@ -31,8 +50,9 @@ function resolveRoomCode(roomCode) {
 /**
  * Повертає HTML-розмітку векторного оверлею шлюзу бункера.
  */
-function buildBunkerOverlayMarkup({ roomCode } = {}) {
+function buildBunkerOverlayMarkup({ roomCode, texts } = {}) {
   const displayCode = resolveRoomCode(roomCode);
+  const [beacon, title, sub] = (texts || TRANSITION_TEXTS.start).closing;
   return `
     <div class="bunker-vault-stage" data-vault-stage>
       <div class="bunker-vault-backdrop" data-vault-backdrop></div>
@@ -131,10 +151,10 @@ function buildBunkerOverlayMarkup({ roomCode } = {}) {
         <div class="bunker-vault-hud" data-vault-hud>
           <div class="bunker-vault-hud__beacon">
             <span class="bunker-vault-hud__dot"></span>
-            <span data-vault-beacon-text>ТРИВОГА // ПРОТОКОЛ ІЗОЛЯЦІЇ</span>
+            <span data-vault-beacon-text>${escapeHtml(beacon)}</span>
           </div>
-          <h3 class="bunker-vault-hud__title" data-vault-title>УВАГА! ЗАКРИТТЯ ШЛЮЗУ</h3>
-          <div class="bunker-vault-hud__sub" data-vault-sub>LOCKDOWN PROTOCOL // INITIATED</div>
+          <h3 class="bunker-vault-hud__title" data-vault-title>${escapeHtml(title)}</h3>
+          <div class="bunker-vault-hud__sub" data-vault-sub>${escapeHtml(sub)}</div>
         </div>
       </div>
 
@@ -230,6 +250,7 @@ export function cancelBunkerDoorTransition() {
  * @param {() => void | Promise<void>} [options.onSealed] - Викликається в момент повної герметизації (екран 100% перекритий)
  * @param {() => void} [options.onComplete] - Викликається після повного відкриття дверей або пропуску
  * @param {boolean} [options.allowSkip=true] - Дозволити пропуск по Esc або кнопці
+ * @param {'start'|'finish'} [options.mode='start'] - Режим текстів: старт гри або її завершення (анімація однакова)
  * @returns {Promise<void>}
  */
 export async function playBunkerDoorTransition({
@@ -237,7 +258,9 @@ export async function playBunkerDoorTransition({
   onSealed,
   onComplete,
   allowSkip = true,
+  mode = 'start',
 } = {}) {
+  const texts = TRANSITION_TEXTS[mode] || TRANSITION_TEXTS.start;
   if (typeof document === 'undefined' || !document.body) {
     if (typeof onSealed === 'function') await onSealed();
     if (typeof onComplete === 'function') onComplete();
@@ -284,9 +307,9 @@ export async function playBunkerDoorTransition({
   overlay.className = 'bunker-vault-overlay';
   overlay.setAttribute('role', 'status');
   overlay.setAttribute('aria-live', 'polite');
-  overlay.setAttribute('aria-label', 'Запуск гри: герметизація бункера');
+  overlay.setAttribute('aria-label', texts.aria);
   overlay.dataset.phase = 'closing';
-  overlay.innerHTML = buildBunkerOverlayMarkup({ roomCode });
+  overlay.innerHTML = buildBunkerOverlayMarkup({ roomCode, texts });
   document.body.appendChild(overlay);
 
   const stageEl = overlay.querySelector('[data-vault-stage]');
@@ -391,7 +414,7 @@ export async function playBunkerDoorTransition({
     ]);
     if (signal.aborted) return;
 
-    setHudPhase('sealed', 'СТАТУС: ГЕРМЕТИЧНО', 'ГЕРМЕТИЗАЦІЯ ЗАВЕРШЕНА', 'ДОСТУП ДО БУНКЕРА НАДАНО');
+    setHudPhase('sealed', ...texts.sealedReduced);
     await runSealedCallback();
     await waitMs(220, signal);
     if (signal.aborted) return;
@@ -510,12 +533,7 @@ export async function playBunkerDoorTransition({
   if (signal.aborted) return;
 
   // --- Фаза 3: Замикання ригелів, поворот штурвала та саспенс герметизації (2.05s -> 3.50s) ---
-  setHudPhase(
-    'sealed',
-    'СТАТУС: ГЕРМЕТИЧНО',
-    'ГЕРМЕТИЗАЦІЯ ЗАВЕРШЕНА',
-    'СИНХРОНІЗАЦІЯ СИСТЕМ БУНКЕРА // 100%'
-  );
+  setHudPhase('sealed', ...texts.sealed);
 
   soundManager.play(SOUND_IDS.BUNKER_HYDRAULIC, { bypassThrottle: true });
 
@@ -547,12 +565,7 @@ export async function playBunkerDoorTransition({
   if (signal.aborted) return;
 
   // --- Фаза 4: Розгерметизація та величне гідравлічне відкриття (3.50s -> 4.85s) ---
-  setHudPhase(
-    'opening',
-    'ДОСТУП ДОЗВОЛЕНО',
-    'ДОСТУП НАДАНО',
-    'ЛАСКАВО ПРОСИМО У БУНКЕР'
-  );
+  setHudPhase('opening', ...texts.opening);
 
   soundManager.play(SOUND_IDS.BUNKER_DOOR_OPEN, { bypassThrottle: true });
 

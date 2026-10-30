@@ -3,7 +3,7 @@ import { supabase } from '../services/supabase.js';
 // ===== «Остання активна сесія» для вкладки «Гра» в хедері =====
 // Код останньої кімнати, в яку гравець заходив на сторінці гри, зберігається в localStorage ПЕР-КОРИСТУВАЧА
 // (ключ містить user id — щоб при зміні акаунта на одному браузері не підхопити чужу кімнату).
-// Вкладка видима, лише поки ця кімната існує і не закрита; інакше вона прихована.
+// Вкладка видима, лише поки ця кімната існує, не закрита і гра в ній не завершена (status finished); інакше вона прихована.
 
 const KEY_PREFIX = 'bunker-last-room:';
 let syncToken = 0; // відсікає застарілі відповіді БД, якщо під час запиту гравець уже перейшов далі
@@ -76,7 +76,7 @@ export async function syncGameTab(userId, base = '') {
     if (error) throw error;
     if (token !== syncToken) return;
 
-    const isActive = data && data.status !== 'closed' && data.room_closed !== true;
+    const isActive = data && data.status !== 'closed' && data.status !== 'finished' && data.room_closed !== true; // завершена гра теж не «активна»
     if (!isActive) clearLastRoom(userId);
   } catch (err) {
     console.error('Не вдалося перевірити останню сесію:', err);

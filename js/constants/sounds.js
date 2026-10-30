@@ -51,14 +51,18 @@ export const SOUND_IDS = Object.freeze({
 
   // --- Ігрові ефекти (SFX) ---
   DICE_ROLL: 'dice-roll',
-  CARD_REVEAL: 'card-reveal',
-  VOTE_CAST: 'vote-cast',
+  CARD_REVEAL: 'card-reveal', // не надо
+  VOTE_CAST: 'vote-cast', // +- надо подумать
   TIMER_TICK: 'timer-tick',
-  TIMER_END: 'timer-end',
-  CATACLYSM_ALERT: 'cataclysm-alert',
-  PLAYER_KICK: 'player-kick',
+  TIMER_END: 'timer-end',// не надо
+  CATACLYSM_ALERT: 'cataclysm-alert', // не надо
+  PLAYER_KICK: 'player-kick', //
+
+  // --- Рулетка (SFX) ---
   ROULETTE_TICK: 'roulette-tick',
   ROULETTE_REVEAL: 'roulette-reveal',
+
+  // --- Двері бункеру (SFX) ---
   BUNKER_DOOR_CLOSE: 'bunker-door-close',
   BUNKER_DOOR_SLAM: 'bunker-door-slam',
   BUNKER_HYDRAULIC: 'bunker-hydraulic',
@@ -103,7 +107,7 @@ export const SOUND_CATALOG = Object.freeze({
   [SOUND_IDS.LOCK_TOGGLE]: Object.freeze({
     id: SOUND_IDS.LOCK_TOGGLE,
     label: 'Відкриття / закриття замка',
-    src: ['./audio/ui/lock-toggle.mp3'],
+    src: ['./audio/ui/lock-toggle.wav'],
     channel: AUDIO_CHANNELS.UI,
     baseVolume: 0.85,
     throttleMs: 80,

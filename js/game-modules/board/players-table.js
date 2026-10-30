@@ -2,6 +2,7 @@ import { describeScale } from '../../utils/experience.js';
 import { esc, unescapeApos, renderSafeNodes } from '../../utils/security.js';
 import { avatarImgHtml, getAvatarPaddingStyle, profileTriggerAttrs } from '../../utils/avatar.js';
 import { getPlayersViewMode, isPlayerCardExpanded } from './board-ui-state.js';
+import { ICONS } from '../../constants/icons.js';
 
 // Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
 function renderSafeTooltip(popup, rawTooltip) {
@@ -22,7 +23,10 @@ function stripTooltipHtml(valHtml) {
 // Якщо не передано, лічильник рахується по масиву players (стара поведінка).
 // isHost — лише ведучий бачить кнопку "Вигнати" / "Повернути" (players[i].id, players[i].isKicked).
 // stageScales — bunker_state.stage_scales ({ profession?: [...], hobby?: [...] }): шкала стадій пака для підказок.
-export function playersTable(columns, players, aliveCount, totalCount, isHost, stageScales) {
+// opts.final — фінальний режим (гру завершено): без кнопок «Вигнати», з позначками «Вибув / Пройшов» і значком замка біля характеристик,
+// які не було відкрито (players[i].cellsOpen[ci] === false, див. board-view-model.js з reveal). aliveCount тут = кількість тих, хто пройшов.
+export function playersTable(columns, players, aliveCount, totalCount, isHost, stageScales, opts = {}) {
+  const isFinal = !!opts.final;
   columns = columns || ["Стать", "Статура", "Риса характеру", "Професія", "Здоров'я", "Хобі / Захоплення", "Фобія / Страх", "Великий багаж", "Рюкзак", "Додаткові відомості"];
   players = players || [
     { name: "Олена", cells: ["Жіноча", "Струнка", "Емпатія", "Хірург", "Астма (легка)", "Гра на гітарі", "Клаустрофобія", "Намет", "Аптечка", "Має карту"] }
@@ -63,13 +67,24 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
     return '';
   };
 
-  const cellHtml = (val) =>
-    val ? `<span class="cell-value">${val}</span>` : `<span class="cell-empty"></span>`;
+  const lockIcon = `<span class="cell-lock" style="-webkit-mask-image:url('${ICONS.LOCKED_LOCK}');mask-image:url('${ICONS.LOCKED_LOCK}');" aria-hidden="true"></span>`;
+  const cellHtml = (val, open = true) => {
+    if (!val) return `<span class="cell-empty"></span>`;
+    if (open) return `<span class="cell-value">${val}</span>`;
+    return `<span class="cell-value cell-value--unrevealed" title="Не було відкрито на момент завершення гри">${lockIcon}${val}</span>`;
+  };
+  const isOutPlayer = (p) => (isFinal ? !!p.isOut : !!p.isKicked);
+  const statusBadge = (p) => {
+    if (!isFinal) return '';
+    return isOutPlayer(p)
+      ? '<span class="final-badge final-badge--out">Вибув</span>'
+      : '<span class="final-badge final-badge--passed">Пройшов</span>';
+  };
 
   const head = columns.map((c) => `<th>${esc(c)} ${getTooltip(c)}</th>`).join("");
 
   const kickToggle = (p) => {
-    if (!isHost || !p.id) return "";
+    if (isFinal || !isHost || !p.id) return "";
     const label = p.isKicked ? "Повернути" : "Вигнати";
     const stateClass = p.isKicked ? " is-return" : "";
     return `<div class="kick-action-btn${stateClass}" data-kick-id="${esc(p.id)}">${label}</div>`;
@@ -78,9 +93,9 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
   const rows = players
     .map((p, index) => {
       const cells = (p.cells || [])
-        .map((val, ci) => `<td data-col-label="${esc(columns[ci] || '')}">${cellHtml(val)}</td>`)
+        .map((val, ci) => `<td data-col-label="${esc(columns[ci] || '')}">${cellHtml(val, p.cellsOpen ? p.cellsOpen[ci] !== false : true)}</td>`)
         .join("");
-      const rowClass = p.isKicked ? 'kicked-player' : '';
+      const rowClass = isOutPlayer(p) ? 'kicked-player' : '';
       const cleanName = unescapeApos(p.name);
       const firstLetter = (cleanName || '').charAt(0);
       const avatarPadding = getAvatarPaddingStyle(firstLetter, 2);
@@ -92,6 +107,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
               <span class="avatar" style="${avatarPadding}" ${profileTriggerAttrs(p.id, cleanName, { focusable: true })}>${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
               <div class="player-name-wrapper">
                 <div class="player-nickname">${esc(cleanName)}</div>
+                ${statusBadge(p)}
                 ${kickToggle(p)}
               </div>
             </div>
@@ -111,14 +127,15 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
       const isExpanded = isPlayerCardExpanded(playerKey);
       const firstLetter = (cleanName || '').charAt(0);
       const avatarPadding = getAvatarPaddingStyle(firstLetter, 2);
-      const kickedClass = p.isKicked ? ' kicked-player' : '';
+      const kickedClass = isOutPlayer(p) ? ' kicked-player' : '';
       const expandedClass = isExpanded ? ' is-expanded' : '';
 
       const cellEntries = columns.map((colName, ci) => ({
         label: colName,
-        val: p.cells?.[ci] ?? null
+        val: p.cells?.[ci] ?? null,
+        open: p.cellsOpen ? p.cellsOpen[ci] !== false : true
       }));
-      const openedEntries = cellEntries.filter(e => !!e.val);
+      const openedEntries = cellEntries.filter(e => !!e.val && e.open);
       const previewChips = openedEntries
         .slice(0, 3)
         .map(e => {
@@ -132,7 +149,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
         .map(e => `
           <div class="player-acc-field${e.val ? ' is-open' : ' is-hidden-val'}">
             <span class="player-acc-field__label">${esc(e.label)} ${getTooltip(e.label)}</span>
-            <span class="player-acc-field__value">${e.val ? cellHtml(e.val) : '<span class="cell-empty-text">Приховано</span>'}</span>
+            <span class="player-acc-field__value">${e.val ? cellHtml(e.val, e.open) : '<span class="cell-empty-text">Приховано</span>'}</span>
           </div>
         `)
         .join('');
@@ -145,6 +162,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
                 <span class="player-num">${index + 1}</span>
                 <span class="avatar" style="${avatarPadding}" ${profileTriggerAttrs(p.id, cleanName)}>${esc(firstLetter)}${avatarImgHtml(p.id)}</span>
                 <span class="player-nickname">${esc(cleanName)}</span>
+                ${statusBadge(p)}
               </div>
               <div class="player-acc-card__meta">
                 <span class="player-acc-card__badge" title="Відкрито характеристик">${openedEntries.length}/${columns.length}</span>

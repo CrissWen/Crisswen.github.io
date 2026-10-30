@@ -111,7 +111,7 @@ export function syncCataclysmTimer(bunkerState, roomStatus) {
 
   // Закрита кімната: ніякого відліку. Беремо готовий рядок з bunker_state.stopped_timer, вставляємо в контейнер
   // і одразу виходимо: setInterval не створюється, onExpire (модалка "Час сплив") не спрацює.
-  if (roomStatus === 'closed') {
+  if (roomStatus === 'closed' || roomStatus === 'finished') {
     stopInterval();
     const stopped = bunkerState?.stopped_timer;
     const timeEl = root.querySelector('[data-cata-time]');

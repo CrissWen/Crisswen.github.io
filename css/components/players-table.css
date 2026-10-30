@@ -688,3 +688,121 @@ table.bunker-table td.player-cell .avatar {
   cursor: pointer;
 }
 .survival-test-link:hover { filter: brightness(1.2); }
+
+/* ===== Фінал завершеної гри: «Вибув / Пройшов», замок на невідкритих характеристиках, кнопка «На головну» ===== */
+/* .final-screen — клас самого контейнера дошки, коли гру завершено (game.js, renderActiveGame): розкладка та ж, що й у грі */
+
+/* У фіналі вибулі не мають бути ледь помітними: усі характеристики мають читатися */
+.final-screen .kicked-player {
+  opacity: 0.62;
+}
+
+.final-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+/* В таблиці бейдж стоїть під ніком (колонка), в картці — у рядку після ніку і не стискається */
+.player-name-wrapper .final-badge {
+  margin-left: 0;
+  align-self: flex-start;
+}
+.player-acc-card__identity .final-badge {
+  flex: none;
+  margin-left: 2px;
+  align-self: center;
+}
+.final-badge--passed {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.final-badge--out {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+/* Характеристика, яку не було відкрито на момент завершення гри: приглушений текст із замком */
+.cell-value--unrevealed {
+  color: var(--text-mute);
+  font-style: italic;
+}
+.cell-lock {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 5px;
+  vertical-align: -0.1em;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Кнопка «На головну» під дошкою; прилипає до низу екрана, щоб не гортати довгу дошку */
+.final-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+/* Вигляд кнопки (форма, колір, шрифт, hover) дає клас .hp-btn: кожна тема вже стилізує його по-своєму (радіус через --radius-sm,
+   кольори, тіні). Тут лише розмір, щоб кнопка не розтягувалась і не дублювала стилі тем. */
+.final-home-btn {
+  min-width: 200px;
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+}
+.final-home-btn:active {
+  transform: translateY(1px);
+}
+.final-home-btn:focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: 2px;
+}
+
+
+/* ===== Фінал на телефоні: використовуємо наявні картки гравців і стековані спецможливості, лише підправляємо деталі ===== */
+
+/* Невідкрита характеристика в картці: без зеленої смужки «відкрито», приглушена */
+.final-screen .player-acc-field:has(.cell-value--unrevealed) {
+  border-left: 1px solid var(--metal);
+  background: var(--panel);
+}
+
+@media (max-width: 920px), (max-height: 520px) {
+  /* Компактніший бейдж «Вибув / Пройшов», щоб у картці вистачало місця для ніку */
+  .final-badge {
+    padding: 0 6px;
+    font-size: 10px;
+    line-height: 1.6;
+  }
+
+  /* У стекованій картці спецможливостей ім'я і бейдж ідуть в один рядок і переносяться, якщо ім'я довге */
+  .special-abilities-container table.special-abilities-table tbody td.player-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+  }
+
+  /* На телефоні кнопка на всю ширину */
+  .final-home-btn {
+    width: 100%;
+    max-width: 420px;
+  }
+}
+

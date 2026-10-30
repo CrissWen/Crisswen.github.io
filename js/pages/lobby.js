@@ -2,7 +2,8 @@ import { supabase } from '../services/supabase.js';
 
 // Статуси кімнати, які вже не вважаються активними. closeRoom (host-actions.js) тепер сам виставляє status: 'closed'
 // в тому ж запиті, що й bunker_state.room_closed, тож цей фільтр вже працює для нових закритих кімнат.
-const EXCLUDED_ROOM_STATUSES = ['closed'];
+const EXCLUDED_ROOM_STATUSES = ['closed', 'finished'];
+const EXCLUDED_STATUSES_FILTER = `(${EXCLUDED_ROOM_STATUSES.join(',')})`; // формат PostgREST для .not('status', 'in', ...)
 
 // Активні кімнати поточного гравця — наповнюється в initLobby(), читається подальшим рендером панелі активних кімнат (наступний етап).
 let userActiveRooms = [];
@@ -16,12 +17,12 @@ async function fetchUserActiveRooms(userId) {
       .from('rooms')
       .select('*')
       .eq('host_id', userId)
-      .neq('status', 'closed'),
+      .not('status', 'in', EXCLUDED_STATUSES_FILTER),
     supabase
       .from('rooms')
       .select('*')
       .contains('players_state', { [userId]: {} })
-      .neq('status', 'closed')
+      .not('status', 'in', EXCLUDED_STATUSES_FILTER)
   ]);
 
   if (hostRes.error) throw hostRes.error;
