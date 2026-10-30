@@ -145,10 +145,20 @@
   --impact: .5s;                        /* через стільки після зупинки «удар»: спалах, кільця, іскри, тряска */
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   z-index: 10012;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
   transition: opacity .8s cubic-bezier(.16, 1, .3, 1);
 }
 .cr-overlay[hidden] { display: none; }
@@ -568,8 +578,49 @@
 
 @keyframes cr-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
-@media (max-width: 480px) {
-  .cr-kicker { font-size: 12px; letter-spacing: .16em; }
+/* ===== АДАПТАЦІЯ ДЛЯ МОБІЛЬНИХ ПРИСТРОЇВ (MOBILE-NATIVE) ===== */
+@media (max-width: 640px) {
+  .cr-overlay {
+    --rr-item: clamp(76px, 20vw, 104px);
+    --hero-size: calc(var(--rr-item) * 1.5);
+    --fx-size: clamp(280px, 85vmin, 460px);
+  }
+  .rr-viewport {
+    padding: 44px 0; /* компактніший вертикальний простір на вузьких екранах */
+  }
+  .cr-kicker {
+    font-size: 12px;
+    letter-spacing: .16em;
+  }
+  .cr-title {
+    font-size: clamp(20px, 5.5vw, 32px);
+    margin: 10px 12px 0;
+    min-height: 2.2em;
+  }
+}
+
+/* Мобільні пристрої в альбомній орієнтації (низька висота екрана) */
+@media (max-height: 520px) {
+  .cr-overlay {
+    --rr-item: clamp(60px, 14vh, 84px);
+    --hero-size: calc(var(--rr-item) * 1.4);
+    --fx-size: clamp(220px, 70vh, 320px);
+  }
+  .rr-viewport {
+    padding: 24px 0;
+  }
+  .cr-reel {
+    margin: 4px 0 2px;
+  }
+  .cr-kicker {
+    font-size: 11px;
+    letter-spacing: .14em;
+  }
+  .cr-title {
+    font-size: clamp(17px, 4.5vh, 24px);
+    margin: 6px 10px 0;
+    min-height: 1.8em;
+  }
 }
 
 /* «Зменшити анімацію»: без руху взагалі. Звичайно JS у цьому випадку вмикає LDM і ефектів немає, але режим можна примусити вручну */
