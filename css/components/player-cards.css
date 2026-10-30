@@ -65,14 +65,15 @@
   cursor: pointer;
 }
 
-/* При наведенні трохи збільшуємо іконку та запускаємо легке покачування (shuffle/wiggle) */
-.char-lock:hover .lock-icon {
+/* При наведенні або активному вікні підтвердження трохи збільшуємо іконку та запускаємо легке покачування (shuffle/wiggle) */
+.char-lock:hover .lock-icon,
+.char-lock.is-confirming .lock-icon {
   filter: brightness(1.15);
   animation: lock-shuffle 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
 }
 
-/* При натисканні — тактильне присідання */
-.char-lock:active .lock-icon {
+/* При натисканні — тактильне присідання (якщо ще не відкритий діалог) */
+.char-lock:not(.is-confirming):active .lock-icon {
   animation: none;
   transform: scale(1.06) rotate(0deg);
   filter: brightness(1.25);

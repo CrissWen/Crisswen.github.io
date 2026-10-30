@@ -1013,7 +1013,10 @@ class SoundManager {
         const lockEl = e.target.closest?.('.char-lock');
         if (lockEl && lockEl !== lastHoveredLock) {
           lastHoveredLock = lockEl;
-          this.play(SOUND_IDS.LOCK_HOVER);
+          // Якщо замок зараз очікує підтвердження (.is-confirming) або діалог підтвердження відкритий — не брязкати повторно
+          if (!lockEl.classList.contains('is-confirming') && !document.getElementById('custom-confirm-root')) {
+            this.play(SOUND_IDS.LOCK_HOVER);
+          }
         } else if (!lockEl) {
           lastHoveredLock = null;
         }

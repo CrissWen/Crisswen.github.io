@@ -57,7 +57,13 @@ export async function handleCharLockClick(lockBtn, ctx) {
     ? 'Приховати цю характеристику від інших?'
     : 'Відкрити цю характеристику всім гравцям?';
 
-  const confirmed = await showCustomConfirm(confirmMsg, lockBtn);
+  lockBtn.classList.add('is-confirming');
+  let confirmed = false;
+  try {
+    confirmed = await showCustomConfirm(confirmMsg, lockBtn);
+  } finally {
+    lockBtn.classList.remove('is-confirming');
+  }
   if (!confirmed) return;
 
   isUpdatingLock = true;
