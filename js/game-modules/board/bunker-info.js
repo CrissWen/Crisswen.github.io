@@ -7,7 +7,7 @@ function esc(str) {
   ));
 }
 
-// Видаляємо тестовий плаваючий перемикач батлу, якщо він залишився в DOM
+// Видаляємо тестовий плаваючий перемикач, якщо він залишився в DOM
 if (typeof document !== 'undefined') {
   document.getElementById('bunker-floating-battle-switcher')?.remove();
   try {
@@ -37,79 +37,73 @@ export function bunkerInfo(data) {
   }
 
   const features = data.features || [];
-  const cargoHtml = features.length > 0
-    ? features.map((f, i) => `
-        <div class="bunker-cargo-slot">
-          <span class="bunker-cargo-tag">CRG-0${i + 1}</span>
-          <span class="bunker-cargo-name">${esc(f)}</span>
-          <span class="bunker-cargo-led" aria-hidden="true"></span>
-        </div>
-      `).join('')
-    : `<div class="bunker-cargo-empty">ВІДСІК ПОРОЖНІЙ</div>`;
+  const featuresHtml = features.length > 0
+    ? features.map((f) => `<li class="equipment-item">${esc(f)}</li>`).join('')
+    : `<li class="equipment-item equipment-item--empty">Спорядження відсутнє</li>`;
 
   return `
     <section class="block${collapsed ? ' is-collapsed' : ''}" id="${blockId}">
       ${headHtml}
       <div class="block-body" id="${blockId}-body">
         
-        <!-- Відсік А: Житловий сектор (Опис) -->
-        <div class="bunker-compartment bunker-compartment--life">
-          <div class="bunker-comp-header">
-            <span class="bunker-comp-badge">СЕКТОР-А</span>
-            <span class="bunker-comp-title">ЖИТЛОВИЙ БЛОК ТА КОНФІГУРАЦІЯ</span>
-            <span class="bunker-comp-status">АКТИВНИЙ</span>
+        <!-- Верхній ярус: Повноширинний формуляр опису з фірмовими кутовими засічками (як у катаклізмі) -->
+        <div class="bunker-formular">
+          <div class="bunker-corner bunker-corner-tl" aria-hidden="true"></div>
+          <div class="bunker-corner bunker-corner-tr" aria-hidden="true"></div>
+          <div class="bunker-corner bunker-corner-bl" aria-hidden="true"></div>
+          <div class="bunker-corner bunker-corner-br" aria-hidden="true"></div>
+          <div class="bunker-prefix">
+            <span class="bunker-chevron" aria-hidden="true">▶</span>
+            <span class="bunker-label">ПРОТОКОЛ СХОВИЩА</span>
+            <span class="bunker-status-pill">АКТИВНИЙ</span>
           </div>
           <p class="bunker-desc">${esc(data.description)}</p>
         </div>
 
-        <!-- Нижній ярус модулів -->
-        <div class="bunker-modules-row">
+        <!-- Нижній ярус: Інвентар зліва + Характеристики справа -->
+        <div class="bunker-details-row">
           
-          <!-- Відсік Б: Карго / Склад -->
-          <div class="bunker-compartment bunker-compartment--cargo">
-            <div class="bunker-comp-header">
-              <span class="bunker-comp-badge">СЕКТОР-Б</span>
-              <span class="bunker-comp-title">СКЛАДСЬКИЙ ВІДСІК</span>
-              <span class="bunker-comp-count">${features.length} ПОЗ.</span>
-            </div>
-            <div class="bunker-cargo-list">
-              ${cargoHtml}
-            </div>
+          <!-- Ліва колонка: Що є в бункері (чистий фірмовий список) -->
+          <div class="bunker-equip-col">
+            <h3 class="bunker-col-title">
+              <span class="title-led" aria-hidden="true"></span>
+              Що є в бункері
+            </h3>
+            <ul class="equipment-list">
+              ${featuresHtml}
+            </ul>
           </div>
 
-          <!-- Відсік В: Системи життєзабезпечення (без кольорових смуг) -->
-          <div class="bunker-compartment bunker-compartment--systems">
-            <div class="bunker-comp-header">
-              <span class="bunker-comp-badge">СЕКТОР-В</span>
-              <span class="bunker-comp-title">ЖИТТЄЗАБЕЗПЕЧЕННЯ</span>
-            </div>
-            <div class="bunker-gauges-grid">
-              <div class="bunker-gauge">
-                <span class="bunker-gauge-icon" style="-webkit-mask-image: url('${ICONS.BUNKER_SIZE}'); mask-image: url('${ICONS.BUNKER_SIZE}');" aria-hidden="true"></span>
-                <div class="bunker-gauge-body">
-                  <span class="bunker-gauge-label">ПЛОЩА</span>
-                  <span class="bunker-gauge-value">${esc(data.size)}</span>
+          <!-- Права колонка: Характеристики бункера (сітка 2х2 в базовому стилі) -->
+          <div class="bunker-stats-col">
+            <h3 class="bunker-col-title">Характеристики бункера</h3>
+            <div class="info-grid">
+              <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.BUNKER_SIZE}'); mask-image: url('${ICONS.BUNKER_SIZE}');" aria-hidden="true"></span>
+                <div class="info-stat-content">
+                  <div class="k">Площа</div>
+                  <div class="v">${esc(data.size)}</div>
                 </div>
               </div>
-              <div class="bunker-gauge">
-                <span class="bunker-gauge-icon" style="-webkit-mask-image: url('${ICONS.STAY_TIME}'); mask-image: url('${ICONS.STAY_TIME}');" aria-hidden="true"></span>
-                <div class="bunker-gauge-body">
-                  <span class="bunker-gauge-label">ТЕРМІН</span>
-                  <span class="bunker-gauge-value">${esc(data.yearsInBunker)}</span>
+              <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.STAY_TIME}'); mask-image: url('${ICONS.STAY_TIME}');" aria-hidden="true"></span>
+                <div class="info-stat-content">
+                  <div class="k">Час перебування</div>
+                  <div class="v">${esc(data.yearsInBunker)}</div>
                 </div>
               </div>
-              <div class="bunker-gauge">
-                <span class="bunker-gauge-icon" style="-webkit-mask-image: url('${ICONS.FOOD}'); mask-image: url('${ICONS.FOOD}');" aria-hidden="true"></span>
-                <div class="bunker-gauge-body">
-                  <span class="bunker-gauge-label">ПРОВІЗІЯ</span>
-                  <span class="bunker-gauge-value">${esc(data.foodSupply)}</span>
+              <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.FOOD}'); mask-image: url('${ICONS.FOOD}');" aria-hidden="true"></span>
+                <div class="info-stat-content">
+                  <div class="k">Запасів їжі/води на</div>
+                  <div class="v">${esc(data.foodSupply)}</div>
                 </div>
               </div>
-              <div class="bunker-gauge">
-                <span class="bunker-gauge-icon" style="-webkit-mask-image: url('${ICONS.CAPACITY}'); mask-image: url('${ICONS.CAPACITY}');" aria-hidden="true"></span>
-                <div class="bunker-gauge-body">
-                  <span class="bunker-gauge-label">МІСТКІСТЬ</span>
-                  <span class="bunker-gauge-value">${esc(data.capacity)}</span>
+              <div class="info-stat">
+                <span class="info-stat-icon" style="-webkit-mask-image: url('${ICONS.CAPACITY}'); mask-image: url('${ICONS.CAPACITY}');" aria-hidden="true"></span>
+                <div class="info-stat-content">
+                  <div class="k">Кількість місць</div>
+                  <div class="v">${esc(data.capacity)}</div>
                 </div>
               </div>
             </div>
