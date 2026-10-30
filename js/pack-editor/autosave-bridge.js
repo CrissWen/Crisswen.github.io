@@ -46,7 +46,11 @@ function sectionKeys() {
 }
 
 function sigOf(key) {
-  if (key === 'cataclysm') return JSON.stringify(state.form.cataclysms || []);
+  if (key === 'cataclysm') {
+    return state.viewMode === 'llm'
+      ? (state.form.texts.cataclysm || '')
+      : JSON.stringify(state.form.cataclysms || []);
+  }
   if (key === 'stages') return JSON.stringify(state.form.stages || {});
   return state.form.texts[key] || ''; // у візуальному режимі текст теж оновлюється разом із карткою
 }
@@ -203,6 +207,9 @@ export function getDraftContext() {
   const categories = {};
   for (const cat of dirty) {
     if (cat === 'cataclysm') {
+      if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm') {
+        syncCataclysmsFromLlmText();
+      }
       categories[cat] = clone(state.form.cataclysms || []);
     } else if ((cat === state.activeCategory && state.viewMode === 'llm') || !state.cardData[cat]) {
       categories[cat] = reconcileCards(state.form.texts[cat] || '', state.cardData[cat] || [], cat, state.extraMeta, new Set());

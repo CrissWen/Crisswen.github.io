@@ -29,9 +29,9 @@ export function joinNameExplanation(name, explanation) {
 // Зворотне: картка з БД → два поля форми. Ділимо по ПЕРШОМУ " - " (дефіс без пробілів усередині слова не чіпаємо).
 export function splitNameExplanation(value) {
   const text = String(value ?? '');
-  const at = text.indexOf(PART_SEPARATOR);
-  if (at < 0) return { name: text.trim(), explanation: '' };
-  return { name: text.slice(0, at).trim(), explanation: text.slice(at + PART_SEPARATOR.length).trim() };
+  const match = text.match(/\s+[-—–]\s+/);
+  if (!match) return { name: text.trim(), explanation: '' };
+  return { name: text.slice(0, match.index).trim(), explanation: text.slice(match.index + match[0].length).trim() };
 }
 
 const parseBool = val => val === true || val === 'true';
@@ -82,20 +82,53 @@ export function formatStageEntry(entry) {
 
 const PROP_SETTERS = {
   rep: (meta, val) => { meta.can_reproduce = parseBool(val); },
+  can_reproduce: (meta, val) => { meta.can_reproduce = parseBool(val); },
+  reproduce: (meta, val) => { meta.can_reproduce = parseBool(val); },
+
   opp: (meta, val) => { meta.opposite = parseNullable(val); },
+  opposite: (meta, val) => { meta.opposite = parseNullable(val); },
+
   age: (meta, val) => { meta.custom_age = val; },
+  custom_age: (meta, val) => { meta.custom_age = val; },
+
   no_age: (meta, val) => { if (parseBool(val)) meta.has_no_age = true; },
+  has_no_age: (meta, val) => { if (parseBool(val)) meta.has_no_age = true; },
+
   age_min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
+  min_age: (meta, val) => { (meta.range ||= {}).min = Number(val); },
   age_max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+  max_age: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+
   action_type: (meta, val) => { meta.action_type = val; },
+
   no_height: (meta, val) => { if (parseBool(val)) meta.has_no_height = true; },
+  has_no_height: (meta, val) => { if (parseBool(val)) meta.has_no_height = true; },
   exact_height: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
+  height: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
+  exact: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
+  height_min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
+  min_height: (meta, val) => { (meta.range ||= {}).min = Number(val); },
+  height_max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+  max_height: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+
   min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
   max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+
   desc: (meta, val) => { meta.description = val; },
+  description: (meta, val) => { meta.description = val; },
+  explanation: (meta, val) => { meta.description = val; },
+
   timer: (meta, val) => { meta.timer_minutes = Number(val); },
+  timer_minutes: (meta, val) => { meta.timer_minutes = Number(val); },
+
   stay: (meta, val) => { meta.stay_time_months = Number(val); },
-  pop: (meta, val) => { meta.population = Number(val); }
+  stay_time: (meta, val) => { meta.stay_time_months = Number(val); },
+  stay_time_months: (meta, val) => { meta.stay_time_months = Number(val); },
+
+  pop: (meta, val) => { meta.population = Number(val); },
+  population: (meta, val) => { meta.population = Number(val); },
+
+  ability: (meta, val) => { meta.ability = val; }
 };
 
 const PROP_SERIALIZERS = [
@@ -117,16 +150,14 @@ const PROP_SERIALIZERS = [
 ];
 
 export function parsePropsString(propsStr) {
-  const regex = /(\w+)\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,}]+)/g;
+  const regex = /(\w+)\s*[:=]\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|«(?:[^»\\]|\\.)*»|“(?:[^”\\]|\\.)*”|[^,}]+)/g;
   let match;
   const props = {};
   while ((match = regex.exec(propsStr)) !== null) {
     const key = match[1];
     let val = match[2].trim();
-    if (val.startsWith('"') && val.endsWith('"')) {
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'")) || (val.startsWith('«') && val.endsWith('»')) || (val.startsWith('“') && val.endsWith('”'))) {
       val = val.slice(1, -1).replace(/\\"/g, '"');
-    } else if (val.startsWith("'") && val.endsWith("'")) {
-      val = val.slice(1, -1).replace(/\\'/g, "'");
     }
     props[key] = val;
   }
@@ -170,12 +201,25 @@ export function parseCardLine(category, line) {
     if (!matched) extracting = false;
   }
 
-  // Спеціальний випадок для професій — "Назва - Здібність"
-  if (category === 'profession' && value.includes(PART_SEPARATOR)) {
-    const separatorIndex = value.indexOf(PART_SEPARATOR);
-    const ability = value.substring(separatorIndex + PART_SEPARATOR.length).trim();
-    if (ability) meta.ability = ability;
-    value = value.substring(0, separatorIndex).trim();
+  // Спеціальний випадок для професій — "Назва - Здібність" (підтримка -, —, –)
+  if (category === 'profession') {
+    const sepMatch = value.match(/\s+[-—–]\s+/);
+    if (sepMatch) {
+      const ability = value.substring(sepMatch.index + sepMatch[0].length).trim();
+      if (ability) meta.ability = ability;
+      value = value.substring(0, sepMatch.index).trim();
+    }
+  }
+
+  // Для категорій з поясненням (фобія): якщо передано {desc: ...} або {explanation: ...} без дефіса
+  if (hasExplanationField(category) && !value.match(/\s+[-—–]\s+/)) {
+    const expl = meta.description || meta.explanation || meta.desc;
+    if (expl) {
+      value = `${value}${PART_SEPARATOR}${expl}`;
+      delete meta.description;
+      delete meta.explanation;
+      delete meta.desc;
+    }
   }
 
   return { value, meta };
