@@ -229,98 +229,175 @@
 }
 
 /* ===== Bunker info block ===== */
-.block-desc {
-  color: var(--text-mute);
-  margin: 0 0 18px;
-  font-size: 15px;
-  line-height: 1.6;
+/* Базовий контейнер відсіків бункера */
+.bunker-compartment {
+  background: color-mix(in srgb, var(--panel-2) 50%, var(--bg));
+  border: 1px solid var(--metal);
+  border-top: 1px solid var(--metal-lt);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
 }
 
-.bunker-details-row {
+.bunker-comp-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: clamp(24px, 3.5cqi, 48px);
-}
-
-.bunker-equip-col {
-  flex: 0 0 auto;
-  min-width: 240px;
-  max-width: min(100%, 420px);
-}
-
-.equipment-title {
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
   font-family: var(--mono);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-mute);
-  margin: 0 0 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: 11.5px;
 }
 
-.equipment-list {
-  list-style: none;
+.bunker-comp-badge {
+  background: var(--metal);
+  color: var(--text);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+
+.bunker-comp-title {
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.bunker-comp-status {
+  margin-left: auto;
+  color: var(--ok);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.bunker-comp-count {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--hazard);
+  font-weight: 700;
+}
+
+/* Відсік А: Житловий блок (Опис) */
+.bunker-compartment--life {
+  margin-bottom: 14px;
+}
+
+.bunker-desc {
+  font-family: var(--body);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text);
   margin: 0;
-  padding: 0;
+  white-space: pre-line;
+  word-break: break-word;
+  opacity: 0.95;
+}
+
+/* Нижній ярус модулів */
+.bunker-modules-row {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+}
+
+/* Відсік Б: Карго / Склад */
+.bunker-compartment--cargo {
+  flex: 1 1 45%;
+  max-width: 440px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bunker-cargo-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: max-content;
-  max-width: 100%;
 }
 
-.equipment-list li {
+.bunker-cargo-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+
+.bunker-cargo-tag {
   font-family: var(--mono);
-  font-size: 14px;
-  color: var(--text);
-  padding: 8px 18px 8px 12px;
-  border-left: 3px solid var(--ok);
-  background: var(--panel-2);
-  border-radius: var(--radius-sm);
-  box-shadow: 2px 2px 5px rgba(0,0,0,.5);
-  overflow-wrap: break-word;
+  font-size: 10.5px;
+  color: var(--hazard);
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
-.bunker-stats-col {
-  flex: 1 1 360px;
-  max-width: 850px;
-  margin-left: auto;
+.bunker-cargo-name {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: var(--text);
+  flex: 1;
+  word-break: break-word;
+}
+
+.bunker-cargo-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+  flex-shrink: 0;
+}
+
+.bunker-cargo-empty {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text-mute);
+  padding: 12px;
+  text-align: center;
+}
+
+/* Відсік В: Системи життєзабезпечення (без кольорових вертикальних смуг) */
+.bunker-compartment--systems {
+  flex: 1 1 55%;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-/* Сітка 2х2 для характеристик бункера */
-.info-grid {
+.bunker-gauges-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 0;
-  margin-top: 0;
-  align-items: stretch;
+  gap: 10px;
   flex: 1;
 }
 
-.info-stat {
+.bunker-gauge {
   background: var(--bg);
   border: 1px solid var(--metal);
-  border-left: 3px solid var(--metal-lt);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  min-height: 80px;
-  box-sizing: border-box;
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 14px;
-  box-shadow: inset 0 0 10px rgba(0,0,0,.8);
+  gap: 10px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
   min-width: 0;
+  box-sizing: border-box;
 }
-.info-stat-icon {
-  width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
+
+.bunker-gauge-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   display: block;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
@@ -328,45 +405,39 @@
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
-  background: linear-gradient(
-    135deg,
-    #ffffff 0%,
-    color-mix(in srgb, var(--hazard) 85%, #ffffff) 22%,
-    var(--hazard) 50%,
-    color-mix(in srgb, var(--hazard) 85%, #ffffff) 60%,
-    var(--hazard) 78%,
-    color-mix(in srgb, var(--hazard) 55%, #000000) 100%
-  );
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  background: linear-gradient(135deg, #ffffff 0%, var(--hazard) 50%, #000 100%);
 }
-.info-stat-content {
+
+.bunker-gauge-body {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   min-width: 0;
   flex: 1;
 }
-.info-stat .k {
+
+.bunker-gauge-label {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-mute);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  overflow-wrap: break-word;
-}
-.info-stat .v {
-  font-family: var(--head);
-  font-size: 21px;
-  font-weight: 600;
-  margin-top: 2px;
-  color: var(--text);
-  line-height: 1.25;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  line-height: 1.2;
 }
 
-/* Для мобільних екранів (портрет і ландшафт, < 820px контейнера):
-   зменшені шрифти та компактна верстка */
+.bunker-gauge-value {
+  font-family: var(--head);
+  font-size: clamp(14px, 1.8cqi, 18px);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+  margin-top: 2px;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* =========================================================================
+   АДАПТИВНІСТЬ (< 820px)
+   ========================================================================= */
 @container (width < 820px) {
   .cataclysm-card {
     gap: 12px;
@@ -410,13 +481,9 @@
     font-size: 10px;
     margin-bottom: 6px;
   }
-  .cataclysm-desc,
-  .block-desc {
+  .cataclysm-desc {
     font-size: 13.5px;
     line-height: 1.5;
-  }
-  .block-desc {
-    margin-bottom: 12px;
   }
   .cataclysm-pop-wrapper {
     width: 100%;
@@ -446,59 +513,45 @@
     padding: 3px 8px;
   }
 
-  .bunker-details-row {
+  .bunker-compartment {
+    padding: 11px 13px;
+  }
+  .bunker-desc {
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .bunker-modules-row {
     flex-direction: column;
     gap: 14px;
   }
-  .bunker-equip-col {
-    width: 100%;
+  .bunker-compartment--cargo,
+  .bunker-compartment--systems {
     max-width: 100%;
-    min-width: 0;
-  }
-  .bunker-stats-col {
-    flex: none;
     width: 100%;
-    max-width: 100%;
-    margin-left: 0;
   }
-  .equipment-title {
-    font-size: 11.5px;
-    margin-bottom: 6px;
-  }
-  .equipment-list {
-    width: 100%;
-    gap: 6px;
-  }
-  .equipment-list li {
-    padding: 6px 10px;
-    font-size: 12.5px;
-  }
-  .info-grid {
+  .bunker-gauges-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-top: 0;
-    max-width: 100%;
   }
-  .info-stat {
+  .bunker-gauge {
     padding: 8px 10px;
     gap: 8px;
   }
-  .info-stat-icon {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
+  .bunker-gauge-icon {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
   }
-  .info-stat .k {
+  .bunker-gauge-label {
     font-size: 10.5px;
   }
-  .info-stat .v {
-    font-size: 15px;
-    margin-top: 1px;
+  .bunker-gauge-value {
+    font-size: 14px;
   }
 }
 
-@container (width < 330px) {
-  .info-grid {
+@container (width < 420px) {
+  .bunker-gauges-grid {
     grid-template-columns: 1fr;
   }
 }
