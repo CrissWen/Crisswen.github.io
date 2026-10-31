@@ -110,7 +110,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'war',
     frame: 'circle',
     path: './icons/catastrophe/bombing-run.svg',
-    tags: Object.freeze(["дрон", "безпілотник", "бомбардув", "авіаудар", "авіаці", "наліт", "літак", "килимов", "руйнуван"]),
+    tags: Object.freeze(["війна кінетичних бомбардувань", "кінетичні бомбардування", "кінетичн", "вольфрамові стрижні", "орбітальні платформи", "дрон", "безпілотник", "бомбардув", "авіаудар", "авіаці", "наліт", "літак", "килимов", "руйнуван"]),
   }),
   GRENADE: Object.freeze({
     id: 'GRENADE',
@@ -124,7 +124,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     id: 'ROCKET',
     label: 'Балістична ракета',
     category: 'war',
-    frame: 'circle',
+    frame: 'square',
     path: './icons/catastrophe/rocket.svg',
     tags: Object.freeze(["ракет", "корабел", "балістичн", "пуск", "обстріл", "шахед", "крилат", "ппо"]),
   }),
@@ -232,7 +232,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'natural',
     frame: 'circle',
     path: './icons/catastrophe/lightning-bow.svg',
-    tags: Object.freeze(["блискавк", "грім", "розряд", "буря", "шторм", "стихія"]),
+    tags: Object.freeze(["сутінки богів", "рагнарок", "фімбулвінтер", "боги", "тор", "блискавка тора", "блискавк", "грім", "розряд", "буря", "шторм", "стихія", "небокрай", "пантеон", "скандинавськ"]),
   }),
   ICE_CUBE: Object.freeze({
     id: 'ICE_CUBE',
@@ -287,7 +287,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/virus.svg',
-    tags: Object.freeze(["вірус", "пандемі", "інфекці", "епідемі", "заражен", "коронавірус", "хвороб", "штам", "інфік"]),
+    tags: Object.freeze(["вірус безсмертя", "вірус", "безсмертя", "патоген", "пандемі", "інфекці", "епідемі", "заражен", "коронавірус", "хвороб", "штам", "вакцин", "інфік", "контактний патоген"]),
   }),
   CHEMICAL_DROP: Object.freeze({
     id: 'CHEMICAL_DROP',
@@ -295,11 +295,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/chemical-drop.svg',
-    tags: Object.freeze([
-      "токсична пшениця", "біолюмінесцентна отруйна пліснява", "отруйна пліснява",
-      "пшениц", "зерн", "хліб", "нейротоксин", "плісняв", "цвіл",
-      "хімі", "крапл", "токсин", "отрут", "реагент", "забруднення", "отруєн", "отруй", "токсич", "кислот"
-    ]),
+    tags: Object.freeze(["токсична пшениця", "біолюмінесцентна отруйна пліснява", "отруйна пліснява", "пшениц", "зерн", "хліб", "нейротоксин", "плісняв", "цвіл", "хімі", "крапл", "токсин", "отрут", "реагент", "забруднення", "отруєн", "отруй", "токсич", "кислот"]),
   }),
   FIZZING_FLASK: Object.freeze({
     id: 'FIZZING_FLASK',
@@ -399,7 +395,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'tech',
     frame: 'circle',
     path: './icons/catastrophe/laser-precision.svg',
-    tags: Object.freeze(["лазер","промінь","приціл","точніст","фокус","збро","орбітальне бомбардування","орбітальний лазер","променева зброя","плазмов","іонна гармата"]),
+    tags: Object.freeze(["останній ресурсний переділ", "ресурсний переділ", "орбітальна кінетична зброя", "орбітальна зброя", "вольфрамові стрижні", "лазер", "приціл", "наведен", "точність", "промінь", "орбітальн", "кінетичн", "приватні армії"]),
   }),
   LASER_WARNING: Object.freeze({
     id: 'LASER_WARNING',
@@ -502,7 +498,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'monsters',
     frame: 'circle',
     path: './icons/catastrophe/imp-laugh.svg',
-    tags: Object.freeze(["біс", "чорт", "імпер", "сміх", "демончат", "капость"]),
+    tags: Object.freeze(["прорив інфернальних врат", "інфернальні врата", "інфернальн", "підземні бестії", "сірчаний газ", "біс", "чорт", "імпер", "сміх", "демончат", "капость", "бесті", "пекельн", "демон"]),
   }),
   TRITON_HEAD: Object.freeze({
     id: 'TRITON_HEAD',
@@ -569,7 +565,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/grim-reaper.svg',
-    tags: Object.freeze(["смерт", "жнець", "коса", "кістляв", "загибел", "потойбіч", "морок"]),
+    tags: Object.freeze(["хода жниваря", "жнивар", "тінь смерті", "холодна присутність", "втрата дихання", "смерт", "жнець", "коса", "кістляв", "загибел", "потойбіч", "морок", "подих смерті"]),
   }),
   DEATH_ZONE: Object.freeze({
     id: 'DEATH_ZONE',
@@ -593,7 +589,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/skull-and-crossbones.svg',
-    tags: Object.freeze(["череп", "пірат", "кістк", "смертельн", "отрут", "чорна мітка", "отруєн", "отруй", "токсич"]),
+    tags: Object.freeze(["прокляття танатосу", "танатос", "самознищення", "інстинкт самозбереження", "ейфорія", "череп", "пірат", "кістк", "смертельн", "отрут", "чорна мітка", "самогубств", "потяг до смерті", "безумств"]),
   }),
   CROWNED_SKULL: Object.freeze({
     id: 'CROWNED_SKULL',
@@ -609,7 +605,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/chewed-skull.svg',
-    tags: Object.freeze(["череп", "погризен", "канібал", "хижак", "рештк", "зомб"]),
+    tags: Object.freeze(["чотири вершники апокаліпсису", "чотири вершники", "вершники апокаліпсису", "комплекс бід", "трупний сморід", "череп", "погризен", "канібал", "хижак", "рештк", "зомб", "понівечен"]),
   }),
   CHEWED_HEART: Object.freeze({
     id: 'CHEWED_HEART',
@@ -625,7 +621,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/animal-skull.svg',
-    tags: Object.freeze(["череп", "вимирання", "кістк", "останки", "фауна", "пустел"]),
+    tags: Object.freeze(["тотальне опустелювання", "опустелювання", "піщані бурі", "бархани", "висохли на порох", "череп", "вимирання", "кістк", "останки", "фауна", "пустел", "порох", "пісок", "бархан"]),
   }),
   BROKEN_BONE: Object.freeze({
     id: 'BROKEN_BONE',
@@ -641,7 +637,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'death',
     frame: 'circle',
     path: './icons/catastrophe/haunting.svg',
-    tags: Object.freeze(["привид","дух","страх","переляк","жах","замок","будинок","полтергейст","потойбіч","проклята земля","шепіт безодні","лавкрафт","колективне божевілля"]),
+    tags: Object.freeze(["зрив некротичної завіси", "некротична завіса", "безтілесний фантом", "потойбічні гості", "привид", "примар", "дух", "полтергейст", "жах", "паранормальн", "фантом", "потойбічч", "крижаний фантом", "некротичн", "тінь", "безтілесн"]),
   }),
   EVIL_BOOK: Object.freeze({
     id: 'EVIL_BOOK',
@@ -705,7 +701,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'occult',
     frame: 'circle',
     path: './icons/catastrophe/robe.svg',
-    tags: Object.freeze(["сект","сектант","культ","культист","культ судного дня","релігійна організація","таємна організація","таємне товариство","орден","братство","ложа","фанат","гуру","пастир","манті","капюшон","ритуал","обряд","жертвопринесення","єрес","єретик"]),
+    tags: Object.freeze(["прихід антихриста", "антихрист", "тавро покори", "світовий диктатор", "поневолення", "фанатичні каральні", "манті", "культ", "сект", "капюшон", "чернець", "ритуал", "орден", "диктатор", "інквізиці"]),
   }),
   HOURGLASS: Object.freeze({
     id: 'HOURGLASS',
@@ -745,7 +741,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'absurd',
     frame: 'circle',
     path: './icons/catastrophe/turd.svg',
-    tags: Object.freeze(["какашк", "гівн", "лайно", "бруд", "каналізаці", "рофл", "мем", "туалет", "колапс"]),
+    tags: Object.freeze(["какашк", "гівн", "лайно", "бруд", "каналізаці", "рофл", "мем", "туалет", "колапс", "смер", "смор"]),
   }),
   CHICKEN_LEG: Object.freeze({
     id: 'CHICKEN_LEG',
@@ -769,7 +765,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'absurd',
     frame: 'circle',
     path: './icons/catastrophe/seated-mouse.svg',
-    tags: Object.freeze(["миш", "пацюк", "щур", "гризун", "шкідник", "чума", "рофл", "нори"]),
+    tags: Object.freeze(["розумні щури-мутанти", "розумні щури", "сіра чума", "колективний розум щурів", "миш", "пацюк", "щур", "гризун", "шкідник", "чума", "рофл", "нори"]),
   }),
   RELATIONSHIP_BOUNDS: Object.freeze({
     id: 'RELATIONSHIP_BOUNDS',
@@ -801,7 +797,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'absurd',
     frame: 'circle',
     path: './icons/catastrophe/dove.svg',
-    tags: Object.freeze(["голуб", "птиц", "птас", "мир", "наді", "рофл", "послід"]),
+    tags: Object.freeze(["голуб", "птиц", "птас", "мир", "наді", "рофл", "послід", "хиж", "велет", "птах"]),
   }),
   CROC_JAWS: Object.freeze({
     id: 'CROC_JAWS',
@@ -817,7 +813,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'bio',
     frame: 'circle',
     path: './icons/catastrophe/poison-gas.svg',
-    tags: Object.freeze(["газ", "отрут", "токсин", "смог", "хмар", "випар", "задух", "нейротоксин", "череп", "туман", "отруєн", "отруй", "токсич"]),
+    tags: Object.freeze(["некротичний туман", "сірий серпанок", "розпад тканин", "розкладання біологічної", "газ", "отрут", "токсин", "смог", "хмар", "випар", "задух", "нейротоксин", "череп", "туман", "отруєн", "отруй", "токсич", "серпанок", "гнил"]),
   }),
   SABER_TOOTH: Object.freeze({
     id: 'SABER_TOOTH',
@@ -833,7 +829,7 @@ export const CATASTROPHE_ICONS = Object.freeze({
     category: 'war',
     frame: 'circle',
     path: './icons/catastrophe/tank.svg',
-    tags: Object.freeze(["танк", "бронетехнік", "війн", "армі", "гармат", "гусениц", "обстріл", "окупаці", "колона"]),
+    tags: Object.freeze(["війна за водні горизонти", "водні горизонти", "артилерійські дуелі", "вакуумні бомбардування", "танк", "бронетехнік", "війн", "армі", "гармат", "гусениц", "обстріл", "окупаці", "колона", "артилері"]),
   }),
   SYRINGE: Object.freeze({
     id: 'SYRINGE',
@@ -900,6 +896,28 @@ export const CATASTROPHE_ICONS = Object.freeze({
     tags: Object.freeze([
       "чорна діра", "гравітаці", "сингулярність", "аномалі", "космос", "вир", "колапс", "затягуван", "фізик", "простір",
       "квантов", "розрив континууму", "розпад хибного вакууму", "астрофізик", "зірка-ізгой", "викривлення простору"
+    ]),
+  }),
+  HANGING_SPIDER: Object.freeze({
+    id: 'HANGING_SPIDER',
+    label: 'Павук на павутинні / Арахнофобія',
+    category: 'monsters',
+    frame: 'circle',
+    path: './icons/catastrophe/hanging-spider.svg',
+    tags: Object.freeze([
+      "павук", "арахнід", "арахнофобія", "павутин", "отрут", "хижак",
+      "комах", "членистоног", "рої", "кокон", "отруєн", "отруй", "токсич"
+    ]),
+  }),
+  SPIDER_BOT: Object.freeze({
+    id: 'SPIDER_BOT',
+    label: 'Павук-робот / Кібер-арахнід',
+    category: 'tech',
+    frame: 'circle',
+    path: './icons/catastrophe/spider-bot.svg',
+    tags: Object.freeze([
+      "робот", "павук-робот", "кіборг", "дрони", "автономн", "механізм",
+      "штучний інтелект", "ші", "кібернетик", "кіберпавук", "машин", "розвідник"
     ]),
   }),
 });
