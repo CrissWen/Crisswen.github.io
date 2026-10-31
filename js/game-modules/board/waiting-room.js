@@ -1,5 +1,6 @@
 import { esc } from '../../utils/escape-html.js';
 import { DEFAULT_PACK_ID, packDisplayName } from '../../services/packs-store.js';
+import { avatarBadgeHtml } from '../../utils/avatar.js';
 
 // minPlayers / maxPlayers — з конфігу балансу (config-manager.js: minPlayersToStart / maxPlayersInLobby), викликач — game.js.
 // Тут немає зашитих чисел: інакше локальне перевизначення в game-config.local.js не змінювало б кнопку «Почати гру» і підказку.
@@ -20,7 +21,7 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
   const playersListHtml = Object.entries(pState)
     .map(([playerId, p]) => `
       <li class="lobby-player-item" style="padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--metal); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-        <span>${esc(p.name)}</span>
+        <span style="display: flex; align-items: center; min-width: 0;">${avatarBadgeHtml(playerId, p.name, 28, { clickable: true })}${esc(p.name)}</span>
         ${isHost && playerId !== myId ? `<button data-lobby-kick="${playerId}" class="lobby-kick-btn" title="Вигнати з лобі" style="background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 0 4px;">✕</button>` : ''}
       </li>
     `)
@@ -34,7 +35,7 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
   if (!options.some(o => o.id === currentPackId)) options.unshift({ id: currentPackId, name: packName });
   const packSelectHtml = isHost ? `
     <label class="wr-pack__label" for="wr-pack-select">Змінити пак гри</label>
-    <select id="wr-pack-select" class="hp-select wr-pack__select" ${packOptions === null ? 'disabled' : ''}>
+    <select id="wr-pack-select" class="pe-select-custom wr-pack__select" ${packOptions === null ? 'disabled' : ''}>
       ${options.map(o => `<option value="${esc(o.id)}" ${o.id === currentPackId ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}
     </select>
   ` : '';
@@ -89,7 +90,7 @@ export function waitingRoom({ roomCode, playersState, isHost, minPlayers, maxPla
           <p class="lobby-start-hint ${canStart ? 'is-ready' : ''}" id="lobby-start-hint">
             Щоб почати гру, потрібно як мінімум ${MIN_PLAYERS_TO_START} осіб. (${playersCount}/${MAX_PLAYERS_IN_LOBBY})
           </p>
-          <button id="start-game-btn" ${canStart ? '' : 'disabled'} style="width: 100%; padding: 12px; border-radius: var(--radius-sm); background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none; font-size: 15px;">
+          <button id="start-game-btn" ${canStart ? '' : 'disabled'} class="menu-btn menu-btn--hazard menu-btn--block">
             Почати гру
           </button>
         ` : ` 

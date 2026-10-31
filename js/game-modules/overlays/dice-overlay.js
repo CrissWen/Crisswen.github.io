@@ -2,6 +2,8 @@
 // Викликається з Realtime-підписки в game.js, коли в bunker_state з'являється нова подія latest_dice,
 // тому всі клієнти кімнати (ведучий, гравці, глядачі) бачать анімацію одночасно.
 
+import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
+
 const OVERLAY_ID = 'dice-overlay';
 const DICE_TYPES = ['d20', 'd6'];
 // Тривалість польоту/скачків кубика (має збігатися з dice-throw у styles.css). До цього моменту число ПРИХОВАНЕ.
@@ -88,6 +90,7 @@ export function showDiceRoll(type, value) {
   overlay.classList.remove('is-hidden', 'is-rolling', 'is-revealed');
   void overlay.offsetWidth; // примусовий reflow, інакше браузер не перезапустить CSS-анімацію
   overlay.classList.add('is-rolling');
+  soundManager.play(SOUND_IDS.DICE_ROLL, { bypassThrottle: true }); // звук кидка стартує разом з анімацією, в усіх клієнтів одночасно
 
   revealTimeout = setTimeout(() => {
     valueEl.textContent = value;

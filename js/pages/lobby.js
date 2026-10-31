@@ -2,7 +2,8 @@ import { supabase } from '../services/supabase.js';
 
 // Статуси кімнати, які вже не вважаються активними. closeRoom (host-actions.js) тепер сам виставляє status: 'closed'
 // в тому ж запиті, що й bunker_state.room_closed, тож цей фільтр вже працює для нових закритих кімнат.
-const EXCLUDED_ROOM_STATUSES = ['closed'];
+const EXCLUDED_ROOM_STATUSES = ['closed', 'finished'];
+const EXCLUDED_STATUSES_FILTER = `(${EXCLUDED_ROOM_STATUSES.join(',')})`; // формат PostgREST для .not('status', 'in', ...)
 
 // Активні кімнати поточного гравця — наповнюється в initLobby(), читається подальшим рендером панелі активних кімнат (наступний етап).
 let userActiveRooms = [];
@@ -16,12 +17,12 @@ async function fetchUserActiveRooms(userId) {
       .from('rooms')
       .select('*')
       .eq('host_id', userId)
-      .neq('status', 'closed'),
+      .not('status', 'in', EXCLUDED_STATUSES_FILTER),
     supabase
       .from('rooms')
       .select('*')
       .contains('players_state', { [userId]: {} })
-      .neq('status', 'closed')
+      .not('status', 'in', EXCLUDED_STATUSES_FILTER)
   ]);
 
   if (hostRes.error) throw hostRes.error;
@@ -86,10 +87,10 @@ export function renderLobby() {
           <h2>Лобі</h2>
         </div>
         <div class="block-body" style="display: flex; flex-direction: column; gap: 14px;">
-          <button id="create-room-btn" style="padding: 10px; border-radius: var(--radius-sm); background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none;">Створити кімнату</button>
+          <button id="create-room-btn" class="menu-btn menu-btn--accent">Створити кімнату</button>
           <hr style="width: 100%; border-color: var(--metal-lt); margin: 0;">
           <input type="text" id="room-code" placeholder="Код кімнати (напр. ABCD)" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text); text-transform: uppercase;">
-          <button id="join-room-btn" disabled style="padding: 10px; border-radius: var(--radius-sm); background: var(--hazard); color: #000; font-weight: bold; cursor: pointer; border: none;">Приєднатися</button>
+          <button id="join-room-btn" disabled class="menu-btn menu-btn--hazard">Приєднатися</button>
           <div id="join-error-msg" class="error-text" role="alert" aria-live="polite" style="margin-top: 0; text-align: center;"></div>
         </div>
       </section>

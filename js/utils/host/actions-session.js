@@ -1,7 +1,9 @@
+import { supabase } from '../../services/supabase.js';
 import { pushLog } from '../log-writer.js';
 import { randInt } from '../random.js';
 import { getRoom, saveRoom, snapshot, clearSnapshot } from './room-store.js';
 import { setHostEvent, nameOf } from './common.js';
+import { clearTimerAutoStop } from './actions-timer.js';
 
 // ===== Голосування, кубик та керування кімнатою =====
 
@@ -123,23 +125,108 @@ export async function kickPlayerFromLobby(roomCode, playerId) {
 
 export async function restartGame(roomCode) {
   const room = await getRoom(roomCode);
-  snapshot(room);
   const pState = room.players_state || {};
   const resetPlayers = {};
   Object.entries(pState).forEach(([id, p]) => { resetPlayers[id] = { name: p.name }; });
   await saveRoom(roomCode, { players_state: resetPlayers, bunker_state: {} });
+  // Після скидання панель ведучого зникає, тож скасувати його неможливо. Старий знімок не лишаємо:
+  // інакше в новій грі «Скасувати» була б активна й відкотила б її до минулої гри.
+  clearSnapshot();
 }
 
 export async function closeRoom(roomCode, stoppedTimer = null) {
   // Статус пишемо разом із bunker_state: додаємо в нього stopped_timer (рядок типу "01:25:30" з екрана ведучого), щоб у закритій
   // кімнаті таймер показував зафіксований час. Інші поля bunker_state лишаються як є (історія гри).
   // Realtime завжди передає змінений status в payload.new, тому game.js визначає закриття саме по status === 'closed'.
-  // lobby.js вже відфільтровує кімнати зі status IN ('finished','closed').
+  // Статистику («Закрити кімнату») НЕ зараховуємо: вона нараховується лише у finishGame() нижче.
+  // Завершену гру (finished) закрити не можна: стара вкладка ведучого не повинна викидати гравців із фіналу, а статистика вже зарахована.
+  const room = await getRoom(roomCode);
+  if (room.status === 'finished') throw new Error('Гру вже завершено: гравці переглядають підсумки');
+
   const patch = { status: 'closed' };
   if (stoppedTimer) {
-    const room = await getRoom(roomCode);
     patch.bunker_state = { ...(room.bunker_state || {}), stopped_timer: stoppedTimer };
   }
   await saveRoom(roomCode, patch);
   clearSnapshot();
+}
+
+// ===== Завершення гри =====
+
+// Живий гравець — той, хто не вибув і не вигнаний (та сама умова, що й у голосуванні). Офлайн на підрахунок не впливає.
+export function countAlivePlayers(playersState) {
+  return Object.values(playersState || {}).filter(p => p && p.is_alive !== false && !p.is_kicked).length;
+}
+
+// Кількість місць у бункері: bunker_state.capacity; якщо його ще немає — гравців / 2 з округленням вниз (як при старті гри).
+export function getBunkerCapacity(room) {
+  const raw = room?.bunker_state?.capacity;
+  if (raw !== undefined && raw !== null && Number.isFinite(Number(raw))) return Number(raw);
+  return Math.floor(Object.keys(room?.players_state || {}).length / 2);
+}
+
+// true — живих не більше, ніж місць: ведучий бачить «Завершити гру», інакше «Закрити кімнату».
+export function canFinishGame(room) {
+  return countAlivePlayers(room?.players_state) <= getBunkerCapacity(room);
+}
+
+// Зараховує статистику кожному учаснику через RPC record_game_results (ідемпотентність лежить на самій функції в БД).
+async function recordGameResults(roomCode) {
+  try {
+    const { data: rpcRes, error: rpcError } = await supabase.rpc('record_game_results', { p_room_code: roomCode });
+    if (rpcError) {
+      console.error('Помилка фіксації результатів гри в історії:', rpcError.message || rpcError);
+      return false;
+    } else {
+      // В БД помилки повертаються всередині jsonb (success: false), а не як rpcError
+      if (!rpcRes || rpcRes.success !== true) {
+        console.error('record_game_results повернув помилку:', rpcRes);
+        return false;
+      }
+      console.log('Результат фіксації гри в історії (record_game_results):', rpcRes);
+      if (rpcRes && rpcRes.recorded_players === 0 && !rpcRes.already_recorded) {
+        console.warn('Жодного гравця не було зафіксовано в історії. Деталі помилок:', JSON.stringify(rpcRes.errors, null, 2));
+      }
+      return true;
+    }
+  } catch (err) {
+    console.error('Не вдалося викликати record_game_results:', err);
+    return false;
+  }
+}
+
+// Завершує гру: status -> 'finished', таймери зупиняються, статистика зараховується ОДИН раз.
+// Гравців не відключаємо: усі клієнти бачать фінал через Realtime (game.js). Статус змінюємо умовним UPDATE
+// (лише якщо кімната ще не finished/closed), тому подвійний клік або дві вкладки ведучого не зарахують гру двічі:
+// RPC викликає лише той запит, що реально змінив рядок.
+export async function finishGame(roomCode, stoppedTimer = null) {
+  const room = await getRoom(roomCode);
+  if (room.status === 'finished' || room.status === 'closed') throw new Error('Гру вже завершено');
+
+  const bState = { ...(room.bunker_state || {}) };
+  if (Object.keys(bState).length === 0) throw new Error('Гру ще не розпочато');
+  if (!canFinishGame(room)) throw new Error('Живих гравців більше, ніж місць у бункері. Продовжуйте гру або закрийте кімнату.');
+
+  // Зупиняємо загальний таймер (активний і на паузі), таймер катаклізму фіксуємо текстом, як при закритті
+  // Голосування візуальне й нікого не виганяє, тому не блокує завершення; просто закриваємо його, щоб воно не лишилось активним на фіналі
+  if (bState.voting?.isActive === true) bState.voting = { ...bState.voting, isActive: false };
+  clearTimerAutoStop();
+  bState.global_timer_end = null;
+  bState.timer_paused_left = null;
+  if (stoppedTimer) bState.stopped_timer = stoppedTimer;
+  pushLog(bState, 'Ведучий завершив гру');
+
+  const { data, error } = await supabase
+    .from('rooms')
+    .update({ status: 'finished', bunker_state: bState })
+    .eq('room_code', roomCode)
+    .not('status', 'in', '(finished,closed)')
+    .select('room_code');
+  if (error) throw new Error(error.message || 'Не вдалося завершити гру');
+  if (!data || data.length === 0) throw new Error('Гру вже завершено');
+
+  clearSnapshot();
+  // Гра вже завершена для всіх, тож у разі збою статистики лише голосно попереджаємо ведучого (помилка в тості панелі)
+  const recorded = await recordGameResults(roomCode);
+  if (!recorded) throw new Error('Гру завершено, але статистику не вдалося зарахувати. Повідомте адміністратора');
 }

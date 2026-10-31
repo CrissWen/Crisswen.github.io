@@ -1,5 +1,7 @@
 import { supabase } from '../../services/supabase.js';
 import { pushLog } from '../log-writer.js';
+import { isCataclysmSpinActive } from '../cataclysm-spin.js';
+import { getGlobalTime } from '../../services/server-time.js';
 
 // ===== Доступ до кімнати в БД + знімок для «Скасувати» =====
 // lastSnapshot — стан модуля: живе лише тут, інші модулі працюють через snapshot() / clearSnapshot().
@@ -41,6 +43,10 @@ export async function undoLastAction(roomCode) {
     throw new Error('Немає дії для скасування');
   }
   const room = await getRoom(roomCode);
+  // Відкат посеред рулетки підмінив би катаклізм, поки стрічка ще крутиться до іншого результату
+  if (isCataclysmSpinActive(room.bunker_state, getGlobalTime())) {
+    throw new Error('Рулетка катаклізму ще крутиться — дочекайтесь результату');
+  }
   const { players_state: restoredPState, bunker_state } = lastSnapshot;
 
   // Переносимо стан відкритості карток та використання здібностей з поточного стану,
@@ -74,6 +80,9 @@ export async function undoLastAction(roomCode) {
   const restored = { ...bunker_state };
   if (Array.isArray(current.logs)) restored.logs = current.logs;
   if (current.latest_dice) restored.latest_dice = current.latest_dice;
+  // cataclysm_spin — той самий випадок: зі знімка повернувся б старий спін з іншим id, і рулетка програлась би вдруге
+  if (current.cataclysm_spin) restored.cataclysm_spin = current.cataclysm_spin;
+  else delete restored.cataclysm_spin;
   pushLog(restored, 'Ведучий скасував попередню дію');
   // host_id в патчі немає навмисно: скасування не повертає колишнього ведучого, навіть якщо застарілий знімок якось уцілів
   await saveRoom(roomCode, { players_state: restoredPState, bunker_state: restored });

@@ -10,6 +10,11 @@
 @import url("components/lobby.css");
 @import url("components/spectator.css");
 @import url("components/dice.css");
+@import url("components/roulette.css");
 @import url("components/notes-log.css");
 @import url("components/packs.css");
 @import url("components/orientation-prompt.css");
+@import url("components/avatar.css");
+@import url("components/profile.css");
+@import url("components/player-profile.css");
+@import url("components/bunker-transition.css");

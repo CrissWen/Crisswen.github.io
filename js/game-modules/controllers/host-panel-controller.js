@@ -11,6 +11,7 @@ import {
 } from '../host-panel/host-panel.js';
 import { showCustomConfirm } from '../overlays/confirm-dialog.js';
 import { getCataclysmTimerText } from '../timers/cataclysm-timer.js';
+import { initCustomSelects } from '../../ui/custom-select.js';
 
 // ===== Панель ведучого: монтування, події, виклик дій =====
 // Контролер не володіє станом гри: усе потрібне (код кімнати, id користувача, поточний стан кімнати) читається
@@ -26,6 +27,7 @@ function hostPanelData(roomData, ctx) {
     players: getPlayersList(roomData.players_state),
     currentUserId: ctx.getUserId(),
     capacity: roomData.bunker_state?.capacity,
+    canFinish: HostActions.canFinishGame(roomData), // живих ≤ місць: «Завершити гру» замість «Закрити кімнату»
     canUndo: HostActions.canUndo(),
     timer: {
       end: roomData.bunker_state?.global_timer_end,
@@ -52,6 +54,7 @@ export function syncHostPanel(roomData, isHost, ctx) {
   if (!root) {
     document.body.insertAdjacentHTML('beforeend', renderHostPanel(hostPanelData(roomData, ctx)));
     root = getHostPanelRoot();
+    initCustomSelects(root);
     bindHostEvents(root, ctx);
   }
 
@@ -172,6 +175,10 @@ function createHostActions(ctx) {
       run: () => HostActions.restartGame(code()),
       ok: 'Гру скинуто'
     },
+    finishGame: {
+      run: () => HostActions.finishGame(code(), getCataclysmTimerText()), // час катаклізму йде в bunker_state.stopped_timer; гравців не перекидаємо — фінал прийде через Realtime
+      ok: 'Гру завершено'
+    },
     closeRoom: {
       run: () => HostActions.closeRoom(code(), getCataclysmTimerText()), // час з екрана йде в bunker_state.stopped_timer разом із status: 'closed'
       ok: 'Кімнату закрито',
@@ -188,7 +195,8 @@ const NO_CONFIRM_ACTIONS = new Set(['timer', 'pauseTimer', 'stopTimer', 'dice', 
 
 // Текст підтвердження для конкретних дій; все, чого немає тут, отримує DEFAULT_CONFIRM_TEXT
 const CONFIRM_TEXTS = {
-  closeRoom: 'Точно закрити кімнату? Усіх гравців буде відключено, дію не можна скасувати.',
+  finishGame: 'Завершити гру? Результати буде зараховано в статистику, дію не можна скасувати.',
+  closeRoom: 'Точно закрити кімнату? Усіх гравців буде відключено, результати не зарахуються в статистику, дію не можна скасувати.',
   restart:   'Почати гру заново? Усі картки буде скинуто, гравці повернуться до кімнати очікування.',
   changeHost:'Передати права ведучого обраному гравцю? Ви втратите доступ до цієї панелі.',
   healMake:  'Застосувати обрану дію до гравця?',

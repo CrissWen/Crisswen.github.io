@@ -5,6 +5,9 @@ import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';
 import { randomBunkerFieldValue } from '../game-generator.js';
 import { getGlobalTime } from '../../services/server-time.js';
+import { detectCataclysmIcon } from '../cataclysm-detector.js';
+import { attachCataclysmSpin, isCataclysmSpinActive } from '../cataclysm-spin.js';
+import { pushLog } from '../log-writer.js';
 
 // ===== Дії з бункером =====
 
@@ -86,6 +89,11 @@ export async function changeBunkerItems(roomCode, action, value) {
 
 export async function changeCataclysm(roomCode) {
   const room = await getRoom(roomCode);
+  // Поки крутиться рулетка, катаклізм не змінюється: інакше результат підмінився б просто під час анімації. Перевірка ДО знімка,
+  // щоб відхилена спроба не затерла знімок для «Скасувати».
+  if (isCataclysmSpinActive(room.bunker_state, getGlobalTime())) {
+    throw new Error('Рулетка катаклізму ще крутиться — дочекайтесь результату');
+  }
   snapshot(room);
   const pools = await loadPools(room.selected_pack_id);
   const bState = room.bunker_state || {};
@@ -103,12 +111,17 @@ export async function changeCataclysm(roomCode) {
     text: card.value,
     description: card.meta?.description || '',
     timer_minutes: timerMinutes,
-    population: card.meta?.population || 'Невідомо' // так само, як у generateGameState: інакше після зміни катаклізму населення зникло б з дошки
+    population: card.meta?.population || 'Невідомо',
+    icon: card.meta?.icon || detectCataclysmIcon(card.value, card.meta?.description)
   };
   // Глобальна мітка кінця відліку в базі даних (мс), щоб таймер був синхронізованим у усіх гравців.
   // Новий катаклізм без власного таймера має скидати стару мітку від попереднього катаклізму, інакше гравці бачили б чужий відлік.
   bState.cataclysm_timer_end = timerMinutes > 0 ? getGlobalTime() + timerMinutes * 60 * 1000 : null;
-  setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
+  // Рулетка: результат уже записаний у bState.cataclysm, спін лише показує його всім за серверним часом. Запис у лозі отримує id спіну,
+  // щоб клієнти ховали його до зупинки стрічки (тост про зміну видав би результат раніше). Рулетку вимкнено — подія одразу, як раніше.
+  const spin = await attachCataclysmSpin(bState, pools.bunker?.cataclysm, getGlobalTime());
+  if (spin) pushLog(bState, `Ведучий змінив катаклізм: ${card.value}`, spin.id);
+  else setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
   await saveRoom(roomCode, { bunker_state: bState });
 }
 

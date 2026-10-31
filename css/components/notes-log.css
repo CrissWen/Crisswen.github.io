@@ -79,3 +79,37 @@
 }
 .event-log__text { color: var(--text-mute); overflow-wrap: anywhere; }
 .event-log__empty { padding: 10px 0; color: var(--text-mute); font-size: 14px; }
+
+@media (max-width: 920px), (max-height: 520px) {
+  .personal-notes,
+  .event-log {
+    margin-top: 12px;
+  }
+  .personal-notes__warning {
+    font-size: 11.5px;
+    margin-bottom: 8px;
+  }
+  .personal-notes__input {
+    min-height: 110px;
+    font-size: 12.5px;
+    padding: 8px 10px;
+  }
+  .event-log__toggle {
+    padding: 10px 12px;
+    font-size: 15.5px;
+  }
+  .event-log__arrow {
+    font-size: 12px;
+  }
+  .event-log__list {
+    padding: 6px 12px 10px;
+    max-height: 180px;
+  }
+  .event-log__item {
+    font-size: 11.5px;
+    gap: 8px;
+  }
+  .event-log__time {
+    font-size: 10.5px;
+  }
+}

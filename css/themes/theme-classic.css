@@ -20,6 +20,15 @@
   --text-mute: #8a90a6;
   --radius:    14px;
   --radius-sm: 9px;
+  --radius-xs: 4px;
+  /* Текст на заливках --ok / --danger, сильний червоний для деструктивних дій і кільце фокусу */
+  --on-ok:     #06110d;
+  --on-hazard: #10121a;
+  --on-accent: #10121a;
+  --on-danger: #1a0806;
+  --danger-strong:    #dc2626;
+  --on-danger-strong: #ffffff;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
   --head: 'Oswald', 'Arial Narrow', sans-serif;
   --body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
@@ -53,7 +62,6 @@ body{
 /* Характеристики бункера та спорядження */
 .info-stat{
   background: var(--panel-2);
-  border-left: 1px solid var(--metal);
   box-shadow: none;
 }
 .info-stat .k{ font-family: var(--body); text-transform: none; }

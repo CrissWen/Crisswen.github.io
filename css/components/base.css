@@ -11,7 +11,9 @@ body{
   font-family:var(--body);
   line-height:1.5;
   min-height:100vh;
+  min-height:100dvh;
   padding: 28px 16px 80px; /* padding-top далі перебивається на 80px в header.css (під фіксований хедер) */
+  transition: padding-top .25s ease;
 }
 
 /* ===== Приховані скролбари (прокрутка коліщатком/свайпом лишається, сам повзунок не малюється) ===== */
@@ -50,6 +52,33 @@ body::-webkit-scrollbar,
   border-bottom:1px solid var(--metal);
   background: rgba(0,0,0,.2);
 }
+
+/* За замовчуванням на десктопі блоки НЕ згортаються і стрілочки приховані */
+.block-head--collapsible{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border-top:none;
+  border-left:none;
+  border-right:none;
+  color:var(--text);
+  font:inherit;
+  text-align:left;
+  cursor:default;
+}
+.block-toggle-arrow{
+  display:none;
+  font-size:12px;
+  color:var(--text-mute);
+  transition:transform .2s ease;
+  flex:none;
+}
+.block-toggle-arrow.is-collapsed{
+  transform:rotate(-90deg);
+}
+
 .block-head h2{
   font-family:var(--head);
   font-weight:600;
@@ -73,14 +102,227 @@ body::-webkit-scrollbar,
 
 /* Для вікна гри (60-70% екрану по центру) */
 .layout-large-centered {
-  width: 85%;        /* Змінили з 70% на 60% */
-  max-width: 1900px; /* Жорстке обмеження (60% від 1920px) */
+  width: 85%;
+  max-width: 1900px;
   margin: 5vh auto;  
 }
 
-/* Медіа-запит: Правило для планшетів та смартфонів */
-@media (max-width: 768px) {
-  .layout-large-centered {
-    width: 98%;
+/* Згортання блоків, компактні відступи та зменшені шрифти — для телефонів (портрет і ландшафт) */
+@media (max-width: 920px), (max-height: 520px) {
+  body {
+    padding-inline: 8px;
+    padding-bottom: 64px;
+    font-size: 13.5px;
   }
+  .wrap {
+    width: 100%;
+  }
+  .layout-large-centered {
+    width: 100%;
+    margin: 10px auto;
+  }
+  .layout-small-centered {
+    margin: 20px auto;
+  }
+  .block {
+    margin-bottom: 12px;
+  }
+  .block-head {
+    padding: 9px 12px;
+  }
+  .block-head h2 {
+    font-size: 15.5px;
+    letter-spacing: .04em;
+  }
+  .block-body {
+    padding: 11px 12px;
+  }
+  .block-head--collapsible{
+    cursor:pointer;
+    transition:background .2s ease;
+  }
+  .block-head--collapsible:hover{
+    background:var(--panel-2);
+  }
+  .block-toggle-arrow{
+    display:inline-block;
+  }
+  .block.is-collapsed > .block-body{
+    display:none;
+  }
+  .block.is-collapsed > .block-head--collapsible{
+    border-bottom-color:transparent;
+  }
+}
+
+/* ===== Універсальний кастомний повзунок / мікшер (.bunker-slider) =====
+   Єдиний візуальний механізм для всіх <input type="range" class="bunker-slider"> у проєкті
+   (хедер, вкладка звуку у профілі тощо). Працює в парі з js/ui/range-slider.js. */
+input[type="range"].bunker-slider {
+  --slider-track-size: 8px;
+  --slider-thumb-size: 18px;
+  --slider-track-radius: 999px;
+  --slider-thumb-radius: 50%;
+  --slider-track-color: rgba(0, 0, 0, .55);
+  --slider-fill-color: var(--hazard);
+  --slider-fill-start: color-mix(in srgb, var(--hazard) 65%, var(--panel));
+  --slider-thumb-bg: var(--bg);
+  --slider-thumb-border: var(--hazard);
+  --slider-progress: 80%;
+  --slider-direction: to right;
+
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: 100%;
+  block-size: 28px; /* Зручна зона дотику/кліку */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"].bunker-slider:dir(rtl) {
+  --slider-direction: to left;
+}
+
+input[type="range"].bunker-slider.is-muted,
+.is-muted input[type="range"].bunker-slider {
+  --slider-fill-color: var(--text-mute);
+  --slider-fill-start: color-mix(in srgb, var(--text-mute) 50%, var(--panel));
+  --slider-thumb-border: var(--text-mute);
+}
+
+/* WebKit / Blink Track */
+input[type="range"].bunker-slider::-webkit-slider-runnable-track {
+  block-size: var(--slider-track-size);
+  border: 1px solid var(--metal);
+  border-radius: var(--slider-track-radius);
+  background: linear-gradient(
+    var(--slider-direction),
+    var(--slider-fill-start) 0%,
+    var(--slider-fill-color) var(--slider-progress),
+    var(--slider-track-color) var(--slider-progress),
+    var(--slider-track-color) 100%
+  );
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .75);
+  transition: border-color .18s ease;
+}
+
+/* WebKit / Blink Thumb */
+input[type="range"].bunker-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  margin-block-start: calc((var(--slider-track-size) - var(--slider-thumb-size)) / 2 - 1px);
+  border: 2.5px solid var(--slider-thumb-border);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .8), 0 0 8px color-mix(in srgb, var(--slider-thumb-border) 35%, transparent);
+  transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+input[type="range"].bunker-slider:hover::-webkit-slider-runnable-track {
+  border-color: var(--metal-lt, var(--hazard));
+}
+
+input[type="range"].bunker-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+  background: var(--slider-thumb-border);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--slider-thumb-border) 65%, transparent);
+}
+
+input[type="range"].bunker-slider:active::-webkit-slider-thumb {
+  transform: scale(1.18);
+  background: var(--slider-thumb-border);
+}
+
+/* Firefox Track */
+input[type="range"].bunker-slider::-moz-range-track {
+  block-size: var(--slider-track-size);
+  border: 1px solid var(--metal);
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-track-color);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .75);
+}
+
+/* Firefox Progress Fill */
+input[type="range"].bunker-slider::-moz-range-progress {
+  block-size: var(--slider-track-size);
+  border-radius: var(--slider-track-radius);
+  background: linear-gradient(var(--slider-direction), var(--slider-fill-start), var(--slider-fill-color));
+}
+
+/* Firefox Thumb */
+input[type="range"].bunker-slider::-moz-range-thumb {
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  border: 2.5px solid var(--slider-thumb-border);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .8), 0 0 8px color-mix(in srgb, var(--slider-thumb-border) 35%, transparent);
+  transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+input[type="range"].bunker-slider:hover::-moz-range-thumb {
+  transform: scale(1.12);
+  background: var(--slider-thumb-border);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--slider-thumb-border) 65%, transparent);
+}
+
+input[type="range"].bunker-slider:focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Універсальна SVG-кнопка вимкнення звуку (.bunker-mute-btn) */
+.bunker-mute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  color: var(--text);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .8);
+  cursor: pointer;
+  flex: none;
+  transition: all .2s ease;
+}
+
+.bunker-mute-btn:hover {
+  border-color: var(--hazard);
+  background: var(--panel-2);
+  color: var(--hazard);
+}
+
+.bunker-mute-btn.is-muted {
+  color: var(--danger, #e05252);
+  border-color: color-mix(in srgb, var(--danger, #e05252) 60%, var(--metal));
+  background: color-mix(in srgb, var(--danger, #e05252) 8%, var(--bg));
+}
+
+.bunker-mute-btn__icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.bunker-mute-btn__icon--off {
+  display: none;
+}
+
+.bunker-mute-btn.is-muted .bunker-mute-btn__icon--on {
+  display: none;
+}
+
+.bunker-mute-btn.is-muted .bunker-mute-btn__icon--off {
+  display: block;
 }

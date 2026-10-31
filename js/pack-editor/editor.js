@@ -121,9 +121,11 @@ const updateButtons = () => {
 function updateCardsMeta() {
   const isCata = state.activeCategory === 'cataclysm';
   let count = 0;
-  if (isCata) {
+  if (state.viewMode === 'llm') {
+    count = parseLines(ui.getCardsText()).length;
+  } else if (isCata) {
     count = state.form.cataclysms.length;
-  } else if (CATEGORY_SCHEMAS[state.activeCategory] && state.viewMode === 'visual') {
+  } else if (CATEGORY_SCHEMAS[state.activeCategory]) {
     count = getDynamicCards().length;
   } else {
     count = parseLines(ui.getCardsText()).length;
@@ -135,6 +137,13 @@ function selectCategory(category) {
   // Режим LLM — один на весь редактор: state.viewMode міняє лише чекбокс «Режим LLM», тому при перемиканні категорій він не скидається.
   // Катаклізми зберігаються масивом, а в LLM-режимі редагуються текстом: при виході з вкладки розбираємо текст назад
   // у масив (і повертаємо у state.form.texts звичний список назв), при вході — генеруємо LLM-текст з масиву.
+  if (state.viewMode === 'llm' && state.activeCategory) {
+    const currentText = ui.getCardsText();
+    if (currentText !== undefined) {
+      state.form.texts[state.activeCategory] = currentText;
+    }
+  }
+
   if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm' && category !== 'cataclysm') {
     syncCataclysmsFromLlmText();
     syncCataText();
@@ -512,6 +521,9 @@ function debounce(func, wait) {
 }
 
 const debouncedCardUpdates = debounce(() => {
+  if (state.activeCategory === 'cataclysm' && state.viewMode === 'llm') {
+    syncCataclysmsFromLlmText();
+  }
   renderSearch();
   updateCardsMeta();
   renderSummary();
@@ -847,8 +859,12 @@ export async function initPackEditor() {
     ui.setLlmCopyVisible(e.target.checked);
 
     if (state.activeCategory === 'cataclysm') {
-      if (state.viewMode === 'visual') syncCataclysmsFromLlmText();
-      else syncCataclysmsToLlmText();
+      if (state.viewMode === 'visual') {
+        syncCataclysmsFromLlmText();
+        syncCataText();
+      } else {
+        syncCataclysmsToLlmText();
+      }
     } else {
       if (state.viewMode === 'visual') {
         state.cardData[state.activeCategory] = reconcileCards(
@@ -863,22 +879,32 @@ export async function initPackEditor() {
 
     ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
 
-    if (state.viewMode === 'visual' && state.activeCategory !== 'cataclysm') {
-      if (state.dynEditIndex >= 0) {
-        const cards = getDynamicCards();
-        if (cards[state.dynEditIndex]) {
-          fillDynFields(cards[state.dynEditIndex]);
+    if (state.viewMode === 'visual') {
+      if (state.activeCategory === 'cataclysm') {
+        if (state.cataEditIndex >= 0 && state.form.cataclysms[state.cataEditIndex]) {
+          ui.fillCataFields(cataFieldStrings(state.form.cataclysms[state.cataEditIndex]));
         } else {
-          resetDynForm();
-          setDynMode(-1);
+          resetCataForm();
+          setCataMode(-1);
         }
+      } else {
+        if (state.dynEditIndex >= 0) {
+          const cards = getDynamicCards();
+          if (cards[state.dynEditIndex]) {
+            fillDynFields(cards[state.dynEditIndex]);
+          } else {
+            resetDynForm();
+            setDynMode(-1);
+          }
+        }
+        updateDynFormState();
       }
-      updateDynFormState();
     }
 
     renderList();
     renderSearch();
     updateCardsMeta();
+    renderSummary();
   });
 
   $('pe-llm-copy')?.addEventListener('click', () =>
@@ -886,8 +912,8 @@ export async function initPackEditor() {
   );
 
   $('pe-cards').addEventListener('input', e => {
-    if (state.activeCategory === 'cataclysm') return;
     state.form.texts[state.activeCategory] = e.target.value;
+    updateCardsMeta();
     debouncedCardUpdates();
   });
 

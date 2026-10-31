@@ -274,10 +274,14 @@ export async function handleSave(btn) {
   }
 
   // Якщо ми в LLM-режимі, синхронізуємо текст активної категорії перед збереженням
-  if (state.viewMode === 'llm') {
+  if (state.viewMode === 'llm' && state.activeCategory) {
+    const currentText = document.getElementById('pe-cards')?.value;
+    if (currentText !== undefined) {
+      state.form.texts[state.activeCategory] = currentText;
+    }
     if (state.activeCategory === 'cataclysm') {
       syncCataclysmsFromLlmText();
-    } else if (state.activeCategory) {
+    } else {
       state.cardData[state.activeCategory] = reconcileCards(
         state.form.texts[state.activeCategory] || '',
         state.cardData[state.activeCategory] || [],

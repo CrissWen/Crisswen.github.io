@@ -1,0 +1,176 @@
+/* ===== Картка профілю гравця (js/ui/player-profile-modal.js) =====
+   Невелике спливне вікно біля аватарки: без затемнення екрана. Кольори, шрифти й радіуси — лише зі змінних теми (var(--...)),
+   тож картка підлаштовується під усі теми без окремих перевизначень.
+   Плитки статистики беруть базовий вигляд .stat-tile з profile.css і лише стискаються під компактну картку. */
+
+/* --- Аватарки, по яких можна клікнути (таблиці, картки, кімната очікування, результати голосування) --- */
+[data-profile-user] {
+  cursor: pointer;
+  transition: box-shadow .15s ease;
+}
+[data-profile-user]:hover {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+[data-profile-user]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Рядок вигнаного гравця має pointer-events: none (players-table.css) — аватарку лишаємо клікабельною */
+.kicked-player [data-profile-user] {
+  pointer-events: auto;
+}
+
+/* --- Сама картка: позицію (left/top) виставляє JS біля натиснутої аватарки --- */
+.pp-card {
+  position: fixed;
+  z-index: 10005; /* вище за підтвердження (10003) і панель ведучого (10002), нижче за редактор аватарки (10006) */
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 40px 16px 16px; /* праворуч зверху місце під хрестик */
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--metal-lt);
+  border-radius: var(--radius);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .6);
+  opacity: 0;
+  transform: translateY(-6px) scale(.97);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.pp-card.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.pp-card:focus {
+  outline: none; /* картка бере фокус програмно, рамка навколо неї не потрібна */
+}
+
+/* --- Хрестик у правому верхньому куті --- */
+.pp-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: color .15s ease, background-color .15s ease;
+}
+.pp-close svg {
+  width: 15px;
+  height: 15px;
+}
+.pp-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, .07);
+}
+.pp-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* --- Зліва: аватарка, ім'я під нею --- */
+.pp-identity {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 92px;
+}
+.pp-avatar {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid var(--text-mute);
+  background: transparent;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 38px;
+  line-height: 1;
+}
+.pp-name {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* --- Справа: плитки статистики 2×2 (компактні, як у .profile-quick-stats) --- */
+.pp-stats {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.pp-stats .stat-tile {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 7px 9px;
+  gap: 2px;
+}
+.pp-stats .stat-tile__label {
+  font-size: 10px;
+  letter-spacing: .03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp-stats .stat-tile__value {
+  font-size: 17px;
+  line-height: 1.1;
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+}
+.pp-stats .stat-tile__value[data-pp-stat="created_at"] {
+  font-size: 14.5px;
+  font-family: var(--head);
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* На вузьких екранах плитки йдуть під аватаркою */
+@media (max-width: 440px) {
+  .pp-card {
+    flex-direction: column;
+    padding: 16px 12px 12px;
+  }
+  .pp-stats {
+    width: 100%;
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-card {
+    transition: none;
+  }
+}

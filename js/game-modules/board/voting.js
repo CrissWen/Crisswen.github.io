@@ -9,6 +9,8 @@
 //   4. Голосування йде, гравець живий і ще не голосував — форма вибору кандидата.
 //   5. Голосування ще не запускалось — секція порожня.
 
+import { avatarBadgeHtml } from '../../utils/avatar.js';
+
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
@@ -19,7 +21,7 @@ function candidateTile(id, name) {
   return `
     <label class="vote-tile">
       <input type="radio" name="vote" value="${esc(id)}" class="vote-tile__input">
-      <span class="vote-tile__name">${esc(name)}</span>
+      <span class="vote-tile__name">${avatarBadgeHtml(id, name, 24)}${esc(name)}</span>
     </label>
   `;
 }
@@ -43,7 +45,7 @@ function resultsTableHtml(votes, players, totalVoters) {
       const percent = totalVoters > 0 ? Math.round((voterIds.length / totalVoters) * 100) : 0;
       return `
         <tr>
-          <td>${esc(nameOf(players, candidateId))}</td>
+          <td>${avatarBadgeHtml(candidateId, nameOf(players, candidateId), 22, { clickable: true })}${esc(nameOf(players, candidateId))}</td>
           <td>${voterIds.map(id => esc(nameOf(players, id))).join(', ')}</td>
           <td>${percent}%</td>
         </tr>

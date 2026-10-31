@@ -61,7 +61,7 @@ const field = (label, control) => `
 `;
 
 const playersSelect = (mode, fieldName = 'target') =>
-  `<select class="hp-select" data-field="${fieldName}" data-players="${mode}"></select>`;
+  `<select class="hp-select pe-select-custom" data-field="${fieldName}" data-players="${mode}"></select>`;
 
 const actionBtn = (label, action, extra = '') =>
   `<button type="button" class="hp-btn" data-action="${action}" ${extra}>${label}</button>`;
@@ -89,7 +89,14 @@ function timerControlsHtml(timer = {}) {
   `;
 }
 
-export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = {}) {
+// Остання кнопка футера: «Завершити гру» (живих ≤ місць) або «Закрити кімнату» (живих > місць). Міняється через data-action і текст.
+function roomEndButtonHtml(canFinish) {
+  return canFinish
+    ? '<button type="button" class="hp-btn hp-btn-red" data-hp-room-end data-action="finishGame">Завершити гру</button>'
+    : '<button type="button" class="hp-btn hp-btn-red" data-hp-room-end data-action="closeRoom">Закрити кімнату</button>';
+}
+
+export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, canFinish = false } = {}) {
   return `
     <div id="${HOST_PANEL_ID}" class="hp-root">
       <button type="button" class="hp-fab" data-hp-toggle aria-label="Панель ведучого">
@@ -141,36 +148,36 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
 
             ${acc('Змінити характеристику', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Характеристика', `<select class="hp-select" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
               ${actionBtn('Змінити на випадкову', 'changeCharacteristic')}
             `)}
 
             ${acc('Змінити стаж', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Характеристика', `<select class="hp-select" data-field="expType">
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="expType">
                 <option value="profession" selected>Професія</option>
                 <option value="hobby">Хобі</option>
               </select>`)}
-              <label class="hp-field" data-exp-sub="profession"><span>Стаж</span><select class="hp-select" data-field="levelProf" data-stages="profession"></select></label>
-              <label class="hp-field" data-exp-sub="hobby" style="display:none"><span>Стаж</span><select class="hp-select" data-field="levelHobby" data-stages="hobby"></select></label>
+              <label class="hp-field" data-exp-sub="profession"><span>Стаж</span><select class="hp-select pe-select-custom" data-field="levelProf" data-stages="profession"></select></label>
+              <label class="hp-field" data-exp-sub="hobby" style="display:none"><span>Стаж</span><select class="hp-select pe-select-custom" data-field="levelHobby" data-stages="hobby"></select></label>
               ${actionBtn('Застосувати', 'changeExperience')}
             `)}
 
             ${acc('Змінити ступінь хвороби', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Ступінь', `<select class="hp-select" data-field="level" data-stages="health"></select>`)}
+              ${field('Ступінь', `<select class="hp-select pe-select-custom" data-field="level" data-stages="health"></select>`)}
               ${actionBtn('Застосувати', 'changeDiseaseSeverity')}
             `)}
 
             ${acc('Змінити статуру', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Статура', `<select class="hp-select" data-field="level" data-stages="body_type"></select>`)}
+              ${field('Статура', `<select class="hp-select pe-select-custom" data-field="level" data-stages="body_type"></select>`)}
               ${actionBtn('Застосувати', 'changeBodyType')}
             `)}
 
             ${acc('Змінити стать', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('На конкретну', `<select class="hp-select" data-field="genderValue" data-stages="gender"></select>`)}
+              ${field('На конкретну', `<select class="hp-select pe-select-custom" data-field="genderValue" data-stages="gender"></select>`)}
               <div class="hp-row hp-row-stack hp-mt">
                 ${actionBtn('Застосувати', 'setGender')}
                 ${actionBtn('На протилежну', 'invertGender')}
@@ -180,20 +187,20 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
             ${acc('Обмінятися характеристиками', `
               ${field('Гравець 1', playersSelect('only', 'target1'))}
               ${field('Гравець 2', playersSelect('only', 'target2'))}
-              ${field('Характеристика', `<select class="hp-select" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
               ${actionBtn('Обміняти', 'swapCharacteristics')}
             `)}
 
             ${acc('Вкрасти характеристику', `
               ${field('Хто краде', playersSelect('only', 'thief'))}
               ${field('У кого краде', playersSelect('only', 'victim'))}
-              ${field('Характеристика', `<select class="hp-select" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
               ${actionBtn('Вкрасти', 'stealCharacteristic')}
             `)}
 
             ${acc('Лікувати / Зробити', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Дія', `<select class="hp-select" data-field="healAction">
+              ${field('Дія', `<select class="hp-select pe-select-custom" data-field="healAction">
                 <option value="perfect" selected>Зробити ідеально здоровим</option>
                 <option value="makeChildfree">Зробити чайлдфрі</option>
                 <option value="cureChildfree">Вилікувати чайлдфрі</option>
@@ -204,19 +211,19 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
 
             ${acc('Додати доп. характеристику', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Категорія', `<select class="hp-select" data-field="category">${extraTypeOptions()}</select>`)}
+              ${field('Категорія', `<select class="hp-select pe-select-custom" data-field="category">${extraTypeOptions()}</select>`)}
               <input type="text" class="hp-input" data-field="customExtra" placeholder="Або введіть вручну..." maxlength="300">
               ${actionBtn('Додати', 'addExtraCharacteristic')}
             `)}
 
             ${acc('Видалити характеристику', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Характеристика', `<select class="hp-select" id="charToDelete" data-field="charKey">${deletableOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" id="charToDelete" data-field="charKey">${deletableOptions()}</select>`)}
               ${actionBtn('Видалити', 'deleteCharacteristic')}
             `)}
 
             ${acc('Зсув характеристик', `
-              ${field('Характеристика', `<select class="hp-select" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
               <div class="hp-row hp-row-stack">
                 ${actionBtn('За годинниковою стрілкою', 'shift', 'data-arg="cw"')}
                 ${actionBtn('Проти годинникової стрілки', 'shift', 'data-arg="ccw"')}
@@ -224,15 +231,15 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
             `)}
 
             ${acc('Змінити параметр бункера', `
-              ${field('Параметр', `<select class="hp-select" data-field="bunkerField">${bunkerFieldOptions()}</select>`)}
+              ${field('Параметр', `<select class="hp-select pe-select-custom" data-field="bunkerField">${bunkerFieldOptions()}</select>`)}
               ${field('Ваша характеристика', `<input type="text" class="hp-input" data-field="customValue" placeholder="Власне значення (порожнє — випадкове)" maxlength="300">`)}
               <!-- Керування предметами: показується лише для параметра "items" (перемикає game.js) -->
-              <select class="hp-select" id="bunker-item-action" data-field="itemAction" style="display:none">
+              <select class="hp-select pe-select-custom" id="bunker-item-action" data-field="itemAction" style="display:none">
                 <option value="add" selected>Додати</option>
                 <option value="remove">Видалити</option>
               </select>
               <input type="text" class="hp-input" id="bunker-item-add-input" data-field="itemAddText" placeholder="Предмети через кому" maxlength="1000" style="display:none">
-              <select class="hp-select" id="bunker-item-remove-select" data-field="itemRemove" style="display:none"></select>
+              <select class="hp-select pe-select-custom" id="bunker-item-remove-select" data-field="itemRemove" style="display:none"></select>
               ${actionBtn('Змінити', 'changeBunker', 'id="bunker-submit-btn"')}
             `)}
 
@@ -255,7 +262,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {} } = 
         <footer class="hp-foot">
           <button type="button" class="hp-btn hp-btn-gray" data-action="undo" ${canUndo ? '' : 'disabled'}>Скасувати попередню дію</button>
           <button type="button" class="hp-btn hp-btn-green" data-action="restart">Почати гру наново</button>
-          <button type="button" class="hp-btn hp-btn-red" data-action="closeRoom">Закрити кімнату</button>
+          ${roomEndButtonHtml(canFinish)}
           <div class="hp-toast" data-hp-toast role="status"></div>
         </footer>
       </aside>
@@ -275,8 +282,13 @@ export function removeHostPanel() {
 
 // Оновлює лише списки гравців, лічильник, кнопку undo та блок керування таймером — сама панель не перемальовується,
 // тож відкриті акордеони та введений текст не губляться.
-export function refreshHostPanel(root, { players, currentUserId, capacity, canUndo, timer }) {
+export function refreshHostPanel(root, { players, currentUserId, capacity, canUndo, timer, canFinish }) {
   if (!root) return;
+
+  // Кнопка завершення/закриття: перемальовуємо лише коли режим справді змінився (не чіпаємо кнопку під час кліку/підтвердження)
+  const endBtn = root.querySelector('[data-hp-room-end]');
+  const wantAction = canFinish ? 'finishGame' : 'closeRoom';
+  if (endBtn && endBtn.dataset.action !== wantAction) endBtn.outerHTML = roomEndButtonHtml(canFinish);
 
   // Списки перебудовуємо, лише якщо склад гравців змінився (щоб не закривати відкритий dropdown)
   const sig = players.map(p => `${p.id}:${p.name}`).join('|');

@@ -1,0 +1,331 @@
+/* ===== Аватарки (фото поверх літери) =====
+   Кольори — лише зі змінних теми, тож усе працює в усіх темах без окремих перевизначень. */
+
+/* Контейнери, куди js/utils/avatar.js кладе <img>: фото має накривати весь круг */
+.header-user-avatar,
+#profile-page-avatar,
+table.bunker-table td.player-cell .avatar,
+.player-acc-card__identity .avatar {
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+  background: var(--panel-2, var(--panel));
+}
+
+/* ===== Профіль: велика аватарка зліва, нік справа, «Видалити» під аватаркою ===== */
+.profile-avatar-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 20px;
+  row-gap: 8px;
+  align-items: center;
+}
+.profile-avatar-actions {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: center;
+  min-height: 18px; /* місце зарезервоване, щоб блок не «стрибав», коли кнопка з'являється/зникає */
+}
+.profile-avatar-row > div:last-child {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+/* Сама аватарка — кнопка без власного вигляду */
+.profile-avatar-edit {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--text-mute);
+  background: transparent;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 44px;
+  line-height: 1;
+  padding-bottom: 5px;
+}
+
+/* Рамка з олівцем при наведенні або фокусі з клавіатури */
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  color: var(--text);
+  opacity: 0;
+  transition: opacity .15s ease;
+  pointer-events: none;
+}
+.profile-avatar-overlay svg {
+  width: 30px;
+  height: 30px;
+}
+.profile-avatar-edit:hover .profile-avatar-overlay,
+.profile-avatar-edit:focus-visible .profile-avatar-overlay {
+  opacity: 1;
+}
+.profile-avatar-edit:disabled {
+  cursor: default;
+  opacity: .6;
+}
+
+/* На тач-пристроях наведення немає — лишається маленький олівець у кутку, щоб було видно, що аватарку можна змінити */
+@media (hover: none) {
+  .profile-avatar-overlay {
+    opacity: 1;
+    background: none;
+    border: none;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+  .profile-avatar-overlay svg {
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 50%;
+    border: 1px solid var(--metal-lt);
+    background: var(--panel-2, var(--panel));
+  }
+}
+
+/* Текстова дія без рамок: колір з палітри теми, підкреслення при наведенні */
+.avatar-action {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color .15s ease, opacity .15s ease;
+}
+.avatar-action:hover:not(:disabled),
+.avatar-action:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.avatar-action:disabled {
+  opacity: .45;
+  cursor: default;
+}
+.avatar-action--danger {
+  color: var(--danger);
+}
+
+/* Самостійний круглий бейдж (кімната очікування, голосування) */
+.avatar-badge {
+  --avatar-size: 28px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  margin-right: 8px;
+  border: 1px solid var(--metal-lt);
+  border-radius: 50%;
+  overflow: hidden;
+  vertical-align: middle;
+  font-family: var(--mono);
+  line-height: 1;
+  color: var(--text-mute);
+  background: transparent;
+}
+
+
+/* ===== Модальне вікно обрізання аватарки (<dialog>) ===== */
+.avatar-crop-dialog {
+  position: fixed;
+  margin: auto;
+  inset: 0;
+  padding: 0;
+  border: 1px solid var(--metal-lt);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .75);
+  max-width: min(360px, calc(100vw - 24px));
+  z-index: 10006;
+}
+
+.avatar-crop-dialog::backdrop {
+  background-color: rgba(0, 0, 0, .75);
+  backdrop-filter: blur(4px);
+}
+
+.avatar-crop-card {
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-crop-header {
+  text-align: center;
+}
+
+.avatar-crop-header h3 {
+  margin: 0 0 4px;
+  font-family: var(--head);
+  font-size: 19px;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+
+.avatar-crop-subtitle {
+  margin: 0;
+  font-family: var(--body);
+  font-size: 12.5px;
+  color: var(--text-mute);
+}
+
+.avatar-crop-canvas-wrap {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--metal);
+  background: #0a0c12;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, .8);
+}
+
+.avatar-crop-canvas-wrap:active {
+  cursor: grabbing;
+}
+
+#avatar-crop-canvas {
+  display: block;
+  width: 280px;
+  height: 280px;
+}
+
+.avatar-crop-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.avatar-crop-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--bg);
+  border: 1px solid var(--metal);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+  user-select: none;
+}
+
+.avatar-crop-zoom-btn:hover {
+  border-color: var(--metal-lt);
+  background: rgba(255, 255, 255, .05);
+}
+
+.avatar-crop-zoom-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--hazard);
+  cursor: pointer;
+  height: 6px;
+}
+
+.avatar-crop-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 4px;
+}
+
+.avatar-crop-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: filter .15s ease;
+  text-align: center;
+}
+
+.avatar-crop-btn:hover {
+  filter: brightness(1.1);
+}
+
+.avatar-crop-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.avatar-crop-btn--cancel {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--metal-lt);
+}
+
+.avatar-crop-btn--apply {
+  background: var(--hazard);
+  color: var(--on-hazard, var(--bg));
+}
+
+@media (max-width: 340px) {
+  .avatar-crop-canvas-wrap,
+  #avatar-crop-canvas,
+  .avatar-crop-zoom-row,
+  .avatar-crop-actions {
+    width: 250px;
+    height: 250px;
+    max-width: 250px;
+  }
+}

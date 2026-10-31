@@ -1,4 +1,5 @@
 import { mapPlayerState } from './player-parser.js';
+import { ICONS } from '../constants/icons.js';
 
 // Гравці у порядку, випадково визначеному при старті гри (generateGameState → bunker_state.players_order).
 // Гравці, яких у списку немає (стара гра без players_order або хтось доєднався пізніше), йдуть в кінці у звичному порядку.
@@ -12,7 +13,11 @@ function orderedPlayerEntries(pState, bState) {
 
 // Перетворює стан кімнати (players_state + bunker_state) на готові дані для блоків дошки.
 // Чиста функція: без DOM і без звернень до БД, тож її легко перевіряти окремо від рендеру (game.js -> renderActiveGame).
-export function buildBoardViewModel(roomData, currentUserId) {
+// opts.reveal — фінал завершеної гри: у таблицях усі характеристики й спецможливості (значення + прапорець відкритості, щоб показати замок),
+// «вибув» = вигнаний або is_alive === false, лічильник = скільки гравців пройшло.
+export function buildBoardViewModel(roomData, currentUserId, opts = {}) {
+  const reveal = !!opts.reveal;
+  const isOut = (p) => !!p?.is_kicked || p?.is_alive === false;
   const pState = roomData.players_state || {};
   const bState = roomData.bunker_state || {};
 
@@ -40,7 +45,7 @@ export function buildBoardViewModel(roomData, currentUserId) {
 
   // ===== Катаклізм =====
   const cataclysmData = bState.cataclysm ? {
-    icon: '☢',
+    icon: bState.cataclysm.icon || ICONS.HAZARD,
     title: bState.cataclysm.text,
     desc: bState.cataclysm.description,
     population: bState.cataclysm.population
@@ -60,10 +65,15 @@ export function buildBoardViewModel(roomData, currentUserId) {
       flatPlayer.characteristics.forEach(c => allCharLabels.add(c.label));
 
       parsedAbilities.push({
+        id,
         name: flatPlayer.name,
-        ability1: flatPlayer.abilities[0]?.open ? flatPlayer.abilities[0].value : null,
-        ability2: flatPlayer.abilities[1]?.open ? flatPlayer.abilities[1].value : null,
-        isKicked: !!rawPlayer.is_kicked
+        ability1: (reveal || flatPlayer.abilities[0]?.open) ? (flatPlayer.abilities[0]?.value ?? null) : null,
+        ability2: (reveal || flatPlayer.abilities[1]?.open) ? (flatPlayer.abilities[1]?.value ?? null) : null,
+        // Запис «Немає» (здібності в гравця нема) не має dbKey: ховати там нічого, тож замок не потрібен
+        ability1Open: flatPlayer.abilities[0]?.dbKey ? !!flatPlayer.abilities[0].open : true,
+        ability2Open: flatPlayer.abilities[1]?.dbKey ? !!flatPlayer.abilities[1].open : true,
+        isKicked: !!rawPlayer.is_kicked,
+        isOut: isOut(rawPlayer)
       });
 
       parsedPlayers.push({ ...flatPlayer, id });
@@ -76,14 +86,14 @@ export function buildBoardViewModel(roomData, currentUserId) {
 
   // Лічильник "Охочі потрапити в бункер": усі зареєстровані в кімнаті vs ще не вигнані (is_kicked).
   const totalPlayers = Object.keys(pState).length;
-  const alivePlayers = Object.values(pState).filter(player => !player.is_kicked).length;
+  const alivePlayers = Object.values(pState).filter(player => reveal ? !isOut(player) : !player.is_kicked).length;
 
   const tableRows = parsedPlayers.map(p => {
-    const cells = columns.map(colName => {
-      const char = p.characteristics.find(c => c.label === colName);
-      return (char && char.open) ? char.value : null;
-    });
-    return { name: p.name, id: p.id, isKicked: !!pState[p.id]?.is_kicked, cells };
+    const chars = columns.map(colName => p.characteristics.find(c => c.label === colName));
+    const cells = chars.map(char => (char && (reveal || char.open)) ? char.value : null);
+    // cellsOpen[i] === false — характеристику не було відкрито на момент завершення гри (у фіналі показується із замком)
+    const cellsOpen = chars.map(char => !char || !!char.open);
+    return { name: p.name, id: p.id, isKicked: !!pState[p.id]?.is_kicked, isOut: isOut(pState[p.id]), cells, cellsOpen };
   });
 
   // ===== Власні характеристики поточного користувача =====

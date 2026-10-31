@@ -1,4 +1,5 @@
 import { getGlobalTime } from '../../services/server-time.js';
+import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
 
 // Плаваючий таймер внизу екрана. Живе поза #game-board (як і панель ведучого),
 // тож перемальовування дошки його не зачіпає.
@@ -8,7 +9,10 @@ import { getGlobalTime } from '../../services/server-time.js';
 const TIMER_ID = 'game-timer-root';
 const HIDE_AFTER_EXPIRED_MS = 10000; // скільки показувати 00 після завершення
 
+const TICK_SOUND_FROM_SEC = 10; // цокання лунає в останні N секунд (збігається з жовтою підсвіткою game-timer--warn)
+
 let intervalId = null;
+let lastTickSecond = null; // для якого значення залишку тік уже зіграно: tick() викликається і при монтуванні, і щосекунди
 
 function pad(n) {
   return String(n).padStart(2, '0');
@@ -67,11 +71,22 @@ function tick(getBunkerState) {
   root.classList.toggle('game-timer--done', remaining <= 0);
   root.classList.toggle('game-timer--warn', remaining > 0 && remaining <= 10);
   root.querySelector('[data-timer-time]').textContent = formatTime(remaining);
+
+  // Цокання в кожного клієнта локально, за серверним часом; на паузі (return вище) і після нуля тиші
+  if (remaining > 0 && remaining <= TICK_SOUND_FROM_SEC) {
+    if (remaining !== lastTickSecond) {
+      lastTickSecond = remaining;
+      soundManager.play(SOUND_IDS.TIMER_TICK);
+    }
+  } else if (remaining > TICK_SOUND_FROM_SEC) {
+    lastTickSecond = null; // новий таймер: наступний відлік знову дасть звук
+  }
 }
 
 // getBunkerState — функція, що повертає актуальний bunker_state (щоб таймер бачив свіжі дані)
 export function mountGameTimer(getBunkerState) {
   unmountGameTimer();
+  lastTickSecond = null;
   document.body.insertAdjacentHTML('beforeend', timerHtml());
   tick(getBunkerState);
   intervalId = setInterval(() => tick(getBunkerState), 1000);

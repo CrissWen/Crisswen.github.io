@@ -1,4 +1,4 @@
-/* ===== ТЕМА: ШТАБ ОБОРОНИ (PATRIOT) — органічна версія =====
+/* ===== ТЕМА: ПОТУЖНІСТЬ (PATRIOT) — органічна версія =====
    Друга ітерація: кислотні неонові кольори й сильне світіння з першої версії замінені на м'якшу,
    приємнішу для очей палітру — глибокий синій + спокійний бронзово-гірчичний, менше box-shadow-світіння,
    природні тіні для об'єму замість "неону".
@@ -20,22 +20,29 @@
      --border-metal, --text-main — таких змінних у проєкті немає, тут замінено на реальні --bg/--metal/--text,
      інакше тема просто нічого б не перефарбувала. */
   --bg:        #001838; /* Затемнений синій — щоб панелі кольору --patriot-1 на ньому виділялись, а не зливались */
-  --on-ok:     var(--text);
+  --on-ok:     #001838;
+  --on-hazard: #001838;
+  --on-accent: #001838;
+  --on-danger: #1a0806;
+  --danger-strong:    #ff6b5e;
+  --on-danger-strong: #1a0806;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--patriot-5) 40%, transparent);
   --panel:     var(--patriot-1);
   --panel-2:   rgba(178, 117, 0, .15); /* Дуже м'який бронзовий фон для вторинних блоків */
   --metal:     var(--patriot-4);
   --metal-lt:  var(--patriot-3);
 
   --hazard:    var(--patriot-5);
-  --danger:    var(--patriot-5); /* Тут свідомо бурштиновий замість класичного червоного — тактична тривога, не кров */
-  --ok:        var(--patriot-3);
-  --accent:    var(--patriot-5);
+  --danger:    #ff8579; /* червоно-кораловий: раніше збігався з бурштиновим --hazard, помилка не відрізнялась від попередження */
+  --ok:        #69b0ff; /* світліший синій: на --panel контраст був 2.8, тепер ≥4.5 */
+  --accent:    #a9d4ff; /* блідо-синій: відрізняється від бурштинового --hazard */
 
   --text:      #f0f4f8; /* М'який біло-синій текст */
   --text-mute: #8ba8cc;
 
   --radius:    6px; /* Трохи м'якші кути для органічності (було 4px) */
   --radius-sm: 4px; /* було 2px */
+  --radius-xs: 3px;
 
   /* Шрифти теж системний токен (кожна тема в проєкті задає свою трійку) — лишив без змін, ТЗ їх не
      торкається; без них усе, що звертається до var(--mono)/var(--head)/var(--body), впало б на дефолтний
@@ -123,4 +130,93 @@ body {
 .cataclysm-timer__icon, .cataclysm-timer__time {
   color: var(--patriot-5) !important;
   text-shadow: 0 2px 5px rgba(0, 0, 0, .8) !important;
+}
+
+
+/* ===== Поверхні, що в цій темі лишались напівпрозорими (--panel-2 = rgba бронза) =====
+   Суцільний бронзово-синій фон, щоб текст не зливався з вмістом позаду. Для язичка хедера
+   специфічність піднято через body, бо header.css вантажиться після теми. */
+body .header-collapse-tab,
+body .header-collapse-tab:hover{
+  background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
+}
+.offline-replay-banner{
+  background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
+}
+/* Кастомні випадаючі списки та комбобокси в редакторі паків у стилістиці Patriot */
+.pe-select-custom__btn:hover,
+.pe-combo__input:hover{
+  border-color: var(--patriot-5);
+}
+.pe-select-custom__btn.is-open{
+  border-color: var(--patriot-5);
+  box-shadow: 0 0 10px rgba(255, 167, 0, .35);
+}
+.pe-select-custom__dropdown,
+.pe-combo__dropdown{
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  box-shadow: 0 10px 28px rgba(0,0,0,.6);
+}
+.pe-select-custom__item:hover,
+.pe-combo__item:hover{
+  background: color-mix(in srgb, var(--patriot-3) 25%, transparent);
+  color: var(--text);
+}
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected{
+  background: color-mix(in srgb, var(--patriot-5) 20%, transparent);
+  color: var(--patriot-5);
+  font-weight: 600;
+}
+
+
+/* Плаваюча кнопка та тост панелі ведучого лежать поверх сторінки, а --panel-2 тут прозорий */
+.hp-fab,
+.hp-toast{
+  background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
+}
+/* Модифікатори кнопок панелі ведучого для теми Потужність */
+button.hp-fab:hover{
+  border-color: var(--patriot-5);
+  box-shadow: 0 0 12px rgba(255, 167, 0, .4);
+}
+button.hp-close:hover{
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
+}
+button.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 30%, var(--panel));
+  color: var(--ok);
+  border-color: var(--ok);
+}
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: 0 4px 15px rgba(105, 176, 255, .4);
+}
+button.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 30%, var(--panel));
+  color: var(--danger);
+  border-color: var(--danger);
+}
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 4px 15px rgba(255, 133, 121, .4);
+}
+button.hp-btn-gray{
+  background: var(--panel-2);
+  color: var(--text-mute);
+  border-color: var(--metal);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  border-color: var(--metal-lt);
+  color: var(--on-hazard, #001838);
+  background: var(--metal);
+}
+button.hp-btn:focus-visible{
+  outline: 2px solid var(--hazard);
+  outline-offset: 2px;
 }

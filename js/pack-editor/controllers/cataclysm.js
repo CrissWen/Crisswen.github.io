@@ -25,6 +25,9 @@ export function syncCataText(f = state.form) {
 let llmTextBaseline = null;
 
 export function syncCataclysmsFromLlmText() {
+  if (state.activeCategory === 'cataclysm' && $('pe-cards')) {
+    state.form.texts.cataclysm = $('pe-cards').value;
+  }
   if (state.form.texts.cataclysm === llmTextBaseline) return;
   const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
   const existingByName = new Map();
@@ -43,10 +46,10 @@ export function syncCataclysmsFromLlmText() {
       nextCatas.push({
         id: existing.id || crypto.randomUUID(),
         name: p.value,
-        description: p.meta.description || existing.description || '',
-        timer_minutes: p.meta.timer_minutes || existing.timer_minutes || 0,
-        stay_time_months: p.meta.stay_time_months || existing.stay_time_months || null,
-        population: p.meta.population || existing.population || null,
+        description: p.meta.description !== undefined ? p.meta.description : (existing.description || ''),
+        timer_minutes: p.meta.timer_minutes !== undefined ? p.meta.timer_minutes : (existing.timer_minutes || 0),
+        stay_time_months: p.meta.stay_time_months !== undefined ? p.meta.stay_time_months : (existing.stay_time_months || null),
+        population: p.meta.population !== undefined ? p.meta.population : (existing.population || null),
         extra: existing.extra || {}
       });
     } else {
@@ -54,9 +57,9 @@ export function syncCataclysmsFromLlmText() {
         id: crypto.randomUUID(),
         name: p.value,
         description: p.meta.description || '',
-        timer_minutes: p.meta.timer_minutes || 0,
-        stay_time_months: p.meta.stay_time_months || null,
-        population: p.meta.population || null,
+        timer_minutes: p.meta.timer_minutes !== undefined ? p.meta.timer_minutes : 0,
+        stay_time_months: p.meta.stay_time_months !== undefined ? p.meta.stay_time_months : null,
+        population: p.meta.population !== undefined ? p.meta.population : null,
         extra: p.meta.extra || {}
       });
     }
@@ -69,6 +72,7 @@ export function syncCataclysmsFromLlmText() {
   }
 
   state.form.cataclysms = nextCatas;
+  llmTextBaseline = state.form.texts.cataclysm;
 }
 
 export function syncCataclysmsToLlmText() {

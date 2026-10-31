@@ -161,6 +161,10 @@
   position: relative;
   width: 100%;
 }
+.pe-select-custom.is-open,
+.pe-select-custom:has(.pe-select-custom__btn.is-open) {
+  z-index: 130;
+}
 .pe-select-custom__btn {
   width: 100%;
   height: 38px;
@@ -224,6 +228,31 @@
   animation: pe-select-fade .12s ease-out;
   max-height: 240px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal-lt) transparent;
+}
+.pe-select-custom__dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.pe-select-custom__dropdown::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.pe-select-custom__dropdown::-webkit-scrollbar-thumb {
+  background: var(--metal-lt);
+  border-radius: var(--radius-sm);
+}
+.pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--hazard) 60%, var(--metal-lt));
+}
+.pe-select-custom__dropdown.is-drop-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+  animation-name: pe-select-fade-up;
+}
+@keyframes pe-select-fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes pe-select-fade {
   from { opacity: 0; transform: translateY(-4px); }
@@ -380,8 +409,19 @@ select.pe-input {
   border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));
 }
 .pe-stage-row.is-warning{
-  border-color: color-mix(in srgb, var(--hazard) 60%, transparent) !important;
-  background: color-mix(in srgb, var(--hazard) 6%, var(--panel)) !important;
+  border-color: rgba(245, 158, 11, .75) !important;
+  background: rgba(245, 158, 11, .08) !important;
+  animation: pe-stage-warning-pulse 1.4s ease-in-out infinite !important;
+}
+@keyframes pe-stage-warning-pulse{
+  0%, 100%{
+    border-color: rgba(245, 158, 11, .75);
+    background: rgba(245, 158, 11, .09);
+  }
+  50%{
+    border-color: rgba(245, 158, 11, .25);
+    background: rgba(245, 158, 11, .02);
+  }
 }
 .pe-stage-row--card .pe-stage-name{
   background:transparent;
@@ -585,8 +625,19 @@ body.is-stage-dragging * {
   box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .pe-time-field.is-warning{
-  border-color:var(--hazard) !important;
-  box-shadow:0 0 0 1px var(--hazard) !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, .45) !important;
+  animation: pe-warning-pulse 1.4s ease-in-out infinite !important;
+}
+@keyframes pe-warning-pulse{
+  0%, 100%{
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, .5), 0 0 10px rgba(245, 158, 11, .35);
+  }
+  50%{
+    border-color: rgba(245, 158, 11, .35);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, .15);
+  }
 }
 .pe-time-field.is-disabled{
   opacity:0.65;
@@ -982,16 +1033,16 @@ body.is-stage-dragging * {
   border-color:var(--metal-lt);
 }
 .pe-delete-pill-btn--danger{
-  background:#ef4444;
-  color:#ffffff;
-  border-color:#dc2626;
+  background:var(--danger-strong);
+  color:var(--on-danger-strong);
+  border-color:color-mix(in srgb, var(--danger-strong) 80%, #000);
   font-weight:600;
   padding:0 12px;
-  box-shadow:0 2px 10px rgba(239, 68, 68, 0.4);
+  box-shadow:0 2px 10px color-mix(in srgb, var(--danger-strong) 40%, transparent);
 }
 .pe-delete-pill-btn--danger:hover:not(:disabled){
-  background:#dc2626;
-  box-shadow:0 4px 14px rgba(239, 68, 68, 0.55);
+  background:color-mix(in srgb, var(--danger-strong) 85%, #000);
+  box-shadow:0 4px 14px color-mix(in srgb, var(--danger-strong) 55%, transparent);
   transform:translateY(-0.5px);
 }
 .pe-delete-pill-btn--danger:disabled{
@@ -1144,35 +1195,35 @@ body.is-stage-dragging * {
   border:1.5px solid color-mix(in srgb, var(--metal-lt) 85%, transparent);
   display:inline-flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:700;line-height:1;
-  color:#fff;
+  color:var(--on-danger-strong);
   transition:border-color .18s ease, background-color .18s ease, transform .15s ease, box-shadow .18s ease;
   margin-right:2px;
 }
 .added-item-row.is-delete-mode:hover .added-item-row__check{
-  border-color:color-mix(in srgb, #ef4444 60%, var(--metal-lt));
+  border-color:color-mix(in srgb, var(--danger-strong) 60%, var(--metal-lt));
 }
 .added-item-row.is-marked-delete .added-item-row__check{
-  background:#ef4444;
-  border-color:#ef4444;
-  box-shadow:0 0 0 2px color-mix(in srgb, #ef4444 25%, transparent);
+  background:var(--danger-strong);
+  border-color:var(--danger-strong);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--danger-strong) 25%, transparent);
   transform:scale(1.05);
 }
 .added-item-row.is-marked-delete{
-  background:color-mix(in srgb, #ef4444 7%, transparent) !important;
-  border-color:color-mix(in srgb, #ef4444 35%, transparent) !important;
+  background:color-mix(in srgb, var(--danger-strong) 7%, transparent) !important;
+  border-color:color-mix(in srgb, var(--danger-strong) 35%, transparent) !important;
 }
 .added-item-row.is-marked-delete::before{
-  background:#ef4444 !important;
+  background:var(--danger-strong) !important;
   transform:scaleY(1) !important;
 }
 .added-item-row.is-marked-delete:hover{
-  background:color-mix(in srgb, #ef4444 12%, transparent) !important;
-  border-color:color-mix(in srgb, #ef4444 55%, transparent) !important;
+  background:color-mix(in srgb, var(--danger-strong) 12%, transparent) !important;
+  border-color:color-mix(in srgb, var(--danger-strong) 55%, transparent) !important;
 }
 .added-item-row__hint--delete{
-  color:color-mix(in srgb, #ef4444 85%, var(--text-mute)) !important;
-  background:color-mix(in srgb, #ef4444 10%, transparent) !important;
-  border:1px solid color-mix(in srgb, #ef4444 30%, transparent) !important;
+  color:color-mix(in srgb, var(--danger-strong) 85%, var(--text-mute)) !important;
+  background:color-mix(in srgb, var(--danger-strong) 10%, transparent) !important;
+  border:1px solid color-mix(in srgb, var(--danger-strong) 30%, transparent) !important;
   opacity:0.9 !important;
   font-size:11.5px;
   font-weight:500;
@@ -1185,9 +1236,9 @@ body.is-stage-dragging * {
   content:"" !important;
 }
 .added-item-row:hover .added-item-row__hint--delete{
-  color:#fff !important;
-  background:color-mix(in srgb, #ef4444 22%, transparent) !important;
-  border-color:color-mix(in srgb, #ef4444 65%, transparent) !important;
+  color:var(--text) !important;
+  background:color-mix(in srgb, var(--danger-strong) 22%, transparent) !important;
+  border-color:color-mix(in srgb, var(--danger-strong) 65%, transparent) !important;
 }
 .added-item-row__hint--pick{
   color:var(--text-mute);
@@ -1220,7 +1271,7 @@ body.is-stage-dragging * {
   pointer-events:auto;
   border-radius:inherit;
   border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
-  background:linear-gradient(180deg, color-mix(in srgb, var(--hazard) 8%, var(--panel)) 0%, var(--panel) 48%, color-mix(in srgb, var(--panel-2) 90%, #080c14) 100%);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--hazard) 8%, var(--panel)) 0%, var(--panel) 48%, color-mix(in srgb, var(--panel-2) 90%, #080c14) 100%), var(--bg); /* суцільна підкладка: у Кріо/Патріоті --panel/--panel-2 прозорі, і форма під оверлеєм просвічувала */
   display:flex;
   align-items:center;
   justify-content:center;
@@ -2445,7 +2496,7 @@ body.is-stage-dragging * {
 .pe-tip__btn:hover {
   background: color-mix(in srgb, var(--hazard) 16%, transparent);
   border-color: var(--hazard);
-  color: #fff;
+  color: var(--text);
 }
 .pe-tip__btn:active {
   transform: scale(.98);
@@ -2598,7 +2649,7 @@ dialog.pe-draft-modal::backdrop {
   font-size: 11px;
   font-weight: 700;
   padding: 0 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs, 4px);
   background: color-mix(in srgb, var(--accent, #38bdf8) 22%, transparent);
 }
 .pe-draft-modal__badge--deleted {
@@ -2634,7 +2685,7 @@ dialog.pe-draft-modal::backdrop {
 }
 .pe-draft-modal__btn-restore {
   background: var(--accent, #38bdf8) !important;
-  color: #082338 !important;
+  color: var(--bg) !important;
   border: none !important;
   gap: 6px;
   box-shadow: 0 3px 12px color-mix(in srgb, var(--accent, #38bdf8) 25%, transparent);
@@ -2644,7 +2695,7 @@ dialog.pe-draft-modal::backdrop {
 }
 .pe-draft-modal.is-conflict .pe-draft-modal__btn-restore {
   background: var(--hazard) !important;
-  color: #241a00 !important;
+  color: var(--bg) !important;
   box-shadow: 0 3px 12px color-mix(in srgb, var(--hazard) 25%, transparent);
 }
 
@@ -2778,7 +2829,7 @@ dialog.pe-draft-modal::backdrop {
   .pe-stepper__controls .pe-stepper__btn {
     pointer-events: auto;
     flex: 1;
-    border-radius: 2px;
+    border-radius: var(--radius-xs, 4px);
   }
   .pe-stepper__controls .pe-stepper__btn:hover:not(:disabled) {
     background: color-mix(in srgb, var(--hazard) 14%, transparent);

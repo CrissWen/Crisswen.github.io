@@ -1,6 +1,6 @@
 /* ===== Вікно «Поверніть телефон горизонтально» (orientation-prompt.js) =====
-   Заблоковане повноекранне вікно поверх усього, включно з панеллю ведучого (10001–10003).
-   Кнопки закриття немає: зникає лише коли телефон повернуто в ландшафт. */
+   Рекомендаційне повноекранне вікно поверх усього, включно з панеллю ведучого (10001–10003).
+   Зникає, коли телефон повернуто в ландшафт або коли гравець натиснув «Продовжити вертикально». */
 .orientation-prompt {
   position: fixed;
   inset: 0;
@@ -40,11 +40,32 @@
   line-height: 1.3;
 }
 .orientation-prompt__text {
-  margin: 0;
+  margin: 0 0 18px;
   color: var(--text-mute);
   font-family: var(--body);
   font-size: 14px;
   line-height: 1.45;
+}
+.orientation-prompt__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--metal-lt);
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.orientation-prompt__dismiss:hover,
+.orientation-prompt__dismiss:active {
+  border-color: var(--hazard);
+  background: var(--panel);
 }
 
 /* Анімація: телефон повертається ПО ГОДИННИКОВІЙ з вертикального в горизонтальне (-90° → 0°),

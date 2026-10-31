@@ -11,12 +11,48 @@ export const THEME_STORAGE_KEY = 'bunker-theme';
 export const DEFAULT_THEME = 'classic';
 
 export const THEMES = [
-  { value: 'classic',   label: 'Класична (Dark)' },
-  { value: 'stalker',   label: 'Сталкер (Grimdark)' },
-  { value: 'fallout',   label: 'Fallout (Termainal)' },
-  { value: 'cyberpunk', label: 'Cyberpunk (Neo-Noir)' },
-  { value: 'cryo',      label: 'Кріо-Станція (Deep Sea)' },
-  { value: 'patriot',   label: 'Потужність (Patriot)' }
+  {
+    value: 'classic',
+    label: 'Класична (Dark)',
+    name: 'Класична',
+    tag: 'Dark',
+    palette: ['#10121a', '#181b26', '#f0a868', '#5fcdb0']
+  },
+  {
+    value: 'stalker',
+    label: 'Сталкер (Grimdark)',
+    name: 'Сталкер',
+    tag: 'Grimdark',
+    palette: ['#0a0b0a', '#141613', '#d6b022', '#6f9a5e']
+  },
+  {
+    value: 'fallout',
+    label: 'Fallout (Terminal)',
+    name: 'Fallout',
+    tag: 'Terminal',
+    palette: ['#050a05', '#081208', '#ffb000', '#39ff6a']
+  },
+  {
+    value: 'cyberpunk',
+    label: 'Cyberpunk (Neo-Noir)',
+    name: 'Cyberpunk',
+    tag: 'Neo-Noir',
+    palette: ['#08060f', '#120f22', '#f6019d', '#00f0ff']
+  },
+  {
+    value: 'cryo',
+    label: 'Кріо-Станція (Deep Sea)',
+    name: 'Кріо-Станція',
+    tag: 'Deep Sea',
+    palette: ['#030b26', '#124973', '#17aec2', '#89fafa']
+  },
+  {
+    value: 'patriot',
+    label: 'Потужність (Patriot)',
+    name: 'Потужність',
+    tag: 'Patriot',
+    palette: ['#001838', '#003882', '#ffa700', '#69b0ff']
+  }
 ];
 
 const VALID_THEME_VALUES = new Set(THEMES.map(t => t.value));
@@ -40,7 +76,23 @@ export function getCurrentTheme() {
 // щоб він не скидався після оновлення сторінки.
 let pendingLink = null; // тема, що ще вантажиться (на випадок швидкого подвійного перемикання)
 
-export function setTheme(themeName) {
+const themeChangeListeners = new Set();
+
+export function onThemeChange(fn) {
+  if (typeof fn === 'function') {
+    themeChangeListeners.add(fn);
+    return () => themeChangeListeners.delete(fn);
+  }
+  return () => {};
+}
+
+function notifyThemeChange(themeName) {
+  themeChangeListeners.forEach(fn => {
+    try { fn(themeName); } catch (e) { console.error('Theme listener error:', e); }
+  });
+}
+
+export function setTheme(themeName, { saveStorage = true } = {}) {
   if (!VALID_THEME_VALUES.has(themeName)) return;
 
   if (pendingLink) { pendingLink.remove(); pendingLink = null; } // скасовуємо попереднє незавершене перемикання
@@ -59,6 +111,7 @@ export function setTheme(themeName) {
         oldLink.remove();
         newLink.id = 'theme-stylesheet';
         pendingLink = null;
+        notifyThemeChange(themeName);
       }, { once: true });
       newLink.addEventListener('error', () => {
         newLink.remove(); // файл теми не завантажився — лишаємо поточну тему, а не ламаємо сторінку
@@ -67,14 +120,27 @@ export function setTheme(themeName) {
       }, { once: true });
       pendingLink = newLink;
       oldLink.after(newLink);
+    } else {
+      notifyThemeChange(themeName);
     }
   }
 
-  try {
-    localStorage.setItem(THEME_STORAGE_KEY, themeName);
-  } catch (err) {
-    console.error('Не вдалося зберегти вибір теми:', err);
+  if (saveStorage) {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themeName);
+    } catch (err) {
+      console.error('Не вдалося зберегти вибір теми:', err);
+    }
   }
+}
+
+// Автоматична синхронізація теми між усіма відкритими вкладками через подію storage
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === THEME_STORAGE_KEY && event.newValue && VALID_THEME_VALUES.has(event.newValue)) {
+      setTheme(event.newValue, { saveStorage: false });
+    }
+  });
 }
 
 // Застосовує вже збережену (або дефолтну) тему до <link id="theme-stylesheet">. Викликається один раз

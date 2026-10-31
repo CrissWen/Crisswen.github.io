@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg viewBox="0 0 32 32" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg">
+  <line x1="8.5" y1="6" x2="23.5" y2="6" stroke="#000000" stroke-width="1.6"/>
+  <line x1="8.5" y1="26" x2="23.5" y2="26" stroke="#000000" stroke-width="1.6"/>
+  <line x1="6" y1="8.5" x2="6" y2="23.5" stroke="#000000" stroke-width="1.6"/>
+  <line x1="26" y1="8.5" x2="26" y2="23.5" stroke="#000000" stroke-width="1.6"/>
+  <circle cx="6" cy="6" r="2.5" fill="none" stroke="#000000" stroke-width="1.6"/>
+  <circle cx="26" cy="6" r="2.5" fill="none" stroke="#000000" stroke-width="1.6"/>
+  <circle cx="6" cy="26" r="2.5" fill="none" stroke="#000000" stroke-width="1.6"/>
+  <circle cx="26" cy="26" r="2.5" fill="none" stroke="#000000" stroke-width="1.6"/>
+</svg>

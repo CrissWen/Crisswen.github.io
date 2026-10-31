@@ -1,9 +1,8 @@
-// Вікно «Поверніть телефон горизонтально» — заблоковане: закрити його не можна.
+// Вікно «Поверніть телефон горизонтально» — рекомендаційне: гравець може повернути екран у ландшафт
+// або натиснути «Продовжити вертикально» (тоді підказка ховається до кінця поточної ігрової сесії).
 // Показується ЛИШЕ на телефонах і ЛИШЕ в двох випадках (викликає game.js):
 //   1) гра щойно почалася й роздалися характеристики;
 //   2) гравець із лобі натиснув «Повернутися» і зайшов у кімнату, де гра вже йде.
-// Поки телефон у портретній орієнтації — вікно висить і блокує екран; щойно його повернули в ландшафт — зникає саме.
-// Якщо потім телефон знову поставити вертикально — вікно з'явиться знову (до виходу зі сторінки гри).
 
 const OVERLAY_ID = 'orientation-prompt';
 
@@ -12,6 +11,7 @@ const coarseMq = window.matchMedia('(pointer: coarse)');
 
 let overlayEl = null;
 let listening = false;
+let dismissedByUser = false;
 
 // Телефон = сенсорний екран із короткою стороною ≤ 600px (планшети й ПК сюди не потрапляють)
 function isPhone() {
@@ -23,7 +23,7 @@ function buildOverlay() {
   const el = document.createElement('div');
   el.id = OVERLAY_ID;
   el.className = 'orientation-prompt';
-  el.setAttribute('role', 'alertdialog');
+  el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-labelledby', 'orientation-prompt-title');
   el.innerHTML = `
@@ -46,16 +46,25 @@ function buildOverlay() {
         </svg>
       </div>
       <h2 id="orientation-prompt-title" class="orientation-prompt__title">Поверніть телефон горизонтально</h2>
-      <p class="orientation-prompt__text">Так таблицю гравців і характеристики буде набагато зручніше читати.</p>
+      <p class="orientation-prompt__text">У горизонтальному режимі зручніше дивитися широку таблицю гравців, або продовжуйте вертикально в режимі карток.</p>
+      <button type="button" class="orientation-prompt__dismiss" data-dismiss-orientation>
+        Продовжити вертикально
+      </button>
     </div>
   `;
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-dismiss-orientation]')) {
+      dismissedByUser = true;
+      sync();
+    }
+  });
   return el;
 }
 
-// Єдина точка істини: показати вікно, лише якщо це телефон і він зараз у портреті
+// Єдина точка істини: показати вікно, лише якщо це телефон у портреті і користувач ще не закрив підказку
 function sync() {
   if (!overlayEl) return;
-  const shouldShow = isPhone() && portraitMq.matches;
+  const shouldShow = !dismissedByUser && isPhone() && portraitMq.matches;
   overlayEl.classList.toggle('is-visible', shouldShow);
   document.documentElement.classList.toggle('has-orientation-prompt', shouldShow);
 }
@@ -79,6 +88,7 @@ export function hideOrientationPrompt() {
     window.removeEventListener('resize', sync);
     listening = false;
   }
+  dismissedByUser = false;
   overlayEl?.remove();
   overlayEl = null;
   document.documentElement.classList.remove('has-orientation-prompt');

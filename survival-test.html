@@ -24,16 +24,24 @@
     })();
   </script>
   <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/components/avatar.css">
   <link rel="stylesheet" href="css/components/survival-test.css">
 </head>
 <body>
   <!-- Хедер — копія #global-header з index.html (посилання ведуть в SPA через index.html#/...).
        Ім'я та аватар підставляє js/pages/survival-test-header.js. Тримати в синхроні з index.html. -->
   <header class="main-header" id="global-header">
-    <a href="index.html#/lobby" class="header-logo">
-      <img src="icons/favicon.png" alt="Лого" class="header-logo-icon">
-      БУНКЕР
-    </a>
+    <div class="header-left">
+      <a href="index.html#/lobby" class="header-logo">
+        <img src="icons/favicon.png" alt="Лого" class="header-logo-icon">
+        БУНКЕР
+      </a>
+      <!-- Навігація як в index.html: показується, коли є сесія. «Гра» видима, лише поки є активна кімната (js/pages/survival-test-header.js) -->
+      <nav class="header-nav" id="header-nav" style="display: none;">
+        <a href="index.html#/packs" class="header-nav-link" data-nav-path="#/packs">Паки</a>
+        <a class="header-nav-link" id="header-game-link" data-nav-path="#/game" hidden>Гра</a>
+      </nav>
+    </div>
 
     <a href="index.html#/profile" class="header-profile-link" id="header-profile-link" style="display: none;">
       <span class="header-user-avatar" id="header-user-avatar">?</span>

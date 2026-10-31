@@ -11,15 +11,23 @@
   --metal-lt:  #2c5c2c;
   --hazard:    #ffb000;
   --danger:    #ff3b30;
-  --ok:        #39ff6a;
+  --ok:        #b8ff5a; /* лаймовий: «успіх» відрізняється від основного зеленого тексту */
   --accent:    #39ff6a;
   --text:      #39ff6a;
-  --text-mute: #1f7a3a;
+  --text-mute: #33b35c; /* було #1f7a3a: контраст на панелі був 3.5 */
   --radius:    0px;
   --radius-sm: 0px;
-  --mono: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
-  --head: 'VT323', 'Courier New', monospace;
-  --body: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
+  --radius-xs: 0px;
+  --on-ok:     #050a05;
+  --on-hazard: #050a05;
+  --on-accent: #050a05;
+  --on-danger: #1a0806;
+  --danger-strong:    #ff3b30;
+  --on-danger-strong: #1a0806;
+  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--text) 55%, transparent);
+  --mono: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --head: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --body: 'Share Tech Mono', 'JetBrains Mono', 'Courier New', monospace; /* VT323 не має кирилиці й дуже малий x-height — текст стрибав у розмірі при перемиканні тем */
   --hazard-pattern: repeating-linear-gradient(45deg, var(--hazard) 0, var(--hazard) 10px, rgba(0,0,0,.8) 10px, rgba(0,0,0,.8) 20px);
 }
 
@@ -46,4 +54,118 @@ body{
 .header-logo-icon {
   /* hue-rotate(90deg) зсуває палітру іконки в зелену зону, saturate робить її яскравішою */
   filter: drop-shadow(0 0 6px #4af626) hue-rotate(90deg) saturate(2) !important;
+}
+
+/* Кастомні випадаючі списки та комбобокси в редакторі паків у стилістиці Fallout */
+.pe-select-custom__btn,
+.pe-combo__input{
+  border-radius: 0px !important;
+  font-family: var(--mono);
+}
+.pe-select-custom__dropdown,
+.pe-combo__dropdown{
+  border-radius: 0px !important;
+  border-color: var(--metal-lt);
+  box-shadow: 0 0 10px rgba(57,255,106,.2), 0 8px 24px rgba(0,0,0,.9);
+}
+.pe-select-custom__item,
+.pe-combo__item{
+  border-radius: 0px !important;
+  font-family: var(--mono);
+}
+.pe-select-custom__item:hover,
+.pe-combo__item:hover{
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected{
+  background: var(--metal);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* ===== Кнопки панелі ведучого (Host Panel) у стилістиці Fallout ===== */
+button.hp-fab{
+  border-radius: 0px !important;
+  background: var(--panel);
+  border: 1px solid var(--metal-lt);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(57,255,106,.25);
+  font-family: var(--mono);
+}
+button.hp-fab:hover{
+  background: var(--metal);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px rgba(57,255,106,.45);
+}
+button.hp-close{
+  border-radius: 0px !important;
+  background: var(--panel);
+  border: 1px solid var(--metal-lt);
+  color: var(--text);
+  font-family: var(--mono);
+}
+button.hp-close:hover{
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--on-danger);
+}
+button.hp-btn{
+  border-radius: 0px !important;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--metal-lt);
+  font-family: var(--mono);
+  box-shadow: none;
+  transition: all .15s ease;
+}
+button.hp-btn:hover:not(:disabled){
+  background: var(--metal);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(57,255,106,.35);
+}
+button.hp-btn:disabled{
+  opacity: .4;
+  cursor: not-allowed;
+  border-color: var(--metal);
+  background: var(--panel);
+}
+button.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 18%, var(--panel));
+  color: var(--ok);
+  border-color: var(--ok);
+}
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: 0 0 15px var(--ok);
+  border-color: transparent;
+}
+button.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 18%, var(--panel));
+  color: var(--danger);
+  border-color: var(--danger);
+}
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 0 15px var(--danger);
+  border-color: transparent;
+}
+button.hp-btn-gray{
+  background: var(--panel);
+  color: var(--text-mute);
+  border-color: var(--metal);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  background: var(--metal);
+  color: var(--text);
+  border-color: var(--metal-lt);
+}
+
+button.hp-btn:focus-visible{
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }

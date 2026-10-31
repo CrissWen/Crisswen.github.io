@@ -1,30 +1,27 @@
 /* ===== Player characteristics (list + lock toggle) ===== */
+#block-player-characteristics .block-body {
+  container-type: inline-size;
+}
+
 .char-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
   /* Заповнення по колонках: елементи 1-5 — ліва колонка, 6-10 — права */
   grid-template-rows: repeat(5, auto);
   grid-auto-flow: column;
-  
   gap: 12px clamp(16px, 3vw, 48px); 
 }
-@media (max-width: 600px) {
-  .char-list {
-    grid-template-columns: 1fr; 
-    grid-template-rows: none;
-    grid-auto-flow: row;
-  }
-}
+
 .abilities-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .char-item{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
   border:1px solid var(--metal);
   border-radius:var(--radius-sm);
-  padding:12px 14px;
+  padding:11px 14px;
   transition:all .3s ease;
   position:relative;
   /* Закрита картка — текстура решітки */
@@ -39,38 +36,48 @@
   opacity:1;
   box-shadow: inset 0 0 20px rgba(0,0,0,.5), -4px 0 0 var(--hazard);
 }
-.char-text{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.char-text{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;}
 .char-label{
-  font-family:var(--mono);font-size:12.5px;
+  font-family:var(--mono);font-size:12px;
   color:var(--text-mute);text-transform:uppercase;
 }
 .char-value {
   font-family: var(--body); 
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 500;
   color: var(--text);
-  letter-spacing: normal; 
+  letter-spacing: normal;
+  overflow-wrap: break-word;
 }
 
-/* Робимо кнопку прозорою і без рамок */
+/* Робимо кнопку прозорою, без рамок і з комфортною тач-областю */
 .char-lock {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;  /* Трохи збільшили розмір самої кнопки */
+  width: 40px;
   height: 40px;
   border: none;
   background: transparent;
-  padding: 6px; /* Внутрішній відступ ("безпечна зона" від країв) */
-  overflow: visible; /* Гарантуємо, що браузер не обріже краї */
+  padding: 6px;
+  overflow: visible;
   cursor: pointer;
 }
 
-/* Оскільки рамок більше немає, при наведенні трохи збільшуємо іконку */
-.char-lock:hover .lock-icon {
-  transform: scale(1.2); /* Збільшуємо на 20% */
+/* При наведенні або активному вікні підтвердження трохи збільшуємо іконку та запускаємо легке покачування (shuffle/wiggle) */
+.char-lock:hover .lock-icon,
+.char-lock.is-confirming .lock-icon {
   filter: brightness(1.15);
+  animation: lock-shuffle 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+}
+
+/* При натисканні — тактильне присідання (якщо ще не відкритий діалог) */
+.char-lock:not(.is-confirming):active .lock-icon {
+  animation: none;
+  transform: scale(1.06) rotate(0deg);
+  filter: brightness(1.25);
+  transition: transform 0.1s ease, filter 0.1s ease;
 }
 
 /* Налаштування самої картинки */
@@ -78,8 +85,40 @@
   width: 100%;
   height: 100%;
   object-fit: contain; 
-  /* Анімацію переносимо сюди, на саму картинку */
-  transition: transform 0.2s ease, filter 0.2s ease; 
+  transform-origin: center center; /* точка обертання по центру */
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.2s ease; 
+}
+
+/* Легке покачування замка із сторони в сторону (shuffle) */
+@keyframes lock-shuffle {
+  0% {
+    transform: scale(1.18) rotate(0deg);
+  }
+  16% {
+    transform: scale(1.18) rotate(-9deg);
+  }
+  32% {
+    transform: scale(1.18) rotate(7.5deg);
+  }
+  48% {
+    transform: scale(1.18) rotate(-5.5deg);
+  }
+  64% {
+    transform: scale(1.18) rotate(3deg);
+  }
+  78% {
+    transform: scale(1.18) rotate(-1.5deg);
+  }
+  90%, 100% {
+    transform: scale(1.18) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .char-lock:hover .lock-icon {
+    animation: none;
+    transform: scale(1.18);
+  }
 }
 
 /* Логіка перемикання (відкрита/закрита) */
@@ -88,7 +127,7 @@
 .char-item.open .char-lock .lock-open { display: block; }
 
 /* ===== Special abilities sub-block (inside block 3) ===== */
-.abilities-block{margin-top:22px;padding-top:18px;border-top:2px dashed var(--metal);}
+.abilities-block{margin-top:18px;padding-top:16px;border-top:2px dashed var(--metal);}
 .abilities-title{
   font-family:var(--mono);font-weight:600;font-size:13px;
   color:var(--hazard);margin:0 0 10px;text-transform:uppercase;
@@ -96,3 +135,51 @@
 .ability-item{border-color:var(--metal-lt);}
 .ability-item.open{border-color:var(--danger);box-shadow: inset 0 0 20px rgba(0,0,0,.5), -4px 0 0 var(--danger);}
 .ability-item.open .char-lock{border-color:var(--hazard);}
+
+/* Компактні шрифти та відступи для телефонів */
+@container (width < 820px) {
+  .char-list {
+    gap: 8px 14px;
+  }
+  .char-item {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .char-label {
+    font-size: 10.5px;
+  }
+  .char-value {
+    font-size: 13px;
+  }
+  .char-lock {
+    width: 34px;
+    height: 34px;
+    padding: 4px;
+  }
+  .abilities-block {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  .abilities-title {
+    font-size: 11.5px;
+    margin-bottom: 8px;
+  }
+}
+
+@container (width < 560px) {
+  .char-list {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-flow: row;
+    gap: 7px;
+  }
+}
+
+@media (max-width: 600px) {
+  .char-list {
+    grid-template-columns: 1fr; 
+    grid-template-rows: none;
+    grid-auto-flow: row;
+    gap: 7px;
+  }
+}

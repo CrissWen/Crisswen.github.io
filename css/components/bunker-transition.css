@@ -1,0 +1,708 @@
+/* ===== Кінематографічний перехід старту гри: Бункерні гермодвері (Bunker Blast Doors) =====
+   Використовує виключно GPU-композитні властивості (transform, opacity) та векторну геометрію clip-path/SVG.
+   Повністю адаптується до поточної теми через CSS-змінні (--bg, --panel, --metal, --hazard, --danger, --ok). */
+
+.bunker-vault-overlay {
+  position: fixed;
+  inset: -4px; /* Невеликий запас від можливих мікро-щілин під час camera shake на мобільних dvh */
+  width: calc(100vw + 8px);
+  height: calc(100vh + 8px);
+  height: calc(100dvh + 8px);
+  z-index: 10050;
+  pointer-events: all;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: layout style paint;
+  perspective: 1200px;
+}
+
+/* Внутрішня сцена, яка отримує імпульс camera-shake при зіткненні багатотонних стулок */
+.bunker-vault-stage {
+  position: absolute;
+  inset: 4px;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Фонова темна завіса (підстраховує під час герметизації та для reduced-motion режиму) */
+.bunker-vault-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--panel) 88%, #000 12%) 0%,
+    color-mix(in srgb, var(--bg) 96%, #000 4%) 100%
+  );
+  opacity: 0;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+/* Верхня і нижня сталеві балки рами шлюзу */
+.bunker-vault-frame-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: clamp(18px, 2.8vh, 30px);
+  z-index: 6;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--metal-lt) 65%, #000 35%) 0%,
+      color-mix(in srgb, var(--panel) 90%, #000 10%) 50%,
+      color-mix(in srgb, var(--bg) 95%, #000 5%) 100%
+    );
+  border-color: var(--metal-lt);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.85);
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+}
+
+.bunker-vault-frame-bar--top {
+  top: 0;
+  border-bottom: 2px solid var(--metal-lt);
+}
+
+.bunker-vault-frame-bar--bottom {
+  bottom: 0;
+  border-top: 2px solid var(--metal-lt);
+}
+
+.bunker-vault-frame-bar::after {
+  content: "";
+  position: absolute;
+  inset: 3px 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard) 0,
+    var(--hazard) 12px,
+    rgba(0, 0, 0, 0.82) 12px,
+    rgba(0, 0, 0, 0.82) 24px
+  );
+  opacity: 0.42;
+}
+
+/* ===== БРОНЕСТУЛКИ (ЛІВА ТА ПРАВА) =====
+   Кожна стулка має ширину 50vw + 26px та взаємодоповнюючий зубчастий профіль clip-path,
+   завдяки чому в закритому стані зубці входять у пази протилежної стулки без жодної щілини. */
+.bunker-door-leaf {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(50vw + 26px);
+  z-index: 3;
+  will-change: transform;
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      color-mix(in srgb, var(--panel-2) 85%, var(--metal-lt) 15%) 0%,
+      color-mix(in srgb, var(--panel) 94%, #000 6%) 65%,
+      color-mix(in srgb, var(--bg) 95%, #000 5%) 100%
+    );
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.85),
+    0 0 45px rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+}
+
+/* Металева мікро-сітка / індустріальне рифлення поверхні бронелиста */
+.bunker-door-leaf::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.18) 0px,
+      rgba(0, 0, 0, 0.18) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  background-size: 48px 48px, 48px 48px, 100% 6px;
+  pointer-events: none;
+}
+
+/* Ліва стулка: виступи на 18..34% та 66..82% + центральне гніздо під штурвал */
+.bunker-door-leaf--left {
+  left: 0;
+  z-index: 4; /* Ліва стулка несе центральний замок-штурвал поверх стику */
+  transform: translate3d(-104%, 0, 0);
+  clip-path: polygon(
+    0% -60px,
+    calc(100% - 48px) -60px,
+    calc(100% - 48px) 13%,
+    100% 17%,
+    100% 33%,
+    calc(100% - 48px) 37%,
+    calc(100% - 48px) 63%,
+    100% 67%,
+    100% 83%,
+    calc(100% - 48px) 87%,
+    calc(100% - 48px) calc(100% + 60px),
+    0% calc(100% + 60px)
+  );
+  border-right: 3px solid color-mix(in srgb, var(--metal-lt) 80%, var(--hazard) 20%);
+}
+
+/* Права стулка: комплементарний зубчастий профіль із перекриттям 4px для герметичності на Retina/fractional DPI */
+.bunker-door-leaf--right {
+  right: 0;
+  z-index: 3;
+  transform: translate3d(104%, 0, 0);
+  clip-path: polygon(
+    0% -60px,
+    100% -60px,
+    100% calc(100% + 60px),
+    0% calc(100% + 60px),
+    0% 86.5%,
+    44px 82.5%,
+    44px 67.5%,
+    0% 63.5%,
+    0% 36.5%,
+    44px 32.5%,
+    44px 17.5%,
+    0% 13.5%
+  );
+  border-left: 3px solid color-mix(in srgb, var(--metal-lt) 80%, var(--hazard) 20%);
+}
+
+/* Попереджувальна смуга небезпеки вздовж замкового краю кожної стулки */
+.bunker-door__hazard-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(54px, 6vw, 84px);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard) 0,
+    var(--hazard) 14px,
+    rgba(10, 12, 16, 0.92) 14px,
+    rgba(10, 12, 16, 0.92) 28px
+  );
+  opacity: 0.78;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.85);
+}
+
+.bunker-door-leaf--left .bunker-door__hazard-edge {
+  right: 0;
+  border-left: 2px solid var(--metal-lt);
+}
+
+.bunker-door-leaf--right .bunker-door__hazard-edge {
+  left: 0;
+  border-right: 2px solid var(--metal-lt);
+}
+
+/* Внутрішня бронеплита з ребрами жорсткості та технічним маркуванням */
+.bunker-door__plate {
+  position: relative;
+  width: calc(100% - clamp(76px, 9vw, 130px));
+  height: 76%;
+  margin: 0 clamp(14px, 2.2vw, 34px);
+  border: 2px solid var(--metal);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--panel-2) 70%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 82%, #000 18%) 100%
+    );
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 36px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(14px, 2.5vh, 28px) clamp(16px, 2.5vw, 36px);
+  overflow: hidden;
+}
+
+.bunker-door-leaf--right .bunker-door__plate {
+  margin-left: auto;
+}
+
+/* Діагональні сталеві ребра жорсткості (X-bracing) */
+.bunker-door__ribs {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.22;
+  pointer-events: none;
+  color: var(--metal-lt);
+}
+
+/* Горизонтальні гідравлічні поршні зверху та знизу стулки */
+.bunker-door__piston {
+  position: relative;
+  z-index: 2;
+  height: clamp(18px, 2.6vh, 28px);
+  border-radius: 4px;
+  border: 1px solid var(--metal-lt);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--metal-lt) 85%, #fff 15%) 0%,
+    var(--metal) 45%,
+    color-mix(in srgb, var(--bg) 90%, #000 10%) 100%
+  );
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.bunker-door__piston::before,
+.bunker-door__piston::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--metal-lt);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Трафаретне маркування (Stencil) на стулках */
+.bunker-door__stencil {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--mono);
+  color: var(--text-mute);
+  opacity: 0.72;
+}
+
+.bunker-door-leaf--left .bunker-door__stencil {
+  align-items: flex-start;
+  padding-right: clamp(30px, 6vw, 90px);
+}
+
+.bunker-door-leaf--right .bunker-door__stencil {
+  align-items: flex-end;
+  text-align: right;
+  padding-left: clamp(30px, 6vw, 90px);
+}
+
+.bunker-door__stencil-code {
+  font-family: var(--head);
+  font-size: clamp(20px, 3.2vw, 42px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text) 78%, var(--hazard) 22%);
+  line-height: 1.05;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.bunker-door__stencil-sub {
+  font-size: clamp(10px, 1.1vw, 13px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.bunker-door__watermark {
+  width: clamp(56px, 8vw, 110px);
+  height: clamp(56px, 8vw, 110px);
+  color: var(--hazard);
+  opacity: 0.16;
+  margin-top: 8px;
+}
+
+/* ===== ВЕРТИКАЛЬНІ СТАЛЕВІ РИГЕЛІ (ЗАМИКАННЯ В РАМУ СТЕЛІ ТА ПІДЛОГИ) =====
+   Вистрілюють з верхнього та нижнього краю стулок у сталеві балки рами (.bunker-vault-frame-bar).
+   Повністю відповідає реальній фізиці шлюзових дверей. */
+.bunker-door__vbolt-sleeve {
+  position: absolute;
+  width: clamp(24px, 2.6vw, 34px);
+  height: clamp(42px, 5vh, 56px);
+  z-index: 5;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--metal-lt) 85%, #fff 15%) 0%,
+    var(--metal) 45%,
+    color-mix(in srgb, var(--panel) 90%, #000 10%) 80%,
+    #0b0d13 100%
+  );
+  border: 1px solid var(--metal-lt);
+  border-radius: 4px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+.bunker-door-leaf--left .bunker-door__vbolt-sleeve {
+  right: calc(clamp(54px, 6vw, 84px) + 10px);
+}
+
+.bunker-door-leaf--right .bunker-door__vbolt-sleeve {
+  left: calc(clamp(54px, 6vw, 84px) + 10px);
+}
+
+.bunker-door__vbolt-sleeve--top {
+  top: clamp(20px, 3vh, 32px);
+}
+
+.bunker-door__vbolt-sleeve--bottom {
+  bottom: clamp(20px, 3vh, 32px);
+}
+
+/* Напрямна горловина гільзи */
+.bunker-door__vbolt-sleeve--top::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 2px;
+  right: 2px;
+  height: 6px;
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--metal-lt) 90%, #fff 10%);
+  border: 1px solid var(--metal-lt);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.bunker-door__vbolt-sleeve--bottom::before {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 2px;
+  right: 2px;
+  height: 6px;
+  border-radius: 0 0 3px 3px;
+  background: color-mix(in srgb, var(--metal-lt) 90%, #fff 10%);
+  border: 1px solid var(--metal-lt);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Декоративні заклепки на гільзі */
+.bunker-door__vbolt-sleeve::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--metal-lt);
+  box-shadow: inset 0 1px 2px #000;
+}
+
+/* Сам масивний сталевий ригель, що вистрілює вертикально */
+.bunker-door__vbolt {
+  position: absolute;
+  left: 50%;
+  transform: translate3d(-50%, 0, 0);
+  width: clamp(14px, 1.6vw, 20px);
+  height: clamp(44px, 5.5vh, 60px);
+  z-index: 4;
+  border: 1px solid var(--metal-lt);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--metal-lt) 90%, #fff 10%) 0%,
+    var(--metal-lt) 25%,
+    var(--metal) 50%,
+    color-mix(in srgb, var(--panel) 85%, #000 15%) 80%,
+    #0b0d13 100%
+  );
+  box-shadow:
+    0 0 14px rgba(0, 0, 0, 0.9),
+    inset 1px 0 0 rgba(255, 255, 255, 0.45);
+  will-change: transform;
+}
+
+.bunker-door__vbolt--top {
+  top: -6px;
+  border-radius: 4px 4px 1px 1px;
+}
+
+.bunker-door__vbolt--top::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 6px;
+  height: 5px;
+  background: var(--hazard);
+  opacity: 0.95;
+  border-radius: 1px;
+}
+
+.bunker-door__vbolt--bottom {
+  bottom: -6px;
+  border-radius: 1px 1px 4px 4px;
+}
+
+.bunker-door__vbolt--bottom::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 6px;
+  height: 5px;
+  background: var(--hazard);
+  opacity: 0.95;
+  border-radius: 1px;
+}
+
+/* ===== ЦЕНТРАЛЬНИЙ ВУЗОЛ БЛОКУВАННЯ (ШТУРВАЛ + HUD ТАБЛО) ===== */
+.bunker-vault-center {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: clamp(14px, 2.4vh, 24px);
+}
+
+/* Круглий гермо-замок (штурвал бункера) */
+.bunker-vault-lock {
+  position: relative;
+  width: clamp(118px, 18vmin, 176px);
+  height: clamp(118px, 18vmin, 176px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--panel-2) 92%, var(--metal-lt) 8%) 0%,
+    color-mix(in srgb, var(--bg) 96%, #000 4%) 75%,
+    #050608 100%
+  );
+  border: 3px solid var(--metal-lt);
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--panel) 85%, #000 15%),
+    0 0 35px rgba(0, 0, 0, 0.95),
+    inset 0 0 24px rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale3d(0.72, 0.72, 1);
+  will-change: transform, opacity;
+}
+
+.bunker-vault-wheel {
+  width: 86%;
+  height: 86%;
+  color: var(--text);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.85));
+  will-change: transform;
+  transform: rotate(0deg);
+}
+
+/* Центральний світловий індикатор у ступиці штурвала */
+.bunker-vault-lock__core {
+  position: absolute;
+  width: 24%;
+  height: 24%;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 18px var(--danger);
+  transition: background-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.bunker-vault-overlay[data-phase="sealed"] .bunker-vault-lock__core {
+  background: var(--hazard);
+  box-shadow: 0 0 20px var(--hazard);
+}
+
+.bunker-vault-overlay[data-phase="opening"] .bunker-vault-lock__core {
+  background: var(--ok);
+  box-shadow: 0 0 22px var(--ok);
+}
+
+/* HUD-консоль статусу герметизації */
+.bunker-vault-hud {
+  position: relative;
+  min-width: min(88vw, 440px);
+  max-width: 92vw;
+  padding: clamp(10px, 1.6vh, 16px) clamp(16px, 2.8vw, 28px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--metal-lt);
+  border-top: 3px solid var(--danger);
+  background: color-mix(in srgb, var(--bg) 92%, #000 8%);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.88),
+    inset 0 0 22px rgba(0, 0, 0, 0.75);
+  text-align: center;
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  will-change: transform, opacity;
+  transition: border-top-color 0.22s ease;
+}
+
+.bunker-vault-overlay[data-phase="sealed"] .bunker-vault-hud {
+  border-top-color: var(--hazard);
+}
+
+.bunker-vault-overlay[data-phase="opening"] .bunker-vault-hud {
+  border-top-color: var(--ok);
+}
+
+/* Верхній рядок маячка тривоги */
+.bunker-vault-hud__beacon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-bottom: 4px;
+  transition: color 0.22s ease;
+}
+
+.bunker-vault-overlay[data-phase="sealed"] .bunker-vault-hud__beacon {
+  color: var(--hazard);
+}
+
+.bunker-vault-overlay[data-phase="opening"] .bunker-vault-hud__beacon {
+  color: var(--ok);
+}
+
+.bunker-vault-hud__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  animation: bunkerBeaconPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes bunkerBeaconPulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 12px currentColor, 0 0 4px currentColor;
+  }
+  50% {
+    opacity: 0.22;
+    box-shadow: 0 0 2px currentColor;
+  }
+}
+
+.bunker-vault-hud__title {
+  font-family: var(--head);
+  font-size: clamp(18px, 2.5vw, 26px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.bunker-vault-hud__sub {
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.2vw, 13px);
+  color: var(--text-mute);
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+
+/* ===== ЕФЕКТ ПНЕВМАТИЧНОЇ ПАРИ (ДЕКОМПРЕСІЯ ПО ЦЕНТРАЛЬНОМУ ШВУ) ===== */
+.bunker-vault-steam {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  bottom: 10%;
+  width: 140px;
+  margin-left: -70px;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in srgb, var(--text) 28%, transparent) 0%,
+    color-mix(in srgb, var(--hazard) 12%, transparent) 45%,
+    transparent 75%
+  );
+  opacity: 0;
+  transform: scale3d(0.25, 0.7, 1);
+  will-change: transform, opacity;
+}
+
+/* ===== АДАПТАЦІЯ ДЛЯ МОБІЛЬНИХ ЕКРАНІВ ===== */
+@media (max-width: 640px) {
+  .bunker-door__plate {
+    width: calc(100% - 46px);
+    height: 70%;
+    padding: 12px;
+  }
+
+  .bunker-door__stencil-sub {
+    display: none;
+  }
+
+  .bunker-door__watermark {
+    width: 44px;
+    height: 44px;
+  }
+
+  .bunker-door-leaf--left {
+    clip-path: polygon(
+      0% -60px,
+      calc(100% - 32px) -60px,
+      calc(100% - 32px) 15%,
+      100% 19%,
+      100% 33%,
+      calc(100% - 32px) 37%,
+      calc(100% - 32px) 63%,
+      100% 67%,
+      100% 81%,
+      calc(100% - 32px) 85%,
+      calc(100% - 32px) calc(100% + 60px),
+      0% calc(100% + 60px)
+    );
+  }
+
+  .bunker-door-leaf--right {
+    clip-path: polygon(
+      0% -60px,
+      100% -60px,
+      100% calc(100% + 60px),
+      0% calc(100% + 60px),
+      0% 84.5%,
+      28px 80.5%,
+      28px 67.5%,
+      0% 63.5%,
+      0% 36.5%,
+      28px 32.5%,
+      28px 19.5%,
+      0% 15.5%
+    );
+  }
+}
+
+/* ===== ДОСТУПНІСТЬ: PREFERS-REDUCED-MOTION =====
+   Для користувачів із чутливістю до руху замінюємо важке зсування стулок і струс камери
+   на спокійне коротке кросфейд-затемнення з інформаційним табло. */
+@media (prefers-reduced-motion: reduce) {
+  .bunker-door-leaf--left,
+  .bunker-door-leaf--right {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .bunker-vault-hud__dot {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
