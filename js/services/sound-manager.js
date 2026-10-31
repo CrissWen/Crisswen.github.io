@@ -33,6 +33,7 @@ class SoundManager {
     this._wasDroneBeforeHide = false;
     this._ambientFadeTimeout = null; // Таймаут згасання при згортанні вкладки
     this._initialized = false;
+    this._globalClicksDisabled = false;
 
     this._loadFromStorage();
     // Також працює на окремій сторінці тесту виживання, де init() не викликається.
@@ -760,6 +761,8 @@ class SoundManager {
     document.addEventListener(
       'click',
       (e) => {
+        if (this._globalClicksDisabled) return;
+        if (typeof document !== 'undefined' && (document.body?.dataset.noClickSound !== undefined || document.body?.classList.contains('no-click-sound'))) return;
         const el = e.target;
         if (!(el instanceof Element)) return;
         if (el.closest(NO_CLICK_SOUND_SELECTOR)) return;
@@ -776,6 +779,29 @@ class SoundManager {
       },
       true
     );
+  }
+
+  /**
+   * Тимчасово вимикає автоматичне відтворення звуку UI-кліку на всіх клікабельних елементах
+   * (корисно для сторінок налаштувань, аудіо-лабораторії та інженерного дебагінгу).
+   */
+  disableGlobalClicks() {
+    this._globalClicksDisabled = true;
+  }
+
+  /**
+   * Вмикає назад автоматичне відтворення звуку UI-кліку.
+   */
+  enableGlobalClicks() {
+    this._globalClicksDisabled = false;
+  }
+
+  /**
+   * Чи увімкнені глобальні UI-кліки.
+   * @returns {boolean}
+   */
+  isGlobalClicksEnabled() {
+    return !this._globalClicksDisabled;
   }
 }
 

@@ -591,7 +591,7 @@
     }
   </style>
 </head>
-<body>
+<body data-no-click-sound>
 
   <!-- ГЛОБАЛЬНИЙ ХЕДЕР -->
   <header class="main-header">
@@ -879,6 +879,9 @@
     import { SOUND_CATALOG, AUDIO_CHANNELS, SOUND_IDS } from './js/constants/sounds.js';
     import { AudioSynth, SYNTH_RECIPES } from './js/services/audio-synth.js';
     import { soundManager } from './js/services/sound-manager.js';
+
+    // Вимикаємо глобальний звук кліків на цій сторінці для чистого дебагінгу
+    soundManager.disableGlobalClicks();
     import { initRangeSliders, setRangeSliderValue } from './js/ui/range-slider.js';
 
     const SUPABASE_URL = 'https://yamapgouatvnvloatnxg.supabase.co';

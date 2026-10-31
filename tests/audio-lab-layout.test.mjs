@@ -57,4 +57,8 @@ test('Audio Lab Layout Contract - Option A Studio Rack', () => {
   assert.match(html, /['"]dice-roll['"]:\s*2\.88/, 'dice-roll must have accurate 2.88s duration instead of 0.34s');
   assert.match(html, /['"]roulette-reveal['"]:\s*20(\.0+)?/, 'roulette-reveal must have accurate ~20s duration instead of 0.82s');
   assert.ok(!html.includes("recipe.durationSec ? recipe.durationSec + 's'"), 'Must not display raw synth recipe durationSec as card duration');
+
+  // 7. Global UI click sounds must be disabled on audio-lab to avoid interfering with debugging
+  assert.ok(html.includes('data-no-click-sound'), 'body must have data-no-click-sound attribute');
+  assert.ok(html.includes('soundManager.disableGlobalClicks()'), 'script must call soundManager.disableGlobalClicks()');
 });

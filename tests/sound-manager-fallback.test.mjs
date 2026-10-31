@@ -121,6 +121,13 @@ async function runTests() {
   assert.strictEqual(AudioSynth.isAmbientPlaying(), false, 'stopAll() must stop AudioSynth ambient');
   assert.strictEqual(soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT), false);
 
+  // 5. Перевіряємо керування глобальними UI-кліками (disableGlobalClicks / enableGlobalClicks)
+  assert.strictEqual(soundManager.isGlobalClicksEnabled(), true);
+  soundManager.disableGlobalClicks();
+  assert.strictEqual(soundManager.isGlobalClicksEnabled(), false, 'disableGlobalClicks must disable global clicks');
+  soundManager.enableGlobalClicks();
+  assert.strictEqual(soundManager.isGlobalClicksEnabled(), true, 'enableGlobalClicks must re-enable global clicks');
+
   console.log('PASS: All sound-manager-fallback tests passed!');
 }
 
