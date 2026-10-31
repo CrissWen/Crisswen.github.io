@@ -64,25 +64,43 @@
     }
 
     .lab-wrap {
-      max-width: 1360px;
+      max-width: 1540px;
       margin: 0 auto;
-      padding: 24px 20px 64px;
-      display: flex;
-      flex-direction: column;
-      gap: 22px;
+      padding: 20px 20px 64px;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 24px;
+      align-items: start;
     }
 
-    /* Master Console & Profile-Style Mixers */
+    /* Master Console & Profile-Style Mixers (Studio Rack) */
     .lab-console {
+      position: sticky;
+      top: 76px;
+      max-height: calc(100vh - 96px);
+      overflow-y: auto;
       background: var(--panel);
       border: 1px solid var(--metal-lt);
       border-top: 3px solid var(--hazard);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      scrollbar-width: thin;
+      scrollbar-color: var(--metal-lt) var(--panel-2);
+    }
+
+    .lab-console::-webkit-scrollbar {
+      width: 6px;
+    }
+    .lab-console::-webkit-scrollbar-track {
+      background: var(--panel-2);
+    }
+    .lab-console::-webkit-scrollbar-thumb {
+      background: var(--metal-lt);
+      border-radius: 3px;
     }
 
     .lab-console__top {
@@ -129,9 +147,9 @@
     }
 
     .lab-mixer-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .lab-mixer-grid .audio-mixer-card {
@@ -430,35 +448,57 @@
       color: #ef4444;
     }
 
-    /* Калібрувальний повзунок картки у стилі bunker-slider */
-    .sound-card__vol {
+    /* Кнопки та повзунок калібрування картки */
+    .sound-card__actions {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-top: 3px;
+    }
+
+    .sound-card__btn-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-left: auto;
-      flex: 1;
-      min-width: 135px;
-      justify-content: flex-end;
+      flex-wrap: wrap;
     }
 
-    .sound-card__vol-label {
+    .sound-card__calibration {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 11px;
+      background: var(--bg);
+      border: 1px solid var(--metal);
+      border-radius: var(--radius-sm);
+      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
+      transition: border-color 0.15s ease;
+    }
+
+    .sound-card__calibration:hover {
+      border-color: var(--metal-lt);
+    }
+
+    .sound-card__calib-label {
       font-size: 11px;
+      font-weight: 600;
       color: var(--text-mute);
       font-family: var(--mono);
       text-transform: uppercase;
+      letter-spacing: 0.04em;
       flex-shrink: 0;
     }
 
-    .sound-card__vol .bunker-slider {
+    .sound-card__calibration .bunker-slider {
       flex: 1;
-      min-width: 70px;
-      max-width: 110px;
+      min-width: 0;
     }
 
-    .sound-card__vol-val {
+    .sound-card__calib-val {
       min-width: 44px;
       font-size: 11px;
-      padding: 2px 5px;
+      padding: 2px 6px;
+      text-align: center;
       flex-shrink: 0;
     }
 
@@ -478,7 +518,7 @@
     }
 
     .lab-wrap[data-view="table"] .sound-card__head {
-      width: 220px;
+      width: 200px;
       flex-shrink: 0;
       flex-direction: column;
       gap: 2px;
@@ -490,17 +530,50 @@
     }
 
     .lab-wrap[data-view="table"] .sound-card__actions {
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
       margin-top: 0;
       flex-shrink: 0;
     }
 
-    @media (max-width: 920px) {
+    .lab-wrap[data-view="table"] .sound-card__calibration {
+      width: 180px;
+      padding: 4px 8px;
+    }
+
+    @media (max-width: 1080px) {
+      .lab-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .lab-console {
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+      }
+      .lab-mixer-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 768px) {
       .lab-wrap[data-view="table"] .sound-card {
         flex-direction: column;
         align-items: stretch;
       }
       .lab-wrap[data-view="table"] .sound-card__head {
         width: auto;
+      }
+      .lab-wrap[data-view="table"] .sound-card__actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .lab-wrap[data-view="table"] .sound-card__calibration {
+        width: 100%;
       }
       .lab-grid {
         grid-template-columns: 1fr;
@@ -586,6 +659,24 @@
               </svg>
               <span>Таблиця</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ОСЦИЛОГРАФ WEB AUDIO ANALYSER -->
+      <div class="lab-scope-box">
+        <canvas id="scope-canvas" class="lab-scope-canvas" width="1200" height="130"></canvas>
+        <div class="lab-scope-hud">
+          <div class="lab-scope-hud__row">
+            <div class="lab-legend">
+              <span class="lab-legend__item"><span class="lab-dot lab-dot--sample"></span>Оригінал (Файл із /audio)</span>
+              <span class="lab-legend__item"><span class="lab-dot lab-dot--synth"></span>Синтезатор (Web Audio API)</span>
+            </div>
+            <span id="scope-mode-badge" style="color: var(--text-mute);">REALTIME WAVEFORM + FFT SPECTRUM</span>
+          </div>
+          <div class="lab-scope-hud__row">
+            <span id="scope-active-sound" style="color: var(--text);">Очікування сигналу...</span>
+            <span id="scope-metrics" style="color: var(--text-dim);">Peak: -∞ dB | RMS: 0.000</span>
           </div>
         </div>
       </div>
@@ -762,24 +853,6 @@
                 <span class="audio-toggle-thumb"></span>
               </span>
             </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- ОСЦИЛОГРАФ WEB AUDIO ANALYSER -->
-      <div class="lab-scope-box">
-        <canvas id="scope-canvas" class="lab-scope-canvas" width="1200" height="130"></canvas>
-        <div class="lab-scope-hud">
-          <div class="lab-scope-hud__row">
-            <div class="lab-legend">
-              <span class="lab-legend__item"><span class="lab-dot lab-dot--sample"></span>Оригінал (Файл із /audio)</span>
-              <span class="lab-legend__item"><span class="lab-dot lab-dot--synth"></span>Синтезатор (Web Audio API)</span>
-            </div>
-            <span id="scope-mode-badge" style="color: var(--text-mute);">REALTIME WAVEFORM + FFT SPECTRUM</span>
-          </div>
-          <div class="lab-scope-hud__row">
-            <span id="scope-active-sound" style="color: var(--text);">Очікування сигналу...</span>
-            <span id="scope-metrics" style="color: var(--text-dim);">Peak: -∞ dB | RMS: 0.000</span>
           </div>
         </div>
       </div>
@@ -1179,27 +1252,30 @@
             </div>
 
             <div class="sound-card__actions">
-              <button type="button" class="lab-btn lab-btn--sample" data-action="sample" title="Відтворити оригінальний файл із /audio">
-                ${SVG_ICONS.play}
-                <span>Семпл</span>
-              </button>
-              <button type="button" class="lab-btn lab-btn--synth" data-action="synth" title="Відтворити процедурний Web Audio синтезатор">
-                ${SVG_ICONS.zap}
-                <span>Синтез</span>
-              </button>
-              ${
-                config.loop
-                  ? `<button type="button" class="lab-btn lab-btn--stop" data-action="stop" title="Зупинити зациклений звук">
-                      ${SVG_ICONS.stop}
-                      <span>Стоп</span>
-                    </button>`
-                  : `<button type="button" class="lab-btn" data-action="ab" title="Послідовне порівняння: Семпл -> пауза -> Синтез">
-                      ${SVG_ICONS.compare}
-                      <span>A/B</span>
-                    </button>`
-              }
-              <div class="sound-card__vol" title="Калібрування baseVolume для цього звуку">
-                <span class="sound-card__vol-label">Base:</span>
+              <div class="sound-card__btn-group">
+                <button type="button" class="lab-btn lab-btn--sample" data-action="sample" title="Відтворити оригінальний файл із /audio">
+                  ${SVG_ICONS.play}
+                  <span>Семпл</span>
+                </button>
+                <button type="button" class="lab-btn lab-btn--synth" data-action="synth" title="Відтворити процедурний Web Audio синтезатор">
+                  ${SVG_ICONS.zap}
+                  <span>Синтез</span>
+                </button>
+                ${
+                  config.loop
+                    ? `<button type="button" class="lab-btn lab-btn--stop" data-action="stop" title="Зупинити зациклений звук">
+                        ${SVG_ICONS.stop}
+                        <span>Стоп</span>
+                      </button>`
+                    : `<button type="button" class="lab-btn" data-action="ab" title="Послідовне порівняння: Семпл -> пауза -> Синтез">
+                        ${SVG_ICONS.compare}
+                        <span>A/B</span>
+                      </button>`
+                }
+              </div>
+
+              <div class="sound-card__calibration" title="Калібрування baseVolume для цього звуку">
+                <span class="sound-card__calib-label">Base Vol</span>
                 <input
                   type="range"
                   class="bunker-slider"
@@ -1211,7 +1287,7 @@
                   data-sound-id="${config.id}"
                   aria-label="Калібрування baseVolume для ${config.id}"
                 >
-                <span class="audio-mixer-card__val sound-card__vol-val" id="vol-val-${config.id}">${Math.round(defaultVol * 100)}%</span>
+                <span class="audio-mixer-card__val sound-card__calib-val" id="vol-val-${config.id}">${Math.round(defaultVol * 100)}%</span>
               </div>
             </div>
           `;
