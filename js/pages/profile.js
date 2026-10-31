@@ -2,7 +2,7 @@ import { getCachedUserHistory, fetchUserGameHistory, checkRoomExists, fetchRoomD
 import { exportGameReplay, readReplayFile, launchOfflineReplay } from '../services/replay-service.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { supabase } from '../services/supabase.js';
-import { THEMES, getCurrentTheme, setTheme } from '../utils/theme-manager.js';
+import { THEMES, getCurrentTheme, setTheme, onThemeChange } from '../utils/theme-manager.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
 import { setAvatarEl, applyAvatarLetterPadding } from '../utils/avatar.js';
 import { openAvatarCropper } from '../ui/avatar-cropper-modal.js';
@@ -349,6 +349,7 @@ function saveCachedStats(userId, stats) {
 
 let currentTabSelector = null;
 let unsubscribeProfileAudio = null;
+let unsubscribeProfileTheme = null;
 
 export function selectProfileTab(name = 'profile', focus = false) {
   if (typeof currentTabSelector === 'function') {
@@ -361,6 +362,10 @@ export function cleanupProfile() {
   if (typeof unsubscribeProfileAudio === 'function') {
     unsubscribeProfileAudio();
     unsubscribeProfileAudio = null;
+  }
+  if (typeof unsubscribeProfileTheme === 'function') {
+    unsubscribeProfileTheme();
+    unsubscribeProfileTheme = null;
   }
 }
 
@@ -595,6 +600,11 @@ function bindAudioEvents() {
   // Синхронізація стану UI, якщо гучність змінено через хедер або інший компонент
   if (typeof unsubscribeProfileAudio === 'function') {
     unsubscribeProfileAudio();
+    unsubscribeProfileAudio = null;
+  }
+  if (typeof unsubscribeProfileTheme === 'function') {
+    unsubscribeProfileTheme();
+    unsubscribeProfileTheme = null;
   }
   unsubscribeProfileAudio = soundManager.subscribe((settings) => {
     const masterPct = Math.round(settings.masterVolume * 100);
@@ -705,6 +715,12 @@ export async function initProfile() {
     // Тему та звук можна перемкнути незалежно від сесії (хоча на цю сторінку і так не пускає неавторизованих —
     // перевірка нижче), тож ініціалізуємо одразу, до await supabase.auth.getSession()
     updateSelectedCard(getCurrentTheme());
+    if (typeof unsubscribeProfileTheme === 'function') {
+        unsubscribeProfileTheme();
+    }
+    unsubscribeProfileTheme = onThemeChange((newTheme) => {
+        updateSelectedCard(newTheme);
+    });
     bindAudioEvents();
 
     themeRadios.forEach(radio => {
