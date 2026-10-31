@@ -164,3 +164,8 @@ button.hp-btn-gray:hover:not(:disabled){
   color: var(--text);
   border-color: var(--metal-lt);
 }
+
+button.hp-btn:focus-visible{
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

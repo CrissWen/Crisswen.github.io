@@ -189,33 +189,47 @@ body .header-collapse-tab:hover{
   background-color: color-mix(in srgb, var(--cryo-2) 45%, var(--cryo-1));
 }
 /* Модифікатори кнопок панелі ведучого для Кріо-станції */
-.hp-btn-green{
-  background: rgba(23, 174, 194, .25) !important;
-  color: var(--cryo-5) !important;
-  border-color: var(--cryo-4) !important;
+button.hp-fab:hover{
+  border-color: var(--cryo-4);
+  box-shadow: 0 0 15px var(--cryo-5);
 }
-.hp-btn-green:hover:not(:disabled){
-  background: var(--cryo-4) !important;
-  color: var(--cryo-1) !important;
-  box-shadow: 0 0 20px var(--cryo-5) !important;
+button.hp-close:hover{
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 0 12px rgba(255, 122, 133, .6);
 }
-.hp-btn-red{
-  background: rgba(255, 122, 133, .2) !important;
-  color: var(--danger) !important;
-  border-color: var(--danger) !important;
+button.hp-btn-green{
+  background: rgba(23, 174, 194, .25);
+  color: var(--cryo-5);
+  border-color: var(--cryo-4);
 }
-.hp-btn-red:hover:not(:disabled){
-  background: var(--danger) !important;
-  color: var(--on-danger) !important;
-  box-shadow: 0 0 20px rgba(255, 122, 133, .6) !important;
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--cryo-4);
+  color: var(--cryo-1);
+  box-shadow: 0 0 20px var(--cryo-5);
 }
-.hp-btn-gray{
-  background: rgba(18, 73, 115, .25) !important;
-  color: var(--text-mute) !important;
-  border-color: var(--metal) !important;
+button.hp-btn-red{
+  background: rgba(255, 122, 133, .2);
+  color: var(--danger);
+  border-color: var(--danger);
 }
-.hp-btn-gray:hover:not(:disabled){
-  border-color: var(--metal-lt) !important;
-  color: var(--text) !important;
-  background: rgba(18, 73, 115, .45) !important;
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 0 20px rgba(255, 122, 133, .6);
+}
+button.hp-btn-gray{
+  background: rgba(18, 73, 115, .25);
+  color: var(--text-mute);
+  border-color: var(--metal);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  border-color: var(--metal-lt);
+  color: var(--text);
+  background: rgba(18, 73, 115, .45);
+}
+button.hp-btn:focus-visible{
+  outline: 2px solid var(--cryo-5);
+  outline-offset: 2px;
 }

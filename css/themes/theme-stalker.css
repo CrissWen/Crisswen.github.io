@@ -490,9 +490,9 @@ button.hp-close{
   transition: all .2s ease;
 }
 button.hp-close:hover{
-  background: var(--danger);
+  background: var(--danger-strong);
   border-color: #d4483c;
-  color: #fff3ef;
+  color: var(--on-danger-strong);
   box-shadow: 0 0 8px rgba(158,42,34,.55);
 }
 button.hp-btn{

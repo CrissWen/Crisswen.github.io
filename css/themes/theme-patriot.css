@@ -177,33 +177,46 @@ body .header-collapse-tab:hover{
   background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
 }
 /* Модифікатори кнопок панелі ведучого для теми Потужність */
-.hp-btn-green{
-  background: color-mix(in srgb, var(--ok) 30%, var(--panel)) !important;
-  color: var(--ok) !important;
-  border-color: var(--ok) !important;
+button.hp-fab:hover{
+  border-color: var(--patriot-5);
+  box-shadow: 0 0 12px rgba(255, 167, 0, .4);
 }
-.hp-btn-green:hover:not(:disabled){
-  background: var(--ok) !important;
-  color: var(--on-ok) !important;
-  box-shadow: 0 4px 15px rgba(105, 176, 255, .4) !important;
+button.hp-close:hover{
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
 }
-.hp-btn-red{
-  background: color-mix(in srgb, var(--danger) 30%, var(--panel)) !important;
-  color: var(--danger) !important;
-  border-color: var(--danger) !important;
+button.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 30%, var(--panel));
+  color: var(--ok);
+  border-color: var(--ok);
 }
-.hp-btn-red:hover:not(:disabled){
-  background: var(--danger) !important;
-  color: var(--on-danger) !important;
-  box-shadow: 0 4px 15px rgba(255, 133, 121, .4) !important;
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: 0 4px 15px rgba(105, 176, 255, .4);
 }
-.hp-btn-gray{
-  background: var(--panel-2) !important;
-  color: var(--text-mute) !important;
-  border-color: var(--metal) !important;
+button.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 30%, var(--panel));
+  color: var(--danger);
+  border-color: var(--danger);
 }
-.hp-btn-gray:hover:not(:disabled){
-  border-color: var(--metal-lt) !important;
-  color: var(--text) !important;
-  background: var(--metal) !important;
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 4px 15px rgba(255, 133, 121, .4);
+}
+button.hp-btn-gray{
+  background: var(--panel-2);
+  color: var(--text-mute);
+  border-color: var(--metal);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  border-color: var(--metal-lt);
+  color: var(--on-hazard, #001838);
+  background: var(--metal);
+}
+button.hp-btn:focus-visible{
+  outline: 2px solid var(--hazard);
+  outline-offset: 2px;
 }
