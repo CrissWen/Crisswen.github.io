@@ -467,7 +467,6 @@
 .info-stat {
   background: var(--bg);
   border: 1px solid var(--metal);
-  border-left: 3px solid var(--metal-lt);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   min-height: 80px;

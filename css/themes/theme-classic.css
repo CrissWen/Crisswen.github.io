@@ -62,7 +62,6 @@ body{
 /* Характеристики бункера та спорядження */
 .info-stat{
   background: var(--panel-2);
-  border-left: 1px solid var(--metal);
   box-shadow: none;
 }
 .info-stat .k{ font-family: var(--body); text-transform: none; }
