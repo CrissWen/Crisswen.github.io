@@ -63,50 +63,66 @@
       margin: 0 auto 14px;
     }
 
+    /* Двоколонковий інженерний лейаут: Ліва стійка 440px + Правий каталог звуків */
     .lab-wrap {
-      max-width: 1600px;
+      max-width: 1560px;
       margin: 0 auto;
-      padding: 16px 20px 64px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
+      padding: 20px 20px 64px;
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 24px;
+      align-items: start;
     }
 
-    /* ==================== TOP STUDIO COCKPIT ==================== */
-    .lab-cockpit {
+    /* ==================== ЛІВА СТІЙКА (STUDIO RACK) ==================== */
+    .lab-console {
       position: sticky;
-      top: 66px;
-      z-index: 80;
-      background: rgba(14, 20, 31, 0.94);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      top: 76px;
+      max-height: calc(100vh - 96px);
+      overflow-y: auto;
+      background: var(--panel);
       border: 1px solid var(--metal-lt);
       border-top: 3px solid var(--hazard);
       border-radius: var(--radius);
-      padding: 10px 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      scrollbar-width: thin;
+      scrollbar-color: var(--metal-lt) var(--panel-2);
+    }
+
+    .lab-console::-webkit-scrollbar {
+      width: 6px;
+    }
+    .lab-console::-webkit-scrollbar-track {
+      background: var(--panel-2);
+    }
+    .lab-console::-webkit-scrollbar-thumb {
+      background: var(--metal-lt);
+      border-radius: 3px;
+    }
+
+    .lab-console__top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--metal);
     }
 
-    .lab-cockpit__brand-col {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-
-    .lab-cockpit__title-row {
+    .lab-console__brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
-    .lab-cockpit__title {
+    .lab-console__title {
       font-family: 'Oswald', sans-serif;
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 600;
       letter-spacing: 0.6px;
       text-transform: uppercase;
@@ -114,49 +130,24 @@
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 7px;
-      line-height: 1;
+      gap: 8px;
     }
 
-    .lab-cockpit__actions {
+    .lab-console__controls {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .lab-view-toggle {
-      display: flex;
-      gap: 2px;
-      background: var(--bg);
-      border: 1px solid var(--metal);
-      border-radius: var(--radius-sm);
-      padding: 2px;
-    }
-    .lab-view-toggle .lab-btn {
-      padding: 4px 7px;
-      background: transparent;
-      border: none;
-    }
-    .lab-view-toggle .lab-btn.is-active {
-      background: var(--hazard);
-      color: #0b0f17;
-    }
-
-    /* Oscilloscope Column in Cockpit */
-    .lab-cockpit__scope-col {
-      flex: 1;
-      max-width: 440px;
-      min-width: 250px;
-    }
-
+    /* Осцилограф у лівій стійці */
     .lab-scope-box {
       position: relative;
-      height: 74px;
-      background: #05080e;
+      height: 114px;
+      background: #06090f;
       border: 1px solid var(--metal-lt);
       border-radius: var(--radius-sm);
       overflow: hidden;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
     }
 
     .lab-scope-canvas {
@@ -172,28 +163,28 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 4px 8px;
+      padding: 6px 10px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
+      font-size: 10.5px;
     }
 
     .lab-scope-hud__row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: 10px;
     }
 
     .lab-legend {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 10px;
     }
 
     .lab-legend__item {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       color: var(--text-dim);
     }
 
@@ -214,101 +205,22 @@
       box-shadow: 0 0 6px #f59e0b;
     }
 
-    /* 4-Channel Mixer Strips in Cockpit */
-    .lab-cockpit__mixer-col {
+    /* Мікшерні картки з profile.css */
+    .lab-mixer-section {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .cockpit-channels {
+    .lab-mixer-grid {
       display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 9px;
     }
 
-    .cockpit-channel {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--bg);
-      border: 1px solid var(--metal);
-      border-radius: var(--radius-sm);
-      padding: 4px 7px;
-      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
-      transition: border-color 0.15s ease;
-    }
-
-    .cockpit-channel:hover {
-      border-color: var(--metal-lt);
-    }
-
-    .cockpit-channel--master {
-      border-color: var(--hazard);
-      background: color-mix(in srgb, var(--hazard) 8%, var(--bg));
-    }
-
-    .cockpit-channel__icon {
-      width: 15px;
-      height: 15px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .cockpit-channel__icon img {
-      width: 13px;
-      height: 13px;
-      object-fit: contain;
-    }
-
-    .cockpit-channel__label {
-      font-family: var(--head);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--text-mute);
-    }
-
-    .cockpit-channel .bunker-slider {
-      width: 66px;
-      flex-shrink: 0;
-    }
-
-    .cockpit-channel__val {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--hazard);
-      min-width: 32px;
-      text-align: right;
-    }
-
-    .cockpit-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg);
-      border: 1px solid var(--metal);
-      border-radius: var(--radius-sm);
-      padding: 4px 7px;
-      cursor: pointer;
-      user-select: none;
-      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
-    }
-    .cockpit-toggle:hover {
-      border-color: var(--metal-lt);
-    }
-    .cockpit-toggle__label {
-      font-family: var(--head);
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: var(--text-mute);
+    .lab-mixer-grid .audio-mixer-card {
+      margin: 0;
+      padding: 10px 12px;
     }
 
     /* Sections */
@@ -328,7 +240,7 @@
 
     .lab-section__title {
       font-family: 'Oswald', sans-serif;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 600;
       letter-spacing: 0.7px;
       text-transform: uppercase;
@@ -344,29 +256,29 @@
       color: var(--text-mute);
     }
 
-    /* Cards Grid (3-4 columns responsive) */
+    /* Комфортна 2-колонкова сітка карток для правого боку */
     .lab-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 14px;
     }
 
     .sound-card {
       background: var(--panel);
       border: 1px solid var(--metal);
       border-left: 3px solid var(--metal-lt);
-      border-radius: var(--radius-sm);
-      padding: 9px 12px;
+      border-radius: var(--radius);
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      gap: 7px;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
+      gap: 9px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
     }
 
     .sound-card:hover {
       border-color: var(--metal-lt);
-      background: color-mix(in srgb, var(--panel-2) 35%, var(--bg));
+      background: color-mix(in srgb, var(--panel-2) 30%, var(--bg));
     }
 
     .sound-card[data-channel="ui"] {
@@ -393,45 +305,35 @@
 
     .sound-card__head {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 8px;
     }
 
-    .sound-card__title-box {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      min-width: 0;
-    }
-
     .sound-card__id {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 600;
       color: var(--text);
-      white-space: nowrap;
     }
 
     .sound-card__label {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--text-dim);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      margin-top: 1px;
     }
 
     .sound-card__badges {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       flex-shrink: 0;
     }
 
     .sound-badge {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      padding: 1px 6px;
+      font-size: 10.5px;
+      padding: 2px 7px;
       border-radius: var(--radius-sm);
       background: var(--panel-2);
       border: 1px solid var(--metal);
@@ -447,87 +349,83 @@
     }
 
     .sound-card__meta {
-      background: #070b12;
+      background: #090e17;
       border: 1px solid var(--metal);
       border-radius: var(--radius-sm);
-      padding: 4px 8px;
+      padding: 6px 9px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 10.5px;
+      font-size: 11px;
       display: flex;
-      align-items: center;
-      gap: 6px;
-      overflow: hidden;
-      white-space: nowrap;
+      flex-direction: column;
+      gap: 3px;
     }
 
-    .sound-card__file {
-      color: var(--text-mute);
-      flex-shrink: 0;
-    }
-
-    .sound-card__sep {
-      color: var(--metal-lt);
-      flex-shrink: 0;
-    }
-
-    .sound-card__formula {
-      color: #fbbf24;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .sound-card__foot {
+    .sound-card__meta-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      color: var(--text-mute);
+    }
+
+    .sound-card__formula {
+      color: #fbbf24;
+      font-size: 10.5px;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sound-card__actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 2px;
     }
 
     .sound-card__btn-group {
       display: flex;
       align-items: center;
-      gap: 5px;
-      flex-shrink: 0;
+      gap: 7px;
+      flex-wrap: wrap;
     }
 
-    .sound-card__btn-group .lab-btn {
-      padding: 4px 8px;
-      font-size: 11px;
-    }
-
-    .sound-card__vol {
+    .sound-card__calibration {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 9px;
+      padding: 6px 10px;
       background: var(--bg);
       border: 1px solid var(--metal);
       border-radius: var(--radius-sm);
-      padding: 3px 6px;
-      flex: 1;
-      max-width: 155px;
-      justify-content: flex-end;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
+      transition: border-color 0.15s ease;
     }
 
-    .sound-card__vol-label {
-      font-family: var(--mono);
-      font-size: 10px;
+    .sound-card__calibration:hover {
+      border-color: var(--metal-lt);
+    }
+
+    .sound-card__calib-label {
+      font-size: 10.5px;
       font-weight: 600;
       color: var(--text-mute);
+      font-family: var(--mono);
       text-transform: uppercase;
+      letter-spacing: 0.04em;
       flex-shrink: 0;
     }
 
-    .sound-card__vol .bunker-slider {
+    .sound-card__calibration .bunker-slider {
       flex: 1;
-      min-width: 44px;
+      min-width: 0;
     }
 
-    .sound-card__vol-val {
-      min-width: 36px;
-      font-size: 10.5px;
-      padding: 1px 4px;
+    .sound-card__calib-val {
+      min-width: 42px;
+      font-size: 11px;
+      padding: 2px 5px;
       text-align: center;
       flex-shrink: 0;
     }
@@ -536,8 +434,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      padding: 5px 10px;
+      gap: 6px;
+      padding: 5px 11px;
       border-radius: var(--radius-sm);
       background: var(--panel-2);
       border: 1px solid var(--metal);
@@ -601,7 +499,7 @@
     .lab-wrap[data-view="table"] .lab-grid {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
     }
 
     .lab-wrap[data-view="table"] .sound-card {
@@ -609,12 +507,14 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 6px 12px;
+      padding: 8px 12px;
     }
 
     .lab-wrap[data-view="table"] .sound-card__head {
-      width: 220px;
+      width: 200px;
       flex-shrink: 0;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .lab-wrap[data-view="table"] .sound-card__meta {
@@ -622,37 +522,37 @@
       min-width: 0;
     }
 
-    .lab-wrap[data-view="table"] .sound-card__foot {
-      flex-shrink: 0;
+    .lab-wrap[data-view="table"] .sound-card__actions {
+      flex-direction: row;
+      align-items: center;
       gap: 10px;
+      margin-top: 0;
+      flex-shrink: 0;
     }
 
-    /* Адаптивні брейкпойнти для кокпіта */
-    @media (max-width: 1280px) {
-      .lab-cockpit {
-        flex-wrap: wrap;
-        padding: 10px 12px;
+    .lab-wrap[data-view="table"] .sound-card__calibration {
+      width: 170px;
+      padding: 4px 8px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .lab-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
       }
-      .lab-cockpit__scope-col {
-        order: 3;
-        flex: 1 1 100%;
-        max-width: none;
+      .lab-console {
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+      }
+      .lab-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       }
     }
 
     @media (max-width: 768px) {
-      .lab-cockpit {
-        position: static;
-      }
-      .cockpit-channels {
-        gap: 5px;
-      }
-      .cockpit-channel .bunker-slider {
-        width: 50px;
-      }
-      .lab-grid {
-        grid-template-columns: 1fr;
-      }
       .lab-wrap[data-view="table"] .sound-card {
         flex-direction: column;
         align-items: stretch;
@@ -660,12 +560,15 @@
       .lab-wrap[data-view="table"] .sound-card__head {
         width: auto;
       }
-      .lab-wrap[data-view="table"] .sound-card__foot {
+      .lab-wrap[data-view="table"] .sound-card__actions {
         flex-direction: column;
         align-items: stretch;
       }
-      .sound-card__vol {
-        max-width: none;
+      .lab-wrap[data-view="table"] .sound-card__calibration {
+        width: 100%;
+      }
+      .lab-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -714,125 +617,240 @@
   <!-- ОСНОВНИЙ ІНТЕРФЕЙС ЛАБОРАТОРІЇ -->
   <main id="audio-lab-app" class="lab-wrap" data-view="cards" hidden>
 
-    <!-- ВЕРХНІЙ ЗАКРІПЛЕНИЙ СТУДІЙНИЙ КОКПІТ (TOP STUDIO COCKPIT) -->
-    <header class="lab-cockpit" aria-label="Студійний кокпіт та живий осцилограф">
-      
-      <!-- Секція 1: Бренд та Швидкі Дії -->
-      <div class="lab-cockpit__brand-col">
-        <div class="lab-cockpit__title-row">
-          <h1 class="lab-cockpit__title">
+    <!-- ЛІВА ЗАКРІПЛЕНА СТІЙКА (STUDIO RACK) -->
+    <section class="lab-console" aria-label="Стійка мікшера та живий осцилограф">
+      <div class="lab-console__top">
+        <div class="lab-console__brand">
+          <h1 class="lab-console__title">
             <svg class="svg-icon" style="width:20px;height:20px;color:var(--hazard);" viewBox="0 0 24 24">
               <path d="M2 10v3"></path><path d="M6 6v11"></path><path d="M10 3v18"></path><path d="M14 8v7"></path><path d="M18 5v13"></path><path d="M22 10v3"></path>
             </svg>
-            Аудіо-Лаб
+            Аудіо-лабораторія
           </h1>
-          <span class="pack-card__badge" id="total-sounds-badge">14 звуків</span>
+          <span class="pack-card__badge" id="total-sounds-badge">14 звуків із каталогу</span>
         </div>
 
-        <div class="lab-cockpit__actions">
+        <div class="lab-console__controls">
           <button type="button" class="lab-btn lab-btn--stop" id="btn-stop-all" title="Зупинити всі активні звуки та ембієнт">
             <svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
             <span>Stop All</span>
           </button>
-          <div class="lab-view-toggle">
+
+          <div style="display: flex; gap: 4px; border-left: 1px solid var(--metal); padding-left: 8px;">
             <button type="button" class="lab-btn is-active" id="btn-view-cards" title="Вигляд картками">
               <svg class="svg-icon" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
                 <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
               </svg>
+              <span>Картки</span>
             </button>
             <button type="button" class="lab-btn" id="btn-view-table" title="Інженерна таблиця">
               <svg class="svg-icon" viewBox="0 0 24 24">
                 <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line>
                 <line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
               </svg>
+              <span>Таблиця</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Секція 2: Осцилограф & Спектрограма -->
-      <div class="lab-cockpit__scope-col">
-        <div class="lab-scope-box">
-          <canvas id="scope-canvas" class="lab-scope-canvas" width="440" height="74"></canvas>
-          <div class="lab-scope-hud">
-            <div class="lab-scope-hud__row">
-              <div class="lab-legend">
-                <span class="lab-legend__item"><span class="lab-dot lab-dot--sample"></span>Семпл</span>
-                <span class="lab-legend__item"><span class="lab-dot lab-dot--synth"></span>Синтез</span>
+      <!-- ОСЦИЛОГРАФ WEB AUDIO ANALYSER -->
+      <div class="lab-scope-box">
+        <canvas id="scope-canvas" class="lab-scope-canvas" width="400" height="114"></canvas>
+        <div class="lab-scope-hud">
+          <div class="lab-scope-hud__row">
+            <div class="lab-legend">
+              <span class="lab-legend__item"><span class="lab-dot lab-dot--sample"></span>Оригінал (Файл із /audio)</span>
+              <span class="lab-legend__item"><span class="lab-dot lab-dot--synth"></span>Синтезатор (Web Audio API)</span>
+            </div>
+            <span id="scope-mode-badge" style="color: var(--text-mute);">FFT + WAVEFORM</span>
+          </div>
+          <div class="lab-scope-hud__row">
+            <span id="scope-active-sound" style="color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Очікування сигналу...</span>
+            <span id="scope-metrics" style="color: var(--text-dim);">Peak: -∞ dB | RMS: 0.000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ПОВНОЦІННИЙ 4-КАНАЛЬНИЙ МІКШЕР З ПРОФІЛЮ -->
+      <div class="lab-mixer-section" id="lab-mixer-container">
+        <div class="audio-mixer-list" id="lab-audio-mixer-list">
+          <div class="lab-mixer-grid">
+            <!-- Master Channel -->
+            <div class="audio-mixer-card audio-mixer-card--master">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/volume-on.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Загальна гучність</span>
+                    <span class="audio-mixer-card__sub">Головний рівень аудіосистеми</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-master">85%</span>
+                  <button
+                    type="button"
+                    class="bunker-mute-btn"
+                    id="lab-audio-mute-btn"
+                    aria-label="Вимкнути звук"
+                    title="Вимкнути весь звук"
+                  >
+                    <img class="bunker-mute-btn__icon bunker-mute-btn__icon--on" src="./icons/audio/volume-on.svg" alt="" aria-hidden="true">
+                    <img class="bunker-mute-btn__icon bunker-mute-btn__icon--off" src="./icons/audio/volume-off.svg" alt="" aria-hidden="true">
+                  </button>
+                </div>
               </div>
-              <span id="scope-mode-badge" style="color: var(--text-mute); font-size: 10px;">FFT + WAVE</span>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-master"
+                data-channel="master"
+                min="0"
+                max="100"
+                step="1"
+                value="85"
+                aria-label="Загальна гучність"
+              >
             </div>
-            <div class="lab-scope-hud__row">
-              <span id="scope-active-sound" style="color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px;">Очікування сигналу...</span>
-              <span id="scope-metrics" style="color: var(--text-dim); font-size: 10px;">Peak: -∞ dB | RMS: 0.000</span>
+
+            <!-- SFX Channel -->
+            <div class="audio-mixer-card">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/sfx.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Ігрові ефекти (SFX)</span>
+                    <span class="audio-mixer-card__sub">Рулетки, кубик, шлюзи, сирени</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-sfx">80%</span>
+                  <button
+                    type="button"
+                    class="audio-test-icon-btn"
+                    data-test-sound="bunker-door-slam"
+                    title="Прослухати ігровий ефект (шлюз)"
+                    aria-label="Прослухати ігровий ефект"
+                  >
+                    <img src="./icons/audio/play.svg" alt="">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-sfx"
+                data-channel="sfx"
+                min="0"
+                max="100"
+                step="1"
+                value="80"
+                aria-label="Гучність ігрових ефектів"
+              >
             </div>
+
+            <!-- UI Channel -->
+            <div class="audio-mixer-card">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/ui.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Інтерфейс (UI)</span>
+                    <span class="audio-mixer-card__sub">Замки, кнопки, перемикачі</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-ui">70%</span>
+                  <button
+                    type="button"
+                    class="audio-test-icon-btn"
+                    data-test-sound="lock-hover"
+                    title="Прослухати звук замка"
+                    aria-label="Прослухати звук інтерфейсу"
+                  >
+                    <img src="./icons/audio/play.svg" alt="">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-ui"
+                data-channel="ui"
+                min="0"
+                max="100"
+                step="1"
+                value="70"
+                aria-label="Гучність звуків інтерфейсу"
+              >
+            </div>
+
+            <!-- Music / Ambient Channel -->
+            <div class="audio-mixer-card">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/music.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Атмосфера та музика</span>
+                    <span class="audio-mixer-card__sub">Фоновий гул шахти бункера</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-music">50%</span>
+                  <button
+                    type="button"
+                    class="audio-test-icon-btn"
+                    id="lab-audio-ambient-btn"
+                    data-test-sound="bunker-ambient"
+                    title="Прослухати атмосферу бункера"
+                    aria-label="Перевірити фоновий ембієнт"
+                  >
+                    <img class="audio-test-icon-btn__play" src="./icons/audio/play.svg" alt="">
+                    <img class="audio-test-icon-btn__stop" src="./icons/audio/stop.svg" alt="">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-music"
+                data-channel="music"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+                aria-label="Гучність фонової музики"
+              >
+            </div>
+          </div>
+
+          <!-- Опція фонового ембієнту -->
+          <div class="audio-option-card">
+            <label class="audio-option-label" for="lab-audio-bg-ambient">
+              <span class="audio-option-text">
+                <span class="audio-option-title">Грати атмосферу бункера у фоні</span>
+                <span class="audio-option-sub">Не ставити ембієнт на паузу при переході на іншу вкладку чи згортанні браузера</span>
+              </span>
+              <input type="checkbox" id="lab-audio-bg-ambient" class="audio-toggle-checkbox">
+              <span class="audio-toggle-track" aria-hidden="true">
+                <span class="audio-toggle-thumb"></span>
+              </span>
+            </label>
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- Секція 3: Компактні смуги каналів (Master, SFX, UI, Music, Ambient) -->
-      <div class="lab-cockpit__mixer-col" id="lab-mixer-container">
-        <div class="cockpit-channels">
-          <!-- Master -->
-          <div class="cockpit-channel cockpit-channel--master" title="Загальна гучність">
-            <span class="cockpit-channel__icon" aria-hidden="true"><img src="./icons/audio/volume-on.svg" alt=""></span>
-            <span class="cockpit-channel__label">Master</span>
-            <input type="range" class="bunker-slider" id="audio-slider-master" data-channel="master" min="0" max="100" step="1" value="85" aria-label="Загальна гучність">
-            <span class="cockpit-channel__val" id="audio-val-master">85%</span>
-            <button type="button" class="bunker-mute-btn" id="lab-audio-mute-btn" aria-label="Вимкнути звук" title="Вимкнути весь звук">
-              <img class="bunker-mute-btn__icon bunker-mute-btn__icon--on" src="./icons/audio/volume-on.svg" alt="" aria-hidden="true">
-              <img class="bunker-mute-btn__icon bunker-mute-btn__icon--off" src="./icons/audio/volume-off.svg" alt="" aria-hidden="true">
-            </button>
-          </div>
-
-          <!-- SFX -->
-          <div class="cockpit-channel" title="Ігрові ефекти (SFX)">
-            <span class="cockpit-channel__icon" aria-hidden="true"><img src="./icons/audio/sfx.svg" alt=""></span>
-            <span class="cockpit-channel__label">SFX</span>
-            <input type="range" class="bunker-slider" id="audio-slider-sfx" data-channel="sfx" min="0" max="100" step="1" value="80" aria-label="Гучність ігрових ефектів">
-            <span class="cockpit-channel__val" id="audio-val-sfx">80%</span>
-            <button type="button" class="audio-test-icon-btn" data-test-sound="bunker-door-slam" title="Прослухати SFX (шлюз)" aria-label="Прослухати ігровий ефект">
-              <img src="./icons/audio/play.svg" alt="">
-            </button>
-          </div>
-
-          <!-- UI -->
-          <div class="cockpit-channel" title="Звуки інтерфейсу (UI)">
-            <span class="cockpit-channel__icon" aria-hidden="true"><img src="./icons/audio/ui.svg" alt=""></span>
-            <span class="cockpit-channel__label">UI</span>
-            <input type="range" class="bunker-slider" id="audio-slider-ui" data-channel="ui" min="0" max="100" step="1" value="70" aria-label="Гучність звуків інтерфейсу">
-            <span class="cockpit-channel__val" id="audio-val-ui">70%</span>
-            <button type="button" class="audio-test-icon-btn" data-test-sound="lock-hover" title="Прослухати UI (замок)" aria-label="Прослухати звук інтерфейсу">
-              <img src="./icons/audio/play.svg" alt="">
-            </button>
-          </div>
-
-          <!-- Music -->
-          <div class="cockpit-channel" title="Атмосфера та музика">
-            <span class="cockpit-channel__icon" aria-hidden="true"><img src="./icons/audio/music.svg" alt=""></span>
-            <span class="cockpit-channel__label">Music</span>
-            <input type="range" class="bunker-slider" id="audio-slider-music" data-channel="music" min="0" max="100" step="1" value="50" aria-label="Гучність фонової музики">
-            <span class="cockpit-channel__val" id="audio-val-music">50%</span>
-            <button type="button" class="audio-test-icon-btn" id="lab-audio-ambient-btn" data-test-sound="bunker-ambient" title="Прослухати ембієнт" aria-label="Перевірити фоновий ембієнт">
-              <img class="audio-test-icon-btn__play" src="./icons/audio/play.svg" alt="">
-              <img class="audio-test-icon-btn__stop" src="./icons/audio/stop.svg" alt="">
-            </button>
-          </div>
-
-          <!-- Background Ambient Toggle -->
-          <label class="cockpit-toggle" title="Грати атмосферу бункера у фоні (не ставити на паузу при переході на іншу вкладку)">
-            <input type="checkbox" id="lab-audio-bg-ambient" class="audio-toggle-checkbox">
-            <span class="audio-toggle-track" aria-hidden="true">
-              <span class="audio-toggle-thumb"></span>
-            </span>
-            <span class="cockpit-toggle__label">Фон</span>
-          </label>
-        </div>
-      </div>
-    </header>
-
-    <!-- КОНТЕЙНЕР СЕКЦІЙ ЗВУКІВ (ГЕНЕРУЄТЬСЯ ПРЯМО З SOUND_CATALOG) -->
+    <!-- ПРАВИЙ КАТАЛОГ ЗВУКІВ (2 КОМФОРТНІ КОЛОНКИ) -->
     <div id="lab-sections-root" style="display: flex; flex-direction: column; gap: 24px;"></div>
 
   </main>
@@ -911,7 +929,7 @@
         gate.hidden = true;
         gate.style.setProperty('display', 'none', 'important');
         app.hidden = false;
-        app.style.display = 'flex';
+        app.style.display = 'grid';
 
         if (!isLabInitialized) {
           isLabInitialized = true;
@@ -1148,7 +1166,7 @@
       const supportedIds = new Set(AudioSynth.getSupportedSoundIds());
       const allItems = Object.values(SOUND_CATALOG).filter((item) => supportedIds.has(item.id));
 
-      document.getElementById('total-sounds-badge').textContent = `${allItems.length} звуків`;
+      document.getElementById('total-sounds-badge').textContent = `${allItems.length} звуків із каталогу`;
 
       const groups = [
         {
@@ -1190,7 +1208,6 @@
         group.items.forEach((config) => {
           const recipe = SYNTH_RECIPES[config.id] || {};
           const srcFile = Array.isArray(config.src) ? config.src[0] : '';
-          const filename = srcFile ? srcFile.split('/').pop() : '';
           const defaultVol = config.baseVolume ?? 0.8;
           perSoundVolumes.set(config.id, defaultVol);
 
@@ -1205,9 +1222,9 @@
 
           card.innerHTML = `
             <div class="sound-card__head">
-              <div class="sound-card__title-box">
-                <span class="sound-card__id">${config.id}</span>
-                <span class="sound-card__label">${config.label}</span>
+              <div>
+                <div class="sound-card__id">${config.id}</div>
+                <div class="sound-card__label">${config.label}</div>
               </div>
               <div class="sound-card__badges">
                 <span class="sound-badge">${config.channel.toUpperCase()}</span>
@@ -1215,19 +1232,23 @@
               </div>
             </div>
 
-            <div class="sound-card__meta" title="${recipe.formula || config.synthType} (${srcFile})">
-              <span class="sound-card__file">${filename}</span>
-              <span class="sound-card__sep">•</span>
-              <span class="sound-card__formula">${recipe.formula || config.synthType}</span>
+            <div class="sound-card__meta">
+              <div class="sound-card__meta-row">
+                <span>Файл гри:</span>
+                <span style="color: var(--text-dim);">${srcFile}</span>
+              </div>
+              <div class="sound-card__formula" title="${recipe.formula || ''}">
+                ${recipe.formula || config.synthType}
+              </div>
             </div>
 
-            <div class="sound-card__foot">
+            <div class="sound-card__actions">
               <div class="sound-card__btn-group">
-                <button type="button" class="lab-btn lab-btn--sample" data-action="sample" title="Відтворити оригінальний файл">
+                <button type="button" class="lab-btn lab-btn--sample" data-action="sample" title="Відтворити оригінальний файл із /audio">
                   ${SVG_ICONS.play}
                   <span>Семпл</span>
                 </button>
-                <button type="button" class="lab-btn lab-btn--synth" data-action="synth" title="Відтворити Web Audio синтез">
+                <button type="button" class="lab-btn lab-btn--synth" data-action="synth" title="Відтворити процедурний Web Audio синтезатор">
                   ${SVG_ICONS.zap}
                   <span>Синтез</span>
                 </button>
@@ -1237,15 +1258,15 @@
                         ${SVG_ICONS.stop}
                         <span>Стоп</span>
                       </button>`
-                    : `<button type="button" class="lab-btn" data-action="ab" title="Порівняння A/B">
+                    : `<button type="button" class="lab-btn" data-action="ab" title="Послідовне порівняння: Семпл -> пауза -> Синтез">
                         ${SVG_ICONS.compare}
                         <span>A/B</span>
                       </button>`
                 }
               </div>
 
-              <div class="sound-card__vol" title="Калібрування baseVolume для цього звуку">
-                <span class="sound-card__vol-label">Vol</span>
+              <div class="sound-card__calibration" title="Калібрування baseVolume для цього звуку">
+                <span class="sound-card__calib-label">Base Vol</span>
                 <input
                   type="range"
                   class="bunker-slider"
@@ -1257,7 +1278,7 @@
                   data-sound-id="${config.id}"
                   aria-label="Калібрування baseVolume для ${config.id}"
                 >
-                <span class="audio-mixer-card__val sound-card__vol-val" id="vol-val-${config.id}">${Math.round(defaultVol * 100)}%</span>
+                <span class="audio-mixer-card__val sound-card__calib-val" id="vol-val-${config.id}">${Math.round(defaultVol * 100)}%</span>
               </div>
             </div>
           `;
@@ -1309,7 +1330,7 @@
         const rect = canvas.getBoundingClientRect();
         if (rect.width > 0 && canvas.width !== Math.round(rect.width)) {
           canvas.width = Math.round(rect.width);
-          canvas.height = Math.round(rect.height || 74);
+          canvas.height = Math.round(rect.height || 114);
         }
       }
       window.addEventListener('resize', resize);
@@ -1320,25 +1341,25 @@
         const w = canvas.width;
         const h = canvas.height;
 
-        c2d.fillStyle = '#05080e';
+        c2d.fillStyle = '#06090f';
         c2d.fillRect(0, 0, w, h);
 
         // Сітка осцилографа
-        c2d.strokeStyle = '#121824';
+        c2d.strokeStyle = '#151d2c';
         c2d.lineWidth = 1;
         c2d.beginPath();
-        for (let x = 0; x < w; x += 40) {
+        for (let x = 0; x < w; x += 50) {
           c2d.moveTo(x, 0);
           c2d.lineTo(x, h);
         }
-        for (let y = 0; y < h; y += 20) {
+        for (let y = 0; y < h; y += 25) {
           c2d.moveTo(0, y);
           c2d.lineTo(w, y);
         }
         c2d.stroke();
 
         // Центральна нульова лінія
-        c2d.strokeStyle = '#1b2638';
+        c2d.strokeStyle = '#223048';
         c2d.beginPath();
         c2d.moveTo(0, h / 2);
         c2d.lineTo(w, h / 2);
@@ -1354,13 +1375,13 @@
         const barFill = isSample ? 'rgba(56, 189, 248, 0.18)' : 'rgba(245, 158, 11, 0.18)';
 
         // 1. Частотний спектр (FFT)
-        const barCount = 36;
+        const barCount = 42;
         const barWidth = w / barCount;
         c2d.fillStyle = barFill;
         for (let i = 0; i < barCount; i++) {
           const mag = freqData[i * 2] / 255;
           const barHeight = mag * (h * 0.85);
-          c2d.fillRect(i * barWidth, h - barHeight, barWidth - 1, barHeight);
+          c2d.fillRect(i * barWidth, h - barHeight, barWidth - 2, barHeight);
         }
 
         // 2. Хвиля осцилографа
@@ -1396,13 +1417,14 @@
       requestAnimationFrame(draw);
     }
 
-    // ==================== 5. ПРИВ'ЯЗКА МІКШЕРА В КОКПІТІ ====================
+    // ==================== 5. ПРИВ'ЯЗКА МІКШЕРА У СТИЛІ ПРОФІЛЮ ====================
     function bindMixerEvents() {
       const mixerRoot = document.getElementById('lab-mixer-container');
       if (!mixerRoot) return;
 
       const muteBtn = document.getElementById('lab-audio-mute-btn');
       const ambientBtn = document.getElementById('lab-audio-ambient-btn');
+      const mixerList = document.getElementById('lab-audio-mixer-list');
       const bgAmbientToggle = document.getElementById('lab-audio-bg-ambient');
       const channelSliders = mixerRoot.querySelectorAll('.bunker-slider[data-channel]');
 
@@ -1475,6 +1497,10 @@
         isMuted = muted;
         updateMasterGain();
 
+        if (mixerList) {
+          mixerList.classList.toggle('is-muted', muted);
+        }
+
         const setUI = (channelKey, pct, isMasterChannel = false) => {
           const slider = document.getElementById(`audio-slider-${channelKey}`);
           const valEl = document.getElementById(`audio-val-${channelKey}`);
@@ -1515,7 +1541,7 @@
         AudioSynth.init();
       } catch (_) {}
 
-      // Прив'язка мікшера в кокпіті
+      // Прив'язка мікшера
       bindMixerEvents();
 
       // Рендер каталогу звуків
