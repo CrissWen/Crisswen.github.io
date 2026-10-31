@@ -173,8 +173,8 @@ export function renderProfile() {
                 <button
                   type="button"
                   class="audio-test-icon-btn"
-                  data-test-sound="${SOUND_IDS.BUNKER_DOOR_SLAM}"
-                  title="Прослухати ефект шлюзу"
+                  data-test-sound="${SOUND_IDS.DICE_ROLL}"
+                  title="Прослухати кидок кубика"
                   aria-label="Прослухати ігровий ефект"
                 >
                   <img src="${esc(ICONS.AUDIO_PLAY)}" alt="">
@@ -211,8 +211,8 @@ export function renderProfile() {
                 <button
                   type="button"
                   class="audio-test-icon-btn"
-                  data-test-sound="${SOUND_IDS.LOCK_HOVER}"
-                  title="Прослухати звук замка"
+                  data-test-sound="${SOUND_IDS.UI_CLICK}"
+                  title="Прослухати клік кнопки"
                   aria-label="Прослухати звук інтерфейсу"
                 >
                   <img src="${esc(ICONS.AUDIO_PLAY)}" alt="">
