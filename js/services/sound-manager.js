@@ -348,6 +348,10 @@ class SoundManager {
       rate = Math.max(0.5, Math.min(2.0, 1 + delta));
     }
 
+    if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
+      this._ambientWanted = true;
+    }
+
     // 4. Якщо файл раніше не знайдено на диску або Howler недоступний — граємо синтезований фоллбек
     if (this._missingFiles.has(soundId) || typeof window === 'undefined' || !window.Howl) {
       this._playSynthFallback(config, effectiveVol, rate, options.loop);
@@ -407,6 +411,7 @@ class SoundManager {
     AudioSynth.stop(soundId);
 
     if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
+      this._ambientWanted = false;
       this._stopAmbientDrone();
     }
   }
@@ -415,6 +420,7 @@ class SoundManager {
    * Зупиняє всі активні звуки.
    */
   stopAll() {
+    this._ambientWanted = false;
     if (typeof window !== 'undefined' && window.Howler) {
       window.Howler.stop();
     }
@@ -445,8 +451,14 @@ class SoundManager {
    * Перевіряє, чи відтворюється зараз вказаний звук (зокрема ембієнт).
    */
   isPlaying(soundId) {
-    if (soundId === SOUND_IDS.BUNKER_AMBIENT && (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes)) {
-      return true;
+    if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
+      if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
+        return true;
+      }
+      const howl = this._howls.get(soundId);
+      if (howl && howl.playing()) return true;
+      // Якщо ембієнт запущений, але Howl ще вантажить аудіофайл (html5 audio стрімінг):
+      return Boolean(this._ambientWanted);
     }
     const howl = this._howls.get(soundId);
     return Boolean(howl && howl.playing());
@@ -484,9 +496,15 @@ class SoundManager {
       },
       onend: (id) => {
         activeSet.delete(id);
+        if (config.id === SOUND_IDS.BUNKER_AMBIENT && activeSet.size === 0 && !config.loop) {
+          this._ambientWanted = false;
+        }
       },
       onstop: (id) => {
         activeSet.delete(id);
+        if (config.id === SOUND_IDS.BUNKER_AMBIENT && activeSet.size === 0) {
+          this._ambientWanted = false;
+        }
       },
       onplayerror: (id, err) => {
         console.warn(`[SoundManager] Відтворення "${config.id}" заблоковане політикою браузера (Autoplay). Клікніть на сторінці для розблокування:`, err);

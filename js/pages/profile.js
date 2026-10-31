@@ -251,7 +251,7 @@ export function renderProfile() {
                   class="audio-test-icon-btn ${isAmbientPlaying ? 'is-playing' : ''}"
                   id="profile-audio-ambient-btn"
                   data-test-sound="${SOUND_IDS.BUNKER_AMBIENT}"
-                  title="${isAmbientPlaying ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера'}"
+                  title="${isAmbientPlaying ? 'Зупинити ембієнт (автозупинка через 15 с)' : 'Прослухати атмосферу бункера'}"
                   aria-label="Перевірити фоновий ембієнт"
                 >
                   <img class="audio-test-icon-btn__play" src="${esc(ICONS.AUDIO_PLAY)}" alt="">
@@ -350,6 +350,29 @@ function saveCachedStats(userId, stats) {
 let currentTabSelector = null;
 let unsubscribeProfileAudio = null;
 let unsubscribeProfileTheme = null;
+const AMBIENT_PREVIEW_DURATION_MS = 15000;
+let ambientPreviewTimer = null;
+
+function setAmbientBtnState(isPlaying) {
+  const ambientBtn = document.getElementById('profile-audio-ambient-btn');
+  if (!ambientBtn) return;
+  ambientBtn.classList.toggle('is-playing', isPlaying);
+  ambientBtn.title = isPlaying
+    ? 'Зупинити ембієнт (автозупинка через 15 с)'
+    : 'Прослухати атмосферу бункера';
+  ambientBtn.setAttribute('aria-label', isPlaying ? 'Зупинити ембієнт' : 'Перевірити фоновий ембієнт');
+}
+
+export function stopAmbientPreview() {
+  if (ambientPreviewTimer) {
+    clearTimeout(ambientPreviewTimer);
+    ambientPreviewTimer = null;
+  }
+  if (soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT)) {
+    soundManager.stop(SOUND_IDS.BUNKER_AMBIENT);
+  }
+  setAmbientBtnState(false);
+}
 
 export function selectProfileTab(name = 'profile', focus = false) {
   if (typeof currentTabSelector === 'function') {
@@ -359,6 +382,7 @@ export function selectProfileTab(name = 'profile', focus = false) {
 
 export function cleanupProfile() {
   currentTabSelector = null;
+  stopAmbientPreview();
   if (typeof unsubscribeProfileAudio === 'function') {
     unsubscribeProfileAudio();
     unsubscribeProfileAudio = null;
@@ -581,15 +605,15 @@ function bindAudioEvents() {
     }
 
     if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
-      if (soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT)) {
-        soundManager.stop(SOUND_IDS.BUNKER_AMBIENT);
+      if (ambientPreviewTimer || soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT)) {
+        stopAmbientPreview();
       } else {
         soundManager.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
-      }
-      if (ambientBtn) {
-        const playing = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
-        ambientBtn.classList.toggle('is-playing', playing);
-        ambientBtn.title = playing ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера';
+        setAmbientBtnState(true);
+
+        ambientPreviewTimer = setTimeout(() => {
+          stopAmbientPreview();
+        }, AMBIENT_PREVIEW_DURATION_MS);
       }
       return;
     }
@@ -636,9 +660,8 @@ function bindAudioEvents() {
     }
 
     if (ambientBtn) {
-      const playing = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
-      ambientBtn.classList.toggle('is-playing', playing);
-      ambientBtn.title = playing ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера';
+      const playing = Boolean(ambientPreviewTimer || soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT));
+      setAmbientBtnState(playing);
     }
 
     if (bgAmbientToggle) {
@@ -652,6 +675,9 @@ function setupProfileTabs(userId = null) {
     if (!tabs.length) return;
 
     const select = (name, focus = false) => {
+        if (name !== 'audio') {
+            stopAmbientPreview();
+        }
         tabs.forEach(tab => {
             const active = tab.dataset.tab === name;
             tab.setAttribute('aria-selected', active ? 'true' : 'false');
