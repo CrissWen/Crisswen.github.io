@@ -54,6 +54,7 @@ let unsubscribeRoom = null; // відписка від Realtime-каналу к�
 let currentUserId = null;
 let currentUserName = null;
 let isSpectator = false; // глядач: гра вже йде, а гравця немає в players_state (виводиться в updateGameBoard на кожне оновлення)
+let isOfflineReplay = false;
 let localRoomState = null;
 let pendingDiceLogId = null; // id запису в лозі про кидок, який прихований до зупинки кубика
 let pendingDiceLogTimer = null;
@@ -73,6 +74,7 @@ const ctx = {
   getUserName: () => currentUserName,
   getRoomState: () => localRoomState,
   isSpectator: () => isSpectator,
+  isOfflineReplay: () => isOfflineReplay,
   refreshBoard: () => {
     const boardEl = document.getElementById('game-board');
     if (boardEl && localRoomState) updateGameBoard(localRoomState, boardEl);
@@ -180,7 +182,7 @@ function mountOfflineReplayBanner(roomCode) {
 export async function initGame() {
   const statusEl = document.getElementById('game-status');
   const boardEl = document.getElementById('game-board');
-  const isOfflineReplay = window.location.hash.includes('mode=offline_replay');
+  isOfflineReplay = window.location.hash.includes('mode=offline_replay');
   if (isOfflineReplay) {
     try {
       const raw = sessionStorage.getItem(REPLAY_STORAGE_KEY);
@@ -200,6 +202,7 @@ export async function initGame() {
       boardEl.style.display = 'block';
 
       mountOfflineReplayBanner(currentRoomCode);
+      setupActionListeners();
 
       mountGameTimer(() => localRoomState?.bunker_state);
       mountCataclysmTimer(onCataclysmTimerExpired);
@@ -388,7 +391,7 @@ function renderActiveGame(roomData, container) {
   const bState = roomData.bunker_state || {};
   const pState = roomData.players_state || {};
   const isHost = isHostOf(roomData);
-  const isFinal = roomData.status === 'finished';
+  const isFinal = roomData.status === 'finished' || isOfflineReplay;
   const vm = buildBoardViewModel(roomData, currentUserId, { reveal: isFinal });
   // Поки крутиться рулетка катаклізму, результат на дошці й у лозі прихований: інакше він видав би себе ще до зупинки стрічки.
   // Перемальовування в момент розблокування запускає spinRefreshTimer (maybePlayCataclysmRoulette).
@@ -428,13 +431,15 @@ function renderActiveGame(roomData, container) {
   // Фінал завершеної гри: та ж дошка, що й у грі, лише в таблицях видно відкрите й закрите (замок), і вбудований режим тільки для читання
   // (панелі ведучого немає, голосувати не можна). Кнопка «На головну» — під дошкою.
   container.classList.toggle('final-screen', isFinal);
-  container.innerHTML = order.join("") + (isFinal
+  container.innerHTML = order.join("") + ((isFinal && !isOfflineReplay)
     ? '<div class="final-actions"><button type="button" class="hp-btn hp-btn-red final-home-btn" data-final-home>На головну</button></div>'
     : '');
-  container.querySelector('[data-final-home]')?.addEventListener('click', () => {
-    clearLastRoom(currentUserId);
-    window.location.hash = '#/lobby';
-  });
+  if (!isOfflineReplay) {
+    container.querySelector('[data-final-home]')?.addEventListener('click', () => {
+      clearLastRoom(currentUserId);
+      window.location.hash = '#/lobby';
+    });
+  }
   restoreVoteSelection(); // повертаємо виділення і розблоковуємо «Проголосувати»
   restoreNotesFocus();
   scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
@@ -754,11 +759,12 @@ async function handleGlobalClick(e) {
 
   const lockBtn = e.target.closest('.char-lock');
   // Після завершення гри характеристики лише для читання: відкривати/ховати їх більше не можна
-  if (lockBtn && localRoomState?.status !== 'finished') await handleCharLockClick(lockBtn, ctx);
+  if (lockBtn && localRoomState?.status !== 'finished' && !isOfflineReplay) await handleCharLockClick(lockBtn, ctx);
 }
 
 export function cleanupGame() {
   isSpectator = false;
+  isOfflineReplay = false;
   hideOrientationPrompt();
   hideGlobalTooltip();
   unmountHeaderCollapseTab();
