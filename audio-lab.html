@@ -10,6 +10,7 @@
 
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/components/packs.css">
+  <link rel="stylesheet" href="css/components/profile.css">
   <link id="theme-stylesheet" rel="stylesheet" href="css/themes/theme-classic.css">
   <script>
     (function () {
@@ -24,6 +25,11 @@
   <link rel="stylesheet" href="css/header.css">
 
   <style>
+    /* ПРИНЦИПОВИЙ ФІКС: авторські стилі [hidden] мають найвищий пріоритет */
+    [hidden] {
+      display: none !important;
+    }
+
     .svg-icon {
       width: 16px;
       height: 16px;
@@ -66,16 +72,16 @@
       gap: 22px;
     }
 
-    /* Master Console & Oscilloscope */
+    /* Master Console & Profile-Style Mixers */
     .lab-console {
       background: var(--panel);
       border: 1px solid var(--metal-lt);
       border-top: 3px solid var(--hazard);
       border-radius: var(--radius);
-      padding: 18px 20px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 18px;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     }
 
@@ -85,6 +91,8 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--metal);
     }
 
     .lab-console__brand {
@@ -95,7 +103,7 @@
 
     .lab-console__title {
       font-family: 'Oswald', sans-serif;
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 600;
       letter-spacing: 0.8px;
       text-transform: uppercase;
@@ -110,34 +118,34 @@
       display: flex;
       align-items: center;
       flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Мікшерна секція каналів у стилі profile.js */
+    .lab-mixer-section {
+      display: flex;
+      flex-direction: column;
       gap: 12px;
     }
 
-    .lab-vol-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--panel-2);
-      border: 1px solid var(--metal);
-      padding: 6px 12px;
-      border-radius: var(--radius);
-      font-size: 12.5px;
-      color: var(--text-dim);
+    .lab-mixer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
     }
 
-    .lab-vol-group input[type="range"] {
-      width: 96px;
-      accent-color: var(--hazard);
-      cursor: pointer;
+    .lab-mixer-grid .audio-mixer-card {
+      margin: 0;
     }
 
     .lab-scope-box {
       position: relative;
-      height: 124px;
+      height: 130px;
       background: #06090f;
       border: 1px solid var(--metal-lt);
       border-radius: var(--radius);
       overflow: hidden;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
     }
 
     .lab-scope-canvas {
@@ -231,7 +239,7 @@
     /* Cards Grid */
     .lab-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
       gap: 14px;
     }
 
@@ -244,7 +252,13 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .sound-card:hover {
+      border-color: var(--metal-lt);
+      background: color-mix(in srgb, var(--panel-2) 30%, var(--bg));
     }
 
     .sound-card[data-channel="ui"] {
@@ -300,41 +314,44 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 10.5px;
       padding: 2px 7px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       background: var(--panel-2);
       border: 1px solid var(--metal);
       color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
 
     .sound-badge--loop {
       border-color: #a855f7;
-      color: #d8b4fe;
+      color: #c084fc;
+      background: rgba(168, 85, 247, 0.12);
     }
 
     .sound-card__meta {
-      background: #080b11;
+      background: #090e17;
       border: 1px solid var(--metal);
-      border-radius: 4px;
-      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
-      color: var(--text-mute);
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
     }
 
     .sound-card__meta-row {
       display: flex;
+      align-items: center;
       justify-content: space-between;
       gap: 8px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      color: var(--text-mute);
     }
 
     .sound-card__formula {
       color: #fbbf24;
+      font-size: 10.5px;
+      line-height: 1.35;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -343,10 +360,9 @@
     .sound-card__actions {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 8px;
-      margin-top: auto;
-      padding-top: 4px;
+      flex-wrap: wrap;
+      margin-top: 2px;
     }
 
     .lab-btn {
@@ -355,82 +371,98 @@
       justify-content: center;
       gap: 6px;
       padding: 6px 11px;
+      border-radius: var(--radius-sm);
+      background: var(--panel-2);
+      border: 1px solid var(--metal);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
       font-size: 12px;
       font-weight: 500;
-      font-family: 'IBM Plex Sans', sans-serif;
-      border-radius: var(--radius);
-      border: 1px solid var(--metal-lt);
-      background: var(--panel-2);
-      color: var(--text);
       cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+      transition: all 0.15s ease;
+      white-space: nowrap;
     }
 
     .lab-btn:hover {
-      border-color: var(--text-dim);
-      background: var(--metal);
+      border-color: var(--hazard);
+      color: var(--hazard);
+      background: var(--panel);
     }
 
     .lab-btn:active {
-      transform: translateY(1px);
-    }
-
-    .lab-btn--sample {
-      background: rgba(14, 165, 233, 0.14);
-      border-color: rgba(56, 189, 248, 0.45);
-      color: #bae6fd;
-    }
-
-    .lab-btn--sample:hover {
-      background: rgba(14, 165, 233, 0.26);
-      border-color: #38bdf8;
-    }
-
-    .lab-btn--synth {
-      background: rgba(245, 158, 11, 0.16);
-      border-color: rgba(245, 158, 11, 0.5);
-      color: #fde68a;
-    }
-
-    .lab-btn--synth:hover {
-      background: rgba(245, 158, 11, 0.28);
-      border-color: #f59e0b;
-    }
-
-    .lab-btn--stop {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: rgba(239, 68, 68, 0.45);
-      color: #fecaca;
-    }
-
-    .lab-btn--stop:hover {
-      background: rgba(239, 68, 68, 0.28);
-      border-color: #ef4444;
+      transform: scale(0.96);
     }
 
     .lab-btn.is-active {
+      background: var(--hazard);
       border-color: var(--hazard);
-      color: var(--hazard);
-      background: rgba(214, 158, 46, 0.14);
+      color: #0b0f17;
+      font-weight: 600;
     }
 
+    .lab-btn--sample {
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
+    .lab-btn--sample:hover {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+    }
+
+    .lab-btn--synth {
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #f59e0b;
+    }
+    .lab-btn--synth:hover {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.12);
+      color: #f59e0b;
+    }
+
+    .lab-btn--stop {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #ef4444;
+    }
+    .lab-btn--stop:hover {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+    }
+
+    /* Калібрувальний повзунок картки у стилі bunker-slider */
     .sound-card__vol {
-      margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-family: 'JetBrains Mono', monospace;
+      gap: 8px;
+      margin-left: auto;
+      flex: 1;
+      min-width: 135px;
+      justify-content: flex-end;
+    }
+
+    .sound-card__vol-label {
       font-size: 11px;
       color: var(--text-mute);
+      font-family: var(--mono);
+      text-transform: uppercase;
+      flex-shrink: 0;
     }
 
-    .sound-card__vol input[type="range"] {
-      width: 68px;
-      accent-color: var(--hazard);
-      cursor: pointer;
+    .sound-card__vol .bunker-slider {
+      flex: 1;
+      min-width: 70px;
+      max-width: 110px;
     }
 
-    /* Table Mode */
+    .sound-card__vol-val {
+      min-width: 44px;
+      font-size: 11px;
+      padding: 2px 5px;
+      flex-shrink: 0;
+    }
+
+    /* Table View */
     .lab-wrap[data-view="table"] .lab-grid {
       display: flex;
       flex-direction: column;
@@ -440,12 +472,13 @@
     .lab-wrap[data-view="table"] .sound-card {
       flex-direction: row;
       align-items: center;
-      padding: 9px 14px;
+      justify-content: space-between;
       gap: 14px;
+      padding: 8px 14px;
     }
 
     .lab-wrap[data-view="table"] .sound-card__head {
-      width: 240px;
+      width: 220px;
       flex-shrink: 0;
       flex-direction: column;
       gap: 2px;
@@ -458,7 +491,6 @@
 
     .lab-wrap[data-view="table"] .sound-card__actions {
       margin-top: 0;
-      padding-top: 0;
       flex-shrink: 0;
     }
 
@@ -520,8 +552,8 @@
   <!-- ОСНОВНИЙ ІНТЕРФЕЙС ЛАБОРАТОРІЇ -->
   <main id="audio-lab-app" class="lab-wrap" data-view="cards" hidden>
 
-    <!-- ВЕРХНЯ КОНСОЛЬ ТА ЖИВИЙ ОСЦИЛОГРАФ -->
-    <section class="lab-console" aria-label="Майстер-панель та осцилограф">
+    <!-- ВЕРХНЯ КОНСОЛЬ ТА МІКШЕР У СТИЛІ ПРОФІЛЮ -->
+    <section class="lab-console" aria-label="Мікшер аудіосистеми та живий осцилограф">
       <div class="lab-console__top">
         <div class="lab-console__brand">
           <h1 class="lab-console__title">
@@ -530,30 +562,10 @@
             </svg>
             Аудіо-лабораторія TrueBunker
           </h1>
-          <span class="pack-card__badge" id="total-sounds-badge">14 звуків з SOUND_CATALOG</span>
+          <span class="pack-card__badge" id="total-sounds-badge">14 звуків із SOUND_CATALOG</span>
         </div>
 
         <div class="lab-console__controls">
-          <div class="lab-vol-group">
-            <svg class="svg-icon" viewBox="0 0 24 24">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <span>Майстер:</span>
-            <input type="range" id="master-vol-slider" min="0" max="1" step="0.02" value="0.85" aria-label="Загальна гучність">
-            <span id="master-vol-val" style="min-width: 34px; text-align: right; font-family: 'JetBrains Mono', monospace;">85%</span>
-          </div>
-
-          <button type="button" class="lab-btn" id="btn-toggle-mute" title="Вимкнути / увімкнути звук">
-            <svg class="svg-icon" id="icon-mute-state" viewBox="0 0 24 24">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <line x1="23" y1="9" x2="17" y2="15"></line>
-              <line x1="17" y1="9" x2="23" y2="15"></line>
-            </svg>
-            <span id="label-mute-state">Mute</span>
-          </button>
-
           <button type="button" class="lab-btn lab-btn--stop" id="btn-stop-all" title="Зупинити всі активні звуки та ембієнт">
             <svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
             <span>Stop All</span>
@@ -578,9 +590,185 @@
         </div>
       </div>
 
+      <!-- МІКШЕР ЗВУКІВ ЯК У ПРОФІЛІ (Master, SFX, UI, Music + Фонові опції) -->
+      <div class="lab-mixer-section" id="lab-mixer-container">
+        <div class="audio-mixer-list" id="lab-audio-mixer-list">
+          <div class="lab-mixer-grid">
+            <!-- Master Channel -->
+            <div class="audio-mixer-card audio-mixer-card--master">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/volume-on.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Загальна гучність</span>
+                    <span class="audio-mixer-card__sub">Головний рівень аудіосистеми</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-master">85%</span>
+                  <button
+                    type="button"
+                    class="bunker-mute-btn"
+                    id="lab-audio-mute-btn"
+                    aria-label="Вимкнути звук"
+                    title="Вимкнути весь звук"
+                  >
+                    <img class="bunker-mute-btn__icon bunker-mute-btn__icon--on" src="./icons/audio/volume-on.svg" alt="" aria-hidden="true">
+                    <img class="bunker-mute-btn__icon bunker-mute-btn__icon--off" src="./icons/audio/volume-off.svg" alt="" aria-hidden="true">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-master"
+                data-channel="master"
+                min="0"
+                max="100"
+                step="1"
+                value="85"
+                aria-label="Загальна гучність"
+              >
+            </div>
+
+            <!-- SFX Channel -->
+            <div class="audio-mixer-card">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/sfx.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Ігрові ефекти (SFX)</span>
+                    <span class="audio-mixer-card__sub">Рулетки, кубик, шлюзи, сирени</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-sfx">80%</span>
+                  <button
+                    type="button"
+                    class="audio-test-icon-btn"
+                    data-test-sound="bunker-door-slam"
+                    title="Прослухати ігровий ефект (шлюз)"
+                    aria-label="Прослухати ігровий ефект"
+                  >
+                    <img src="./icons/audio/play.svg" alt="">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-sfx"
+                data-channel="sfx"
+                min="0"
+                max="100"
+                step="1"
+                value="80"
+                aria-label="Гучність ігрових ефектів"
+              >
+            </div>
+
+            <!-- UI Channel -->
+            <div class="audio-mixer-card">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/ui.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Інтерфейс (UI)</span>
+                    <span class="audio-mixer-card__sub">Замки, кнопки, перемикачі</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-ui">70%</span>
+                  <button
+                    type="button"
+                    class="audio-test-icon-btn"
+                    data-test-sound="lock-hover"
+                    title="Прослухати звук замка"
+                    aria-label="Прослухати звук інтерфейсу"
+                  >
+                    <img src="./icons/audio/play.svg" alt="">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-ui"
+                data-channel="ui"
+                min="0"
+                max="100"
+                step="1"
+                value="70"
+                aria-label="Гучність звуків інтерфейсу"
+              >
+            </div>
+
+            <!-- Music / Ambient Channel -->
+            <div class="audio-mixer-card">
+              <div class="audio-mixer-card__top">
+                <div class="audio-mixer-card__head">
+                  <span class="audio-mixer-card__icon" aria-hidden="true">
+                    <img src="./icons/audio/music.svg" alt="">
+                  </span>
+                  <div class="audio-mixer-card__info">
+                    <span class="audio-mixer-card__title">Атмосфера та музика</span>
+                    <span class="audio-mixer-card__sub">Фоновий гул шахти бункера</span>
+                  </div>
+                </div>
+                <div class="audio-mixer-card__actions">
+                  <span class="audio-mixer-card__val" id="audio-val-music">50%</span>
+                  <button
+                    type="button"
+                    class="audio-test-icon-btn"
+                    id="lab-audio-ambient-btn"
+                    data-test-sound="bunker-ambient"
+                    title="Прослухати атмосферу бункера"
+                    aria-label="Перевірити фоновий ембієнт"
+                  >
+                    <img class="audio-test-icon-btn__play" src="./icons/audio/play.svg" alt="">
+                    <img class="audio-test-icon-btn__stop" src="./icons/audio/stop.svg" alt="">
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                class="bunker-slider"
+                id="audio-slider-music"
+                data-channel="music"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+                aria-label="Гучність фонової музики"
+              >
+            </div>
+          </div>
+
+          <!-- Опція фонового ембієнту -->
+          <div class="audio-option-card">
+            <label class="audio-option-label" for="lab-audio-bg-ambient">
+              <span class="audio-option-text">
+                <span class="audio-option-title">Грати атмосферу бункера у фоні</span>
+                <span class="audio-option-sub">Не ставити ембієнт на паузу при переході на іншу вкладку чи згортанні браузера</span>
+              </span>
+              <input type="checkbox" id="lab-audio-bg-ambient" class="audio-toggle-checkbox">
+              <span class="audio-toggle-track" aria-hidden="true">
+                <span class="audio-toggle-thumb"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <!-- ОСЦИЛОГРАФ WEB AUDIO ANALYSER -->
       <div class="lab-scope-box">
-        <canvas id="scope-canvas" class="lab-scope-canvas" width="1200" height="124"></canvas>
+        <canvas id="scope-canvas" class="lab-scope-canvas" width="1200" height="130"></canvas>
         <div class="lab-scope-hud">
           <div class="lab-scope-hud__row">
             <div class="lab-legend">
@@ -603,9 +791,12 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/vendor/howler.min.js"></script>
   <script type="module">
-    import { SOUND_CATALOG, AUDIO_CHANNELS } from './js/constants/sounds.js';
+    import { SOUND_CATALOG, AUDIO_CHANNELS, SOUND_IDS } from './js/constants/sounds.js';
     import { AudioSynth, SYNTH_RECIPES } from './js/services/audio-synth.js';
+    import { soundManager } from './js/services/sound-manager.js';
+    import { initRangeSliders, setRangeSliderValue } from './js/ui/range-slider.js';
 
     const SUPABASE_URL = 'https://yamapgouatvnvloatnxg.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_RxOSkIZnLIuwt2GTNxItvQ_hKy1mU8u';
@@ -623,23 +814,45 @@
     };
 
     // ==================== 1. ПЕРЕВІРКА ДОСТУПУ (ADMIN GATE) ====================
+    let isLabInitialized = false;
+
     async function initAccessGate() {
       const pill = document.getElementById('admin-status-pill');
       const gate = document.getElementById('admin-gate');
       const app = document.getElementById('audio-lab-app');
       const urlParams = new URLSearchParams(window.location.search);
+
       const isDevBypass =
         urlParams.get('dev') === '1' ||
         sessionStorage.getItem('tb_curator_dev') === '1' ||
-        sessionStorage.getItem('tb_admin_dev') === '1';
+        sessionStorage.getItem('tb_admin_dev') === '1' ||
+        localStorage.getItem('tb_curator_dev') === '1' ||
+        localStorage.getItem('tb_is_admin') === 'true';
 
       let isAdmin = false;
-      if (supabase) {
+      if (supabase && !isDevBypass) {
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data: sessionData } = await supabase.auth.getSession();
+          let user = sessionData?.session?.user;
+          if (!user) {
+            const { data: userData } = await supabase.auth.getUser();
+            user = userData?.user;
+          }
+
           if (user) {
-            const { data } = await supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
-            isAdmin = Boolean(data);
+            const { data } = await supabase
+              .from('admins')
+              .select('user_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (data) {
+              isAdmin = true;
+              localStorage.setItem('tb_is_admin', 'true');
+            } else if (user.app_metadata?.claims_admin || user.user_metadata?.is_admin) {
+              isAdmin = true;
+              localStorage.setItem('tb_is_admin', 'true');
+            }
           }
         } catch (e) {
           console.warn('Admin check warning:', e);
@@ -647,24 +860,38 @@
       }
 
       if (isAdmin || isDevBypass) {
-        pill.textContent = isAdmin ? 'Адміністратор' : 'Режим тестувальника';
+        if (pill) pill.textContent = isAdmin ? 'Адміністратор' : 'Режим тестувальника';
+        // Надійне приховування gate та показ app з гарантованим скиданням display
         gate.hidden = true;
+        gate.style.setProperty('display', 'none', 'important');
         app.hidden = false;
-        initAudioLab();
+        app.style.display = 'flex';
+
+        if (!isLabInitialized) {
+          isLabInitialized = true;
+          initAudioLab();
+        }
       } else {
-        pill.textContent = 'Гість (Тільки перегляд)';
+        if (pill) pill.textContent = 'Гість (Доступ обмежено)';
         gate.hidden = false;
+        gate.style.display = 'flex';
         app.hidden = true;
+        app.style.setProperty('display', 'none', 'important');
       }
     }
 
     document.getElementById('btn-dev-bypass')?.addEventListener('click', () => {
       sessionStorage.setItem('tb_admin_dev', '1');
       sessionStorage.setItem('tb_curator_dev', '1');
+      localStorage.setItem('tb_curator_dev', '1');
       initAccessGate();
     });
 
-    // ==================== 2. ІНІЦІАЛІЗАЦІЯ АУДІО-ЛАБОРАТОРІЇ ====================
+    supabase?.auth.onAuthStateChange(() => {
+      initAccessGate();
+    });
+
+    // ==================== 2. СЕРЦЕВИНА АУДІО-ЛАБОРАТОРІЇ ====================
     let masterVolume = 0.85;
     let isMuted = false;
     let analyserNode = null;
@@ -693,8 +920,15 @@
         analyserNode.connect(masterBusGain);
         masterBusGain.connect(ctx.destination);
 
-        // Спрямовуємо весь вихід AudioSynth через analyserNode
+        // Спрямовуємо вихід AudioSynth через analyserNode для спектрографа
         AudioSynth.setOutputNode(analyserNode);
+
+        // Якщо Howler готовий, також підключаємо його вихід до аналізатора
+        if (window.Howler && window.Howler.masterGain) {
+          try {
+            window.Howler.masterGain.connect(analyserNode);
+          } catch (_) {}
+        }
       }
       return ctx;
     }
@@ -732,7 +966,6 @@
 
       const unitVol = perSoundVolumes.get(soundId) ?? config.baseVolume ?? 0.8;
 
-      // Для великого потокового файлу (bunker-ambient) або якщо fetch/decode недоступний — HTML5 Audio
       if (config.html5) {
         const audio = new Audio(srcPath);
         audio.loop = Boolean(config.loop);
@@ -771,25 +1004,16 @@
         source.connect(gain);
         gain.connect(analyserNode);
 
-        activeSampleSources.set(soundId, source);
         source.onended = () => {
-          if (activeSampleSources.get(soundId) === source) {
-            activeSampleSources.delete(soundId);
-            setCardState(soundId, null);
-          }
-        };
-        source.start(0);
-      } catch (err) {
-        console.warn(`Fallback to HTMLAudio for ${srcPath}:`, err);
-        const audio = new Audio(srcPath);
-        audio.loop = Boolean(config.loop);
-        audio.volume = isMuted ? 0 : Math.min(1, unitVol * masterVolume);
-        activeHtmlAudios.set(soundId, audio);
-        audio.onended = () => {
-          activeHtmlAudios.delete(soundId);
+          activeSampleSources.delete(soundId);
           setCardState(soundId, null);
         };
-        audio.play().catch(() => {});
+
+        activeSampleSources.set(soundId, source);
+        source.start(0);
+      } catch (err) {
+        console.warn('Original sample play failed, fallback to synth:', err);
+        playSynthesized(config);
       }
     }
 
@@ -861,9 +1085,12 @@
       for (const id of activeSampleSources.keys()) stopSoundById(id);
       for (const id of activeHtmlAudios.keys()) stopSoundById(id);
       AudioSynth.stopAll(40);
+      soundManager.stopAll();
       document.querySelectorAll('.sound-card').forEach((c) => {
         c.classList.remove('is-playing-sample', 'is-playing-synth');
       });
+      const ambientBtn = document.getElementById('lab-audio-ambient-btn');
+      if (ambientBtn) ambientBtn.classList.remove('is-playing');
       document.getElementById('scope-active-sound').textContent = 'Усі звуки зупинено';
     }
 
@@ -872,7 +1099,6 @@
       const root = document.getElementById('lab-sections-root');
       root.innerHTML = '';
 
-      // Відбираємо всі звуки з фізичними файлами на диску (14 основних звуків гри)
       const supportedIds = new Set(AudioSynth.getSupportedSoundIds());
       const allItems = Object.values(SOUND_CATALOG).filter((item) => supportedIds.has(item.id));
 
@@ -881,22 +1107,22 @@
       const groups = [
         {
           id: 'ui',
-          title: '1. Інтерфейс (UI)',
-          subtitle: 'Тактильні кліки кнопок, замків характеристик, вкладок та кидок кубика',
+          title: 'Звуки інтерфейсу (UI)',
+          subtitle: 'Мікрокліки, переходи між вкладками, гральні кістки та тактильні відгуки',
           icon: SVG_ICONS.sectionUi,
           items: allItems.filter((item) => SYNTH_RECIPES[item.id]?.category === 'ui'),
         },
         {
           id: 'sfx',
-          title: '2. Рулетка та ігрові події (SFX)',
-          subtitle: 'Клацання барабана рулетки та фіксація результату',
+          title: 'Ігрові події та рулетка (SFX)',
+          subtitle: 'Акустичні ефекти обертання та урочистого розкриття результатів гри',
           icon: SVG_ICONS.sectionSfx,
           items: allItems.filter((item) => SYNTH_RECIPES[item.id]?.category === 'sfx'),
         },
         {
           id: 'bunker',
-          title: '3. Гермошлюз бункера та атмосфера',
-          subtitle: 'Важкі сервоприводи дверей, пневматика, сирена тривоги та фоновий ембієнт',
+          title: 'Атмосфера бункера, механіка та тривоги',
+          subtitle: 'Важкі гермодвері, гідравлічні приводи, сирени та низькочастотний фоновий гул',
           icon: SVG_ICONS.sectionBunker,
           items: allItems.filter((item) => SYNTH_RECIPES[item.id]?.category === 'bunker'),
         },
@@ -953,7 +1179,7 @@
             </div>
 
             <div class="sound-card__actions">
-              <button type="button" class="lab-btn lab-btn--sample" data-action="sample" title="Відтворити оригінальний файл з /audio">
+              <button type="button" class="lab-btn lab-btn--sample" data-action="sample" title="Відтворити оригінальний файл із /audio">
                 ${SVG_ICONS.play}
                 <span>Семпл</span>
               </button>
@@ -973,29 +1199,43 @@
                     </button>`
               }
               <div class="sound-card__vol" title="Калібрування baseVolume для цього звуку">
-                <input type="range" min="0.05" max="1" step="0.05" value="${defaultVol}" data-action="vol">
-                <span class="vol-readout">${Math.round(defaultVol * 100)}%</span>
+                <span class="sound-card__vol-label">Base:</span>
+                <input
+                  type="range"
+                  class="bunker-slider"
+                  min="5"
+                  max="100"
+                  step="5"
+                  value="${Math.round(defaultVol * 100)}"
+                  data-action="vol"
+                  data-sound-id="${config.id}"
+                  aria-label="Калібрування baseVolume для ${config.id}"
+                >
+                <span class="audio-mixer-card__val sound-card__vol-val" id="vol-val-${config.id}">${Math.round(defaultVol * 100)}%</span>
               </div>
             </div>
           `;
 
-          card.querySelector('[data-action="sample"]')?.addEventListener('click', () => playOriginalSample(config));
-          card.querySelector('[data-action="synth"]')?.addEventListener('click', () => playSynthesized(config));
-          card.querySelector('[data-action="ab"]')?.addEventListener('click', () => compareAB(config));
-          card.querySelector('[data-action="stop"]')?.addEventListener('click', () => stopSoundById(config.id));
+          // Делегування дій на картці
+          card.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            if (action === 'sample') playOriginalSample(config);
+            else if (action === 'synth') playSynthesized(config);
+            else if (action === 'ab') compareAB(config);
+            else if (action === 'stop') stopSoundById(config.id);
+          });
 
-          const volSlider = card.querySelector('[data-action="vol"]');
-          const volReadout = card.querySelector('.vol-readout');
-          volSlider?.addEventListener('input', (e) => {
-            const v = Number(e.target.value);
-            perSoundVolumes.set(config.id, v);
-            volReadout.textContent = `${Math.round(v * 100)}%`;
-            if (config.id === 'bunker-ambient' && AudioSynth.isAmbientPlaying()) {
-              AudioSynth.setAmbientVolume(v, 50);
-            }
-            const activeAudio = activeHtmlAudios.get(config.id);
-            if (activeAudio) {
-              activeAudio.volume = isMuted ? 0 : Math.min(1, v * masterVolume);
+          const slider = card.querySelector('input[data-action="vol"]');
+          const readout = card.querySelector(`#vol-val-${config.id}`);
+          slider?.addEventListener('input', (e) => {
+            const pct = Number(e.target.value) || 0;
+            const newVol = pct / 100;
+            perSoundVolumes.set(config.id, newVol);
+            if (readout) readout.textContent = `${pct}%`;
+            if (config.loop && AudioSynth.isAmbientPlaying() && config.id === 'bunker-ambient') {
+              AudioSynth.setAmbientVolume(newVol);
             }
           });
 
@@ -1004,36 +1244,58 @@
 
         root.appendChild(section);
       });
+
+      // Ініціалізуємо кастомні повзунки .bunker-slider у списку карток
+      initRangeSliders(root);
     }
 
-    // ==================== 4. ЖИВИЙ ОСЦИЛОГРАФ ТА СПЕКТРОГРАФ ====================
+    // ==================== 4. ОСЦИЛОГРАФ ТА СПЕКТРОГРАМА ====================
     function startOscilloscopeLoop() {
       const canvas = document.getElementById('scope-canvas');
       if (!canvas) return;
       const c2d = canvas.getContext('2d');
       const metricsEl = document.getElementById('scope-metrics');
 
-      const timeData = new Uint8Array(1024);
-      const freqData = new Uint8Array(512);
+      const timeData = new Uint8Array(512);
+      const freqData = new Uint8Array(256);
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0 && canvas.width !== Math.round(rect.width)) {
+          canvas.width = Math.round(rect.width);
+          canvas.height = Math.round(rect.height || 130);
+        }
+      }
+      window.addEventListener('resize', resize);
+      resize();
 
       function draw() {
         requestAnimationFrame(draw);
-
         const w = canvas.width;
         const h = canvas.height;
+
         c2d.fillStyle = '#06090f';
         c2d.fillRect(0, 0, w, h);
 
         // Сітка осцилографа
-        c2d.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        c2d.strokeStyle = '#151d2c';
         c2d.lineWidth = 1;
         c2d.beginPath();
-        c2d.moveTo(0, h / 2);
-        c2d.lineTo(w, h / 2);
-        for (let x = w / 4; x < w; x += w / 4) {
+        for (let x = 0; x < w; x += 60) {
           c2d.moveTo(x, 0);
           c2d.lineTo(x, h);
         }
+        for (let y = 0; y < h; y += 30) {
+          c2d.moveTo(0, y);
+          c2d.lineTo(w, y);
+        }
+        c2d.stroke();
+
+        // Центральна нульова лінія
+        c2d.strokeStyle = '#223048';
+        c2d.beginPath();
+        c2d.moveTo(0, h / 2);
+        c2d.lineTo(w, h / 2);
         c2d.stroke();
 
         if (!analyserNode) return;
@@ -1043,10 +1305,10 @@
 
         const isSample = currentVisualSource === 'sample';
         const mainColor = isSample ? '#38bdf8' : '#f59e0b';
-        const barFill = isSample ? 'rgba(56, 189, 248, 0.14)' : 'rgba(245, 158, 11, 0.14)';
+        const barFill = isSample ? 'rgba(56, 189, 248, 0.18)' : 'rgba(245, 158, 11, 0.18)';
 
-        // 1. Фоновий FFT спектр
-        const barCount = 96;
+        // 1. Частотний спектр (FFT)
+        const barCount = 48;
         const barWidth = w / barCount;
         c2d.fillStyle = barFill;
         for (let i = 0; i < barCount; i++) {
@@ -1088,28 +1350,141 @@
       requestAnimationFrame(draw);
     }
 
-    // ==================== 5. ПРИВ'ЯЗКА МАЙСТЕР-КОНТРОЛІВ ====================
+    // ==================== 5. ПРИВ'ЯЗКА МІКШЕРА У СТИЛІ ПРОФІЛЮ ====================
+    function bindMixerEvents() {
+      const mixerRoot = document.getElementById('lab-mixer-container');
+      if (!mixerRoot) return;
+
+      const muteBtn = document.getElementById('lab-audio-mute-btn');
+      const ambientBtn = document.getElementById('lab-audio-ambient-btn');
+      const mixerList = document.getElementById('lab-audio-mixer-list');
+      const bgAmbientToggle = document.getElementById('lab-audio-bg-ambient');
+      const channelSliders = mixerRoot.querySelectorAll('.bunker-slider[data-channel]');
+
+      // Синхронізуємо повзунки мікшера
+      initRangeSliders(mixerRoot);
+
+      // Фоновий ембієнт тумблер
+      if (bgAmbientToggle) {
+        bgAmbientToggle.checked = Boolean(soundManager.getSettings().backgroundAmbient);
+        bgAmbientToggle.addEventListener('change', () => {
+          soundManager.setBackgroundAmbient(bgAmbientToggle.checked);
+        });
+      }
+
+      // Повзунки каналів (Master, SFX, UI, Music)
+      channelSliders.forEach((slider) => {
+        slider.addEventListener('input', () => {
+          const ch = slider.dataset.channel;
+          const pct = Number(slider.value) || 0;
+          soundManager.setChannelVolume(ch, pct / 100);
+        });
+      });
+
+      // Mute кнопка
+      if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+          soundManager.toggleMute();
+        });
+      }
+
+      // Делегування тестових кнопок каналів
+      mixerRoot.addEventListener('click', (e) => {
+        const testBtn = e.target.closest('[data-test-sound]');
+        if (!testBtn) return;
+        const soundId = testBtn.dataset.testSound;
+        if (!soundId) return;
+
+        if (soundManager.isMuted()) {
+          soundManager.setMuted(false);
+        }
+
+        if (soundId === 'bunker-ambient') {
+          if (soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT) || AudioSynth.isAmbientPlaying()) {
+            soundManager.stop(SOUND_IDS.BUNKER_AMBIENT);
+            AudioSynth.stopAmbient();
+            testBtn.classList.remove('is-playing');
+            testBtn.title = 'Прослухати атмосферу бункера';
+          } else {
+            ensureAudioGraph();
+            soundManager.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
+            testBtn.classList.add('is-playing');
+            testBtn.title = 'Зупинити ембієнт';
+          }
+          return;
+        }
+
+        ensureAudioGraph();
+        soundManager.play(soundId, { bypassThrottle: true });
+      });
+
+      // Підписка на зміну налаштувань у SoundManager (двосторонній реактивний зв'язок)
+      soundManager.subscribe((settings) => {
+        const masterPct = Math.round(settings.masterVolume * 100);
+        const sfxPct = Math.round(settings.sfxVolume * 100);
+        const uiPct = Math.round(settings.uiVolume * 100);
+        const musicPct = Math.round(settings.musicVolume * 100);
+        const muted = Boolean(settings.muted);
+
+        masterVolume = settings.masterVolume;
+        isMuted = muted;
+        updateMasterGain();
+
+        if (mixerList) {
+          mixerList.classList.toggle('is-muted', muted);
+        }
+
+        const setUI = (channelKey, pct, isMasterChannel = false) => {
+          const slider = document.getElementById(`audio-slider-${channelKey}`);
+          const valEl = document.getElementById(`audio-val-${channelKey}`);
+          if (slider) setRangeSliderValue(slider, pct);
+          if (valEl) valEl.textContent = isMasterChannel && muted ? 'MUTE' : `${pct}%`;
+        };
+
+        setUI('master', masterPct, true);
+        setUI('sfx', sfxPct);
+        setUI('ui', uiPct);
+        setUI('music', musicPct);
+
+        if (muteBtn) {
+          muteBtn.classList.toggle('is-muted', muted);
+          muteBtn.setAttribute('aria-label', muted ? 'Увімкнути звук' : 'Вимкнути звук');
+          muteBtn.title = muted ? 'Звук вимкнено (клік — увімкнути)' : 'Вимкнути весь звук';
+        }
+
+        if (ambientBtn) {
+          const isPlaying = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT) || AudioSynth.isAmbientPlaying();
+          ambientBtn.classList.toggle('is-playing', isPlaying);
+          ambientBtn.title = isPlaying ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера';
+        }
+
+        if (bgAmbientToggle) {
+          bgAmbientToggle.checked = Boolean(settings.backgroundAmbient);
+        }
+      });
+    }
+
+    // ==================== 6. ІНІЦІАЛІЗАЦІЯ ДОДАТКУ ====================
     function initAudioLab() {
+      // Підготовка аудіоменеджера гри
+      try {
+        soundManager.init();
+      } catch (_) {}
+
+      try {
+        AudioSynth.init();
+      } catch (_) {}
+
+      // Прив'язка мікшера у стилі profile.js
+      bindMixerEvents();
+
+      // Рендер каталогу звуків
       renderCatalogSections();
+
+      // Запуск живого осцилографа
       startOscilloscopeLoop();
 
-      const masterSlider = document.getElementById('master-vol-slider');
-      const masterVal = document.getElementById('master-vol-val');
-      masterSlider?.addEventListener('input', (e) => {
-        masterVolume = Number(e.target.value);
-        masterVal.textContent = `${Math.round(masterVolume * 100)}%`;
-        updateMasterGain();
-      });
-
-      const muteBtn = document.getElementById('btn-toggle-mute');
-      const muteLabel = document.getElementById('label-mute-state');
-      muteBtn?.addEventListener('click', () => {
-        isMuted = !isMuted;
-        muteBtn.classList.toggle('is-active', isMuted);
-        muteLabel.textContent = isMuted ? 'Muted' : 'Mute';
-        updateMasterGain();
-      });
-
+      // Загальні кнопки
       document.getElementById('btn-stop-all')?.addEventListener('click', stopAllAudio);
 
       const appWrap = document.getElementById('audio-lab-app');
@@ -1129,6 +1504,7 @@
       });
     }
 
+    // Перший вхід: запускаємо перевірку доступу
     initAccessGate();
   </script>
 </body>
