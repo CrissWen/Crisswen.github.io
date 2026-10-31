@@ -50,4 +50,11 @@ test('Audio Lab Layout Contract - Option A Studio Rack', () => {
   // 5. Sound cards must have .sound-card__btn-group and dedicated .sound-card__calibration row
   assert.ok(html.includes('sound-card__btn-group'), 'Sound card must have .sound-card__btn-group');
   assert.ok(html.includes('sound-card__calibration'), 'Sound card must have .sound-card__calibration');
+
+  // 6. Sound durations must be based on true audio file lengths (not microsecond synth recipe durationSec)
+  assert.ok(html.includes('SAMPLE_DURATIONS'), 'Audio Lab must define SAMPLE_DURATIONS registry for true file durations');
+  assert.match(html, /['"]ui-click['"]:\s*1(\.0+)?/, 'ui-click must have accurate 1.00s duration instead of 0.045s');
+  assert.match(html, /['"]dice-roll['"]:\s*2\.88/, 'dice-roll must have accurate 2.88s duration instead of 0.34s');
+  assert.match(html, /['"]roulette-reveal['"]:\s*20(\.0+)?/, 'roulette-reveal must have accurate ~20s duration instead of 0.82s');
+  assert.ok(!html.includes("recipe.durationSec ? recipe.durationSec + 's'"), 'Must not display raw synth recipe durationSec as card duration');
 });

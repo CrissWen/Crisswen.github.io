@@ -340,12 +340,30 @@
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.3px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
     }
 
     .sound-badge--loop {
       border-color: #a855f7;
       color: #c084fc;
       background: rgba(168, 85, 247, 0.12);
+    }
+
+    .sound-badge--active {
+      border-color: #38bdf8;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.16);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+      font-weight: 700;
+    }
+
+    .sound-badge--synth-active {
+      border-color: #f59e0b;
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.16);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+      font-weight: 700;
     }
 
     .sound-card__meta {
@@ -966,6 +984,84 @@
     const activeHtmlAudios = new Map();
     const perSoundVolumes = new Map();
     const abTimers = new Set();
+    const activePlaybackIntervals = new Map();
+
+    // Справжні виміряні тривалості аудіофайлів гри на диску (у секундах)
+    const SAMPLE_DURATIONS = {
+      'lock-hover': 0.49,
+      'lock-toggle': 0.69,
+      'ui-click': 1.00,
+      'tab-switch': 0.31,
+      'dice-roll': 2.88,
+      'timer-tick': 1.96,
+      'cataclysm-alert': 1.00,
+      'roulette-tick': 0.26,
+      'roulette-reveal': 20.06,
+      'bunker-door-close': 2.00,
+      'bunker-door-slam': 1.48,
+      'bunker-hydraulic': 1.48,
+      'bunker-door-open': 2.00,
+      'bunker-ambient': 272.91,
+    };
+
+    function formatDuration(sec) {
+      if (!Number.isFinite(sec)) return 'one-shot';
+      if (sec >= 60) {
+        const mins = Math.floor(sec / 60);
+        const rem = Math.floor(sec % 60);
+        return `${mins}:${String(rem).padStart(2, '0')}s`;
+      }
+      if (sec >= 10) return `${sec.toFixed(1)}s`;
+      return `${sec.toFixed(2)}s`;
+    }
+
+    function startDurationTicker(soundId, totalSec, prefix = '') {
+      stopDurationTicker(soundId);
+      const badge = document.getElementById(`dur-badge-${soundId}`);
+      if (!badge) return;
+
+      badge.classList.remove('sound-badge--active', 'sound-badge--synth-active');
+      if (prefix.includes('B') || prefix.includes('⚡')) {
+        badge.classList.add('sound-badge--synth-active');
+      } else {
+        badge.classList.add('sound-badge--active');
+      }
+
+      const startTime = performance.now();
+      const isLoop = !Number.isFinite(totalSec) || totalSec <= 0;
+
+      const update = () => {
+        const elapsedSec = (performance.now() - startTime) / 1000;
+        if (isLoop) {
+          const m = Math.floor(elapsedSec / 60);
+          const s = Math.floor(elapsedSec % 60);
+          const timeStr = `${m}:${String(s).padStart(2, '0')}`;
+          badge.textContent = prefix ? `${prefix} ${timeStr}` : timeStr;
+        } else {
+          const current = Math.min(totalSec, elapsedSec);
+          const currentStr = current >= 10 ? current.toFixed(1) + 's' : current.toFixed(2) + 's';
+          const totalStr = formatDuration(totalSec);
+          badge.textContent = prefix ? `${prefix} ${currentStr}` : `${currentStr} / ${totalStr}`;
+        }
+      };
+
+      update();
+      const intervalId = setInterval(update, 50);
+      activePlaybackIntervals.set(soundId, intervalId);
+    }
+
+    function stopDurationTicker(soundId) {
+      if (activePlaybackIntervals.has(soundId)) {
+        clearInterval(activePlaybackIntervals.get(soundId));
+        activePlaybackIntervals.delete(soundId);
+      }
+      const badge = document.getElementById(`dur-badge-${soundId}`);
+      if (badge) {
+        badge.classList.remove('sound-badge--active', 'sound-badge--synth-active');
+        const defaultText = badge.dataset.defaultText;
+        if (defaultText) badge.textContent = defaultText;
+      }
+    }
 
     function ensureAudioGraph() {
       const ctx = AudioSynth.getContext();
@@ -1029,6 +1125,8 @@
       document.getElementById('scope-active-sound').textContent = `[СЕМПЛ] ${config.label}`;
 
       const unitVol = perSoundVolumes.get(soundId) ?? config.baseVolume ?? 0.8;
+      const realDurSec = SAMPLE_DURATIONS[soundId] || (config.loop ? Infinity : 1.0);
+      startDurationTicker(soundId, config.loop ? Infinity : realDurSec, '');
 
       if (config.html5) {
         const audio = new Audio(srcPath);
@@ -1042,6 +1140,7 @@
         activeHtmlAudios.set(soundId, audio);
         audio.onended = () => {
           activeHtmlAudios.delete(soundId);
+          stopDurationTicker(soundId);
           setCardState(soundId, null);
         };
         audio.play().catch((err) => console.warn('Sample play warning:', err));
@@ -1056,6 +1155,11 @@
           const arrayBuf = await resp.arrayBuffer();
           audioBuffer = await ctx.decodeAudioData(arrayBuf);
           decodedSampleCache.set(srcPath, audioBuffer);
+          SAMPLE_DURATIONS[soundId] = audioBuffer.duration;
+          const badge = document.getElementById(`dur-badge-${soundId}`);
+          if (badge && !config.loop) {
+            badge.dataset.defaultText = formatDuration(audioBuffer.duration);
+          }
         }
 
         const source = ctx.createBufferSource();
@@ -1070,6 +1174,7 @@
 
         source.onended = () => {
           activeSampleSources.delete(soundId);
+          stopDurationTicker(soundId);
           setCardState(soundId, null);
         };
 
@@ -1077,6 +1182,7 @@
         source.start(0);
       } catch (err) {
         console.warn('Original sample play failed, fallback to synth:', err);
+        stopDurationTicker(soundId);
         playSynthesized(config);
       }
     }
@@ -1099,9 +1205,13 @@
         loop: Boolean(config.loop),
       });
 
+      const synthDur = recipe?.durationSec || 0.5;
+      startDurationTicker(soundId, config.loop ? Infinity : synthDur, '⚡');
+
       if (!config.loop && recipe && Number.isFinite(recipe.durationSec)) {
         const ms = Math.max(120, Math.round(recipe.durationSec * 1000) + 60);
         const tid = setTimeout(() => {
+          stopDurationTicker(soundId);
           setCardState(soundId, null);
           abTimers.delete(tid);
         }, ms);
@@ -1111,21 +1221,28 @@
 
     async function compareAB(config) {
       stopSoundById(config.id);
-      await playOriginalSample(config);
 
       const srcPath = Array.isArray(config.src) ? config.src[0] : null;
       const cached = srcPath ? decodedSampleCache.get(srcPath) : null;
-      const sampleDurMs = cached ? Math.min(2200, Math.round(cached.duration * 1000)) : 650;
+      const realDurSec = cached?.duration || SAMPLE_DURATIONS[config.id] || 1.0;
+      // Обмежуємо семпл для швидкого порівняння максимум 5.0с
+      const sampleDurMs = Math.round(Math.min(5.0, realDurSec) * 1000);
+
+      await playOriginalSample(config);
+      startDurationTicker(config.id, Math.min(5.0, realDurSec), 'A:');
 
       const tid = setTimeout(() => {
         abTimers.delete(tid);
         stopSoundById(config.id);
+        const recipe = AudioSynth.getRecipe(config.id) || {};
         playSynthesized(config);
-      }, sampleDurMs + 220);
+        startDurationTicker(config.id, recipe.durationSec || 0.5, 'B:');
+      }, sampleDurMs + 250);
       abTimers.add(tid);
     }
 
     function stopSoundById(soundId) {
+      stopDurationTicker(soundId);
       const sampleSrc = activeSampleSources.get(soundId);
       if (sampleSrc) {
         try { sampleSrc.stop(); } catch (_) {}
@@ -1146,6 +1263,7 @@
     function stopAllAudio() {
       for (const tid of abTimers) clearTimeout(tid);
       abTimers.clear();
+      for (const id of activePlaybackIntervals.keys()) stopDurationTicker(id);
       for (const id of activeSampleSources.keys()) stopSoundById(id);
       for (const id of activeHtmlAudios.keys()) stopSoundById(id);
       AudioSynth.stopAll(40);
@@ -1211,9 +1329,12 @@
           const defaultVol = config.baseVolume ?? 0.8;
           perSoundVolumes.set(config.id, defaultVol);
 
-          const durBadge = config.loop
-            ? `<span class="sound-badge sound-badge--loop">LOOP</span>`
-            : `<span class="sound-badge">${recipe.durationSec ? recipe.durationSec + 's' : 'one-shot'}</span>`;
+          const durSec = SAMPLE_DURATIONS[config.id];
+          const initialDurText = config.loop
+            ? 'LOOP'
+            : formatDuration(durSec || recipe.durationSec || 1.0);
+
+          const durBadge = `<span class="sound-badge ${config.loop ? 'sound-badge--loop' : ''}" id="dur-badge-${config.id}" data-default-text="${initialDurText}">${initialDurText}</span>`;
 
           const card = document.createElement('article');
           card.className = 'sound-card';
