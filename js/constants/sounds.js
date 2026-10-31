@@ -110,7 +110,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Відкриття / закриття замка',
     src: ['./audio/ui/lock-toggle.wav'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.35,
+    baseVolume: 0.3,
     throttleMs: 80,
     interrupt: true,
     maxInstances: 1,
@@ -124,7 +124,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Клік кнопки',
     src: ['./audio/ui/ui-click.wav'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.85,
+    baseVolume: 1.0,    // вихідний WAV має низький пік (-14.5 dB), тому 1.0 вирівнює тактильний відгук
     throttleMs: 45,
     interrupt: true,
     maxInstances: 2,
@@ -138,7 +138,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Перемикання вкладки',
     src: ['./audio/ui/tab-switch.mp3'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.45,
+    baseVolume: 0.4,
     throttleMs: 50,
     interrupt: true,
     maxInstances: 1,
@@ -195,7 +195,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Відлік таймера',
     src: ['./audio/sfx/bunker-inside/timer-tick.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 0.4,    // цокання не має глушити розмову гравців
+    baseVolume: 0.35,   // цокання не має глушити розмову гравців
     throttleMs: 400,
     interrupt: true,
     maxInstances: 1,
@@ -221,7 +221,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Сирена катаклізму',
     src: ['./audio/sfx/bunker-door/cataclysm-siren.wav'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 0.45,   // сирени зазвичай дуже гучні по LUFS, тому калібруємо нижче
+    baseVolume: 0.3,    // сирена має високий RMS (-16.4 dB) та спектр 2-4 кГц, тому калібруємо нижче
     throttleMs: 1000,
     interrupt: true,
     maxInstances: 1,
@@ -249,7 +249,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Клацання стрічки рулетки',
     src: ['./audio/sfx/roulette/click.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 1,
+    baseVolume: 0.4,   // знижено з 1.0: серія частих тіків не глушить інші звуки
     throttleMs: 30,     // тіки частіші за 30 мс зливаються в тріск (раніше MIN_TICK_GAP_MS у sfx.js)
     interrupt: false,   // тіки йдуть серією й можуть накладатися
     maxInstances: 4,
@@ -262,7 +262,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Результат рулетки',
     src: ['./audio/sfx/roulette/choose.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 1,
+    baseVolume: 0.65,  // знижено з 1.0: приємний акцент фіналу рулетки без перевантаження
     throttleMs: 500,
     interrupt: true,
     maxInstances: 1,
@@ -275,7 +275,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Рух гермодверей (закриття)',
     src: ['./audio/sfx/bunker-door/bunker-door-close.wav', './audio/sfx/bunker-door-close.webm', './audio/sfx/bunker-door-close.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 0.7,
+    baseVolume: 0.55,  // вихідний WAV має пік -0.3 dB (майже 0 dBFS), знижено для запасу гедруму
     throttleMs: 300,
     interrupt: true,
     maxInstances: 1,
@@ -288,7 +288,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Удар зачинення шлюзу',
     src: ['./audio/sfx/bunker-door/bunker-door-slam.wav', './audio/sfx/bunker-door-slam.webm', './audio/sfx/bunker-door-slam.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 0.85,
+    baseVolume: 0.7,   // вихідний WAV має пік -0.7 dB, 0.70 дає потужний удар без кліпінгу
     throttleMs: 300,
     interrupt: true,
     maxInstances: 1,
@@ -301,7 +301,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Гідравліка та ригелі шлюзу',
     src: ['./audio/sfx/bunker-door/bunker-hydraulic.wav', './audio/sfx/bunker-hydraulic.webm', './audio/sfx/bunker-hydraulic.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 0.65,
+    baseVolume: 0.5,   // вихідний WAV має пік -1.4 dB
     throttleMs: 250,
     interrupt: true,
     maxInstances: 1,
@@ -314,7 +314,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Відкриття шлюзу бункера',
     src: ['./audio/sfx/bunker-door/bunker-door-open.wav', './audio/sfx/bunker-door-open.webm', './audio/sfx/bunker-door-open.mp3'],
     channel: AUDIO_CHANNELS.SFX,
-    baseVolume: 0.75,
+    baseVolume: 0.6,   // вихідний WAV має пік -3.2 dB
     throttleMs: 300,
     interrupt: true,
     maxInstances: 1,
@@ -328,7 +328,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Атмосфера бункера',
     src: ['./audio/sfx/bunker-inside/bunker-ambient.mp3'],
     channel: AUDIO_CHANNELS.MUSIC,
-    baseVolume: 0.4,
+    baseVolume: 0.35,  // комфортний підклад, що не заважає UI та SFX
     loop: true,
     html5: true,        // файл ~4 МБ: стрімінг через <audio> замість повного декодування в пам'ять: стартує одразу й не їсть ~50 МБ RAM
     interrupt: true,
