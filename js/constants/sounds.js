@@ -40,6 +40,7 @@ export const DEFAULT_AUDIO_SETTINGS = Object.freeze({
   uiVolume: 0.7,
   musicVolume: 0.5,
   muted: false,
+  backgroundAmbient: false,
 });
 
 export const SOUND_IDS = Object.freeze({

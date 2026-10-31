@@ -19,6 +19,7 @@ export function renderProfile() {
     const uiPct = Math.round(settings.uiVolume * 100);
     const musicPct = Math.round(settings.musicVolume * 100);
     const isMuted = Boolean(settings.muted);
+    const isBackgroundAmbient = Boolean(settings.backgroundAmbient);
     const isAmbientPlaying = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
     const themeCardsHtml = THEMES.map(t => `
       <label class="theme-card" for="theme-radio-${esc(t.value)}">
@@ -270,6 +271,25 @@ export function renderProfile() {
               aria-label="Гучність фонової музики"
             >
           </div>
+
+          <!-- Перемикач атмосфери у фоні -->
+          <div class="audio-option-card">
+            <label class="audio-option-label" for="profile-audio-bg-ambient">
+              <span class="audio-option-text">
+                <span class="audio-option-title">Грати атмосферу бункера у фоні</span>
+                <span class="audio-option-sub">Не ставити ембієнт на паузу при переході на іншу вкладку чи згортанні браузера</span>
+              </span>
+              <input
+                type="checkbox"
+                class="audio-toggle-checkbox"
+                id="profile-audio-bg-ambient"
+                ${isBackgroundAmbient ? 'checked' : ''}
+              >
+              <span class="audio-toggle-track" aria-hidden="true">
+                <span class="audio-toggle-thumb"></span>
+              </span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -515,9 +535,17 @@ function bindAudioEvents() {
   const muteBtn = document.getElementById('profile-audio-mute-btn');
   const ambientBtn = document.getElementById('profile-audio-ambient-btn');
   const mixerList = document.getElementById('profile-audio-mixer-list');
+  const bgAmbientToggle = document.getElementById('profile-audio-bg-ambient');
   const channelSliders = panel.querySelectorAll('.bunker-slider[data-channel]');
 
   initRangeSliders(panel);
+
+  // Перемикач відтворення атмосфери у фоні
+  if (bgAmbientToggle) {
+    bgAmbientToggle.addEventListener('change', () => {
+      soundManager.setBackgroundAmbient(bgAmbientToggle.checked);
+    });
+  }
 
   // Повзунки головних каналів (Master, SFX, UI, Music)
   channelSliders.forEach(slider => {
@@ -601,6 +629,10 @@ function bindAudioEvents() {
       const playing = soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT);
       ambientBtn.classList.toggle('is-playing', playing);
       ambientBtn.title = playing ? 'Зупинити ембієнт' : 'Прослухати атмосферу бункера';
+    }
+
+    if (bgAmbientToggle) {
+      bgAmbientToggle.checked = Boolean(settings.backgroundAmbient);
     }
   });
 }

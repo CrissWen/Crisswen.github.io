@@ -88,6 +88,7 @@ class SoundManager {
           uiVolume: this._clamp01(parsed.uiVolume ?? DEFAULT_AUDIO_SETTINGS.uiVolume),
           musicVolume: this._clamp01(parsed.musicVolume ?? DEFAULT_AUDIO_SETTINGS.musicVolume),
           muted: Boolean(parsed.muted ?? DEFAULT_AUDIO_SETTINGS.muted),
+          backgroundAmbient: Boolean(parsed.backgroundAmbient ?? DEFAULT_AUDIO_SETTINGS.backgroundAmbient),
         };
       }
     } catch (_) {
@@ -223,6 +224,16 @@ class SoundManager {
 
   isMuted() {
     return this._settings.muted;
+  }
+
+  setBackgroundAmbient(enabled) {
+    this._settings.backgroundAmbient = Boolean(enabled);
+    this._saveSettings();
+    this._notifyListeners();
+  }
+
+  isBackgroundAmbientEnabled() {
+    return Boolean(this._settings.backgroundAmbient);
   }
 
   /**
@@ -974,6 +985,9 @@ class SoundManager {
 
   _setupVisibilityListener() {
     document.addEventListener('visibilitychange', () => {
+      // Якщо увімкнено відтворення атмосфери у фоні — не зупиняємо ембієнт
+      if (this._settings.backgroundAmbient) return;
+
       if (document.hidden) {
         if (this._ambientDroneNodes) {
           this._wasAmbientPlayingBeforeHide = true;
