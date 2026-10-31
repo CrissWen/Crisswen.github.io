@@ -29,6 +29,7 @@ class SoundManager {
     this._audioCtx = null; // Web Audio API контекст для синтезованого фоллбеку
     this._ambientDroneNodes = null; // Активні вузли синтезованого ембієнту
     this._wasAmbientPlayingBeforeHide = false;
+    this._ambientFadeTimeout = null; // Таймаут згасання при згортанні вкладки
     this._initialized = false;
 
     this._loadFromStorage();
@@ -901,7 +902,7 @@ class SoundManager {
     }
   }
 
-  _toggleAmbientDrone(effectiveVol) {
+  _toggleAmbientDrone(effectiveVol, rampDuration = 0.6) {
     if (this._ambientDroneNodes) {
       this._stopAmbientDrone();
       return;
@@ -926,7 +927,7 @@ class SoundManager {
     filter.frequency.setValueAtTime(160, now);
 
     gainNode.gain.setValueAtTime(0.0001, now);
-    gainNode.gain.linearRampToValueAtTime(effectiveVol * 0.25, now + 0.6);
+    gainNode.gain.linearRampToValueAtTime(effectiveVol * 0.25, now + rampDuration);
 
     osc1.connect(filter);
     osc2.connect(filter);
@@ -983,31 +984,133 @@ class SoundManager {
     window.addEventListener('click', unlock, true);
   }
 
+  /**
+   * Власний плавний фейд гучності для звуку (працює надійно і для Web Audio, і для HTML5 Audio без багів Howler черги).
+   * @param {string} soundId
+   * @param {number} fromVol
+   * @param {number} toVol
+   * @param {number} durationMs
+   * @param {Function} [onComplete]
+   */
+  _fadeAudio(soundId, fromVol, toVol, durationMs = 350, onComplete) {
+    const howl = this._howls.get(soundId);
+    if (!howl) {
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
+
+    // Скасовуємо будь-який активний інтервал фейду для цього звуку
+    if (this._customFadeIntervals && this._customFadeIntervals.has(soundId)) {
+      clearInterval(this._customFadeIntervals.get(soundId));
+      this._customFadeIntervals.delete(soundId);
+    }
+    if (!this._customFadeIntervals) {
+      this._customFadeIntervals = new Map();
+    }
+
+    const startTime = performance.now();
+    howl.volume(fromVol);
+
+    const intervalId = setInterval(() => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(1, elapsed / durationMs);
+      const current = fromVol + (toVol - fromVol) * progress;
+
+      howl.volume(current);
+
+      if (progress >= 1) {
+        clearInterval(intervalId);
+        if (this._customFadeIntervals) this._customFadeIntervals.delete(soundId);
+        howl.volume(toVol);
+        if (typeof onComplete === 'function') onComplete();
+      }
+    }, 25);
+
+    this._customFadeIntervals.set(soundId, intervalId);
+  }
+
+  _stopCustomFade(soundId) {
+    if (this._customFadeIntervals && this._customFadeIntervals.has(soundId)) {
+      clearInterval(this._customFadeIntervals.get(soundId));
+      this._customFadeIntervals.delete(soundId);
+    }
+  }
+
   _setupVisibilityListener() {
+    const FADE_DURATION_MS = 350;
+
     document.addEventListener('visibilitychange', () => {
-      // Якщо увімкнено відтворення атмосфери у фоні — не зупиняємо ембієнт
       if (this._settings.backgroundAmbient) return;
 
       if (document.hidden) {
-        if (this._ambientDroneNodes) {
-          this._wasAmbientPlayingBeforeHide = true;
-          this._stopAmbientDrone();
-        }
+        this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
+
+        const isDrone = Boolean(this._ambientDroneNodes);
         const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
-        if (ambientHowl && ambientHowl.playing()) {
+        const isHowl = Boolean(ambientHowl && ambientHowl.playing());
+
+        if (isDrone || isHowl || this._ambientWanted) {
           this._wasAmbientPlayingBeforeHide = true;
-          ambientHowl.pause();
         }
-      } else if (this._wasAmbientPlayingBeforeHide) {
+
+        if (isDrone) {
+          const { gainNode } = this._ambientDroneNodes;
+          if (this._audioCtx && gainNode) {
+            const now = this._audioCtx.currentTime;
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(0.0001, now + FADE_DURATION_MS / 1000);
+          }
+          setTimeout(() => {
+            if (document.hidden && !this._settings.backgroundAmbient) {
+              this._stopAmbientDrone();
+            }
+          }, FADE_DURATION_MS);
+        }
+
+        if (isHowl) {
+          // Плавно затухаємо до 0, і лише після досягнення 0 ставимо на паузу
+          const startVol = ambientHowl.volume();
+          this._fadeAudio(SOUND_IDS.BUNKER_AMBIENT, startVol, 0, FADE_DURATION_MS, () => {
+            if (document.hidden && !this._settings.backgroundAmbient) {
+              ambientHowl.pause();
+            }
+          });
+        }
+      } else {
+        this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
+
+        const shouldResume = this._wasAmbientPlayingBeforeHide || this._ambientWanted;
         this._wasAmbientPlayingBeforeHide = false;
+
+        if (!shouldResume || this._settings.muted) return;
+
+        const effVol = this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT);
+        if (effVol <= 0.001) return;
+
         const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
         if (ambientHowl && !this._missingFiles.has(SOUND_IDS.BUNKER_AMBIENT)) {
-          ambientHowl.play();
-        } else if (!this._settings.muted) {
-          const effVol = this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT);
-          if (effVol > 0.001) {
-            this._toggleAmbientDrone(effVol);
+          if (Array.isArray(ambientHowl._queue)) {
+            ambientHowl._queue = [];
           }
+
+          const currentVol = ambientHowl.playing() ? ambientHowl.volume() : 0;
+          if (!ambientHowl.playing()) {
+            ambientHowl.volume(0);
+            ambientHowl.play();
+          }
+          // Плавно нарощуємо гучність від поточної до повної
+          this._fadeAudio(SOUND_IDS.BUNKER_AMBIENT, currentVol, effVol, FADE_DURATION_MS);
+        } else if (this._ambientDroneNodes) {
+          const { gainNode } = this._ambientDroneNodes;
+          if (this._audioCtx && gainNode) {
+            const now = this._audioCtx.currentTime;
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(effVol * 0.25, now + FADE_DURATION_MS / 1000);
+          }
+        } else if (this._ambientWanted) {
+          this._toggleAmbientDrone(effVol, FADE_DURATION_MS / 1000);
         }
       }
     });

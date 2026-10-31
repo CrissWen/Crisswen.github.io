@@ -110,7 +110,7 @@ export const SOUND_CATALOG = Object.freeze({
     label: 'Відкриття / закриття замка',
     src: ['./audio/ui/lock-toggle.wav'],
     channel: AUDIO_CHANNELS.UI,
-    baseVolume: 0.85,
+    baseVolume: 0.35,
     throttleMs: 80,
     interrupt: true,
     maxInstances: 1,
