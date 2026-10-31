@@ -3,7 +3,7 @@
  * із підтримкою каналів гучності (Master, SFX, UI, Music),
  * точкового калібрування кожного звуку (baseVolume),
  * захисту від какофонії (throttleMs, interrupt, maxInstances, pitchShift)
- * та синтезованого Web Audio фоллбеку на випадок відсутності аудіофайлів.
+ * та синтезованого Web Audio фоллбеку (AudioSynth) на випадок відсутності аудіофайлів.
  */
 
 import {
@@ -13,6 +13,7 @@ import {
   SOUND_IDS,
   getSoundConfig,
 } from '../constants/sounds.js';
+import { AudioSynth } from './audio-synth.js';
 
 const STORAGE_KEY_SETTINGS = 'bunker-audio-settings';
 
@@ -29,6 +30,7 @@ class SoundManager {
     this._audioCtx = null; // Web Audio API контекст для синтезованого фоллбеку
     this._ambientDroneNodes = null; // Активні вузли синтезованого ембієнту
     this._wasAmbientPlayingBeforeHide = false;
+    this._wasDroneBeforeHide = false;
     this._ambientFadeTimeout = null; // Таймаут згасання при згортанні вкладки
     this._initialized = false;
 
@@ -257,13 +259,9 @@ class SoundManager {
     if (typeof window !== 'undefined' && window.Howler) {
       window.Howler.mute(this._settings.muted);
     }
-    if (this._ambientDroneNodes?.gainNode && this._audioCtx) {
+    if (AudioSynth.isAmbientPlaying()) {
       const targetVol = this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT);
-      this._ambientDroneNodes.gainNode.gain.setTargetAtTime(
-        targetVol * 0.25,
-        this._audioCtx.currentTime,
-        0.05
-      );
+      AudioSynth.setAmbientVolume(targetVol, 50);
     }
   }
 
@@ -273,13 +271,9 @@ class SoundManager {
       const effectiveVol = this.getEffectiveVolume(soundId);
       howl.volume(effectiveVol);
     }
-    if (soundId === SOUND_IDS.BUNKER_AMBIENT && this._ambientDroneNodes?.gainNode && this._audioCtx) {
+    if (soundId === SOUND_IDS.BUNKER_AMBIENT && AudioSynth.isAmbientPlaying()) {
       const targetVol = this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT);
-      this._ambientDroneNodes.gainNode.gain.setTargetAtTime(
-        targetVol * 0.25,
-        this._audioCtx.currentTime,
-        0.05
-      );
+      AudioSynth.setAmbientVolume(targetVol, 50);
     }
   }
 
@@ -294,7 +288,7 @@ class SoundManager {
   _resumeAmbientIfWanted() {
     if (!this._ambientWanted || this._settings.muted) return;
     if (this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT) <= 0.001) return;
-    if (this._ambientDroneNodes) return;
+    if (AudioSynth.isAmbientPlaying()) return;
     const howl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
     if (howl && (howl.playing() || howl.state() === 'loading')) return;
     this.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
@@ -355,14 +349,14 @@ class SoundManager {
 
     // 4. Якщо файл раніше не знайдено на диску або Howler недоступний — граємо синтезований фоллбек
     if (this._missingFiles.has(soundId) || typeof window === 'undefined' || !window.Howl) {
-      this._playSynthFallback(config, effectiveVol, rate);
+      this._playSynthFallback(config, effectiveVol, rate, options.loop);
       return null;
     }
 
     // 5. Відтворення через Howler.js
     const howl = this._getOrCreateHowl(config);
     if (!howl) {
-      this._playSynthFallback(config, effectiveVol, rate);
+      this._playSynthFallback(config, effectiveVol, rate, options.loop);
       return null;
     }
 
@@ -409,6 +403,7 @@ class SoundManager {
       howl.stop();
     }
     this._activeInstances.get(soundId)?.clear();
+    AudioSynth.stop(soundId);
 
     if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
       this._stopAmbientDrone();
@@ -425,6 +420,7 @@ class SoundManager {
     for (const set of this._activeInstances.values()) {
       set.clear();
     }
+    AudioSynth.stopAll();
     this._stopAmbientDrone();
   }
 
@@ -448,7 +444,7 @@ class SoundManager {
    * Перевіряє, чи відтворюється зараз вказаний звук (зокрема ембієнт).
    */
   isPlaying(soundId) {
-    if (soundId === SOUND_IDS.BUNKER_AMBIENT && this._ambientDroneNodes) {
+    if (soundId === SOUND_IDS.BUNKER_AMBIENT && (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes)) {
       return true;
     }
     const howl = this._howls.get(soundId);
@@ -505,7 +501,7 @@ class SoundManager {
           this._missingFiles.add(config.id);
           const effVol = this.getEffectiveVolume(config.id);
           if (!wasSilent && effVol > 0.001) {
-            this._playSynthFallback(config, effVol, 1);
+            this._playSynthFallback(config, effVol, 1, config.loop);
           }
         }
       },
@@ -516,449 +512,46 @@ class SoundManager {
   }
 
   // ===========================================================================
-  // Процедурний Web Audio API Синтезатор (Fallback для тестування без файлів)
+  // Процедурний Web Audio API Синтезатор (Делегування до AudioSynth)
   // ===========================================================================
 
   _getAudioContext() {
-    if (typeof window === 'undefined') return null;
-    if (!this._audioCtx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this._audioCtx = new AudioCtx();
-      }
-    }
-    if (this._audioCtx && this._audioCtx.state === 'suspended') {
-      this._audioCtx.resume().catch(() => {});
-    }
-    return this._audioCtx;
+    const ctx = AudioSynth.getContext();
+    this._audioCtx = ctx;
+    return ctx;
   }
 
-  _playSynthFallback(config, effectiveVol, rate = 1) {
-    const ctx = this._getAudioContext();
-    if (!ctx) return;
-
-    const now = ctx.currentTime;
+  _playSynthFallback(config, effectiveVol, rate = 1, loop = undefined) {
     const type = config.synthType || 'click';
-
-    if (type === 'drone') {
+    if (type === 'drone' || config.id === SOUND_IDS.BUNKER_AMBIENT) {
       this._toggleAmbientDrone(effectiveVol);
       return;
     }
 
-    const masterGain = ctx.createGain();
-    masterGain.connect(ctx.destination);
-
-    switch (type) {
-      case 'lock-hover': {
-        // Делікатний високочастотний металевий мікро-імпульс (22 мс)
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1350 * rate, now);
-        osc.frequency.exponentialRampToValueAtTime(1950 * rate, now + 0.022);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.25, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.024);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.025);
-        break;
-      }
-
-      case 'lock-toggle': {
-        // Механічне подвійне клацання ригеля замка
-        const osc = ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(420 * rate, now);
-        osc.frequency.setValueAtTime(640 * rate, now + 0.045);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.4, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
-        masterGain.gain.setValueAtTime(effectiveVol * 0.45, now + 0.045);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.115);
-        break;
-      }
-
-      case 'click': {
-        // Тактильний короткий клік кнопки
-        const osc = ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(720 * rate, now);
-        osc.frequency.exponentialRampToValueAtTime(240 * rate, now + 0.032);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.35, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.038);
-        break;
-      }
-
-      case 'tab': {
-        // М'який перехід вкладки
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(480 * rate, now);
-        osc.frequency.exponentialRampToValueAtTime(760 * rate, now + 0.05);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.3, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.06);
-        break;
-      }
-
-      case 'dice': {
-        // Серія з 4 швидких пружних ударів гральної кістки
-        const offsets = [0, 0.055, 0.105, 0.145];
-        const freqs = [520, 680, 590, 820];
-        offsets.forEach((offset, idx) => {
-          const osc = ctx.createOscillator();
-          const tapGain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freqs[idx] * rate, now + offset);
-          osc.frequency.exponentialRampToValueAtTime(220 * rate, now + offset + 0.038);
-
-          tapGain.gain.setValueAtTime(effectiveVol * 0.4, now + offset);
-          tapGain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.04);
-
-          osc.connect(tapGain);
-          tapGain.connect(ctx.destination);
-          osc.start(now + offset);
-          osc.stop(now + offset + 0.042);
-        });
-        break;
-      }
-
-      case 'card': {
-        // Розкриття картки — приємний двоногий акорд
-        [440, 660].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const noteGain = ctx.createGain();
-          const start = now + i * 0.045;
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq * rate, start);
-          osc.frequency.exponentialRampToValueAtTime(freq * 1.15 * rate, start + 0.14);
-
-          noteGain.gain.setValueAtTime(effectiveVol * 0.32, start);
-          noteGain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
-
-          osc.connect(noteGain);
-          noteGain.connect(ctx.destination);
-          osc.start(start);
-          osc.stop(start + 0.16);
-        });
-        break;
-      }
-
-      case 'vote': {
-        // Чіткий сигнал фіксації голосу
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33 * rate, now); // D5
-        osc.frequency.setValueAtTime(880 * rate, now + 0.06); // A5
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.35, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.17);
-        break;
-      }
-
-      case 'tick': {
-        // Коротке цокання таймера
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1050 * rate, now);
-        osc.frequency.exponentialRampToValueAtTime(450 * rate, now + 0.018);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.3, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.022);
-        break;
-      }
-
-      case 'timer-end': {
-        // Подвійний сигнал завершення часу
-        [0, 0.14].forEach((offset) => {
-          const osc = ctx.createOscillator();
-          const beepGain = ctx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(740, now + offset);
-
-          beepGain.gain.setValueAtTime(effectiveVol * 0.3, now + offset);
-          beepGain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.1);
-
-          osc.connect(beepGain);
-          beepGain.connect(ctx.destination);
-          osc.start(now + offset);
-          osc.stop(now + offset + 0.11);
-        });
-        break;
-      }
-
-      case 'alarm': {
-        // Тривожна сирена бункера (плавний підйом та спад частоти)
-        const osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(340, now);
-        osc.frequency.linearRampToValueAtTime(680, now + 0.32);
-        osc.frequency.linearRampToValueAtTime(380, now + 0.65);
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1400, now);
-
-        masterGain.gain.setValueAtTime(0.001, now);
-        masterGain.gain.linearRampToValueAtTime(effectiveVol * 0.38, now + 0.06);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
-
-        osc.connect(filter);
-        filter.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.7);
-        break;
-      }
-
-      case 'kick': {
-        // Низький глухий удар закриття гермодверей бункера
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(38, now + 0.28);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.55, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.32);
-        break;
-      }
-
-      case 'door-close': {
-        // Важкий низькочастотний гул сервоприводів та рейок при повільному розгоні бронестулок (~1.45с)
-        const osc = ctx.createOscillator();
-        const sub = ctx.createOscillator();
-        const filter = ctx.createBiquadFilter();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(54 * rate, now);
-        osc.frequency.linearRampToValueAtTime(96 * rate, now + 0.95);
-        osc.frequency.linearRampToValueAtTime(60 * rate, now + 1.4);
-
-        sub.type = 'triangle';
-        sub.frequency.setValueAtTime(34 * rate, now);
-        sub.frequency.linearRampToValueAtTime(50 * rate, now + 1.35);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(160, now);
-        filter.frequency.linearRampToValueAtTime(380, now + 1.05);
-
-        masterGain.gain.setValueAtTime(0.001, now);
-        masterGain.gain.linearRampToValueAtTime(effectiveVol * 0.45, now + 0.18);
-        masterGain.gain.setValueAtTime(effectiveVol * 0.45, now + 1.15);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.42);
-
-        osc.connect(filter);
-        sub.connect(filter);
-        filter.connect(masterGain);
-
-        osc.start(now);
-        sub.start(now);
-        osc.stop(now + 1.45);
-        sub.stop(now + 1.45);
-        break;
-      }
-
-      case 'door-slam': {
-        // Масивний удар зіткнення багатотонних стулок + металевий резонанс (~0.42с)
-        const subOsc = ctx.createOscillator();
-        const clangOsc = ctx.createOscillator();
-        const clangGain = ctx.createGain();
-
-        subOsc.type = 'sine';
-        subOsc.frequency.setValueAtTime(175 * rate, now);
-        subOsc.frequency.exponentialRampToValueAtTime(28 * rate, now + 0.36);
-
-        clangOsc.type = 'triangle';
-        clangOsc.frequency.setValueAtTime(320 * rate, now);
-        clangOsc.frequency.exponentialRampToValueAtTime(95 * rate, now + 0.18);
-
-        masterGain.gain.setValueAtTime(effectiveVol * 0.72, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-
-        clangGain.gain.setValueAtTime(effectiveVol * 0.38, now);
-        clangGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
-
-        subOsc.connect(masterGain);
-        clangOsc.connect(clangGain);
-        clangGain.connect(ctx.destination);
-
-        subOsc.start(now);
-        clangOsc.start(now);
-        subOsc.stop(now + 0.42);
-        clangOsc.stop(now + 0.2);
-        break;
-      }
-
-      case 'door-hydraulic': {
-        // Подвійне клацання ригелів + пневматичне шипіння пари (декомпресія ~0.46с)
-        [0, 0.11].forEach((offset, idx) => {
-          const boltOsc = ctx.createOscillator();
-          const boltGain = ctx.createGain();
-          boltOsc.type = 'triangle';
-          const baseFreq = idx === 0 ? 440 : 560;
-          boltOsc.frequency.setValueAtTime(baseFreq * rate, now + offset);
-          boltOsc.frequency.exponentialRampToValueAtTime(170 * rate, now + offset + 0.065);
-
-          boltGain.gain.setValueAtTime(effectiveVol * 0.42, now + offset);
-          boltGain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07);
-
-          boltOsc.connect(boltGain);
-          boltGain.connect(ctx.destination);
-          boltOsc.start(now + offset);
-          boltOsc.stop(now + offset + 0.075);
-        });
-
-        // Генерація короткого шумового імпульсу пневматики
-        const bufferSize = Math.floor(ctx.sampleRate * 0.32);
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = Math.random() * 2 - 1;
-        }
-        const noise = ctx.createBufferSource();
-        noise.buffer = noiseBuffer;
-
-        const bpFilter = ctx.createBiquadFilter();
-        bpFilter.type = 'bandpass';
-        bpFilter.frequency.setValueAtTime(1900, now + 0.14);
-        bpFilter.frequency.exponentialRampToValueAtTime(650, now + 0.44);
-        bpFilter.Q.setValueAtTime(2.2, now + 0.14);
-
-        const hissGain = ctx.createGain();
-        hissGain.gain.setValueAtTime(0.001, now + 0.14);
-        hissGain.gain.linearRampToValueAtTime(effectiveVol * 0.28, now + 0.18);
-        hissGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-        noise.connect(bpFilter);
-        bpFilter.connect(hissGain);
-        hissGain.connect(ctx.destination);
-        noise.start(now + 0.14);
-        noise.stop(now + 0.46);
-        break;
-      }
-
-      case 'door-open': {
-        // Розблокування замка + величний гідравлічний відкат стулок (~1.35с)
-        const osc = ctx.createOscillator();
-        const filter = ctx.createBiquadFilter();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(48 * rate, now);
-        osc.frequency.exponentialRampToValueAtTime(116 * rate, now + 0.98);
-        osc.frequency.linearRampToValueAtTime(70 * rate, now + 1.32);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(200, now);
-        filter.frequency.linearRampToValueAtTime(460, now + 0.85);
-        filter.frequency.linearRampToValueAtTime(140, now + 1.32);
-
-        masterGain.gain.setValueAtTime(0.001, now);
-        masterGain.gain.linearRampToValueAtTime(effectiveVol * 0.42, now + 0.1);
-        masterGain.gain.setValueAtTime(effectiveVol * 0.38, now + 0.95);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.34);
-
-        osc.connect(filter);
-        filter.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 1.36);
-        break;
-      }
-
-      default: {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600 * rate, now);
-        masterGain.gain.setValueAtTime(effectiveVol * 0.3, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-        osc.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + 0.055);
-      }
-    }
+    AudioSynth.play(config.id || type, {
+      volume: effectiveVol,
+      rate,
+      loop: loop !== undefined ? Boolean(loop) : Boolean(config.loop),
+    });
   }
 
   _toggleAmbientDrone(effectiveVol, rampDuration = 0.6) {
-    if (this._ambientDroneNodes) {
+    if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
       this._stopAmbientDrone();
       return;
     }
 
-    const ctx = this._getAudioContext();
-    if (!ctx) return;
-
-    const now = ctx.currentTime;
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const filter = ctx.createBiquadFilter();
-    const gainNode = ctx.createGain();
-
-    // Глибокий низькочастотний гул вентиляції бункера
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(55, now); // A1
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(82.41, now); // E2
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(160, now);
-
-    gainNode.gain.setValueAtTime(0.0001, now);
-    gainNode.gain.linearRampToValueAtTime(effectiveVol * 0.25, now + rampDuration);
-
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    osc1.start(now);
-    osc2.start(now);
-
-    this._ambientDroneNodes = { osc1, osc2, filter, gainNode };
-    this._notifyListeners();
+    AudioSynth.startAmbient({ volume: effectiveVol, rampDuration });
+    if (AudioSynth.isAmbientPlaying()) {
+      this._ambientDroneNodes = { active: true };
+      this._notifyListeners();
+    }
   }
 
   _stopAmbientDrone() {
-    if (!this._ambientDroneNodes) return;
-    const { osc1, osc2, gainNode } = this._ambientDroneNodes;
+    if (!AudioSynth.isAmbientPlaying() && !this._ambientDroneNodes) return;
     this._ambientDroneNodes = null;
-    try {
-      if (this._audioCtx) {
-        const now = this._audioCtx.currentTime;
-        gainNode.gain.setTargetAtTime(0.0001, now, 0.08);
-        setTimeout(() => {
-          try {
-            osc1.stop();
-            osc2.stop();
-            osc1.disconnect();
-            osc2.disconnect();
-          } catch (_) {}
-        }, 250);
-      }
-    } catch (_) {}
+    AudioSynth.stopAmbient(0.25);
     this._notifyListeners();
   }
 
@@ -968,6 +561,7 @@ class SoundManager {
 
   _setupUnlockListeners() {
     const unlock = () => {
+      AudioSynth.unlock();
       if (this._audioCtx && this._audioCtx.state === 'suspended') {
         this._audioCtx.resume().catch(() => {});
       }
@@ -1009,7 +603,8 @@ class SoundManager {
     }
 
     const startTime = performance.now();
-    howl.volume(fromVol);
+    const initialVol = toVol > fromVol && fromVol === 0 ? Math.min(toVol, Math.max(0.02, toVol * 0.1)) : fromVol;
+    howl.volume(initialVol);
 
     const intervalId = setInterval(() => {
       const elapsed = performance.now() - startTime;
@@ -1044,24 +639,24 @@ class SoundManager {
 
       if (document.hidden) {
         this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
+        if (this._ambientFadeTimeout) {
+          clearTimeout(this._ambientFadeTimeout);
+          this._ambientFadeTimeout = null;
+        }
 
-        const isDrone = Boolean(this._ambientDroneNodes);
+        const isDrone = Boolean(AudioSynth.isAmbientPlaying() || this._ambientDroneNodes);
         const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
         const isHowl = Boolean(ambientHowl && ambientHowl.playing());
 
         if (isDrone || isHowl || this._ambientWanted) {
           this._wasAmbientPlayingBeforeHide = true;
+          this._wasDroneBeforeHide = isDrone;
         }
 
         if (isDrone) {
-          const { gainNode } = this._ambientDroneNodes;
-          if (this._audioCtx && gainNode) {
-            const now = this._audioCtx.currentTime;
-            gainNode.gain.cancelScheduledValues(now);
-            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-            gainNode.gain.linearRampToValueAtTime(0.0001, now + FADE_DURATION_MS / 1000);
-          }
-          setTimeout(() => {
+          AudioSynth.setAmbientVolume(0.0001, FADE_DURATION_MS);
+          this._ambientFadeTimeout = setTimeout(() => {
+            this._ambientFadeTimeout = null;
             if (document.hidden && !this._settings.backgroundAmbient) {
               this._stopAmbientDrone();
             }
@@ -1079,9 +674,15 @@ class SoundManager {
         }
       } else {
         this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
+        if (this._ambientFadeTimeout) {
+          clearTimeout(this._ambientFadeTimeout);
+          this._ambientFadeTimeout = null;
+        }
 
         const shouldResume = this._wasAmbientPlayingBeforeHide || this._ambientWanted;
+        const wasDrone = this._wasDroneBeforeHide;
         this._wasAmbientPlayingBeforeHide = false;
+        this._wasDroneBeforeHide = false;
 
         if (!shouldResume || this._settings.muted) return;
 
@@ -1089,7 +690,7 @@ class SoundManager {
         if (effVol <= 0.001) return;
 
         const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
-        if (ambientHowl && !this._missingFiles.has(SOUND_IDS.BUNKER_AMBIENT)) {
+        if (ambientHowl && !this._missingFiles.has(SOUND_IDS.BUNKER_AMBIENT) && !wasDrone) {
           if (Array.isArray(ambientHowl._queue)) {
             ambientHowl._queue = [];
           }
@@ -1101,15 +702,9 @@ class SoundManager {
           }
           // Плавно нарощуємо гучність від поточної до повної
           this._fadeAudio(SOUND_IDS.BUNKER_AMBIENT, currentVol, effVol, FADE_DURATION_MS);
-        } else if (this._ambientDroneNodes) {
-          const { gainNode } = this._ambientDroneNodes;
-          if (this._audioCtx && gainNode) {
-            const now = this._audioCtx.currentTime;
-            gainNode.gain.cancelScheduledValues(now);
-            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-            gainNode.gain.linearRampToValueAtTime(effVol * 0.25, now + FADE_DURATION_MS / 1000);
-          }
-        } else if (this._ambientWanted) {
+        } else if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
+          AudioSynth.setAmbientVolume(effVol, FADE_DURATION_MS);
+        } else if (shouldResume) {
           this._toggleAmbientDrone(effVol, FADE_DURATION_MS / 1000);
         }
       }
@@ -1141,12 +736,6 @@ class SoundManager {
       { passive: true }
     );
 
-    // Клік по будь-чому клікабельному: фаза capture, щоб звук спрацьовував до обробників, які можуть одразу вимкнути/перемалювати елемент
-    // (напр. панель ведучого). Клікабельним вважається:
-    //  1) семантичний елемент (кнопка, вкладка, пункт меню, посилання, summary), або
-    //  2) будь-який елемент із cursor: pointer (картки, пункти кастомних списків, лейбли, іконки, лого тощо).
-    // Винятки: замки (у них свій звук lock-toggle), тест-кнопки налаштувань звуку (вони грають свій звук),
-    // повзунки, неактивні елементи та будь-що з data-no-click-sound.
     const CLICKABLE_SELECTOR = [
       'button',
       'a[href]',
@@ -1177,14 +766,12 @@ class SoundManager {
 
         let clickable = el.closest(CLICKABLE_SELECTOR);
         if (!clickable) {
-          // cursor успадковується дочірніми елементами, тож клік по тексту/іконці всередині клікабельного блоку теж ловиться
           try {
             if (window.getComputedStyle(el).cursor === 'pointer') clickable = el;
           } catch (_) {}
         }
         if (!clickable) return;
 
-        // Клік по <label> породжує другий, синтетичний клік по його input — throttleMs у UI_CLICK не дає звуку прозвучати двічі
         this.play(SOUND_IDS.UI_CLICK);
       },
       true
@@ -1205,4 +792,3 @@ export {
   SOUND_CATALOG,
   SOUND_IDS,
 };
-
