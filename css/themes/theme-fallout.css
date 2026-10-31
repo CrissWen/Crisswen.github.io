@@ -84,3 +84,83 @@ body{
   color: #ffffff;
   font-weight: 700;
 }
+
+/* ===== Кнопки панелі ведучого (Host Panel) у стилістиці Fallout ===== */
+button.hp-fab{
+  border-radius: 0px !important;
+  background: var(--panel);
+  border: 1px solid var(--metal-lt);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(57,255,106,.25);
+  font-family: var(--mono);
+}
+button.hp-fab:hover{
+  background: var(--metal);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px rgba(57,255,106,.45);
+}
+button.hp-close{
+  border-radius: 0px !important;
+  background: var(--panel);
+  border: 1px solid var(--metal-lt);
+  color: var(--text);
+  font-family: var(--mono);
+}
+button.hp-close:hover{
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--on-danger);
+}
+button.hp-btn{
+  border-radius: 0px !important;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--metal-lt);
+  font-family: var(--mono);
+  box-shadow: none;
+  transition: all .15s ease;
+}
+button.hp-btn:hover:not(:disabled){
+  background: var(--metal);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(57,255,106,.35);
+}
+button.hp-btn:disabled{
+  opacity: .4;
+  cursor: not-allowed;
+  border-color: var(--metal);
+  background: var(--panel);
+}
+button.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 18%, var(--panel));
+  color: var(--ok);
+  border-color: var(--ok);
+}
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: 0 0 15px var(--ok);
+  border-color: transparent;
+}
+button.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 18%, var(--panel));
+  color: var(--danger);
+  border-color: var(--danger);
+}
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 0 15px var(--danger);
+  border-color: transparent;
+}
+button.hp-btn-gray{
+  background: var(--panel);
+  color: var(--text-mute);
+  border-color: var(--metal);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  background: var(--metal);
+  color: var(--text);
+  border-color: var(--metal-lt);
+}

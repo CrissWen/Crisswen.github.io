@@ -463,3 +463,101 @@ button.menu-btn:focus-visible{
   color: #f0cf3c;
   font-weight: 700;
 }
+
+/* ===== Кнопки панелі ведучого (Host Panel) у стилістиці Сталкера ===== */
+button.hp-fab{
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--hazard);
+  box-shadow: var(--btn-shadow);
+  border-radius: var(--radius-sm);
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+button.hp-fab:hover{
+  background: var(--btn-hover-bg);
+  border-color: var(--hazard);
+  box-shadow: var(--btn-shadow), 0 0 10px rgba(214,176,34,.45);
+}
+button.hp-fab:active{
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,.5);
+}
+button.hp-close{
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text-mute);
+  border-radius: var(--radius-sm);
+  transition: all .2s ease;
+}
+button.hp-close:hover{
+  background: var(--danger);
+  border-color: #d4483c;
+  color: #fff3ef;
+  box-shadow: 0 0 8px rgba(158,42,34,.55);
+}
+button.hp-btn{
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--btn-shadow);
+  text-transform: uppercase;
+  font-family: var(--mono);
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+button.hp-btn:hover:not(:disabled){
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--btn-hover-text);
+  box-shadow: var(--btn-shadow), var(--btn-glow);
+}
+button.hp-btn:active:not(:disabled){
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,.5);
+}
+button.hp-btn:disabled{
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
+  border-color: var(--btn-disabled-border);
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+}
+button.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 30%, var(--btn-bg));
+  color: #e0eed8;
+  border: 1px solid var(--ok);
+  box-shadow: var(--btn-shadow);
+}
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: var(--btn-shadow), 0 0 10px rgba(111,154,94,.45);
+}
+button.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 25%, var(--btn-bg));
+  color: #fbd0cc;
+  border: 1px solid color-mix(in srgb, var(--danger-strong) 70%, #000);
+  box-shadow: var(--btn-shadow);
+}
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  border-color: transparent;
+  box-shadow: var(--btn-shadow), 0 0 10px rgba(217,83,74,.45);
+}
+button.hp-btn-gray{
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--btn-hover-text);
+}
+button.hp-btn:focus-visible{
+  outline: 2px solid var(--hazard);
+  outline-offset: 2px;
+}

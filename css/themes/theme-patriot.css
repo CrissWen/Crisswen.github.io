@@ -176,3 +176,34 @@ body .header-collapse-tab:hover{
 .hp-toast{
   background-color: color-mix(in srgb, var(--patriot-4) 22%, var(--bg));
 }
+/* Модифікатори кнопок панелі ведучого для теми Потужність */
+.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 30%, var(--panel)) !important;
+  color: var(--ok) !important;
+  border-color: var(--ok) !important;
+}
+.hp-btn-green:hover:not(:disabled){
+  background: var(--ok) !important;
+  color: var(--on-ok) !important;
+  box-shadow: 0 4px 15px rgba(105, 176, 255, .4) !important;
+}
+.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 30%, var(--panel)) !important;
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+.hp-btn-red:hover:not(:disabled){
+  background: var(--danger) !important;
+  color: var(--on-danger) !important;
+  box-shadow: 0 4px 15px rgba(255, 133, 121, .4) !important;
+}
+.hp-btn-gray{
+  background: var(--panel-2) !important;
+  color: var(--text-mute) !important;
+  border-color: var(--metal) !important;
+}
+.hp-btn-gray:hover:not(:disabled){
+  border-color: var(--metal-lt) !important;
+  color: var(--text) !important;
+  background: var(--metal) !important;
+}

@@ -83,3 +83,80 @@ body{
   background: color-mix(in srgb, var(--hazard) 20%, transparent);
   color: var(--hazard);
 }
+
+/* ===== Кнопки панелі ведучого (Host Panel) у стилістиці Кіберпанку ===== */
+button.hp-fab{
+  border-radius: 2px !important;
+  background: var(--panel);
+  border: 1px solid var(--ok);
+  color: var(--ok);
+  box-shadow: 0 0 10px rgba(0, 240, 255, .3);
+  transition: all .2s ease;
+}
+button.hp-fab:hover{
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: 0 0 20px rgba(0, 240, 255, .6);
+}
+button.hp-close{
+  border-radius: 2px !important;
+  background: var(--panel);
+  border: 1px solid var(--metal-lt);
+  color: var(--text-mute);
+  transition: all .2s ease;
+}
+button.hp-close:hover{
+  border-color: var(--danger-strong);
+  background: var(--danger-strong);
+  color: var(--on-danger-strong);
+  box-shadow: 0 0 12px rgba(255, 41, 82, .6);
+}
+button.hp-btn{
+  border-radius: 2px !important;
+  background: rgba(18, 15, 34, .7);
+  color: var(--text);
+  border: 1px solid var(--metal-lt);
+  font-family: var(--mono);
+  box-shadow: none;
+  transition: all .2s ease;
+}
+button.hp-btn:hover:not(:disabled){
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok);
+  box-shadow: 0 0 12px rgba(0, 240, 255, .4);
+}
+button.hp-btn-green{
+  background: color-mix(in srgb, var(--ok) 20%, transparent);
+  color: var(--ok);
+  border-color: var(--ok);
+  box-shadow: 0 0 8px rgba(0, 240, 255, .25);
+}
+button.hp-btn-green:hover:not(:disabled){
+  background: var(--ok);
+  color: var(--on-ok);
+  box-shadow: 0 0 20px rgba(0, 240, 255, .7);
+  border-color: transparent;
+}
+button.hp-btn-red{
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  color: var(--danger);
+  border-color: var(--danger);
+  box-shadow: 0 0 8px rgba(255, 106, 61, .25);
+}
+button.hp-btn-red:hover:not(:disabled){
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 0 20px rgba(255, 106, 61, .7);
+  border-color: transparent;
+}
+button.hp-btn-gray{
+  background: rgba(18, 15, 34, .7);
+  color: var(--text-mute);
+  border-color: var(--metal);
+}
+button.hp-btn-gray:hover:not(:disabled){
+  border-color: var(--metal-lt);
+  color: var(--text);
+  background: var(--metal);
+}
