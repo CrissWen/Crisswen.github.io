@@ -24,26 +24,32 @@ export function syncCataText(f = state.form) {
 // і текст катаклізмів розбирається щоразу при виході з вкладки.
 let llmTextBaseline = null;
 
-export function syncCataclysmsFromLlmText() {
+export function syncCataclysmsFromLlmText({ markDeleted = true } = {}) {
   if (state.activeCategory === 'cataclysm' && $('pe-cards')) {
     state.form.texts.cataclysm = $('pe-cards').value;
   }
   if (state.form.texts.cataclysm === llmTextBaseline) return;
   const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
   const existingByName = new Map();
-  for (const c of state.form.cataclysms) {
-    if (c?.name) existingByName.set(c.name.trim().toLowerCase(), c);
+  for (let i = 0; i < state.form.cataclysms.length; i++) {
+    const c = state.form.cataclysms[i];
+    if (c?.name) existingByName.set(c.name.trim().toLowerCase(), { cata: c, index: i });
   }
 
   const matchedIds = new Set();
-  const nextCatas = [];
+  const matchedIndices = new Set();
+  const nextCatas = new Array(parsed.length).fill(null);
 
-  for (const p of parsed) {
+  // Pass 1: Точний збіг за назвою
+  for (let i = 0; i < parsed.length; i++) {
+    const p = parsed[i];
     const key = p.value.trim().toLowerCase();
-    const existing = existingByName.get(key);
-    if (existing) {
+    const match = existingByName.get(key);
+    if (match && !matchedIndices.has(match.index)) {
+      const existing = match.cata;
+      matchedIndices.add(match.index);
       if (existing.id) matchedIds.add(existing.id);
-      nextCatas.push({
+      nextCatas[i] = {
         id: existing.id || crypto.randomUUID(),
         name: p.value,
         description: p.meta.description !== undefined ? p.meta.description : (existing.description || ''),
@@ -51,9 +57,29 @@ export function syncCataclysmsFromLlmText() {
         stay_time_months: p.meta.stay_time_months !== undefined ? p.meta.stay_time_months : (existing.stay_time_months || null),
         population: p.meta.population !== undefined ? p.meta.population : (existing.population || null),
         extra: existing.extra || {}
-      });
+      };
+    }
+  }
+
+  // Pass 2: Позиційний фолбек (якщо назву катаклізму відредагували на тій самій позиції i)
+  for (let i = 0; i < parsed.length; i++) {
+    if (nextCatas[i]) continue;
+    const p = parsed[i];
+    const oldAtPos = state.form.cataclysms[i];
+    if (oldAtPos && !matchedIndices.has(i)) {
+      matchedIndices.add(i);
+      if (oldAtPos.id) matchedIds.add(oldAtPos.id);
+      nextCatas[i] = {
+        id: oldAtPos.id || crypto.randomUUID(),
+        name: p.value,
+        description: p.meta.description !== undefined ? p.meta.description : (oldAtPos.description || ''),
+        timer_minutes: p.meta.timer_minutes !== undefined ? p.meta.timer_minutes : (oldAtPos.timer_minutes || 0),
+        stay_time_months: p.meta.stay_time_months !== undefined ? p.meta.stay_time_months : (oldAtPos.stay_time_months || null),
+        population: p.meta.population !== undefined ? p.meta.population : (oldAtPos.population || null),
+        extra: oldAtPos.extra || {}
+      };
     } else {
-      nextCatas.push({
+      nextCatas[i] = {
         id: crypto.randomUUID(),
         name: p.value,
         description: p.meta.description || '',
@@ -61,18 +87,20 @@ export function syncCataclysmsFromLlmText() {
         stay_time_months: p.meta.stay_time_months !== undefined ? p.meta.stay_time_months : null,
         population: p.meta.population !== undefined ? p.meta.population : null,
         extra: p.meta.extra || {}
-      });
+      };
     }
   }
 
-  for (const old of state.form.cataclysms) {
-    if (old?.id && !matchedIds.has(old.id)) {
-      state.markCardDeleted(old.id);
+  if (markDeleted) {
+    for (const old of state.form.cataclysms) {
+      if (old?.id && !matchedIds.has(old.id)) {
+        state.markCardDeleted(old.id);
+      }
     }
+    llmTextBaseline = state.form.texts.cataclysm;
   }
 
   state.form.cataclysms = nextCatas;
-  llmTextBaseline = state.form.texts.cataclysm;
 }
 
 export function syncCataclysmsToLlmText() {

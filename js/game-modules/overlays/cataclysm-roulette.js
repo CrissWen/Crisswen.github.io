@@ -2,9 +2,9 @@ import { getGlobalTime } from '../../services/server-time.js';
 import { getGameConfig } from '../../config/config-manager.js';
 import { ICONS } from '../../constants/icons.js';
 import { CATASTROPHE_ICONS_LIST } from '../../constants/catastrophe-icons.js';
-import { createRng } from '../../utils/roulette-ribbon.js';
-import { getSpinTimeline, sanitizeIconPath } from '../../utils/cataclysm-spin.js';
-import { normalizeRouletteConfig } from '../../utils/roulette-config.js';
+import { createRng } from '../../utils/roulette/roulette-ribbon.js';
+import { getSpinTimeline, sanitizeIconPath, resolveSpinVisuals } from '../../utils/roulette/cataclysm-spin.js';
+import { normalizeRouletteConfig } from '../../utils/roulette/roulette-config.js';
 import { playRouletteOverlay, hideRouletteOverlay, isRouletteOverlayShown, primeRouletteAudio } from '../../ui/roulette-overlay.js';
 
 // ===== Рулетка катаклізму =====
@@ -68,7 +68,8 @@ export async function playCataclysmRoulette(spin, { onFinish = null } = {}) {
   const result = { key: resultPath, src: resultPath };
   const pool = poolPaths.length > 0 ? poolPaths.map(path => ({ key: path, src: path })) : [result];
   const seed = Number(spin.seed) || 0;
-  const fillers = buildFillers(poolPaths, seed, cfg.maxFillers);
+  const visuals = resolveSpinVisuals(spin, cfg); // I-10: стрічка визначається спіном ведучого, а не локальним конфігом
+  const fillers = buildFillers(poolPaths, seed, visuals.maxFillers);
 
   return playRouletteOverlay({
     ariaLabel: 'Рулетка катаклізму',
@@ -86,9 +87,9 @@ export async function playCataclysmRoulette(spin, { onFinish = null } = {}) {
       seed,
       stopIndex: Number(spin.stop_index),
       durationMs: Number(spin.duration_ms),
-      easingPower: cfg.easingPower,
-      fillerZone: cfg.fillerZone,
-      suspense: cfg.suspense
+      easingPower: visuals.easingPower,
+      fillerZone: visuals.fillerZone,
+      suspense: visuals.suspense
     },
     onFinish
   });

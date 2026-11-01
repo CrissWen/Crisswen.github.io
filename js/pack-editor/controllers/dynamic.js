@@ -1,7 +1,7 @@
 import { state } from '../state.js';
 import { setMobileCardView } from './mobile-nav.js';
 import { CATEGORY_SCHEMAS } from '../categories.js';
-import { esc } from '../../utils/escape-html.js';
+import { esc } from '../../utils/common/escape-html.js';
 import {
   parseLines, oneLine, parseCards, cardToLine,
   hasExplanationField, joinNameExplanation, splitNameExplanation
@@ -349,7 +349,7 @@ const CATEGORY_STRATEGIES = {
         if (targetCard) {
           targetCard.meta.opposite = currentName;
         } else {
-          cards.push({ value: targetName, meta: { opposite: currentName } });
+          cards.push({ id: crypto.randomUUID(), value: targetName, meta: { opposite: currentName } });
         }
       }
     }

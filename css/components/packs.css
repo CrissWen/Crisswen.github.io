@@ -278,9 +278,15 @@
   user-select: none;
   transition: background-color .15s ease, color .15s ease;
 }
-.pe-select-custom__item:hover {
+.pe-select-custom__item:hover,
+.pe-select-custom__item.is-active {
   background: color-mix(in srgb, var(--hazard) 16%, transparent);
   color: var(--hazard);
+}
+/* Опція, підсвічена клавіатурою (aria-activedescendant): контур видно навіть поверх .is-selected */
+.pe-select-custom__item.is-active {
+  outline: 1px solid color-mix(in srgb, var(--hazard) 60%, transparent);
+  outline-offset: -1px;
 }
 .pe-select-custom__item.is-selected {
   color: var(--hazard);

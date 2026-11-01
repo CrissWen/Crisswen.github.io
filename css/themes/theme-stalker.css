@@ -453,6 +453,7 @@ button.menu-btn:focus-visible{
   box-shadow: 0 8px 24px rgba(0,0,0,.8), 2px 2px 0 rgba(0,0,0,.5);
 }
 .pe-select-custom__item:hover,
+.pe-select-custom__item.is-active,
 .pe-combo__item:hover{
   background: var(--btn-hover-bg);
   color: var(--hazard);

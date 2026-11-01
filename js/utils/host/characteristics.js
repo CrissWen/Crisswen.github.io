@@ -1,7 +1,7 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
-import { randInt, pickCard, pickStage, generateHeight } from '../random.js';
-import { rollExperience } from '../experience.js';
+import { randInt, pickCard, pickStage, generateHeight } from '../common/random.js';
+import { rollExperience } from '../auth/experience.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
 
@@ -171,20 +171,7 @@ export function rerollGenderAndAge(player, pools, excludeCurrent = true, updateA
   }
 
   const card = pickCard(candidates.length ? candidates : all, 'Стать невідома');
-  const wasRevealed = !!player.gender?.is_revealed;
-
-  const genderObj = { value: card.value, is_revealed: wasRevealed };
-  if (card.meta?.has_no_age === true || card.meta?.custom_age_mode === 'no_age') {
-    genderObj.has_no_age = true;
-  }
-  if (Array.isArray(card.meta?.stages) && card.meta.stages.length > 0) {
-    genderObj.custom_stages = card.meta.stages;
-  }
-
-  player.gender = genderObj;
-  if (updateAge) {
-    player.age = { value: generateAge(card, pools.config), is_revealed: wasRevealed };
-  }
+  applyGenderCard(player, card, pools?.config, updateAge);
 }
 
 // Виставляє конкретну (обрану ведучим) стать і перегенеровує вік під неї (як у rerollGenderAndAge, але без випадкового вибору).

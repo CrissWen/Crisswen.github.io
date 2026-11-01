@@ -210,6 +210,9 @@ input[type="range"].bunker-slider::-webkit-slider-runnable-track {
 }
 
 /* WebKit / Blink Thumb */
+/* АРХІТЕКТУРНЕ ЗАСТЕРЕЖЕННЯ (НЕ ДЕДУПЛІКУВАТИ):
+   Не об'єднувати селектори ::-webkit-slider-thumb та ::-moz-range-thumb через кому!
+   За стандартом CSS невідомий браузеру вендорний псевдоелемент робить невалідним увесь блок правил. */
 input[type="range"].bunker-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;

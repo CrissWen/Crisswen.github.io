@@ -1,4 +1,4 @@
-import { esc } from '../../utils/escape-html.js';
+import { esc } from '../../utils/common/escape-html.js';
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from '../categories.js';
 import { TITLE_MAX, DESC_MAX, CATACLYSM_LIMITS } from '../constants.js';
 import { STAGE_KEYS, OBJECT_STAGE_KEYS, parseStageEntry } from '../payload.js';

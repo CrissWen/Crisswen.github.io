@@ -4,18 +4,13 @@ import {
   BUNKER_FIELDS,
   DELETABLE_CHARACTERISTICS,
   HEAL_PERFECT
-} from '../../utils/host-actions.js';
+} from '../../utils/game/host-actions.js';
+import { esc } from '../../utils/auth/security.js';
 
 // Цей модуль відповідає ЛИШЕ за HTML/DOM-вигляд панелі.
 // Уся логіка дій — у utils/host-actions.js, підключення подій — у pages/game.js.
 
 const HOST_PANEL_ID = 'host-panel-root';
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
 
 // Підпис гравця: ім'я, а при збігу імен додається короткий фрагмент ID
 function playerLabel(player, players) {

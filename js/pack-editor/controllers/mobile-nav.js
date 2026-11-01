@@ -74,13 +74,25 @@ export function setMobileCardView(view, { scroll = true } = {}) {
   }
 }
 
+let mobileNavAbortController = null;
+
+export function cleanupMobileNav() {
+  if (mobileNavAbortController) {
+    mobileNavAbortController.abort();
+    mobileNavAbortController = null;
+  }
+}
+
 export function initMobileNav() {
+  cleanupMobileNav();
+  mobileNavAbortController = new AbortController();
+  const { signal } = mobileNavAbortController;
   const mql = window.matchMedia('(max-width: 899px)');
   mql.addEventListener('change', () => {
     updateMobileInert();
-  });
+  }, { signal });
   window.addEventListener('resize', () => {
     updateMobileInert();
-  });
+  }, { signal });
   setMobileCardView(state.mobileCardView || 'categories', { scroll: false });
 }

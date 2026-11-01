@@ -165,6 +165,7 @@ select option:hover{
   -webkit-backdrop-filter: blur(14px);
 }
 .pe-select-custom__item:hover,
+.pe-select-custom__item.is-active,
 .pe-combo__item:hover{
   background-color: rgba(23, 174, 194, .25);
   color: var(--cryo-5);

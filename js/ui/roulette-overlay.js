@@ -1,5 +1,5 @@
 import { createRouletteReel, resolveReelMode } from './roulette-reel.js';
-import { configureSfx, playHeartbeat, unlockAudio } from '../utils/sfx.js';
+import { configureSfx, playHeartbeat, unlockAudio } from '../utils/common/sfx.js';
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 
 // ===== Оверлей рулетки (спільний для рулетки катаклізму й рулетки тесту виживання) =====
@@ -54,6 +54,15 @@ function el(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+// Виклик зовнішнього onFinish: виняток у колбеку (наприклад, refreshBoard) не має лишити оверлей у DOM або зупиняти очищення
+function runCallback(callback, arg) {
+  try {
+    callback?.(arg);
+  } catch (err) {
+    console.error('Помилка в onFinish рулетки:', err);
+  }
 }
 
 const rand = (min, max) => min + Math.random() * (max - min);
@@ -277,6 +286,9 @@ export function hideRouletteOverlay() {
     state.restore();
     state.restore = null;
   }
+  // Оверлей закрили зовні до штатного завершення: сповіщаємо викликача (onFinish({ cancelled: true })),
+  // інакше проміс, який чекає на фініш (survival-roulette), завис би назавжди
+  state.cancel?.();
 }
 
 // Для виклику з жесту користувача (клік): дозволяє браузеру програти звук рулетки, що стартує пізніше
@@ -353,6 +365,11 @@ export async function playRouletteOverlay({
   state.timers.push(setTimeout(() => finish({ immediate: true }), EMERGENCY_LIMIT_MS));
 
   let finished = false;
+  state.cancel = () => {
+    if (finished) return;
+    finished = true;
+    runCallback(onFinish, { cancelled: true });
+  };
   function finish({ immediate = false } = {}) {
     if (finished) return;
     finished = true;
@@ -363,7 +380,7 @@ export async function playRouletteOverlay({
 
     if (immediate || isReduced || !overlay || !overlay.isConnected) {
       hideRouletteOverlay();
-      callback?.();
+      runCallback(callback);
       return;
     }
 
@@ -410,10 +427,7 @@ export async function playRouletteOverlay({
       state.restore = null;
     }
 
-    // Сповіщаємо гру про розблокування (дошка оновлюється під оверлеєм)
-    callback?.();
-
-    // Після завершення fade-out остаточно прибираємо оверлей із DOM
+    // Таймер прибирання ставимо до виклику колбека: збій у зовнішньому коді не має лишити оверлей у DOM
     const fadeTimer = setTimeout(() => {
       if (current === state) {
         hideRouletteOverlay();
@@ -422,6 +436,9 @@ export async function playRouletteOverlay({
       }
     }, FADE_OUT_DURATION_MS);
     state.timers.push(fadeTimer);
+
+    // Сповіщаємо гру про розблокування (дошка оновлюється під оверлеєм)
+    runCallback(callback);
   }
 
   // ----- Режим (LDM) -----
@@ -433,7 +450,7 @@ export async function playRouletteOverlay({
   if (mode === 'light') overlay.classList.add('is-light'); // LDM: без розмиття фону — це найважчий ефект
 
   // ----- Стрічка -----
-  state.reel = createRouletteReel(reelHost, {
+  const reelConfig = {
     ...reelOptions,
     mode,
     onTick: ({ speed }) => playRouletteTick(speed),
@@ -461,8 +478,16 @@ export async function playRouletteOverlay({
       overlay.classList.add('is-revealed');
       if (!late) playRouletteReveal();
     }
-  });
-  state.reel.start({ startAt: timeline.startAt, now });
+  };
+  // Збій створення стрічки (наприклад, помилка в buildRibbon) не має блокувати сторінку до аварійного ліміту
+  try {
+    state.reel = createRouletteReel(reelHost, reelConfig);
+    state.reel.start({ startAt: timeline.startAt, now });
+  } catch (err) {
+    console.error('Не вдалося запустити рулетку:', err);
+    if (current === state) hideRouletteOverlay();
+    return false;
+  }
 
   // Розблокування за часом таймлайну: пауза після зупинки однакова в усіх
   state.timers.push(setTimeout(finish, Math.max(0, timeline.unlockAt + UNLOCK_PAD_MS - now())));

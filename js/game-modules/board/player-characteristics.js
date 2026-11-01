@@ -7,12 +7,7 @@
 
 import { isBlockCollapsed } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
+import { esc } from '../../utils/auth/security.js';
 
 export function playerCharacteristics(data) {
   data = data || {

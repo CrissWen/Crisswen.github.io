@@ -239,6 +239,28 @@ export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = 
   return finalConfig;
 }
 
+// Канонічна серіалізація об'єкта/значення з відсортованими ключами для детермінованого порівняння (Minor 4, Minor 5)
+function canonicalizeValue(v) {
+  if (Array.isArray(v)) return v.map(canonicalizeValue);
+  if (v && typeof v === 'object') {
+    const sorted = {};
+    for (const k of Object.keys(v).sort()) {
+      if (v[k] !== undefined) sorted[k] = canonicalizeValue(v[k]);
+    }
+    return sorted;
+  }
+  return v;
+}
+
+export function canonicalCardSnapshot(card) {
+  return JSON.stringify({
+    pool_type: card?.pool_type || 'character',
+    category: card?.category || '',
+    value: String(card?.value ?? ''),
+    meta: canonicalizeValue(card?.meta || {})
+  });
+}
+
 // Нормалізований вигляд форми для порівняння: зайві пробіли та порожні рядки змінами не вважаються
 export function normalizeForm(f) {
   const texts = {};
@@ -249,7 +271,12 @@ export function normalizeForm(f) {
   const stages = {};
   for (const key of STAGE_KEYS) stages[key] = parseLines(f.stages[key]).join('\n');
   const cataclysms = (f.cataclysms || []).map(c => [
-    String(c.name ?? '').trim(), String(c.description ?? '').trim(), c.timer_minutes || 0, c.stay_time_months || 0, c.population || 0
+    String(c.name ?? '').trim(),
+    String(c.description ?? '').trim(),
+    c.timer_minutes || 0,
+    c.stay_time_months || 0,
+    c.population || 0,
+    canonicalizeValue(c.extra || {})
   ]);
   return JSON.stringify({ title: f.title.trim(), description: f.description.trim(), texts, stages, ranges: f.ranges, cataclysms });
 }

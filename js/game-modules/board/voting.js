@@ -9,13 +9,8 @@
 //   4. Голосування йде, гравець живий і ще не голосував — форма вибору кандидата.
 //   5. Голосування ще не запускалось — секція порожня.
 
-import { avatarBadgeHtml } from '../../utils/avatar.js';
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
+import { avatarBadgeHtml } from '../../utils/auth/avatar.js';
+import { esc } from '../../utils/auth/security.js';
 
 function candidateTile(id, name) {
   return `

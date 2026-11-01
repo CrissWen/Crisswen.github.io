@@ -1,7 +1,8 @@
 import { ICONS } from '../constants/icons.js';
-import { esc } from '../utils/security.js';
+import { esc } from '../utils/auth/security.js';
 import { REPLAY_STORAGE_KEY } from '../services/replay-service.js';
 import { supabase } from '../services/supabase.js';
+import { checkIsAdmin } from '../services/packs-store.js';
 import { cataclysm } from '../game-modules/board/cataclysm.js';
 import { bunkerInfo } from '../game-modules/board/bunker-info.js';
 import { playerCharacteristics } from '../game-modules/board/player-characteristics.js';
@@ -19,7 +20,7 @@ import {
 import { mountGameTimer, unmountGameTimer } from '../game-modules/timers/game-timer.js';
 import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer } from '../game-modules/timers/cataclysm-timer.js';
 import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
-import * as HostActions from '../utils/host-actions.js';
+import * as HostActions from '../utils/game/host-actions.js';
 import { removeHostPanel } from '../game-modules/host-panel/host-panel.js';
 import { syncHostPanel } from '../game-modules/controllers/host-panel-controller.js';
 import { syncVotingScroll, maybeAutoFinishVoting, handleVoteRadioChange, handleVoteSubmit, resetVotingState } from '../game-modules/controllers/voting-controller.js';
@@ -29,16 +30,17 @@ import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/cont
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
 import { playCataclysmRoulette, hideCataclysmRoulette, isCataclysmRouletteShown, primeCataclysmRouletteAudio } from '../game-modules/overlays/cataclysm-roulette.js';
-import { isCataclysmSpinActive, getSpinTimeline } from '../utils/cataclysm-spin.js';
+import { isCataclysmSpinActive, getSpinTimeline } from '../utils/roulette/cataclysm-spin.js';
 import { showOrientationPrompt, hideOrientationPrompt } from '../game-modules/overlays/orientation-prompt.js';
 import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-modules/board/event-log.js';
 import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-modules/board/personal-notes.js';
-import { buildBoardViewModel } from '../utils/board-view-model.js';
-import { startGame } from '../utils/start-game.js';
+import { buildBoardViewModel } from '../utils/game/board-view-model.js';
+import { startGame } from '../utils/game/start-game.js';
 import { initCustomSelects } from '../ui/custom-select.js';
-import { subscribeToRoom, mergeRoomState } from '../services/room-subscription.js';
+import { subscribeToRoom } from '../services/room-subscription.js';
+import { computeRoomUpdateEffects } from '../game-modules/state/room-update-reducer.js';
 import { syncServerTime, getGlobalTime } from '../services/server-time.js';
-import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
+import { setLastRoom, clearLastRoom } from '../utils/game/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
@@ -53,6 +55,7 @@ let currentRoomCode = null;
 let unsubscribeRoom = null; // відписка від Realtime-каналу кімнати (services/room-subscription.js)
 let currentUserId = null;
 let currentUserName = null;
+let isCurrentUserAdmin = false;
 let isSpectator = false; // глядач: гра вже йде, а гравця немає в players_state (виводиться в updateGameBoard на кожне оновлення)
 let isOfflineReplay = false;
 let localRoomState = null;
@@ -240,36 +243,38 @@ export async function initGame() {
     const isGameStarted = Object.keys(room.bunker_state || {}).length > 0;
     const isPlayerInRoom = room.players_state && room.players_state[currentUserId];
 
-    // Дочекуємось конфігу (base + можливий game-config.local.js) ДО першого рендеру кімнати. Інакше при прямому заході по посиланню
-    // вейтінг-рум міг би побачити лише базові ліміти, поки локальний файл ще вантажиться (getGameConfigSync дає базу).
-    const [bc] = await Promise.all([getGameConfig(), syncServerTime()]); // серверний час потрібен таймерам ще до першого рендеру (syncServerTime ніколи не кидає помилку)
+    // Дочекуємось конфігу (base + можливий game-config.local.js) та перевірки прав адміна ДО першого рендеру кімнати.
+    const [bc, , isAdmin] = await Promise.all([getGameConfig(), syncServerTime(), checkIsAdmin()]);
+    isCurrentUserAdmin = Boolean(isAdmin);
 
     // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
-    // Ліміт на місця (bc.maxPlayersInLobby, config-manager.js) діє виключно на етапі лобі: якщо гра вже йде, цю перевірку ігноруємо.
+    // Атомарний вхід у лобі виконується через SECURITY DEFINER RPC join_room (із серверним контролем місткості під FOR UPDATE).
     if (!isGameStarted && !isPlayerInRoom) {
-      // Свіжий players_state читаємо прямо перед записом (а не беремо з першого запиту): так вікно, в якому двоє
-      // одночасно заходять і затирають один одного, скорочується до самого UPDATE. Повністю гонку закриє лише атомарний запис на сервері.
-      const { data: fresh, error: freshError } = await supabase
-        .from('rooms').select('players_state').eq('room_code', currentRoomCode).single();
-      if (freshError || !fresh) throw new Error(freshError?.message || "Кімнату не знайдено");
-
-      const currentPlayers = fresh.players_state || {};
-      if (!currentPlayers[currentUserId]) {
-        if (Object.keys(currentPlayers).length >= bc.maxPlayersInLobby) {
+      const { error: joinError } = await supabase.rpc('join_room', {
+        p_room: currentRoomCode,
+        p_name: currentUserName,
+        p_max: bc.maxPlayersInLobby
+      });
+      if (joinError) {
+        if (String(joinError.message || '').includes('переповнена')) {
           showGlobalToast('Ця кімната вже переповнена');
           clearLastRoom(currentUserId);
           window.location.hash = '#/lobby';
           return;
         }
-
-        const updatedPlayersState = { ...currentPlayers, [currentUserId]: { name: currentUserName } };
-        const { error: joinError } = await supabase
-          .from('rooms').update({ players_state: updatedPlayersState }).eq('room_code', currentRoomCode);
-        if (joinError) throw new Error(joinError.message);
-        room.players_state = updatedPlayersState;
-      } else {
-        room.players_state = currentPlayers;
+        throw new Error(joinError.message);
       }
+
+      const { data: fresh, error: freshError } = await supabase
+        .from('rooms')
+        .select('players_state, bunker_state, status, version')
+        .eq('room_code', currentRoomCode)
+        .single();
+      if (freshError || !fresh) throw new Error(freshError?.message || "Кімнату не знайдено");
+      room.players_state = fresh.players_state || {};
+      if (fresh.bunker_state) room.bunker_state = fresh.bunker_state;
+      if (fresh.status) room.status = fresh.status;
+      if (typeof fresh.version === 'number') room.version = fresh.version;
     }
 
     // Кімната успішно відкрита — запам'ятовуємо її для вкладки «Гра» в хедері
@@ -346,13 +351,12 @@ function updateGameBoard(roomData, container) {
       roomCode: currentRoomCode,
       playersState: roomData.players_state,
       isHost: isHost,
-      minPlayers: bc.minPlayersToStart,
+      minPlayers: (isHost && isCurrentUserAdmin) ? 1 : bc.minPlayersToStart,
       maxPlayers: bc.maxPlayersInLobby,
       selectedPackId: roomData.selected_pack_id,
       selectedPackTitle: roomData.selected_pack_title,
       packOptions: isHost ? getPackOptions() : null,
-      myId: currentUserId,
-      _needsInit: Boolean(setTimeout(() => initCustomSelects(container), 0))
+      myId: currentUserId
     });
     initCustomSelects(container);
 
@@ -417,7 +421,6 @@ function renderActiveGame(roomData, container) {
       voting: bState.voting,
       players: vm.votingPlayers,
       myId: currentUserId,
-      _needsInit: Boolean(setTimeout(() => initCustomSelects(container), 0)),
       amAlive: !isFinal && !isSpectator && pState[currentUserId]?.is_alive !== false && !pState[currentUserId]?.is_kicked
     })),
     // Особисті замітки (тимчасові, лише в пам'яті вкладки) — між голосуванням і логом подій
@@ -434,6 +437,7 @@ function renderActiveGame(roomData, container) {
   container.innerHTML = order.join("") + ((isFinal && !isOfflineReplay)
     ? '<div class="final-actions"><button type="button" class="hp-btn hp-btn-red final-home-btn" data-final-home>На головну</button></div>'
     : '');
+  initCustomSelects(container);
   if (!isOfflineReplay) {
     container.querySelector('[data-final-home]')?.addEventListener('click', () => {
       clearLastRoom(currentUserId);
@@ -480,48 +484,39 @@ function subscribeToRoomUpdates() {
   unsubscribeRoom = subscribeToRoom(currentRoomCode, handleRoomUpdate);
 }
 
-// Реакції на оновлення рядка кімнати. patch — payload.new з Realtime (може бути неповним, див. mergeRoomState).
+// Реакції на оновлення рядка кімнати. Чисті переходи обчислює computeRoomUpdateEffects (room-update-reducer.js).
 function handleRoomUpdate(patch) {
-  // Фіксуємо id попередньої події ДО злиття стану — щоб відрізнити справжню нову подію від тієї, що вже показана.
-  const prevEventId = localRoomState?.bunker_state?.latest_host_event?.id || 0;
-  const prevDiceId = localRoomState?.bunker_state?.latest_dice?.id || 0;
-  const prevStatus = localRoomState?.status;
-  const wasGameStarted = Object.keys(localRoomState?.bunker_state || {}).length > 0;
+  const fx = computeRoomUpdateEffects(localRoomState, patch, { currentUserId });
+  localRoomState = fx.nextState;
 
-  localRoomState = mergeRoomState(localRoomState, patch);
+  // Старт або скидання гри (з цієї чи іншої вкладки) закриває історію дій: знімок «Скасувати» з минулої гри не має переходити в нову
+  if (fx.shouldClearSnapshot) HostActions.clearSnapshot();
 
   // Якщо гра ще не почалася, і нас видалили з players_state, значить нас вигнали з лобі
-  const isGameStartedNow = Object.keys(localRoomState.bunker_state || {}).length > 0;
-  // Старт або скидання гри (з цієї чи іншої вкладки) закриває історію дій: знімок «Скасувати» з минулої гри не має переходити в нову
-  if (wasGameStarted !== isGameStartedNow) HostActions.clearSnapshot();
-  if (!isGameStartedNow && localRoomState.host_id !== currentUserId && !localRoomState.players_state?.[currentUserId]) {
+  if (fx.kickedFromLobby) {
     showGlobalToast('Вас вигнали з кімнати.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
     return;
   }
 
-  // Ведучий закрив кімнату (host-actions.js closeRoom пише лише status, bunker_state залишається як історія) — повертаємо всіх у лобі
-  if (localRoomState.status === 'closed') {
+  // Ведучий закрив кімнату — повертаємо всіх у лобі
+  if (fx.roomClosed) {
     freezeCataclysmTimer(); // зупиняємо відлік рівно на цій секунді; текст таймера лишається як є
     hideCataclysmRoulette(); // рулетка не повинна блокувати вихід із закритої кімнати
-    // Закриття кімнати — без анімації дверей: якщо вона вже грає (старт або фінал), прибираємо її, щоб оверлей не перейшов у лобі
     awaitingDoorSeal = false;
     cancelBunkerDoorTransition();
-    if (localRoomState.host_id !== currentUserId) showGlobalToast('Ведучий закрив кімнату.');
+    if (fx.notifyHostClosed) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
     return;
   }
 
-  // Ведучий завершив гру (finishGame в host-actions.js): гравців не перекидаємо. Завершена гра більше не «активна» для вкладки «Гра».
-  // Анімація дверей грається лише в клієнтів, які були в кімнаті в момент переходу в finished (prevStatus !== 'finished');
-  // хто зайшов або оновив сторінку пізніше, потрапляє в initGame й одразу бачить фінал без анімації.
-  // Дошка монтується в момент герметизації (onSealed), як і на старті гри.
-  if (localRoomState.status === 'finished') {
+  // Ведучий завершив гру: гравців не перекидаємо, а в момент переходу в finished граємо двері бункера
+  if (fx.roomFinished) {
     hideCataclysmRoulette();
     clearLastRoom(currentUserId);
-    if (prevStatus !== 'finished' && isGameStartedNow) {
+    if (fx.playFinishDoor) {
       awaitingDoorSeal = true;
       playBunkerDoorTransition({
         mode: 'finish',
@@ -535,8 +530,8 @@ function handleRoomUpdate(patch) {
     }
   }
 
-  // Гра щойно почалася (характеристики роздано) — пропонуємо повернути телефон горизонтально або продовжити вертикально
-  if (!wasGameStarted && isGameStartedNow) {
+  // Гра щойно почалася (характеристики роздано)
+  if (fx.playStartDoor) {
     awaitingDoorSeal = true;
     playBunkerDoorTransition({
       roomCode: currentRoomCode || localRoomState?.room_code,
@@ -554,28 +549,20 @@ function handleRoomUpdate(patch) {
     return;
   }
 
-  // Нова подія від ведучого (крадіжка, зміна характеристики тощо) — показуємо всім гравцям тост по-центру екрана.
-  const hostEvent = localRoomState.bunker_state?.latest_host_event;
-  if (hostEvent && hostEvent.id > 0 && hostEvent.id !== prevEventId) {
-    showGlobalToast(hostEvent.text);
+  if (fx.hostEventText) {
+    showGlobalToast(fx.hostEventText);
   }
 
-  // Рулетка катаклізму: новий спін програється в усіх клієнтів за серверним часом; порожній стан (гру скинуто) прибирає оверлей
-  if (isGameStartedNow) {
+  if (fx.isGameStartedNow) {
     maybePlayCataclysmRoulette(localRoomState);
   } else {
     hideCataclysmRoulette();
     playedSpinId = null;
   }
 
-  // Новий кидок кубика від ведучого — у всіх клієнтів (включно з ведучим і глядачами) локально запускається анімація.
-  // Порівняння по id не дає повторно програти старий кидок при будь-якому іншому оновленні рядка кімнати.
-  // Записи старого формату (без type/value, з d20+d6) ігноруємо.
-  const diceRoll = localRoomState.bunker_state?.latest_dice;
-  if (diceRoll && diceRoll.id > 0 && diceRoll.id !== prevDiceId && diceRoll.type) {
-    showDiceRoll(diceRoll.type, diceRoll.value);
-    // Запис про цей кидок у лозі ховаємо, поки кубик крутиться, і розкриваємо в момент зупинки
-    pendingDiceLogId = diceRoll.id;
+  if (fx.newDiceRoll) {
+    showDiceRoll(fx.newDiceRoll.type, fx.newDiceRoll.value);
+    pendingDiceLogId = fx.newDiceRoll.id;
     clearTimeout(pendingDiceLogTimer);
     pendingDiceLogTimer = setTimeout(() => {
       pendingDiceLogId = null;
@@ -765,6 +752,7 @@ async function handleGlobalClick(e) {
 export function cleanupGame() {
   isSpectator = false;
   isOfflineReplay = false;
+  isCurrentUserAdmin = false;
   hideOrientationPrompt();
   hideGlobalTooltip();
   unmountHeaderCollapseTab();

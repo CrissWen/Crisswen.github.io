@@ -1,4 +1,5 @@
 import { supabase } from '../services/supabase.js';
+import { esc } from '../utils/auth/security.js';
 
 // Статуси кімнати, які вже не вважаються активними. closeRoom (host-actions.js) тепер сам виставляє status: 'closed'
 // в тому ж запиті, що й bunker_state.room_closed, тож цей фільтр вже працює для нових закритих кімнат.
@@ -37,12 +38,6 @@ async function fetchUserActiveRooms(userId) {
 // яке в ПРОЄКТІ ніде реально не виставляється в 'playing'. Саме поле status теж перевіряю на майбутнє, якщо воно з'явиться.
 function isRoomPlaying(room) {
 return Object.keys(room.bunker_state || {}).length > 0 || room.status === 'playing';
-}
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
 }
 
 // HTML-вміст .reconnect-panel: або картки активних кімнат, або напис "Немає активних ігор", якщо масив порожній.

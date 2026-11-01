@@ -1,4 +1,5 @@
 import { supabase } from '../services/supabase.js';
+import { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth/auth-validation.js';
 
 const inputStyle = "padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text);";
 
@@ -109,6 +110,13 @@ export async function initAuth() {
       errorText.style.display = 'block';
       return;
     }
+    // I-7: при реєстрації — суворі правила нікнейма; при вході — лише те, що ламає фейкову пошту (старі акаунти не блокуємо)
+    const nameError = validateUsername(username, { strict: mode === 'register' });
+    if (nameError) {
+      errorText.textContent = nameError;
+      errorText.style.display = 'block';
+      return;
+    }
     if (!password) {
       errorText.textContent = "Будь ласка, введіть пароль!";
       errorText.style.display = 'block';
@@ -122,7 +130,7 @@ export async function initAuth() {
     }
 
     // Supabase Auth працює з email, тому для входу за нікнеймом використовуємо фейкову пошту
-    const fakeEmail = `${username}@bunker.local`;
+    const fakeEmail = buildFakeEmail(username);
 
     const loadingText = mode === 'register' ? "Реєстрація..." : "Завантаження...";
     loginBtn.textContent = loadingText;
@@ -140,7 +148,7 @@ export async function initAuth() {
 
         if (error) {
           // Ім'я (username) має UNIQUE-обмеження в БД — зайняте ім'я повертає помилку від тригера/таблиці
-          throw new Error("Це ім'я вже зайняте");
+          throw new AuthUiError(mapAuthError(error, 'register')); // I-7: справжня причина, а не завжди «ім'я зайняте»
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -148,7 +156,7 @@ export async function initAuth() {
           password: password
         });
 
-        if (error) throw new Error("Невірне ім'я або пароль");
+        if (error) throw new AuthUiError(mapAuthError(error, 'login'));
       }
 
       // Успішний вхід/реєстрація — перенаправляємо гравця в Лобі. Якщо він прийшов за посиланням-запрошенням (#/login?join=КОД, збережений роутером у app.js),
@@ -158,7 +166,7 @@ export async function initAuth() {
       window.location.hash = joinCode ? `#/lobby?join=${joinCode}` : '#/lobby';
 
     } catch (err) {
-      errorText.textContent = err.message;
+      errorText.textContent = err instanceof AuthUiError ? err.message : mapAuthError(err, mode);
       errorText.style.display = 'block';
       loginBtn.textContent = BUTTON_TEXT[mode];
       loginBtn.disabled = false;

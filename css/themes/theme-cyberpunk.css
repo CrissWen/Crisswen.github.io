@@ -74,6 +74,7 @@ body{
   box-shadow: 0 10px 30px rgba(0,0,0,.8), 0 0 15px rgba(0, 240, 255, .2);
 }
 .pe-select-custom__item:hover,
+.pe-select-custom__item.is-active,
 .pe-combo__item:hover{
   background: color-mix(in srgb, var(--ok) 18%, transparent);
   color: var(--ok);

@@ -4,18 +4,9 @@
  */
 
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
+import { esc } from '../utils/auth/security.js';
 
 let activeTransition = null;
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 // Тексти HUD на дверях за режимами: 'start' — старт гри, 'finish' — завершення гри (там сама анімація, інші написи).
 // closing — початок (закриття стулок), sealed — повна герметизація, opening — відкриття.
@@ -79,7 +70,7 @@ function buildBunkerOverlayMarkup({ roomCode, texts } = {}) {
           <div class="bunker-door__piston"></div>
           <div class="bunker-door__stencil">
             <span class="bunker-door__stencil-sub">ЗАХИСНИЙ КОНТУР // СЕКТОР 01</span>
-            <span class="bunker-door__stencil-code" data-vault-room-code>${escapeHtml(displayCode)}</span>
+            <span class="bunker-door__stencil-code" data-vault-room-code>${esc(displayCode)}</span>
             <!-- Емблема радіаційної/біологічної ізоляції -->
             <svg class="bunker-door__watermark" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
               <circle cx="32" cy="32" r="6" />
@@ -151,10 +142,10 @@ function buildBunkerOverlayMarkup({ roomCode, texts } = {}) {
         <div class="bunker-vault-hud" data-vault-hud>
           <div class="bunker-vault-hud__beacon">
             <span class="bunker-vault-hud__dot"></span>
-            <span data-vault-beacon-text>${escapeHtml(beacon)}</span>
+            <span data-vault-beacon-text>${esc(beacon)}</span>
           </div>
-          <h3 class="bunker-vault-hud__title" data-vault-title>${escapeHtml(title)}</h3>
-          <div class="bunker-vault-hud__sub" data-vault-sub>${escapeHtml(sub)}</div>
+          <h3 class="bunker-vault-hud__title" data-vault-title>${esc(title)}</h3>
+          <div class="bunker-vault-hud__sub" data-vault-sub>${esc(sub)}</div>
         </div>
       </div>
 
@@ -362,8 +353,10 @@ export async function playBunkerDoorTransition({
     if (cleanedUp) return;
     stopSiren();
     abortController.abort();
-    await runSealedCallback();
+    // I-11: екран розблоковуємо одразу — завислий onSealed не має тримати двері поверх гри.
+    // onSealed усе одно виконується (стан гри мусить змонтуватись), onComplete йде після нього.
     cleanupDOM();
+    await runSealedCallback();
     runCompleteCallback();
   };
 

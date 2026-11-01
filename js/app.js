@@ -5,13 +5,14 @@ import { renderGame, initGame, cleanupGame } from './pages/game.js';
 import { renderProfile, initProfile, cleanupProfile, selectProfileTab } from './pages/profile.js'; // Підключаємо сторінку профілю
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
-import { applyStoredTheme } from './utils/theme-manager.js';
-import { syncGameTab } from './utils/last-session.js';
-import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/avatar.js';
+import { applyStoredTheme } from './utils/common/theme-manager.js';
+import { syncGameTab } from './utils/game/last-session.js';
+import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/auth/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
 import { initCustomSelects } from './ui/custom-select.js';
 import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
+import { firstChar } from './utils/auth/initial.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -84,7 +85,7 @@ const headerUserAvatar = document.getElementById("header-user-avatar");
 // Автоматичне оновлення аватарки в хедері при надходженні Realtime-події
 onAvatarChange((newUrl) => {
   if (headerUserAvatar && headerUserName) {
-    const letter = headerUserName.textContent.trim().charAt(0) || '?';
+    const letter = firstChar(headerUserName.textContent.trim()) || '?';
     setAvatarEl(headerUserAvatar, letter, newUrl);
   }
 });
@@ -114,7 +115,7 @@ async function router() {
 
   // Синхронізуємо час із сервером один раз, коли користувач залогінений
   if (session) {
-    import('./utils/time-sync.js').then(({ syncTime }) => syncTime());
+    import('./utils/game/time-sync.js').then(({ syncTime }) => syncTime());
   }
 
   // --- ЛОГІКА ХЕДЕРА ---
@@ -128,7 +129,7 @@ async function router() {
     // Вкладка «Гра»: веде до останньої активної кімнати або сіра, якщо такої немає (без await — не гальмуємо рендер сторінки)
     syncGameTab(session.user.id);
 
-    const firstLetter = username.charAt(0);
+    const firstLetter = firstChar(username);
     headerUserAvatar.textContent = firstLetter;
 
     applyAvatarLetterPadding(headerUserAvatar, firstLetter, 3);

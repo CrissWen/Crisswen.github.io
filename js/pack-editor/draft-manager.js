@@ -1,3 +1,4 @@
+import { clone } from '../utils/common/clone.js';
 // ===== Менеджер локальних чернеток редактора паків (localStorage) =====
 // Ключ: truebunker_draft_<userId>_<packId> (ізоляція між користувачами на одному комп'ютері; новий пак → packId = 'new').
 // Модуль не знає про DOM редактора й про Supabase: стан йому передає редактор (saveDraft) або функція-постачальник (bindLifecycle).
@@ -13,14 +14,6 @@ const keyOf = (packId, userId) => `${DRAFT_PREFIX}${userId}_${packId || 'new'}`;
 const isQuotaError = err =>
   err && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22 || err.code === 1014);
 
-function clone(value) {
-  if (value === undefined) return undefined;
-  try {
-    return structuredClone(value);
-  } catch {
-    return JSON.parse(JSON.stringify(value));
-  }
-}
 
 let debounceTimer = null;
 let pendingPayload = null;

@@ -24,6 +24,12 @@ class SoundManager {
     this._lastPlayedAt = new Map(); // Час останнього відтворення (ms): soundId -> timestamp
     this._activeInstances = new Map(); // Активні ID звуків: soundId -> Set<number>
     this._missingFiles = new Set(); // Звуки, чиї файли ще не додані на диск (фоллбек на синт)
+    // I-3: збій завантаження не блокує файл назавжди: запис протухає через _missingRetryMs, скидається подією 'online',
+    // а після _missingMaxAttempts невдач файл вважається справді відсутнім
+    this._missingAttempts = new Map(); // soundId -> кількість невдалих завантажень поспіль
+    this._missingSince = new Map(); // soundId -> Date.now() останнього збою
+    this._missingRetryMs = 30000;
+    this._missingMaxAttempts = 3;
     this._ambientWanted = false; // гра хоче грати атмосферу (startAmbient): відновлюється після роз-mute / підняття гучності
     this._silentLoad = new Set(); // Звуки, що вантажаться наперед (preload): помилка завантаження не має грати синтез-фоллбек при старті
     this._listeners = new Set(); // Підписники на зміну налаштувань гучності
@@ -34,11 +40,13 @@ class SoundManager {
     this._ambientFadeTimeout = null; // Таймаут згасання при згортанні вкладки
     this._initialized = false;
     this._globalClicksDisabled = false;
+    this._domCleanups = []; // функції зняття глобальних слухачів (для destroy())
 
     this._loadFromStorage();
     // Також працює на окремій сторінці тесту виживання, де init() не викликається.
     if (typeof window !== 'undefined') {
-      window.addEventListener('storage', (event) => {
+      this._listen(window, 'online', () => this._retryMissing()); // I-3: мережа повернулась -> пробуємо завантажити файли знову
+      this._listen(window, 'storage', (event) => {
         if (event.key !== STORAGE_KEY_SETTINGS && event.key !== null) return;
         this._loadFromStorage();
         this._applyGlobalHowlerState();
@@ -46,6 +54,26 @@ class SoundManager {
         this._notifyListeners();
       });
     }
+  }
+
+  // Реєструє слухача і запам'ятовує, як його зняти: без цього обробники жили б вічно (тести, скидання середовища)
+  _listen(target, type, handler, options) {
+    target.addEventListener(type, handler, options);
+    this._domCleanups.push(() => target.removeEventListener(type, handler, options));
+  }
+
+  /**
+   * Знімає усі глобальні слухачі подій (storage, visibilitychange, розблокування, глобальні UI-хуки) і зупиняє звук.
+   * Після destroy() можна знову викликати init().
+   */
+  destroy() {
+    this._domCleanups.splice(0).forEach(cleanup => {
+      try { cleanup(); } catch (_) {}
+    });
+    clearTimeout(this._ambientFadeTimeout);
+    this._ambientFadeTimeout = null;
+    this.stopAll();
+    this._initialized = false;
   }
 
   /**
@@ -353,7 +381,7 @@ class SoundManager {
     }
 
     // 4. Якщо файл раніше не знайдено на диску або Howler недоступний — граємо синтезований фоллбек
-    if (this._missingFiles.has(soundId) || typeof window === 'undefined' || !window.Howl) {
+    if (this._isMissing(soundId) || typeof window === 'undefined' || !window.Howl) {
       this._playSynthFallback(config, effectiveVol, rate, options.loop);
       return null;
     }
@@ -403,6 +431,7 @@ class SoundManager {
    * Зупиняє відтворення конкретного звуку.
    */
   stop(soundId) {
+    this._stopCustomFade(soundId); // I-2: інакше інтервал фейду далі мутує гучність зупиненого звуку
     const howl = this._howls.get(soundId);
     if (howl) {
       howl.stop();
@@ -421,6 +450,10 @@ class SoundManager {
    */
   stopAll() {
     this._ambientWanted = false;
+    if (this._customFadeIntervals) { // I-2: гасимо всі активні фейди
+      for (const id of this._customFadeIntervals.values()) clearInterval(id);
+      this._customFadeIntervals.clear();
+    }
     if (typeof window !== 'undefined' && window.Howler) {
       window.Howler.stop();
     }
@@ -492,19 +525,16 @@ class SoundManager {
       preload: Boolean(config.preload),
       volume: this.getEffectiveVolume(config.id),
       onload: () => {
+        this._missingAttempts.delete(config.id); // I-3: успішне завантаження скидає лічильник збоїв
         this._silentLoad.delete(config.id);
       },
       onend: (id) => {
         activeSet.delete(id);
-        if (config.id === SOUND_IDS.BUNKER_AMBIENT && activeSet.size === 0 && !config.loop) {
-          this._ambientWanted = false;
-        }
       },
+      // _ambientWanted змінюють лише явні startAmbient()/stopAmbient()/stop()/stopAll(): Howler шле onstop асинхронно
+      // і після власного howl.stop() усередині play() (interrupt), тож скидання тут блокувало б відновлення після unmute
       onstop: (id) => {
         activeSet.delete(id);
-        if (config.id === SOUND_IDS.BUNKER_AMBIENT && activeSet.size === 0) {
-          this._ambientWanted = false;
-        }
       },
       onplayerror: (id, err) => {
         console.warn(`[SoundManager] Відтворення "${config.id}" заблоковане політикою браузера (Autoplay). Клікніть на сторінці для розблокування:`, err);
@@ -517,7 +547,7 @@ class SoundManager {
         // Якщо аудіофайл ще фізично не поклали у папку /audio — перемикаємо цей звук на синтезатор
         const wasSilent = this._silentLoad.delete(config.id); // помилка передзавантаження при старті не повинна грати звук
         if (!this._missingFiles.has(config.id)) {
-          this._missingFiles.add(config.id);
+          this._markMissing(config.id);
           const effVol = this.getEffectiveVolume(config.id);
           if (!wasSilent && effVol > 0.001) {
             this._playSynthFallback(config, effVol, 1, config.loop);
@@ -534,6 +564,44 @@ class SoundManager {
   // Процедурний Web Audio API Синтезатор (Делегування до AudioSynth)
   // ===========================================================================
 
+  // I-3: облік звуків, чий файл не вдалося завантажити (перехід на синтез-фоллбек з можливістю повтору)
+  _markMissing(soundId) {
+    this._missingFiles.add(soundId);
+    this._missingAttempts.set(soundId, (this._missingAttempts.get(soundId) || 0) + 1);
+    this._missingSince.set(soundId, Date.now());
+  }
+
+  _clearMissing(soundId) {
+    this._missingFiles.delete(soundId);
+    this._missingSince.delete(soundId);
+    // Невдалий Howl лишається в стані 'unloaded' назавжди: прибираємо його, щоб наступний play() створив свіжий
+    const stale = this._howls.get(soundId);
+    this._howls.delete(soundId);
+    this._activeInstances.get(soundId)?.clear();
+    try { stale?.unload?.(); } catch (_) {}
+  }
+
+  /** true, якщо файл звуку вважається відсутнім; протухлий запис (вікно повтору минуло) знімається і дозволяє нову спробу. */
+  _isMissing(soundId) {
+    if (!this._missingFiles.has(soundId)) return false;
+    if ((this._missingAttempts.get(soundId) || 0) >= this._missingMaxAttempts) return true;
+    const since = this._missingSince.get(soundId) || 0;
+    if (Date.now() - since >= this._missingRetryMs) {
+      this._clearMissing(soundId);
+      return false;
+    }
+    return true;
+  }
+
+  /** Мережа повернулась: даємо ще одну спробу всім звукам, що не вичерпали ліміт збоїв. */
+  _retryMissing() {
+    for (const soundId of [...this._missingFiles]) {
+      if ((this._missingAttempts.get(soundId) || 0) < this._missingMaxAttempts) {
+        this._clearMissing(soundId);
+      }
+    }
+  }
+
   _getAudioContext() {
     const ctx = AudioSynth.getContext();
     this._audioCtx = ctx;
@@ -543,7 +611,7 @@ class SoundManager {
   _playSynthFallback(config, effectiveVol, rate = 1, loop = undefined) {
     const type = config.synthType || 'click';
     if (type === 'drone' || config.id === SOUND_IDS.BUNKER_AMBIENT) {
-      this._toggleAmbientDrone(effectiveVol);
+      this._startAmbientDrone(effectiveVol);
       return;
     }
 
@@ -554,9 +622,10 @@ class SoundManager {
     });
   }
 
-  _toggleAmbientDrone(effectiveVol, rampDuration = 0.6) {
-    if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
-      this._stopAmbientDrone();
+  // Ідемпотентний старт: якщо дрон уже грає, лише оновлюємо гучність. Раніше це був toggle, і повторний play() вимикав звук
+  _startAmbientDrone(effectiveVol, rampDuration = 0.6) {
+    if (AudioSynth.isAmbientPlaying()) {
+      AudioSynth.setAmbientVolume(effectiveVol, rampDuration * 1000);
       return;
     }
 
@@ -592,9 +661,9 @@ class SoundManager {
       window.removeEventListener('click', unlock, true);
     };
 
-    window.addEventListener('pointerdown', unlock, true);
-    window.addEventListener('keydown', unlock, true);
-    window.addEventListener('click', unlock, true);
+    this._listen(window, 'pointerdown', unlock, true);
+    this._listen(window, 'keydown', unlock, true);
+    this._listen(window, 'click', unlock, true);
   }
 
   /**
@@ -653,7 +722,7 @@ class SoundManager {
   _setupVisibilityListener() {
     const FADE_DURATION_MS = 350;
 
-    document.addEventListener('visibilitychange', () => {
+    this._listen(document, 'visibilitychange', () => {
       if (this._settings.backgroundAmbient) return;
 
       if (document.hidden) {
@@ -709,7 +778,7 @@ class SoundManager {
         if (effVol <= 0.001) return;
 
         const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
-        if (ambientHowl && !this._missingFiles.has(SOUND_IDS.BUNKER_AMBIENT) && !wasDrone) {
+        if (ambientHowl && !this._isMissing(SOUND_IDS.BUNKER_AMBIENT) && !wasDrone) {
           if (Array.isArray(ambientHowl._queue)) {
             ambientHowl._queue = [];
           }
@@ -724,7 +793,7 @@ class SoundManager {
         } else if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
           AudioSynth.setAmbientVolume(effVol, FADE_DURATION_MS);
         } else if (shouldResume) {
-          this._toggleAmbientDrone(effVol, FADE_DURATION_MS / 1000);
+          this._startAmbientDrone(effVol, FADE_DURATION_MS / 1000);
         }
       }
     });
@@ -737,7 +806,8 @@ class SoundManager {
   _setupGlobalUIHooks() {
     let lastHoveredLock = null;
 
-    document.addEventListener(
+    this._listen(
+      document,
       'pointerover',
       (e) => {
         if (e.pointerType && e.pointerType !== 'mouse') return;
@@ -776,7 +846,8 @@ class SoundManager {
       '[aria-disabled="true"]',
     ].join(', ');
 
-    document.addEventListener(
+    this._listen(
+      document,
       'click',
       (e) => {
         if (this._globalClicksDisabled) return;

@@ -1,6 +1,6 @@
 import { supabase } from '../../services/supabase.js';
-import { pushLog } from '../log-writer.js';
-import { randInt } from '../random.js';
+import { pushLog, nextEventId } from '../game/log-writer.js';
+import { randInt } from '../common/random.js';
 import { getRoom, saveRoom, snapshot, clearSnapshot } from './room-store.js';
 import { setHostEvent, nameOf } from './common.js';
 import { clearTimerAutoStop } from './actions-timer.js';
@@ -23,7 +23,7 @@ export async function startVoting(roomCode) {
   snapshot(room);
   bState.voting = { isActive: true, votes: {} };
   setHostEvent(bState, 'Ведучий запустив голосування');
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
 }
 
 // Автозавершення голосування: викликається клієнтом ведучого (game.js -> maybeAutoFinishVoting), коли проголосували всі живі.
@@ -45,7 +45,7 @@ export async function finishVoting(roomCode) {
   }
 
   bState.voting = { ...bState.voting, isActive: false, totalVoters };
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
 }
 
 // Кількість граней для кожного типу кубика: незалежні кидки d20 і d6.
@@ -62,11 +62,12 @@ export async function rollDice(roomCode, type) {
   const room = await getRoom(roomCode);
   const bState = room.bunker_state || {};
   const value = randInt(1, sides);
-  const id = Date.now();
+  const prevDiceId = Number(bState.latest_dice?.id) || 0;
+  const id = Math.max(nextEventId(), prevDiceId + 1);
   bState.latest_dice = { id, type, value };
   // Запис у лозі має id кидка: клієнти ховають його до зупинки кубика (див. game.js), щоб не видати результат раніше анімації
   pushLog(bState, `Ведучий кинув кубик ${type}, випало ${value}`, id);
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
   return { type, value };
 }
 
@@ -77,7 +78,7 @@ export async function changeHost(roomCode, newHostId) {
   if (newHostId === room.host_id) throw new Error('Цей гравець уже ведучий');
   const bState = room.bunker_state || {};
   setHostEvent(bState, `Ведучий передав права ведучого гравцю ${nameOf(pState, newHostId)}`);
-  await saveRoom(roomCode, { host_id: newHostId, bunker_state: bState });
+  await saveRoom(roomCode, { host_id: newHostId, bunker_state: bState }, room.version);
   // Передачу ролі скасувати не можна (панель зникає в колишнього ведучого одразу), тому знімка ця дія не робить, а старий скидає.
   // Інакше після повернення ролі (А -> Б -> А) «Скасувати» відкотило б усе, що зробив Б. Новий ведучий починає без знімка:
   // «Скасувати» неактивне до його першої дії.
@@ -110,17 +111,17 @@ export async function toggleKickPlayer(roomCode, playerId) {
     ? `Ведучий повернув гравця ${nameOf(pState, playerId)}`
     : `Ведучий вигнав гравця ${nameOf(pState, playerId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function kickPlayerFromLobby(roomCode, playerId) {
   const room = await getRoom(roomCode);
   const pState = room.players_state || {};
   if (!playerId || !pState[playerId]) return;
-  
+
   delete pState[playerId];
-  
-  await saveRoom(roomCode, { players_state: pState });
+
+  await saveRoom(roomCode, { players_state: pState }, room.version);
 }
 
 export async function restartGame(roomCode) {
@@ -128,7 +129,7 @@ export async function restartGame(roomCode) {
   const pState = room.players_state || {};
   const resetPlayers = {};
   Object.entries(pState).forEach(([id, p]) => { resetPlayers[id] = { name: p.name }; });
-  await saveRoom(roomCode, { players_state: resetPlayers, bunker_state: {} });
+  await saveRoom(roomCode, { players_state: resetPlayers, bunker_state: {} }, room.version);
   // Після скидання панель ведучого зникає, тож скасувати його неможливо. Старий знімок не лишаємо:
   // інакше в новій грі «Скасувати» була б активна й відкотила б її до минулої гри.
   clearSnapshot();
@@ -141,13 +142,24 @@ export async function closeRoom(roomCode, stoppedTimer = null) {
   // Статистику («Закрити кімнату») НЕ зараховуємо: вона нараховується лише у finishGame() нижче.
   // Завершену гру (finished) закрити не можна: стара вкладка ведучого не повинна викидати гравців із фіналу, а статистика вже зарахована.
   const room = await getRoom(roomCode);
-  if (room.status === 'finished') throw new Error('Гру вже завершено: гравці переглядають підсумки');
+  if (room.status === 'finished' || room.status === 'closed') {
+    throw new Error('Гру вже завершено: гравці переглядають підсумки');
+  }
 
   const patch = { status: 'closed' };
   if (stoppedTimer) {
     patch.bunker_state = { ...(room.bunker_state || {}), stopped_timer: stoppedTimer };
   }
-  await saveRoom(roomCode, patch);
+  const { data, error } = await supabase
+    .from('rooms')
+    .update(patch)
+    .eq('room_code', roomCode)
+    .not('status', 'in', '(finished,closed)')
+    .select('room_code');
+  if (error) throw new Error(error.message || 'Не вдалося закрити кімнату');
+  if (!data || data.length === 0) {
+    throw new Error('Гру вже завершено: гравці переглядають підсумки');
+  }
   clearSnapshot();
 }
 
@@ -158,11 +170,11 @@ export function countAlivePlayers(playersState) {
   return Object.values(playersState || {}).filter(p => p && p.is_alive !== false && !p.is_kicked).length;
 }
 
-// Кількість місць у бункері: bunker_state.capacity; якщо його ще немає — гравців / 2 з округленням вниз (як при старті гри).
+// Кількість місць у бункері: bunker_state.capacity; якщо його ще немає — гравців / 2 з округленням вниз (але не менше 1, як при старті гри).
 export function getBunkerCapacity(room) {
   const raw = room?.bunker_state?.capacity;
   if (raw !== undefined && raw !== null && Number.isFinite(Number(raw))) return Number(raw);
-  return Math.floor(Object.keys(room?.players_state || {}).length / 2);
+  return Math.max(1, Math.floor(Object.keys(room?.players_state || {}).length / 2));
 }
 
 // true — живих не більше, ніж місць: ведучий бачить «Завершити гру», інакше «Закрити кімнату».

@@ -1,5 +1,5 @@
 import { PERFECT_HEALTH_LABEL, HEAL_PERFECT, CHAR_TYPE_MAP, DELETABLE_CHARACTERISTICS } from './constants.js';
-import { randInt, shuffleArray } from '../random.js';
+import { randInt } from '../common/random.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { resolveIds, setHostEvent, nameOf, labelOf, targetPhrase } from './common.js';
@@ -9,7 +9,7 @@ import {
 } from './characteristics.js';
 
 // ===== Дії з характеристиками гравців =====
-// Шаблон кожної дії: getRoom → snapshot (для «Скасувати») → зміна players_state/bunker_state → setHostEvent → saveRoom.
+// Шаблон кожної дії: getRoom → snapshot (для «Скасувати») → зміна players_state/bunker_state → setHostEvent → saveRoom(..., room.version).
 // Момент виклику snapshot() у різних діях різний свідомо (див. коментарі), тому спільної обгортки немає.
 
 export async function changeCharacteristic(roomCode, targetId, charType) {
@@ -36,7 +36,7 @@ export async function changeCharacteristic(roomCode, targetId, charType) {
 
   setHostEvent(bState, `Ведучий змінив характеристику «${labelOf(charType)}» ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function changeExperience(roomCode, targetId, charType, newExpLevel) {
@@ -58,7 +58,7 @@ export async function changeExperience(roomCode, targetId, charType, newExpLevel
   const typeName = charType === 'hobby' ? 'хобі' : 'професії';
   setHostEvent(bState, `Ведучий встановив стаж ${typeName} «${newExpLevel}» ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
@@ -76,7 +76,7 @@ export async function changeDiseaseSeverity(roomCode, targetId, severityLevel) {
 
   setHostEvent(bState, `Ведучий встановив ступінь хвороби «${severityLevel}» ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function changeBodyType(roomCode, targetId, bodyType) {
@@ -110,7 +110,7 @@ export async function changeBodyType(roomCode, targetId, bodyType) {
 
   setHostEvent(bState, `Ведучий встановив статуру «${bodyType}» ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function invertGender(roomCode, targetId) {
@@ -128,7 +128,7 @@ export async function invertGender(roomCode, targetId) {
 
   setHostEvent(bState, `Ведучий змінив стать ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function swapCharacteristics(roomCode, charType, target1, target2) {
@@ -151,7 +151,7 @@ export async function swapCharacteristics(roomCode, charType, target1, target2) 
   const eventText = `Ведучий обміняв характеристику «${labelOf(charType)}» між ${nameOf(pState, target1)} та ${nameOf(pState, target2)}`;
 
   setHostEvent(bState, eventText);
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function shiftAnnulCharacteristics(roomCode, charType, direction = 'cw') {
@@ -172,7 +172,7 @@ export async function shiftAnnulCharacteristics(roomCode, charType, direction = 
   const dirText = direction === 'ccw' ? 'проти годинникової' : 'за годинниковою';
   setHostEvent(bState, `Ведучий зсунув характеристику «${labelOf(charType)}» між гравцями (${dirText})`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export async function healPlayer(roomCode, targetId, healAction) {
@@ -195,7 +195,7 @@ export async function healPlayer(roomCode, targetId, healAction) {
 
   setHostEvent(bState, `Ведучий вилікував ${targetPhrase(pState, targetId, 'genitive')}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 // customText (необов'язково): якщо не порожній — БД не чіпаємо, додається саме цей текст.
@@ -224,7 +224,7 @@ export async function addExtraCharacteristic(roomCode, targetId, charCategory, c
 
   setHostEvent(bState, `Ведучий додав додаткову характеристику «${labelOf(charCategory)}» ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 // Універсальне "Видалити характеристику": будь-яке поле зі списку DELETABLE_CHARACTERISTICS (constants.js) стає порожнім.
@@ -251,7 +251,7 @@ export async function deleteCharacteristic(roomCode, targetId, charKey) {
 
   setHostEvent(bState, `Ведучий видалив характеристику «${meta.label}» у ${targetPhrase(pState, targetId, 'genitive')}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 // Старий вхід для рюкзака / крупного інвентаря — тепер тонка обгортка над deleteCharacteristic (в панелі не використовується).
@@ -286,7 +286,7 @@ async function setChildfree(roomCode, targetId, value) {
     ? `Ведучий зробив ${targetPhrase(pState, targetId, 'genitive')} чайлдфрі`
     : `Ведучий вилікував ${targetPhrase(pState, targetId, 'genitive')} від чайлдфрі`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 export const makeChildfree = (roomCode, targetId) => setChildfree(roomCode, targetId, true);
@@ -310,7 +310,7 @@ export async function curePhobia(roomCode, targetId) {
 
   setHostEvent(bState, `Ведучий вилікував від фобії ${targetPhrase(pState, targetId, 'genitive')}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }
 
 // Задати конкретну стать (з пулу пака) і перегенерувати вік під неї. Вже маючих цю стать пропускаємо.
@@ -333,5 +333,5 @@ export async function setGender(roomCode, targetId, genderValue) {
 
   setHostEvent(bState, `Ведучий встановив стать «${card.value}» ${targetPhrase(pState, targetId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }

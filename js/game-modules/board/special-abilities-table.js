@@ -1,7 +1,8 @@
-import { esc, unescapeApos } from '../../utils/security.js';
-import { avatarImgHtml, profileTriggerAttrs } from '../../utils/avatar.js';
+import { esc, unescapeApos } from '../../utils/auth/security.js';
+import { avatarImgHtml, profileTriggerAttrs } from '../../utils/auth/avatar.js';
 import { isBlockCollapsed } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
+import { firstChar } from '../../utils/auth/initial.js';
 
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.
@@ -37,7 +38,7 @@ export function specialAbilitiesTable(players, opts = {}) {
     .map((p) => {
       const rowClass = isOutPlayer(p) ? 'kicked-player' : '';
       const cleanName = unescapeApos(p.name);
-      const firstLetter = cleanName ? cleanName[0] : '';
+      const firstLetter = firstChar(cleanName);
       return `
         <tr data-player="${esc(cleanName)}" class="${rowClass}">
           <td class="player-cell"><span class="avatar" ${profileTriggerAttrs(p.id, cleanName, { focusable: true })}>${esc(firstLetter)}${avatarImgHtml(p.id)}</span>${esc(cleanName)}${statusBadge(p)}</td>

@@ -1,3 +1,4 @@
+import { clone } from '../utils/common/clone.js';
 // ===== Історія дій редактора (Undo / Redo), кільцевий буфер на 30 дій =====
 // Дія: { type, category, description, before, after }, де before/after — знімки стану (structuredClone).
 // Сам менеджер не знає, як застосувати знімок до редактора: це робить applier, який реєструє editor.js (setApplier).
@@ -9,14 +10,6 @@ export const ACTION_TYPES = [
   'STAGES_REORDER', 'STAGE_ADD', 'STAGE_DELETE', 'LLM_TEXT_CHANGE'
 ];
 
-function clone(value) {
-  if (value === undefined) return undefined;
-  try {
-    return structuredClone(value);
-  } catch {
-    return JSON.parse(JSON.stringify(value));
-  }
-}
 
 export class HistoryManager {
   constructor() {
@@ -52,8 +45,9 @@ export class HistoryManager {
 
   undo() {
     if (!this.canUndo()) return null;
-    const action = this.undoStack.pop();
+    const action = this.undoStack[this.undoStack.length - 1];
     this._run(action.before, action, 'undo');
+    this.undoStack.pop();
     this.redoStack.push(action);
     this._emit();
     return action;
@@ -61,8 +55,9 @@ export class HistoryManager {
 
   redo() {
     if (!this.canRedo()) return null;
-    const action = this.redoStack.pop();
+    const action = this.redoStack[this.redoStack.length - 1];
     this._run(action.after, action, 'redo');
+    this.redoStack.pop();
     this.undoStack.push(action);
     this._emit();
     return action;

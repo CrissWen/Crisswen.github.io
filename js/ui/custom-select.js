@@ -7,13 +7,14 @@
  * Provides:
  * - Two-way sync with native <select> (fires native 'change' & 'input' events)
  * - Dynamic options sync via MutationObserver
- * - Full keyboard navigation (ArrowUp, ArrowDown, Enter, Space, Escape, Tab)
- * - Complete accessibility (aria-haspopup, aria-expanded, role="listbox", role="option")
+ * - Full keyboard navigation (ArrowUp/ArrowDown/Home/End move the highlight only; Enter/Space confirm; Escape/Tab close without change)
+ * - Complete accessibility (ARIA combobox: role="combobox", aria-controls, aria-activedescendant, aria-expanded, role="listbox", role="option")
  * - Outside click handling
  */
 
 // Keep track of registered document listeners
 let globalListenersAttached = false;
+let customSelectUid = 0; // унікальні id для listbox/опцій (потрібні aria-controls та aria-activedescendant)
 
 function ensureGlobalListeners() {
   if (globalListenersAttached || typeof document === 'undefined') return;
@@ -49,7 +50,9 @@ export function closeAllCustomSelects(exceptWrap = null) {
     if (btn) {
       btn.classList.remove('is-open');
       btn.setAttribute('aria-expanded', 'false');
+      btn.removeAttribute('aria-activedescendant');
     }
+    drop.querySelectorAll('.is-active').forEach(item => item.classList.remove('is-active'));
   });
 }
 
@@ -164,6 +167,41 @@ export function initCustomSelect(selectEl, options = {}) {
   dropdown.style.display = 'none';
   wrap.appendChild(dropdown);
 
+  // ARIA combobox (select-only): кнопка керує listbox, а підсвічена опція повідомляється через aria-activedescendant
+  const uid = ++customSelectUid;
+  const listId = 'pe-select-list-' + uid;
+  dropdown.id = listId;
+  btn.setAttribute('role', 'combobox');
+  btn.setAttribute('aria-controls', listId);
+  const ariaLabel = selectEl.getAttribute && selectEl.getAttribute('aria-label');
+  if (ariaLabel) btn.setAttribute('aria-label', ariaLabel);
+
+  // Значення опції, яку зараз підсвічено клавіатурою (null — нічого). Значення <select> змінюється лише після Enter/Space/кліку.
+  let activeValue = null;
+
+  function applyActive() {
+    let found = null;
+    dropdown.querySelectorAll('.pe-select-custom__item').forEach(item => {
+      const on = activeValue !== null && item.dataset.value === activeValue;
+      item.classList.toggle('is-active', on);
+      if (on) found = item;
+    });
+    if (found && !dropdown.hidden) btn.setAttribute('aria-activedescendant', found.id);
+    else btn.removeAttribute('aria-activedescendant');
+    return found;
+  }
+
+  function setActive(value) {
+    activeValue = value;
+    const found = applyActive();
+    if (found) found.scrollIntoView({ block: 'nearest' });
+  }
+
+  function clearActive() {
+    activeValue = null;
+    applyActive();
+  }
+
   function openDropdown() {
     if (btn.disabled) return;
     closeAllCustomSelects(wrap);
@@ -183,10 +221,9 @@ export function initCustomSelect(selectEl, options = {}) {
     btn.classList.add('is-open');
     wrap.classList.add('is-open');
     btn.setAttribute('aria-expanded', 'true');
-    const sel = dropdown.querySelector('.pe-select-custom__item.is-selected');
-    if (sel) {
-      sel.scrollIntoView({ block: 'nearest' });
-    }
+    const sel = dropdown.querySelector('.pe-select-custom__item.is-selected')
+      || dropdown.querySelector('.pe-select-custom__item:not(.is-disabled)');
+    if (sel) setActive(sel.dataset.value);
   }
 
   function closeDropdown() {
@@ -196,6 +233,7 @@ export function initCustomSelect(selectEl, options = {}) {
     btn.classList.remove('is-open');
     wrap.classList.remove('is-open');
     btn.setAttribute('aria-expanded', 'false');
+    clearActive();
   }
 
   function toggleDropdown() {
@@ -208,35 +246,44 @@ export function initCustomSelect(selectEl, options = {}) {
     toggleDropdown();
   });
 
-  // Keyboard navigation on trigger button
+  // Keyboard navigation on trigger button.
+  // Стрілки/Home/End лише рухають підсвітку; значення міняється тільки після Enter/Space (або кліку). Escape/Tab закривають без змін.
   btn.addEventListener('keydown', (e) => {
     const items = Array.from(dropdown.querySelectorAll('.pe-select-custom__item:not(.is-disabled)'));
     if (!items.length) return;
+    const isOpen = !dropdown.hidden;
 
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      if (dropdown.hidden) {
+      if (!isOpen) {
         openDropdown();
         return;
       }
-      const currentIdx = items.findIndex(it => it.classList.contains('is-selected'));
-      let nextIdx = e.key === 'ArrowDown' ? currentIdx + 1 : currentIdx - 1;
+      const currentIdx = items.findIndex(it => it.dataset.value === activeValue);
+      let nextIdx;
+      if (currentIdx === -1) nextIdx = e.key === 'ArrowDown' ? 0 : items.length - 1;
+      else nextIdx = e.key === 'ArrowDown' ? currentIdx + 1 : currentIdx - 1;
       if (nextIdx < 0) nextIdx = items.length - 1;
       if (nextIdx >= items.length) nextIdx = 0;
-      
-      const targetItem = items[nextIdx];
-      if (targetItem) {
-        selectValue(targetItem.dataset.value);
-        targetItem.scrollIntoView({ block: 'nearest' });
-      }
+      setActive(items[nextIdx].dataset.value);
+    } else if (e.key === 'Home' || e.key === 'End') {
+      if (!isOpen) return;
+      e.preventDefault();
+      setActive(items[e.key === 'Home' ? 0 : items.length - 1].dataset.value);
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      toggleDropdown();
-    } else if (e.key === 'Escape' && !dropdown.hidden) {
+      if (!isOpen) {
+        openDropdown();
+        return;
+      }
+      const target = items.find(it => it.dataset.value === activeValue);
+      if (target) selectValue(target.dataset.value);
+      closeDropdown();
+    } else if (e.key === 'Escape' && isOpen) {
       e.preventDefault();
       e.stopPropagation();
       closeDropdown();
-    } else if (e.key === 'Tab' && !dropdown.hidden) {
+    } else if (e.key === 'Tab' && isOpen) {
       closeDropdown();
     }
   });
@@ -265,6 +312,7 @@ export function initCustomSelect(selectEl, options = {}) {
       const item = document.createElement('div');
       item.className = 'pe-select-custom__item' + (isSel ? ' is-selected' : '');
       item.setAttribute('role', 'option');
+      item.id = listId + '-opt-' + idx;
       item.setAttribute('data-value', opt.value);
       item.setAttribute('aria-selected', String(isSel));
       if (opt.disabled) {
@@ -295,6 +343,7 @@ export function initCustomSelect(selectEl, options = {}) {
 
     label.textContent = currentLabelText || (optionsList[0] ? optionsList[0].textContent : '—');
     btn.disabled = Boolean(selectEl.disabled);
+    applyActive(); // перемальовування (зміна значення/опцій) не має губити підсвітку відкритого списку
   }
 
   // Sync when native select changes programmatically via change/input events

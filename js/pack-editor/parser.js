@@ -40,8 +40,18 @@ const parseNumOrStr = val => {
   const n = Number(val);
   return Number.isFinite(n) ? n : val;
 };
+const setFiniteNum = (obj, key, val) => {
+  const n = Number(val);
+  if (Number.isFinite(n)) obj[key] = n;
+};
+const setFiniteRangeNum = (meta, bound, val) => {
+  const n = Number(val);
+  if (Number.isFinite(n)) (meta.range ||= {})[bound] = n;
+};
+const escPropStr = val => String(val ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export const OBJECT_STAGE_KEYS = ['age_categories', 'profession', 'hobby', 'gender'];
+export const STAGE_SUPPORTING_CATEGORIES = ['age_categories', 'profession', 'hobby', 'gender', 'health', 'body_type'];
 
 const cleanStageName = raw => String(raw ?? '').replace(/:\s*null\s*$/i, '').trim();
 
@@ -94,10 +104,10 @@ const PROP_SETTERS = {
   no_age: (meta, val) => { if (parseBool(val)) meta.has_no_age = true; },
   has_no_age: (meta, val) => { if (parseBool(val)) meta.has_no_age = true; },
 
-  age_min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
-  min_age: (meta, val) => { (meta.range ||= {}).min = Number(val); },
-  age_max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
-  max_age: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+  age_min: (meta, val) => { setFiniteRangeNum(meta, 'min', val); },
+  min_age: (meta, val) => { setFiniteRangeNum(meta, 'min', val); },
+  age_max: (meta, val) => { setFiniteRangeNum(meta, 'max', val); },
+  max_age: (meta, val) => { setFiniteRangeNum(meta, 'max', val); },
 
   action_type: (meta, val) => { meta.action_type = val; },
 
@@ -106,44 +116,44 @@ const PROP_SETTERS = {
   exact_height: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
   height: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
   exact: (meta, val) => { meta.exact_height = parseNumOrStr(val); },
-  height_min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
-  min_height: (meta, val) => { (meta.range ||= {}).min = Number(val); },
-  height_max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
-  max_height: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+  height_min: (meta, val) => { setFiniteRangeNum(meta, 'min', val); },
+  min_height: (meta, val) => { setFiniteRangeNum(meta, 'min', val); },
+  height_max: (meta, val) => { setFiniteRangeNum(meta, 'max', val); },
+  max_height: (meta, val) => { setFiniteRangeNum(meta, 'max', val); },
 
-  min: (meta, val) => { (meta.range ||= {}).min = Number(val); },
-  max: (meta, val) => { (meta.range ||= {}).max = Number(val); },
+  min: (meta, val) => { setFiniteRangeNum(meta, 'min', val); },
+  max: (meta, val) => { setFiniteRangeNum(meta, 'max', val); },
 
   desc: (meta, val) => { meta.description = val; },
   description: (meta, val) => { meta.description = val; },
   explanation: (meta, val) => { meta.description = val; },
 
-  timer: (meta, val) => { meta.timer_minutes = Number(val); },
-  timer_minutes: (meta, val) => { meta.timer_minutes = Number(val); },
+  timer: (meta, val) => { setFiniteNum(meta, 'timer_minutes', val); },
+  timer_minutes: (meta, val) => { setFiniteNum(meta, 'timer_minutes', val); },
 
-  stay: (meta, val) => { meta.stay_time_months = Number(val); },
-  stay_time: (meta, val) => { meta.stay_time_months = Number(val); },
-  stay_time_months: (meta, val) => { meta.stay_time_months = Number(val); },
+  stay: (meta, val) => { setFiniteNum(meta, 'stay_time_months', val); },
+  stay_time: (meta, val) => { setFiniteNum(meta, 'stay_time_months', val); },
+  stay_time_months: (meta, val) => { setFiniteNum(meta, 'stay_time_months', val); },
 
-  pop: (meta, val) => { meta.population = Number(val); },
-  population: (meta, val) => { meta.population = Number(val); },
+  pop: (meta, val) => { setFiniteNum(meta, 'population', val); },
+  population: (meta, val) => { setFiniteNum(meta, 'population', val); },
 
   ability: (meta, val) => { meta.ability = val; }
 };
 
 const PROP_SERIALIZERS = [
   m => m.can_reproduce !== undefined && `rep: ${m.can_reproduce}`,
-  m => m.opposite !== undefined && `opp: ${m.opposite === null ? 'null' : `"${m.opposite}"`}`,
+  m => m.opposite !== undefined && `opp: ${m.opposite === null ? 'null' : `"${escPropStr(m.opposite)}"`}`,
   m => m.has_no_age === true && 'no_age: true',
-  m => m.custom_age !== undefined && (!m.has_no_age || m.custom_age !== 'Без віку') && `age: "${m.custom_age}"`,
+  m => m.custom_age !== undefined && (!m.has_no_age || m.custom_age !== 'Без віку') && `age: "${escPropStr(m.custom_age)}"`,
   (m, cat) => cat === 'gender' && m.range?.min !== undefined && `age_min: ${m.range.min}`,
   (m, cat) => cat === 'gender' && m.range?.max !== undefined && `age_max: ${m.range.max}`,
-  m => m.action_type !== undefined && `action_type: "${m.action_type}"`,
+  m => m.action_type !== undefined && `action_type: "${escPropStr(m.action_type)}"`,
   m => m.has_no_height === true && 'no_height: true',
   m => m.exact_height !== undefined && m.exact_height !== '' && `exact_height: ${m.exact_height}`,
   (m, cat) => cat !== 'gender' && m.range?.min !== undefined && `min: ${m.range.min}`,
   (m, cat) => cat !== 'gender' && m.range?.max !== undefined && `max: ${m.range.max}`,
-  m => m.description !== undefined && `desc: "${m.description}"`,
+  m => m.description !== undefined && `desc: "${escPropStr(m.description)}"`,
   m => m.timer_minutes !== undefined && `timer: ${m.timer_minutes}`,
   m => m.stay_time_months !== undefined && `stay: ${m.stay_time_months}`,
   m => m.population !== undefined && `pop: ${m.population}`
@@ -157,9 +167,13 @@ export function parsePropsString(propsStr) {
     const key = match[1];
     let val = match[2].trim();
     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'")) || (val.startsWith('«') && val.endsWith('»')) || (val.startsWith('“') && val.endsWith('”'))) {
-      val = val.slice(1, -1).replace(/\\"/g, '"');
+      val = val.slice(1, -1).replace(/\\(["'«»“”\\])/g, '$1');
     }
-    props[key] = val;
+    if (PROP_SETTERS[key]) {
+      PROP_SETTERS[key](props, val);
+    } else {
+      props[key] = val;
+    }
   }
   return props;
 }
@@ -171,29 +185,30 @@ export function parsePropsString(propsStr) {
 export function parseCardLine(category, line) {
   let value = line;
   const meta = {};
+  const canHaveStages = STAGE_SUPPORTING_CATEGORIES.includes(category);
 
   let extracting = true;
   while (extracting) {
     let matched = false;
 
-    // Шукаємо стадії в кінці рядка
-    const stagesMatch = value.match(/\[(.*?)\]\s*$/);
-    if (stagesMatch) {
-      const rawStages = stagesMatch[1].split(',').map(s => s.trim()).filter(Boolean);
-      meta.stages = OBJECT_STAGE_KEYS.includes(category)
-        ? rawStages.map(s => parseStageEntry(category, s, { omitNullLimit: true }))
-        : rawStages;
-      value = value.substring(0, stagesMatch.index).trim();
-      matched = true;
+    // Шукаємо стадії в кінці рядка (лише для категорій, що підтримують стадії)
+    if (canHaveStages) {
+      const stagesMatch = value.match(/\[([^\[\]]*?)\]\s*$/);
+      if (stagesMatch) {
+        const rawStages = stagesMatch[1].split(/[,;]/).map(s => s.trim()).filter(Boolean);
+        meta.stages = OBJECT_STAGE_KEYS.includes(category)
+          ? rawStages.map(s => parseStageEntry(category, s, { omitNullLimit: true }))
+          : rawStages;
+        value = value.substring(0, stagesMatch.index).trim();
+        matched = true;
+      }
     }
 
     // Шукаємо прапорці в кінці рядка: {key: val, ...}
-    const propsMatch = value.match(/\{(.*?)\}\s*$/);
+    const propsMatch = value.match(/\{([^{}]*?)\}\s*$/);
     if (propsMatch) {
       const parsed = parsePropsString(propsMatch[1]);
-      for (const [key, val] of Object.entries(parsed)) {
-        PROP_SETTERS[key]?.(meta, val);
-      }
+      Object.assign(meta, parsed);
       value = value.substring(0, propsMatch.index).trim();
       matched = true;
     }
@@ -237,39 +252,64 @@ export function parseCards(text, category, extraMeta = {}) {
   });
 }
 
+// АРХІТЕКТУРНЕ ЗАСТЕРЕЖЕННЯ: алгоритм узгодження за назвою/позицією оптимізовано під структуру картки { value, meta }.
+// Не узагальнювати передчасно з syncCataclysmsFromLlmText, яка оперує повною схемою полів катаклізму.
 // Узгодження рядків тексту з наявними картками (збереження UUID карток при редагуванні або зміні порядку)
 export function reconcileCards(text, existingCards = [], category, extraMeta = {}, deletedIds = null) {
   const availableByName = new Map();
-  for (const c of existingCards) {
+  for (let i = 0; i < existingCards.length; i++) {
+    const c = existingCards[i];
     if (!c) continue;
     const list = availableByName.get(c.value) || [];
-    list.push(c);
+    list.push({ card: c, index: i });
     availableByName.set(c.value, list);
   }
 
+  const matchedOldIndices = new Set();
   const matchedOldIds = new Set();
-  const result = [];
-
-  for (const line of parseLines(text)) {
+  const parsedLines = parseLines(text).map(line => {
     const { value, meta } = parseCardLine(category, line);
     const extra = extraMeta?.[category]?.[value];
-    const fullMeta = extra ? { ...extra, ...meta } : meta;
+    return { value, meta: extra ? { ...extra, ...meta } : meta };
+  });
 
+  // Pass 1: Точний збіг за назвою (value)
+  const result = new Array(parsedLines.length).fill(null);
+  for (let i = 0; i < parsedLines.length; i++) {
+    const { value, meta } = parsedLines[i];
     const candidates = availableByName.get(value);
     if (candidates && candidates.length > 0) {
-      const existing = candidates.shift();
-      if (existing.id) matchedOldIds.add(existing.id);
-      result.push({
-        id: existing.id || crypto.randomUUID(),
+      // Якщо картка стоїть на тій самій позиції i, надаємо перевагу саме їй
+      const sameIdxPos = candidates.findIndex(item => item.index === i);
+      const chosen = sameIdxPos >= 0 ? candidates.splice(sameIdxPos, 1)[0] : candidates.shift();
+      matchedOldIndices.add(chosen.index);
+      if (chosen.card.id) matchedOldIds.add(chosen.card.id);
+      result[i] = {
+        id: chosen.card.id || crypto.randomUUID(),
         value,
-        meta: fullMeta
-      });
+        meta
+      };
+    }
+  }
+
+  // Pass 2: Позиційний збіг (in-place редагування рядка на тій самій позиції i)
+  for (let i = 0; i < parsedLines.length; i++) {
+    if (result[i]) continue;
+    const oldAtPos = existingCards[i];
+    if (oldAtPos && !matchedOldIndices.has(i)) {
+      matchedOldIndices.add(i);
+      if (oldAtPos.id) matchedOldIds.add(oldAtPos.id);
+      result[i] = {
+        id: oldAtPos.id || crypto.randomUUID(),
+        value: parsedLines[i].value,
+        meta: parsedLines[i].meta
+      };
     } else {
-      result.push({
+      result[i] = {
         id: crypto.randomUUID(),
-        value,
-        meta: fullMeta
-      });
+        value: parsedLines[i].value,
+        meta: parsedLines[i].meta
+      };
     }
   }
 

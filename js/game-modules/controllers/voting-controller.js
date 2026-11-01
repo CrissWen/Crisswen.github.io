@@ -1,5 +1,5 @@
 import { supabase } from '../../services/supabase.js';
-import { finishVoting } from '../../utils/host-actions.js';
+import { finishVoting } from '../../utils/game/host-actions.js';
 import { showGlobalToast } from '../overlays/global-toast.js';
 
 // ===== Поведінка голосування на сторінці гри (мережа, скрол, автозавершення) =====
@@ -67,10 +67,8 @@ export function handleVoteRadioChange(e) {
   if (btn) btn.disabled = false;
 }
 
-// Запис голосу — звичайний UPDATE кімнати (як і решта механік гри), без RPC. Голосує рядовий гравець,
-// а не ведучий, тож прямий запис у bunker_state має працювати незалежно від того, чи застосовано
-// host-rls.sql (там UPDATE дозволений лише host_id = auth.uid()) — окрема RLS-політика на голосування
-// має дозволяти будь-якому гравцю кімнати оновлювати лише bunker_state.voting.votes.
+// Запис голосу виконується атомарно на сервері через SECURITY DEFINER RPC cast_vote(p_room, p_candidate),
+// який під FOR UPDATE оновлює лише bunker_state.voting.votes[auth.uid()] (jsonb_set) без перезапису всього bunker_state.
 export async function handleVoteSubmit(btn, ctx) {
   if (ctx.isSpectator()) return; // глядач не голосує
   const section = btn.closest('#voting-section');
@@ -83,37 +81,21 @@ export async function handleVoteSubmit(btn, ctx) {
   btn.textContent = 'Голосуємо...';
 
   try {
-    // Читаємо свіжий bunker_state прямо перед записом, щоб не затерти голос когось,
-    // хто проголосував між останнім Realtime-оновленням локального стейту і цим кліком.
-    const { data: room, error: fetchError } = await supabase
-      .from('rooms')
-      .select('bunker_state, players_state')
-      .eq('room_code', ctx.getRoomCode())
-      .single();
-    if (fetchError || !room) throw new Error(fetchError?.message || 'Кімнату не знайдено');
-
-    // Свіжа перевірка на момент запису: вигнаний не може голосувати і не може бути обраний кандидатом
-    const freshPlayers = room.players_state || {};
-    if (!canParticipate(freshPlayers[ctx.getUserId()])) throw new Error('Вигнані гравці не можуть голосувати');
-    if (!canParticipate(freshPlayers[candidateId])) throw new Error('Цього гравця вже виключено з голосування');
-
-    const bunker_state = room.bunker_state || {};
-    if (!bunker_state.voting?.isActive) throw new Error('Голосування вже завершено');
-
-    bunker_state.voting.votes = { ...bunker_state.voting.votes, [ctx.getUserId()]: candidateId };
-
-    const { error } = await supabase
-      .from('rooms')
-      .update({ bunker_state })
-      .eq('room_code', ctx.getRoomCode());
+    const { error } = await supabase.rpc('cast_vote', {
+      p_room: ctx.getRoomCode(),
+      p_candidate: candidateId
+    });
     if (error) throw new Error(error.message);
 
     // Локально відразу відмічаємо свій голос: не чекаємо round-trip через WebSocket, а перемальовуємо
     // дошку зараз — voting.js сам сховає сітку кандидатів і покаже зелену панель "Ви проголосували..."
     // (стан визначається наявністю bunker_state.voting.votes[currentUserId]).
     const roomState = ctx.getRoomState();
-    if (roomState) {
-      roomState.bunker_state = bunker_state;
+    if (roomState?.bunker_state?.voting) {
+      roomState.bunker_state.voting.votes = {
+        ...(roomState.bunker_state.voting.votes || {}),
+        [ctx.getUserId()]: candidateId
+      };
       ctx.refreshBoard();
     }
   } catch (err) {

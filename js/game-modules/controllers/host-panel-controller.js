@@ -1,4 +1,4 @@
-import * as HostActions from '../../utils/host-actions.js';
+import * as HostActions from '../../utils/game/host-actions.js';
 import {
   renderHostPanel,
   refreshHostPanel,
