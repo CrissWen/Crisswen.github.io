@@ -1,3 +1,4 @@
+import { isAllowedImageFormat, loadImage } from '../utils/image-file.js';
 import { supabase, supabaseUrl } from './supabase.js';
 
 // ===== Аватарки гравців =====
@@ -226,31 +227,6 @@ export async function fetchAvatars(userIds, { force = false } = {}) {
 
 // ===== Підготовка картинки =====
 
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/pjpeg']);
-
-function isAllowedImageFormat(file) {
-  if (!file) return false;
-  if (file.type && ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) return true;
-  if (file.name && /\.(jpe?g|png|webp)$/i.test(file.name)) return true;
-  return false;
-}
-
-
-
-async function loadImage(file) {
-  if (window.createImageBitmap) {
-    try {
-      return await createImageBitmap(file);
-    } catch (e) { /* падаємо на запасний варіант нижче */ }
-  }
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => { URL.revokeObjectURL(objectUrl); resolve(img); };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Не вдалося прочитати зображення')); };
-    img.src = objectUrl;
-  });
-}
 
 function canvasToBlob(canvas, type, quality) {
   return new Promise(resolve => canvas.toBlob(resolve, type, quality));

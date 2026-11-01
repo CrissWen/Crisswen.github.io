@@ -1,3 +1,4 @@
+import { clone } from '../utils/clone.js';
 // ===== Міст редактора паків: автосейв чернеток + Undo/Redo + гарячі клавіші =====
 // Редактор не інструментуємо в кожному обробнику: після будь-якої зміни стану editor.js викликає onEditorChanged()
 // (з updateButtons). Тут зі знімків по розділах (категорії карток, катаклізми, стадії) складаються дії для HistoryManager,
@@ -28,10 +29,6 @@ let lastDeleted = [];
 let lastMeta = { title: '', description: '' };
 let unbindLifecycle = null;
 
-function clone(v) {
-  if (v === undefined) return undefined;
-  try { return structuredClone(v); } catch { return JSON.parse(JSON.stringify(v)); }
-}
 
 const cardCategories = () => ALL_PACK_CATEGORIES.map(c => c.category).filter(c => c !== 'cataclysm');
 const labelOf = key => {

@@ -12,6 +12,17 @@ import { initRangeSliders, setRangeSliderValue } from '../ui/range-slider.js';
 import { ICONS } from '../constants/icons.js';
 import { firstChar } from '../utils/initial.js';
 
+
+function getAudioPercentValues(settings = {}) {
+  return {
+    masterPct: Math.round((settings.masterVolume ?? 0) * 100),
+    sfxPct: Math.round((settings.sfxVolume ?? 0) * 100),
+    uiPct: Math.round((settings.uiVolume ?? 0) * 100),
+    musicPct: Math.round((settings.musicVolume ?? 0) * 100),
+    isMuted: Boolean(settings.muted)
+  };
+}
+
 export function renderProfile() {
     const settings = soundManager.getSettings();
 

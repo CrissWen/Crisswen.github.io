@@ -1,12 +1,4 @@
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/pjpeg']);
-
-function isAllowedImageFormat(file) {
-  if (!file) return false;
-  if (file.type && ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) return true;
-  if (file.name && /\.(jpe?g|png|webp)$/i.test(file.name)) return true;
-  return false;
-}
-
+import { isAllowedImageFormat, loadImage } from '../utils/image-file.js';
 /**
  * Модальне вікно інтерактивного обрізання (crop & zoom) аватарки.
  * Працює на базі нативного <dialog> та HTML5 Canvas.
@@ -296,42 +288,6 @@ async function applyCrop() {
   }
 }
 
-// Завантаження картинки з можливим попереднім масштабуванням дуже великих фото (> 1920px)
-async function readAndDownscaleImage(file) {
-  if (window.createImageBitmap) {
-    try {
-      const bmp = await createImageBitmap(file);
-      // Якщо фото гігантське (наприклад, 48MP телефон 8000×6000), зменшуємо до 1920px
-      const maxDim = 1920;
-      if (bmp.width > maxDim || bmp.height > maxDim) {
-        const ratio = Math.min(maxDim / bmp.width, maxDim / bmp.height);
-        const w = Math.round(bmp.width * ratio);
-        const h = Math.round(bmp.height * ratio);
-        const resized = await createImageBitmap(bmp, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-        bmp.close();
-        return resized;
-      }
-      return bmp;
-    } catch (e) {
-      /* падаємо на запасний Image-варіант */
-    }
-  }
-
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error('Не вдалося відкрити файл зображення'));
-    };
-    img.src = objectUrl;
-  });
-}
-
 /**
  * Відкриває діалог обрізання для обраного файлу.
  * @param {File|Blob} file
@@ -348,7 +304,7 @@ export async function openAvatarCropper(file) {
   const token = ++openToken;
   if (currentResolve) closeDialog(null);
 
-  const loaded = await readAndDownscaleImage(file);
+  const loaded = await loadImage(file, { maxDimension: 1920 });
   if (token !== openToken) { // поки читали файл, нас витіснив новіший виклик
     if (typeof loaded.close === 'function') loaded.close();
     return null;

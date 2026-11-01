@@ -252,6 +252,8 @@ export function parseCards(text, category, extraMeta = {}) {
   });
 }
 
+// АРХІТЕКТУРНЕ ЗАСТЕРЕЖЕННЯ: алгоритм узгодження за назвою/позицією оптимізовано під структуру картки { value, meta }.
+// Не узагальнювати передчасно з syncCataclysmsFromLlmText, яка оперує повною схемою полів катаклізму.
 // Узгодження рядків тексту з наявними картками (збереження UUID карток при редагуванні або зміні порядку)
 export function reconcileCards(text, existingCards = [], category, extraMeta = {}, deletedIds = null) {
   const availableByName = new Map();
