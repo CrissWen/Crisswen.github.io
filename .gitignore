@@ -5,12 +5,10 @@
 # game-config.base.js і правлячи лише ті, поля, які хоче перевизначити.
 js/config/game-config.local.js
 .cacm/
-
 scratch/
-scratch/
-
 backups/
-.env
-
 graphify-out/
+.agents/
 docs/
+
+.env
