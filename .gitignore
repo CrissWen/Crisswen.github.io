@@ -10,6 +10,7 @@ scratch/
 scratch/
 
 backups/
-env.
+.env
 
 graphify-out/
+docs/
