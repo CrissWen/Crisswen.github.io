@@ -41,7 +41,9 @@ import { subscribeToRoom } from '../services/room-subscription.js';
 import { computeRoomUpdateEffects } from '../game-modules/state/room-update-reducer.js';
 import { syncServerTime, getGlobalTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/game/last-session.js';
-import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
+import { fetchAvatars, hasCachedAvatar, isAvatarStale, getCachedAvatar, onAvatarChange } from '../services/avatar-service.js';
+import { setAvatarEl, clearBrokenAvatarUrl } from '../utils/auth/avatar.js';
+import { firstChar } from '../utils/auth/initial.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
 import { soundManager } from '../services/sound-manager.js';
@@ -53,6 +55,7 @@ import { soundManager } from '../services/sound-manager.js';
 
 let currentRoomCode = null;
 let unsubscribeRoom = null; // відписка від Realtime-каналу кімнати (services/room-subscription.js)
+let unsubscribeAvatarChange = null; // відписка від оновлень аватарок гравців (services/avatar-service.js)
 let currentUserId = null;
 let currentUserName = null;
 let isCurrentUserAdmin = false;
@@ -291,6 +294,11 @@ export async function initGame() {
     // Гравець зайшов (зокрема кнопкою «Повернутися» з лобі) у кімнату, де гра вже йде — пропонуємо повернути телефон горизонтально або продовжити вертикально
     if (isGameStarted && room.status !== 'closed' && room.status !== 'finished') showOrientationPrompt();
 
+    if (unsubscribeAvatarChange) unsubscribeAvatarChange();
+    unsubscribeAvatarChange = onAvatarChange((newUrl, changedUserId) => {
+      applyPlayerAvatarUpdate(changedUserId, newUrl);
+    });
+
     subscribeToRoomUpdates();
     maybePlayCataclysmRoulette(localRoomState); // зайшли посеред рулетки (перезавантаження сторінки) — вона продовжується з потрібного місця
     setupActionListeners();
@@ -304,13 +312,30 @@ export async function initGame() {
   }
 }
 
-// Хтось новий зайшов у кімнату — докачуємо його аватарку (раз на гравця) і перемальовуємо дошку, коли вона з'явиться.
-// Невдалий запит нічого не кешує і не дає перемальовування, тож зациклитись це не може.
-function prefetchAvatars(roomData) {
-  const ids = Object.keys(roomData.players_state || {});
-  if (!ids.length || ids.every(hasCachedAvatar)) return;
-  fetchAvatars(ids).then(loaded => {
-    if (loaded > 0) ctx.refreshBoard();
+// Точково оновлює аватарку гравця на дошці (бейджі в лобі, списки тощо) без перезапису всього innerHTML
+export function applyPlayerAvatarUpdate(changedUserId, newUrl) {
+  if (!changedUserId) return;
+  if (newUrl) clearBrokenAvatarUrl(newUrl);
+  const board = document.getElementById('game-board');
+  if (!board) return;
+  const badges = board.querySelectorAll(`[data-profile-user="${changedUserId}"]`);
+  badges.forEach(badge => {
+    const name = badge.getAttribute('data-profile-name') || '';
+    const letter = firstChar(name) || badge.textContent.trim().slice(0, 1) || '?';
+    setAvatarEl(badge, letter, newUrl);
+  });
+}
+
+// Хтось новий зайшов у кімнату — докачуємо його аватарку (якщо її немає або застаріла)
+// і точково оновлюємо бейджі на дошці, уникаючи повторного перетирання всього HTML кімнати.
+export function prefetchAvatars(roomData) {
+  const ids = Object.keys(roomData?.players_state || {});
+  const needsFetch = ids.filter(id => !hasCachedAvatar(id) || isAvatarStale(id) || getCachedAvatar(id) === null);
+  if (!needsFetch.length) return;
+  fetchAvatars(needsFetch).then(loaded => {
+    needsFetch.forEach(id => {
+      applyPlayerAvatarUpdate(id, getCachedAvatar(id));
+    });
   });
 }
 
@@ -763,6 +788,10 @@ export function cleanupGame() {
   HostActions.clearSnapshot(); // знімок «Скасувати» живе в пам'яті модуля: без цього після виходу й повернення в ту саму кімнату він би лишився
   unmountGameTimer();
   unmountCataclysmTimer();
+  if (unsubscribeAvatarChange) {
+    unsubscribeAvatarChange();
+    unsubscribeAvatarChange = null;
+  }
   if (unsubscribeRoom) {
     unsubscribeRoom();
     unsubscribeRoom = null;

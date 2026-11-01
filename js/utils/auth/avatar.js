@@ -15,24 +15,48 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   window.addEventListener('online', () => brokenUrls.clear());
 }
 
-// Одна пара обробників на весь сайт: картинка, що не завантажилась, просто зникає і лишається літера
-document.addEventListener('error', (e) => {
-  const img = e.target;
-  if (img instanceof HTMLImageElement && img.classList.contains('avatar-img')) {
-    brokenUrls.set(img.getAttribute('src'), Date.now());
+// Одна пара обробників на весь сайт: картинка, що не завантажилась, просто зникає і лишається літера.
+// Ігноруємо помилки, якщо елемент уже від'єднано від DOM (!img.isConnected):
+// це аборт завантаження через ререндер контейнера (наприклад, innerHTML), а не битий URL!
+export function handleImgError(target) {
+  const img = target;
+  if (!img) return false;
+  const isImg = (typeof HTMLImageElement !== 'undefined' && img instanceof HTMLImageElement) || img.tagName === 'IMG' || img.tag === 'img';
+  if (isImg && img.classList?.contains('avatar-img')) {
+    if (img.isConnected === false) return false;
+    const src = img.getAttribute('src') || img.src;
+    if (src) brokenUrls.set(src, Date.now());
     img.remove();
+    return true;
   }
-}, true);
+  return false;
+}
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('error', (e) => {
+    handleImgError(e.target);
+  }, true);
+}
+
+export function clearBrokenAvatarUrl(url) {
+  if (url) brokenUrls.delete(url);
+}
+
+export function isAvatarUrlBroken(url) {
+  if (!url) return false;
+  const failedAt = brokenUrls.get(url);
+  if (failedAt === undefined) return false;
+  if (Date.now() - failedAt >= BROKEN_URL_TTL_MS) {
+    brokenUrls.delete(url); // TTL минув — пробуємо ще раз
+    return false;
+  }
+  return true;
+}
 
 function usableUrl(url) {
   if (!url) return null;
-  const failedAt = brokenUrls.get(url);
-  if (failedAt === undefined) return url;
-  if (Date.now() - failedAt >= BROKEN_URL_TTL_MS) {
-    brokenUrls.delete(url); // TTL минув — пробуємо ще раз
-    return url;
-  }
-  return null;
+  if (isAvatarUrlBroken(url)) return null;
+  return url;
 }
 
 // <img> для вставки в рядок-шаблон (після літери всередині контейнера). Порожній рядок, якщо аватарки немає.
