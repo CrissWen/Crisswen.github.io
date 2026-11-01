@@ -45,7 +45,7 @@ export async function changeBunker(roomCode, field, customValue) {
   bState[field] = value;
   const fieldLabel = BUNKER_FIELDS.find(f => f.key === field)?.label || field;
   setHostEvent(bState, `Ведучий змінив параметр бункера «${fieldLabel}»`);
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
   return value;
 }
 
@@ -83,7 +83,7 @@ export async function changeBunkerItems(roomCode, action, value) {
   snapshot(room); // бекап для "Скасувати" — після всіх перевірок, щоб невдала спроба не затирала попередній знімок
   bState.items = next;
   setHostEvent(bState, eventText);
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
   return next;
 }
 
@@ -122,7 +122,7 @@ export async function changeCataclysm(roomCode) {
   const spin = await attachCataclysmSpin(bState, pools.bunker?.cataclysm, getGlobalTime());
   if (spin) pushLog(bState, `Ведучий змінив катаклізм: ${card.value}`, spin.id);
   else setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
 }
 
 export async function changeBunkerCapacity(roomCode, delta) {
@@ -132,6 +132,6 @@ export async function changeBunkerCapacity(roomCode, delta) {
   const current = Number(bState.capacity) || 1;
   bState.capacity = Math.max(1, current + delta);
   setHostEvent(bState, `Ведучий змінив кількість місць у бункері: ${bState.capacity}`);
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
   return bState.capacity;
 }

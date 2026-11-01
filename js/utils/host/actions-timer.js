@@ -22,13 +22,16 @@ export function clearTimerAutoStop() {
   }
 }
 
-// Запускає таймер авто-зупинки на час залишку + 1 секунда, щоб на екрані висіло "00"
-function scheduleAutoStop(roomCode, delayMs) {
+// Запускає таймер авто-зупинки на час залишку + 1 секунда, щоб на екрані висіло "00".
+// Прив'язується до expectedEnd (global_timer_end конкретного запуску), щоб запізнілий колбек
+// ніколи не погасив новий таймер, якщо ведучий встиг перезапустити його (виправляє C3).
+function scheduleAutoStop(roomCode, delayMs, expectedEnd = null) {
   clearTimerAutoStop();
   const safeDelay = Math.max(0, delayMs);
   autoStopTimeoutId = setTimeout(async () => {
+    autoStopTimeoutId = null;
     try {
-      await stopGlobalTimer(roomCode, true);
+      await stopGlobalTimer(roomCode, true, expectedEnd);
     } catch (err) {
       console.error('Не вдалося автоматично завершити таймер:', err);
     }
@@ -44,7 +47,7 @@ export function syncTimerAutoStop(roomCode, bunkerState) {
   }
   if (autoStopTimeoutId) return; // вже заплановано
   const remainingMs = (end - getGlobalTime()) + 1000;
-  scheduleAutoStop(roomCode, remainingMs);
+  scheduleAutoStop(roomCode, remainingMs, end);
 }
 
 export async function setGlobalTimer(roomCode, seconds) {
@@ -52,26 +55,36 @@ export async function setGlobalTimer(roomCode, seconds) {
   const room = await getRoom(roomCode);
   snapshot(room);
   const bState = room.bunker_state || {};
+  const end = getGlobalTime() + seconds * 1000;
   bState.global_timer_seconds = seconds;
-  bState.global_timer_end = getGlobalTime() + seconds * 1000;
+  bState.global_timer_end = end;
   bState.timer_paused_left = null; // новий запуск скасовує попередню паузу, якщо вона була
   pushLog(bState, `Ведучий запустив таймер на ${formatTimerSeconds(seconds)}`); // лише запис у лог, без latest_host_event (без Toast)
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
 
   // Таймер рахує seconds секунд + 1 секунду тримає "00", після чого завершує роботу
-  scheduleAutoStop(roomCode, (seconds + 1) * 1000);
+  scheduleAutoStop(roomCode, (seconds + 1) * 1000, end);
 }
 
 // Повністю зупиняє таймер (ховає віджет): і активний відлік, і збережену паузу.
-export async function stopGlobalTimer(roomCode, isAuto = false) {
-  clearTimerAutoStop();
+// При isAuto = true перевіряє, чи bState.global_timer_end досі збігається з expectedEnd,
+// щоб застарілий auto-stop не погасив перезапущений таймер (C3).
+export async function stopGlobalTimer(roomCode, isAuto = false, expectedEnd = null) {
+  if (!isAuto) clearTimerAutoStop();
   const room = await getRoom(roomCode);
-  snapshot(room);
   const bState = room.bunker_state || {};
+
+  if (isAuto) {
+    if (!bState.global_timer_end) return;
+    if (expectedEnd !== null && bState.global_timer_end !== expectedEnd) return;
+  } else {
+    snapshot(room);
+  }
+
   bState.global_timer_end = null;
   bState.timer_paused_left = null;
   pushLog(bState, isAuto ? 'Час таймера вийшов' : 'Ведучий зупинив таймер');
-  await saveRoom(roomCode, { bunker_state: bState });
+  await saveRoom(roomCode, { bunker_state: bState }, room.version);
 }
 
 // Перемикач паузи: якщо таймер іде — заморожує залишок у timer_paused_left;
@@ -88,19 +101,20 @@ export async function pauseGlobalTimer(roomCode) {
     bState.timer_paused_left = left;
     bState.global_timer_end = null;
     pushLog(bState, 'Ведучий призупинив таймер');
-    await saveRoom(roomCode, { bunker_state: bState });
+    await saveRoom(roomCode, { bunker_state: bState }, room.version);
     return 'paused';
   }
 
   if (bState.timer_paused_left != null) {
     const left = bState.timer_paused_left;
-    bState.global_timer_end = getGlobalTime() + left;
+    const end = getGlobalTime() + left;
+    bState.global_timer_end = end;
     bState.timer_paused_left = null;
     pushLog(bState, 'Ведучий запустив таймер');
-    await saveRoom(roomCode, { bunker_state: bState });
+    await saveRoom(roomCode, { bunker_state: bState }, room.version);
 
     // Відновлення таймера: залишок + 1 секунда на показ "00"
-    scheduleAutoStop(roomCode, left + 1000);
+    scheduleAutoStop(roomCode, left + 1000, end);
     return 'resumed';
   }
 

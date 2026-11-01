@@ -69,5 +69,5 @@ export async function stealCharacteristic(roomCode, thiefId, victimId, charType)
 
   setHostEvent(bState, `Ведучий: ${nameOf(pState, thiefId)} вкрав(ла) характеристику «${labelOf(charType)}» у ${nameOf(pState, victimId)}`);
 
-  await saveRoom(roomCode, { players_state: pState, bunker_state: bState });
+  await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);
 }

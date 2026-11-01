@@ -27,7 +27,6 @@ function timerHtml() {
   return `
     <div id="${TIMER_ID}" class="game-timer" hidden aria-live="off">
       <div class="game-timer__time" data-timer-time>00</div>
-      <!-- TODO: Voting UI — відображення голосування поки не реалізоване -->
       <div class="game-timer__voting" data-timer-voting hidden></div>
     </div>
   `;

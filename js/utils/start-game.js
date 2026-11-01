@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js';
-import { packDisplayName } from '../services/packs-store.js';
+import { packDisplayName, checkIsAdmin } from '../services/packs-store.js';
 import { getGameConfig } from '../config/config-manager.js';
 import { generateGameState } from './game-generator.js';
 import { loadGamePools } from './host/card-pools.js';
@@ -30,9 +30,11 @@ export async function startGame(roomCode) {
 
   // Кнопка «Почати гру» вже disabled при недостатній кількості, але відображена кількість могла застаріти
   // (хтось вийшов між рендером і кліком) — тому рахуємо ще раз по свіжих даних кімнати.
-  const { minPlayersToStart } = await getGameConfig();
-  if (playersList.length < minPlayersToStart) {
-    throw new Error(`Для старту потрібно мінімум ${minPlayersToStart} гравців (зараз ${playersList.length})`);
+  // Для адміністраторів (таблиця admins) дозволено старт з 1 гравцем для соло-тестування в продакшені.
+  const [{ minPlayersToStart }, isAdmin] = await Promise.all([getGameConfig(), checkIsAdmin()]);
+  const requiredMin = isAdmin ? 1 : minPlayersToStart;
+  if (playersList.length < requiredMin) {
+    throw new Error(`Для старту потрібно мінімум ${requiredMin} гравців (зараз ${playersList.length})`);
   }
 
   const { pools, added } = await loadGamePools(room.selected_pack_id, playersList.length);
@@ -52,7 +54,7 @@ export async function startGame(roomCode) {
 
   const { error: updateError } = await supabase
     .from('rooms')
-    .update({ bunker_state: bunkerState, players_state: playersState })
+    .update({ status: 'in_progress', bunker_state: bunkerState, players_state: playersState })
     .eq('room_code', roomCode);
   if (updateError) throw new Error(updateError.message || 'Не вдалося зберегти стан гри');
   // Нова гра починається з порожньої історії дій: «Скасувати» неактивне до першої дії ведучого

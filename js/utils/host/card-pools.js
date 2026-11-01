@@ -3,6 +3,7 @@ import { DEFAULT_PACK_ID } from '../../services/packs-store.js';
 import { getGameConfig } from '../../config/config-manager.js';
 import { applyDefaultFallback, buildRequirements, buildMinimalRequirements } from '../pack-fallback.js';
 import { getStageNames } from '../experience.js';
+import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 
 // ===== Пули карток паків (pack_cards) =====
 // Формат пулу: { bunker: { [category]: [{ value, meta }] }, character: {...}, config }.
@@ -13,6 +14,7 @@ const PAGE_SIZE = 1000; // ліміт рядків за один запит Supa
 const MAX_PAGES = 20;
 
 const rawCache = new Map();
+const warnedPackIds = new Set();
 
 const isDefaultPack = packId => !packId || packId === DEFAULT_PACK_ID;
 
@@ -56,7 +58,7 @@ async function getRawPools(packId, { fresh = false } = {}) {
 // добираються з дефолтного (мінімум по одній картці), щоб перерол не видавав «Немає даних».
 // Додатково повертається fallback (базовий пак), щоб при виборі нових карток без повторів
 // спочатку брати вільні картки з кастомного пака, а якщо їх не лишилось — добирати з базового.
-// Якщо особистий пак не вдалося прочитати (наприклад, ведучим став не його автор), мовчки працюємо на дефолтному.
+// Якщо особистий пак не вдалося прочитати (наприклад, ведучим став не його автор), попереджаємо ведучого один раз і працюємо на дефолтному (I4).
 export async function loadPools(packId = null) {
   const defaults = await getRawPools(DEFAULT_PACK_ID);
   if (isDefaultPack(packId)) return { ...defaults, fallback: null };
@@ -67,6 +69,10 @@ export async function loadPools(packId = null) {
     return { ...pools, fallback: defaults };
   } catch (err) {
     console.warn('Особистий пак недоступний, використовується базовий:', err);
+    if (!warnedPackIds.has(packId)) {
+      warnedPackIds.add(packId);
+      showGlobalToast('Особистий пак недоступний — використано базовий пак');
+    }
     return { ...defaults, fallback: null };
   }
 }
