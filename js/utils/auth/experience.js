@@ -13,6 +13,9 @@ export const UNKNOWN_STAGE = 'Невідома стадія';
 // Вік, з якого може починатися стаж (ранні роки життя без нього): максимум стажу = (вік − цей вік) років у місяцях.
 // Реальне значення береться з конфігу балансу (experienceStartAge у game-config.base.js), це лише запасне.
 export const DEFAULT_EXPERIENCE_START_AGE = 16;
+// Мінімальний вік раннього дитинства: якщо людина займається справою змалку (напр. з 6 років),
+// стадія понад 10 років доступна вже у 16-18 років, але стадія понад 20 років не випаде тому, хто прожив менше.
+export const MIN_EARLY_START_AGE = 6;
 // Верхня межа місяців, коли вік гравця невідомий (напр. "Без віку" у Кіборга) і в шкалі немає порогів
 const FALLBACK_MAX_MONTHS = 480;
 // Запас понад останній поріг, коли вік невідомий, а в шкалі є відкрита верхня стадія (щоб вона теж могла випасти)
@@ -106,6 +109,27 @@ export const generateExperienceMonths = (type, config, age, startAge = DEFAULT_E
 //   2) у картки є meta.stages без порогів (рядки) → випадкова назва з них (pickStage);
 //   3) інакше, якщо в конфігу є шкала за місяцями → вона (або випадкова зі списку, якщо без віку);
 //   4) інакше pickStage за default_stages.
+// Стадії, на які персонаж фізично має право за своїм віком:
+// Початок практики можливий з раннього віку (minStartAge, за замовчуванням 6 років).
+// Якщо стадія вимагає мінімальний стаж (попередній up_to_months), який перевищує прожиті роки
+// від раннього віку ((age - minStartAge) * 12 міс), вона виключається.
+export function getEligibleStages(scale, age, minStartAge = MIN_EARLY_START_AGE) {
+  if (!Array.isArray(scale) || !scale.length) return [];
+  const a = (age === null || age === undefined || age === '') ? NaN : Number(age);
+  if (!Number.isFinite(a)) return scale;
+
+  const maxLifetimeMonths = Math.max(0, Math.floor((a - minStartAge) * 12));
+
+  const eligible = scale.filter((s, idx) => {
+    if (idx === 0) return true;
+    const prevThreshold = scale[idx - 1]?.up_to_months;
+    if (!Number.isFinite(prevThreshold)) return false;
+    return maxLifetimeMonths >= prevThreshold;
+  });
+
+  return eligible.length ? eligible : [scale[0]];
+}
+
 export function rollExperience(type, card, config, age, startAge = DEFAULT_EXPERIENCE_START_AGE) {
   const isAgeKnown = age !== null && age !== undefined && age !== '' && Number.isFinite(Number(age));
   const cardStages = card?.meta?.stages;
@@ -114,9 +138,8 @@ export function rollExperience(type, card, config, age, startAge = DEFAULT_EXPER
   if (hasCardStages) {
     const cardScale = getMonthScale(cardStages);
     if (cardScale.length) {
-      const stageName = isAgeKnown
-        ? stageNameByMonths(cardScale, generateMonthsForScale(cardScale, age, startAge))
-        : pickFromStrings(cardScale.map(s => s.name), UNKNOWN_STAGE);
+      const eligible = isAgeKnown ? getEligibleStages(cardScale, age) : cardScale;
+      const stageName = pickFromStrings(eligible.map(s => s.name), UNKNOWN_STAGE);
       return {
         stage: stageName,
         custom_scale: serializeScale(cardScale)
@@ -127,9 +150,8 @@ export function rollExperience(type, card, config, age, startAge = DEFAULT_EXPER
 
   const defaultScale = getMonthStages(type, config);
   if (defaultScale.length) {
-    const stageName = isAgeKnown
-      ? stageNameByMonths(defaultScale, generateMonthsForScale(defaultScale, age, startAge))
-      : pickFromStrings(defaultScale.map(s => s.name), UNKNOWN_STAGE);
+    const eligible = isAgeKnown ? getEligibleStages(defaultScale, age) : defaultScale;
+    const stageName = pickFromStrings(eligible.map(s => s.name), UNKNOWN_STAGE);
     return { stage: stageName };
   }
   return { stage: pickStage(card || {}, config?.default_stages?.[type]) };
