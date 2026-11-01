@@ -9,7 +9,7 @@ import {
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { isPackNoticeMuted, isPackShortageMuted, setPackShortageMuted } from '../game-modules/overlays/pack-notice.js';
-import { findShortByCounts } from '../utils/pack-fallback.js';
+import { findShortByCounts } from '../utils/game/pack-fallback.js';
 import { getGameConfigSync } from '../config/config-manager.js';
 import { initTips } from './ui/tooltip.js';
 import * as ui from './ui/ui.js';

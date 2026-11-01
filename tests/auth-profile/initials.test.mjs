@@ -4,7 +4,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // MINOR 4 (аудит етапу 3): charAt(0) обрізає сурогатні пари (емодзі). Ініціал беремо цілим символом.
-const { firstChar } = await import('../../js/utils/initial.js');
+const { firstChar } = await import('../../js/utils/auth/initial.js');
 
 // Звичайні імена
 assert.strictEqual(firstChar('Тимур'), 'Т');

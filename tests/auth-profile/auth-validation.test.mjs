@@ -3,7 +3,7 @@
 // I-7: валідація нікнейму при реєстрації та чесні повідомлення про помилки авторизації.
 // Раніше будь-який збій signUp (мережа, слабкий пароль, ліміт запитів) маскувався під «Це ім'я вже зайняте».
 
-const { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } = await import('../../js/utils/auth-validation.js');
+const { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } = await import('../../js/utils/auth/auth-validation.js');
 
 let failed = 0;
 function check(name, fn) {

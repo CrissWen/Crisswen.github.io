@@ -1,8 +1,8 @@
-import { esc, unescapeApos } from '../../utils/security.js';
-import { avatarImgHtml, profileTriggerAttrs } from '../../utils/avatar.js';
+import { esc, unescapeApos } from '../../utils/auth/security.js';
+import { avatarImgHtml, profileTriggerAttrs } from '../../utils/auth/avatar.js';
 import { isBlockCollapsed } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
-import { firstChar } from '../../utils/initial.js';
+import { firstChar } from '../../utils/auth/initial.js';
 
 // БЛОК 5 — ТАБЛИЦЯ "СПЕЦ МОЖЛИВОСТІ" (завжди рівно 2 колонки-можливості)
 // Якщо можливість ще не відкрита гравцем — комірка просто порожня.

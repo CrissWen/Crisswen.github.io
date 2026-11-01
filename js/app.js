@@ -5,14 +5,14 @@ import { renderGame, initGame, cleanupGame } from './pages/game.js';
 import { renderProfile, initProfile, cleanupProfile, selectProfileTab } from './pages/profile.js'; // Підключаємо сторінку профілю
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
-import { applyStoredTheme } from './utils/theme-manager.js';
-import { syncGameTab } from './utils/last-session.js';
-import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/avatar.js';
+import { applyStoredTheme } from './utils/common/theme-manager.js';
+import { syncGameTab } from './utils/game/last-session.js';
+import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/auth/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
 import { initCustomSelects } from './ui/custom-select.js';
 import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
-import { firstChar } from './utils/initial.js';
+import { firstChar } from './utils/auth/initial.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -115,7 +115,7 @@ async function router() {
 
   // Синхронізуємо час із сервером один раз, коли користувач залогінений
   if (session) {
-    import('./utils/time-sync.js').then(({ syncTime }) => syncTime());
+    import('./utils/game/time-sync.js').then(({ syncTime }) => syncTime());
   }
 
   // --- ЛОГІКА ХЕДЕРА ---

@@ -1,4 +1,4 @@
-import { esc } from '../utils/escape-html.js';
+import { esc } from '../utils/common/escape-html.js';
 import { listPacks, deletePack, MAX_PERSONAL_PACKS, PACK_LIMIT_MESSAGE } from '../services/packs-store.js';
 import { showPackConfirm } from '../game-modules/overlays/pack-confirm.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';

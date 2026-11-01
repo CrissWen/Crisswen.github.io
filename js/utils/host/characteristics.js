@@ -1,7 +1,7 @@
 import { getGameConfigSync } from '../../config/config-manager.js';
 import { CHAR_TYPE_MAP, STEAL_EMPTY_TEXT } from './constants.js';
-import { randInt, pickCard, pickStage, generateHeight } from '../random.js';
-import { rollExperience } from '../experience.js';
+import { randInt, pickCard, pickStage, generateHeight } from '../common/random.js';
+import { rollExperience } from '../auth/experience.js';
 
 // ===== Генерація карток характеристик (без звернень до БД) =====
 

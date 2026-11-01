@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js';
-import { esc } from '../utils/security.js';
+import { esc } from '../utils/auth/security.js';
 
 // Статуси кімнати, які вже не вважаються активними. closeRoom (host-actions.js) тепер сам виставляє status: 'closed'
 // в тому ж запиті, що й bunker_state.room_closed, тож цей фільтр вже працює для нових закритих кімнат.

@@ -1,4 +1,4 @@
-import { isAllowedImageFormat, loadImage } from '../utils/image-file.js';
+import { isAllowedImageFormat, loadImage } from '../utils/auth/image-file.js';
 /**
  * Модальне вікно інтерактивного обрізання (crop & zoom) аватарки.
  * Працює на базі нативного <dialog> та HTML5 Canvas.

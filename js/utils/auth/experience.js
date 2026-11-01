@@ -7,7 +7,7 @@
 // Стадія БЕЗ up_to_months (зазвичай остання) — відкрита верхня: діє для всього стажу понад найбільший поріг.
 // Масив рядків — не шкала за місяцями: такі списки лишаються на логіці pickStage (випадкова назва).
 
-import { randInt, pickStage, pickFromStrings } from './random.js';
+import { randInt, pickStage, pickFromStrings } from '../common/random.js';
 
 export const UNKNOWN_STAGE = 'Невідома стадія';
 // Вік, з якого може починатися стаж (ранні роки життя без нього): максимум стажу = (вік − цей вік) років у місяцях.

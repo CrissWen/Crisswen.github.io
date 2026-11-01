@@ -1,4 +1,4 @@
-import { esc } from '../../utils/security.js';
+import { esc } from '../../utils/auth/security.js';
 // АРХІТЕКТУРНЕ ЗАСТЕРЕЖЕННЯ (НЕ ДЕДУПЛІКУВАТИ З confirm-dialog.js):
 // Вікно підтвердження для сторінок паків (#/packs, #/pack-editor). Навмисно ізольоване від confirm-dialog.js, щоб не чіпати глобальне вікно гри
 // (панель ведучого, char-lock) і мати власний вигляд та захист від випадкового кліку:

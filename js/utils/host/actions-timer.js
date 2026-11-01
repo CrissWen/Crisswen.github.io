@@ -1,4 +1,4 @@
-import { pushLog } from '../log-writer.js';
+import { pushLog } from '../game/log-writer.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { getGlobalTime } from '../../services/server-time.js';
 

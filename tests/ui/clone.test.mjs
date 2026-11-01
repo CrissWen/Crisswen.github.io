@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clone } from '../../js/utils/clone.js';
+import { clone } from '../../js/utils/common/clone.js';
 
 test('clone: returns undefined for undefined input', () => {
   assert.equal(clone(undefined), undefined);

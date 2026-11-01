@@ -1,4 +1,4 @@
-import { clone } from '../utils/clone.js';
+import { clone } from '../utils/common/clone.js';
 // ===== Менеджер локальних чернеток редактора паків (localStorage) =====
 // Ключ: truebunker_draft_<userId>_<packId> (ізоляція між користувачами на одному комп'ютері; новий пак → packId = 'new').
 // Модуль не знає про DOM редактора й про Supabase: стан йому передає редактор (saveDraft) або функція-постачальник (bindLifecycle).

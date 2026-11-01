@@ -1,6 +1,6 @@
 import { supabase } from '../../services/supabase.js';
-import { pushLog } from '../log-writer.js';
-import { isCataclysmSpinActive } from '../cataclysm-spin.js';
+import { pushLog } from '../game/log-writer.js';
+import { isCataclysmSpinActive } from '../roulette/cataclysm-spin.js';
 import { getGlobalTime } from '../../services/server-time.js';
 
 // ===== Доступ до кімнати в БД + знімок для «Скасувати» =====

@@ -1,4 +1,4 @@
-import { buildRibbon, createTravelCurve, landingOffsetFromSeed } from '../utils/roulette-ribbon.js';
+import { buildRibbon, createTravelCurve, landingOffsetFromSeed } from '../utils/roulette/roulette-ribbon.js';
 
 // ===== Універсальна рулетка-стрічка («крутка кейса») =====
 // Не знає про катаклізми: приймає елементи, результат і час старту, малює горизонтальну стрічку, що розганяється,

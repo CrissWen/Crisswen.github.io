@@ -1,8 +1,8 @@
-import { getGameConfig } from '../config/config-manager.js';
-import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray, generateHeight } from './random.js';
-import { getGlobalTime } from '../services/server-time.js';
-import { rollExperience, getMonthStages, serializeScale } from './experience.js';
-import { detectCataclysmIcon } from './cataclysm-detector.js';
+import { getGameConfig } from '../../config/config-manager.js';
+import { randInt, getSkewedRandomInt, rollChance, pickCard, pickFromStrings, pickStage, shuffleArray, generateHeight } from '../common/random.js';
+import { getGlobalTime } from '../../services/server-time.js';
+import { rollExperience, getMonthStages, serializeScale } from '../auth/experience.js';
+import { detectCataclysmIcon } from '../roulette/cataclysm-detector.js';
 
 const formatStayTime = (months) => {
   if (!months || isNaN(months)) return "Невідомий час";

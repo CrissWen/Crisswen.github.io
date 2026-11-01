@@ -1,8 +1,8 @@
 import { supabase } from '../services/supabase.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale } from '../services/avatar-service.js';
-import { setAvatarEl, applyAvatarLetterPadding } from '../utils/avatar.js';
-import { esc } from '../utils/security.js';
-import { firstChar } from '../utils/initial.js';
+import { setAvatarEl, applyAvatarLetterPadding } from '../utils/auth/avatar.js';
+import { esc } from '../utils/auth/security.js';
+import { firstChar } from '../utils/auth/initial.js';
 
 // ===== Картка профілю гравця (невелике спливне вікно біля аватарки) =====
 // Відкривається кліком по аватарці будь-якого гравця під час гри (елементи з data-profile-user, див. utils/avatar.js).

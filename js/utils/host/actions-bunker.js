@@ -3,11 +3,11 @@ import { pickUniqueFromPools } from './characteristics.js';
 import { getRoom, saveRoom, snapshot } from './room-store.js';
 import { loadPools } from './card-pools.js';
 import { setHostEvent } from './common.js';
-import { randomBunkerFieldValue } from '../game-generator.js';
+import { randomBunkerFieldValue } from '../game/game-generator.js';
 import { getGlobalTime } from '../../services/server-time.js';
-import { detectCataclysmIcon } from '../cataclysm-detector.js';
-import { attachCataclysmSpin, isCataclysmSpinActive } from '../cataclysm-spin.js';
-import { pushLog } from '../log-writer.js';
+import { detectCataclysmIcon } from '../roulette/cataclysm-detector.js';
+import { attachCataclysmSpin, isCataclysmSpinActive } from '../roulette/cataclysm-spin.js';
+import { pushLog } from '../game/log-writer.js';
 
 // ===== Дії з бункером =====
 

@@ -13,15 +13,15 @@ const STUBS = {
       auth: { getSession: () => globalThis.__getSession() },
       from: () => { const c = { select: () => c, eq: () => c, maybeSingle: () => globalThis.__maybeSingle() }; return c; }
     };`,
-  '../utils/theme-manager.js': `export const THEMES = []; export const getCurrentTheme = () => 'classic'; export const setTheme = () => {}; export const onThemeChange = () => () => {};`,
+  '../utils/common/theme-manager.js': `export const THEMES = []; export const getCurrentTheme = () => 'classic'; export const setTheme = () => {}; export const onThemeChange = () => () => {};`,
   '../services/avatar-service.js': `
     globalThis.__avatarSubs = 0;
     export const fetchAvatars = async () => 0; export const getCachedAvatar = () => null; export const hasCachedAvatar = () => true;
     export const isAvatarStale = () => false; export const uploadAvatar = async () => ''; export const removeAvatar = async () => {};
     export const onAvatarChange = (cb) => { globalThis.__avatarSubs++; let on = true; return () => { if (on) { on = false; globalThis.__avatarSubs--; } }; };`,
-  '../utils/avatar.js': `export const setAvatarEl = () => {}; export const applyAvatarLetterPadding = () => {};`,
+  '../utils/auth/avatar.js': `export const setAvatarEl = () => {}; export const applyAvatarLetterPadding = () => {};`,
   '../ui/avatar-cropper-modal.js': `export const openAvatarCropper = async () => null;`,
-  '../utils/security.js': `export const esc = s => String(s);`,
+  '../utils/auth/security.js': `export const esc = s => String(s);`,
   '../services/sound-manager.js': `
     export const AUDIO_CHANNELS = { MASTER: 'master', SFX: 'sfx', UI: 'ui', MUSIC: 'music' };
     export const SOUND_IDS = { BUNKER_AMBIENT: 'ambient', DICE_ROLL: 'dice', UI_CLICK: 'click' };

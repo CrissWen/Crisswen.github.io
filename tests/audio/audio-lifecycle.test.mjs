@@ -76,7 +76,7 @@ globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 
 const { soundManager, SOUND_IDS } = await import('../../js/services/sound-manager.js');
 const { AudioSynth } = await import('../../js/services/audio-synth.js');
-const sfx = await import('../../js/utils/sfx.js');
+const sfx = await import('../../js/utils/common/sfx.js');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function reset() {

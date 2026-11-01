@@ -1,6 +1,6 @@
-import { esc } from '../../utils/escape-html.js';
+import { esc } from '../../utils/common/escape-html.js';
 import { DEFAULT_PACK_ID, packDisplayName } from '../../services/packs-store.js';
-import { avatarBadgeHtml } from '../../utils/avatar.js';
+import { avatarBadgeHtml } from '../../utils/auth/avatar.js';
 
 // minPlayers / maxPlayers — з конфігу балансу (config-manager.js: minPlayersToStart / maxPlayersInLobby), викликач — game.js.
 // Тут немає зашитих чисел: інакше локальне перевизначення в game-config.local.js не змінювало б кнопку «Почати гру» і підказку.

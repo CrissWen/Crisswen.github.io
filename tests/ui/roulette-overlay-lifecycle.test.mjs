@@ -10,7 +10,7 @@ const STUBS = {
       return { start() {}, destroy() { globalThis.__reelDestroyed = (globalThis.__reelDestroyed || 0) + 1; } };
     }
     export async function resolveReelMode() { return 'full'; }`,
-  '../utils/sfx.js': `
+  '../utils/common/sfx.js': `
     export function configureSfx() {}
     export function playHeartbeat() {}
     export function unlockAudio() {}`,

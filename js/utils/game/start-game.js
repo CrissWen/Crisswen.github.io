@@ -1,13 +1,13 @@
-import { supabase } from '../services/supabase.js';
-import { packDisplayName, checkIsAdmin } from '../services/packs-store.js';
-import { getGameConfig } from '../config/config-manager.js';
+import { supabase } from '../../services/supabase.js';
+import { packDisplayName, checkIsAdmin } from '../../services/packs-store.js';
+import { getGameConfig } from '../../config/config-manager.js';
 import { generateGameState } from './game-generator.js';
-import { loadGamePools } from './host/card-pools.js';
+import { loadGamePools } from '../host/card-pools.js';
 import { describeFallback } from './pack-fallback.js';
 import { pushLog } from './log-writer.js';
-import { attachCataclysmSpin } from './cataclysm-spin.js';
-import { getGlobalTime } from '../services/server-time.js';
-import { clearSnapshot } from './host/room-store.js';
+import { attachCataclysmSpin } from '../roulette/cataclysm-spin.js';
+import { getGlobalTime } from '../../services/server-time.js';
+import { clearSnapshot } from '../host/room-store.js';
 
 // Старт гри: читає гравців і обраний пак кімнати, генерує стан за його картками і записує його в БД одним UPDATE.
 // Без DOM: кнопку, її текст і показ помилки веде викликач (game.js -> handleStartGame).

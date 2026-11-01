@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabase.js';
+import { supabase } from '../../services/supabase.js';
 
 // ===== «Остання активна сесія» для вкладки «Гра» в хедері =====
 // Код останньої кімнати, в яку гравець заходив на сторінці гри, зберігається в localStorage ПЕР-КОРИСТУВАЧА

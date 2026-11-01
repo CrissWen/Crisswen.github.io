@@ -1,6 +1,6 @@
 import { supabase } from '../../services/supabase.js';
-import { pushLog, nextEventId } from '../log-writer.js';
-import { randInt } from '../random.js';
+import { pushLog, nextEventId } from '../game/log-writer.js';
+import { randInt } from '../common/random.js';
 import { getRoom, saveRoom, snapshot, clearSnapshot } from './room-store.js';
 import { setHostEvent, nameOf } from './common.js';
 import { clearTimerAutoStop } from './actions-timer.js';

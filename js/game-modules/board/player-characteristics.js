@@ -7,7 +7,7 @@
 
 import { isBlockCollapsed } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
-import { esc } from '../../utils/security.js';
+import { esc } from '../../utils/auth/security.js';
 
 export function playerCharacteristics(data) {
   data = data || {

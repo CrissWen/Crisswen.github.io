@@ -4,8 +4,8 @@
 // якщо файл не завантажився, лишається синтез.
 // Гучність і вимкнення звуку задає спільний SoundManager: канал «Ігрові ефекти» (SFX) та Master.
 
-import { soundManager, AUDIO_CHANNELS } from '../services/sound-manager.js';
-import { AudioSynth } from '../services/audio-synth.js';
+import { soundManager, AUDIO_CHANNELS } from '../../services/sound-manager.js';
+import { AudioSynth } from '../../services/audio-synth.js';
 
 const MIN_TICK_GAP_MS = 30; // «тіки» частіші за це зливаються в тріск, тож пропускаємо зайві
 

@@ -1,4 +1,4 @@
-import { clone } from '../utils/clone.js';
+import { clone } from '../utils/common/clone.js';
 // ===== Міст редактора паків: автосейв чернеток + Undo/Redo + гарячі клавіші =====
 // Редактор не інструментуємо в кожному обробнику: після будь-якої зміни стану editor.js викликає onEditorChanged()
 // (з updateButtons). Тут зі знімків по розділах (категорії карток, катаклізми, стадії) складаються дії для HistoryManager,

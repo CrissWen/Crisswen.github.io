@@ -1,6 +1,6 @@
 import { esc } from './security.js';
 import { firstChar } from './initial.js';
-import { getCachedAvatar, hasCachedAvatar, fetchAvatars } from '../services/avatar-service.js';
+import { getCachedAvatar, hasCachedAvatar, fetchAvatars } from '../../services/avatar-service.js';
 
 // ===== Відображення аватарок =====
 // Літера імені завжди лежить під картинкою як запасний варіант: поки фото вантажиться або якщо воно не завантажилось,

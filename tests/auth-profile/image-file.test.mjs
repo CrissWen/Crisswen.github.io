@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isAllowedImageFormat, ALLOWED_MIME_TYPES, loadImage } from '../../js/utils/image-file.js';
+import { isAllowedImageFormat, ALLOWED_MIME_TYPES, loadImage } from '../../js/utils/auth/image-file.js';
 
 test('image-file: ALLOWED_MIME_TYPES contains standard web image formats', () => {
   assert.ok(ALLOWED_MIME_TYPES.has('image/jpeg'));

@@ -1,5 +1,5 @@
-import { shuffleArray } from './random.js';
-import { ALL_PACK_CATEGORIES } from '../pack-editor/categories.js';
+import { shuffleArray } from '../common/random.js';
+import { ALL_PACK_CATEGORIES } from '../../pack-editor/categories.js';
 
 // ===== Фолбек карток: добір із дефолтного пака, коли в особистому їх не вистачає =====
 // Чисті функції без БД і DOM. Формат пулів — як у host/card-pools.js:

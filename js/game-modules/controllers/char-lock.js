@@ -1,7 +1,7 @@
 import { supabase } from '../../services/supabase.js';
 import { showCustomConfirm } from '../overlays/confirm-dialog.js';
 import { showGlobalToast } from '../overlays/global-toast.js';
-import { addLog } from '../../utils/log-writer.js';
+import { addLog } from '../../utils/game/log-writer.js';
 import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
 
 // ===== Замок характеристики: гравець відкриває/ховає свою картку від інших =====

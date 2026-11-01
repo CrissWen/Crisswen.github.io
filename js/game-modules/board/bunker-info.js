@@ -1,6 +1,6 @@
 import { isBlockCollapsed } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
-import { esc } from '../../utils/security.js';
+import { esc } from '../../utils/auth/security.js';
 
 // Видаляємо тестовий плаваючий перемикач, якщо він залишився в DOM
 if (typeof document !== 'undefined') {

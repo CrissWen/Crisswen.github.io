@@ -4,7 +4,7 @@
  */
 
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
-import { esc } from '../utils/security.js';
+import { esc } from '../utils/auth/security.js';
 
 let activeTransition = null;
 

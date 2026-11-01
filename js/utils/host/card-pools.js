@@ -1,8 +1,8 @@
 import { supabase } from '../../services/supabase.js';
 import { DEFAULT_PACK_ID } from '../../services/packs-store.js';
 import { getGameConfig } from '../../config/config-manager.js';
-import { applyDefaultFallback, buildRequirements, buildMinimalRequirements } from '../pack-fallback.js';
-import { getStageNames } from '../experience.js';
+import { applyDefaultFallback, buildRequirements, buildMinimalRequirements } from '../game/pack-fallback.js';
+import { getStageNames } from '../auth/experience.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 
 // ===== Пули карток паків (pack_cards) =====

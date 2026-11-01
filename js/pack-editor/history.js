@@ -1,4 +1,4 @@
-import { clone } from '../utils/clone.js';
+import { clone } from '../utils/common/clone.js';
 // ===== Історія дій редактора (Undo / Redo), кільцевий буфер на 30 дій =====
 // Дія: { type, category, description, before, after }, де before/after — знімки стану (structuredClone).
 // Сам менеджер не знає, як застосувати знімок до редактора: це робить applier, який реєструє editor.js (setApplier).

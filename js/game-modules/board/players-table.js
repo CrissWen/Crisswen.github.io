@@ -1,9 +1,9 @@
-import { describeScale } from '../../utils/experience.js';
-import { esc, unescapeApos, renderSafeNodes } from '../../utils/security.js';
-import { avatarImgHtml, getAvatarPaddingStyle, profileTriggerAttrs } from '../../utils/avatar.js';
+import { describeScale } from '../../utils/auth/experience.js';
+import { esc, unescapeApos, renderSafeNodes } from '../../utils/auth/security.js';
+import { avatarImgHtml, getAvatarPaddingStyle, profileTriggerAttrs } from '../../utils/auth/avatar.js';
 import { getPlayersViewMode, isPlayerCardExpanded } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
-import { firstChar } from '../../utils/initial.js';
+import { firstChar } from '../../utils/auth/initial.js';
 
 // Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
 function renderSafeTooltip(popup, rawTooltip) {

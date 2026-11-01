@@ -1,11 +1,11 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { register } from 'node:module';
 
 // MINOR 5 (аудит етапу 3): тимчасова помилка завантаження аватарки не має блокувати її до F5.
 // Зламана адреса блокується лише на короткий час (TTL) і одразу розблокується, коли мережа повернулась (подія online).
 
 const STUBS = {
-  '../services/avatar-service.js': `
+  '../../services/avatar-service.js': `
     export function getCachedAvatar() { return globalThis.__avatarUrl; }
     export function hasCachedAvatar() { return true; }
     export function fetchAvatars() { return Promise.resolve(); }`
@@ -46,7 +46,7 @@ const realNow = Date.now;
 let fakeNow = 1_000_000;
 Date.now = () => fakeNow;
 
-const { avatarImgHtml } = await import('../../js/utils/avatar.js');
+const { avatarImgHtml } = await import('../../js/utils/auth/avatar.js');
 
 const URL1 = 'https://example.supabase.co/storage/v1/object/public/avatars/u1/a.png';
 globalThis.__avatarUrl = URL1;

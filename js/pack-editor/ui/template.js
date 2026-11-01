@@ -1,4 +1,4 @@
-import { esc } from '../../utils/escape-html.js';
+import { esc } from '../../utils/common/escape-html.js';
 import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
 import { TITLE_MAX, DESC_MAX, STAGE_FIELDS, RANGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
 

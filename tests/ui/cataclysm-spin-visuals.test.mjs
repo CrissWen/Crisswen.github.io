@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { register } from 'node:module';
 
 // I-10: візуальні параметри стрічки (maxFillers, fillerZone, easingPower, suspense) раніше читались із ЛОКАЛЬНОГО конфігу кожного клієнта,
@@ -12,8 +12,8 @@ const RULES = [
     src: "export const CATASTROPHE_ICONS_LIST = Array.from({ length: 60 }, (_, i) => ({ path: 'icons/c' + i + '.svg' }));" },
   { parent: '/overlays/cataclysm-roulette.js', spec: '../../ui/roulette-overlay.js',
     src: 'export const playRouletteOverlay = async (o) => { globalThis.__overlayOpts = o; return true; }; export const hideRouletteOverlay = () => {}; export const isRouletteOverlayShown = () => false; export const primeRouletteAudio = () => {};' },
-  { parent: '/utils/cataclysm-spin.js', spec: '../config/config-manager.js', src: 'export const getGameConfig = async () => globalThis.__cfg;' },
-  { parent: '/utils/cataclysm-spin.js', spec: './cataclysm-detector.js', src: 'export const detectCataclysmIcon = () => null;' },
+  { parent: '/utils/roulette/cataclysm-spin.js', spec: '../../config/config-manager.js', src: 'export const getGameConfig = async () => globalThis.__cfg;' },
+  { parent: '/utils/roulette/cataclysm-spin.js', spec: './cataclysm-detector.js', src: 'export const detectCataclysmIcon = () => null;' },
 ];
 const hooksSource = `
   const RULES = ${JSON.stringify(RULES)};
@@ -24,7 +24,7 @@ const hooksSource = `
   }`;
 register('data:text/javascript,' + encodeURIComponent(hooksSource));
 
-const spinMod = await import('../../js/utils/cataclysm-spin.js');
+const spinMod = await import('../../js/utils/roulette/cataclysm-spin.js');
 const { playCataclysmRoulette } = await import('../../js/game-modules/overlays/cataclysm-roulette.js');
 
 const HOST = { enabled: true, durationMs: 5000, startLeadMs: 1500, holdAfterMs: 3000, easingPower: 4, fillerZone: 0.4, maxFillers: 17, suspense: { holdMs: 300 }, mode: 'full' };

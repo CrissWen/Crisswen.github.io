@@ -4,8 +4,8 @@ import {
   BUNKER_FIELDS,
   DELETABLE_CHARACTERISTICS,
   HEAL_PERFECT
-} from '../../utils/host-actions.js';
-import { esc } from '../../utils/security.js';
+} from '../../utils/game/host-actions.js';
+import { esc } from '../../utils/auth/security.js';
 
 // Цей модуль відповідає ЛИШЕ за HTML/DOM-вигляд панелі.
 // Уся логіка дій — у utils/host-actions.js, підключення подій — у pages/game.js.

@@ -14,10 +14,10 @@ import {
   TITLE_MAX, DESC_MAX, CARD_VALUE_MAX, CARD_META_TEXT_MAX,
   STAGE_NAME_MAX, MAX_PACK_CARDS, CATACLYSM_LIMITS
 } from '../constants.js';
-import { validatePackText, cleanControlChars } from '../../utils/security.js';
+import { validatePackText, cleanControlChars } from '../../utils/auth/security.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { showPackNotice, isPackNoticeMuted, setPackNoticeMuted } from '../../game-modules/overlays/pack-notice.js';
-import { findShortCategories } from '../../utils/pack-fallback.js';
+import { findShortCategories } from '../../utils/game/pack-fallback.js';
 import { getGameConfigSync } from '../../config/config-manager.js';
 import * as ui from '../ui/ui.js';
 import { cataDraftPending, syncCataclysmsFromLlmText } from './cataclysm.js';

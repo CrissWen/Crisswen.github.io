@@ -1,4 +1,4 @@
-import { syncServerTime, getGlobalTime } from '../services/server-time.js';
+import { syncServerTime, getGlobalTime } from '../../services/server-time.js';
 
 /**
  * Отримує час із сервера Supabase та розраховує зміщення відносно локального пристрою.

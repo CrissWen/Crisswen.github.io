@@ -17,7 +17,7 @@ globalThis.document = {
   getElementById: () => null
 };
 
-const { buildBoardViewModel } = await import('../../js/utils/board-view-model.js');
+const { buildBoardViewModel } = await import('../../js/utils/game/board-view-model.js');
 const { playersTable } = await import('../../js/game-modules/board/players-table.js');
 const { specialAbilitiesTable } = await import('../../js/game-modules/board/special-abilities-table.js');
 

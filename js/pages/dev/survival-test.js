@@ -4,7 +4,7 @@
 // (Хедер сторінки живе в survival-test-header.js — він єдиний читає сесію, лише для імені в профілі.)
 import { getGameConfig } from '../../config/config-manager.js';
 import { playSurvivalRoulette, primeSurvivalRouletteAudio } from './survival-roulette.js';
-import { esc } from '../../utils/security.js';
+import { esc } from '../../utils/auth/security.js';
 //
 // ЛОГІКА
 //   Крок 1: їжа.              «Ні» -> фінал "голод"

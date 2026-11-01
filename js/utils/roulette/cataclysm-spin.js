@@ -1,4 +1,4 @@
-import { getGameConfig } from '../config/config-manager.js';
+import { getGameConfig } from '../../config/config-manager.js';
 import { detectCataclysmIcon } from './cataclysm-detector.js';
 import { normalizeRouletteConfig } from './roulette-config.js';
 

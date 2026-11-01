@@ -1,5 +1,5 @@
 import { createRouletteReel, resolveReelMode } from './roulette-reel.js';
-import { configureSfx, playHeartbeat, unlockAudio } from '../utils/sfx.js';
+import { configureSfx, playHeartbeat, unlockAudio } from '../utils/common/sfx.js';
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 
 // ===== Оверлей рулетки (спільний для рулетки катаклізму й рулетки тесту виживання) =====

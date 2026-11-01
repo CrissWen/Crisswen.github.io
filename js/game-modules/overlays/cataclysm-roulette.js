@@ -2,9 +2,9 @@ import { getGlobalTime } from '../../services/server-time.js';
 import { getGameConfig } from '../../config/config-manager.js';
 import { ICONS } from '../../constants/icons.js';
 import { CATASTROPHE_ICONS_LIST } from '../../constants/catastrophe-icons.js';
-import { createRng } from '../../utils/roulette-ribbon.js';
-import { getSpinTimeline, sanitizeIconPath, resolveSpinVisuals } from '../../utils/cataclysm-spin.js';
-import { normalizeRouletteConfig } from '../../utils/roulette-config.js';
+import { createRng } from '../../utils/roulette/roulette-ribbon.js';
+import { getSpinTimeline, sanitizeIconPath, resolveSpinVisuals } from '../../utils/roulette/cataclysm-spin.js';
+import { normalizeRouletteConfig } from '../../utils/roulette/roulette-config.js';
 import { playRouletteOverlay, hideRouletteOverlay, isRouletteOverlayShown, primeRouletteAudio } from '../../ui/roulette-overlay.js';
 
 // ===== Рулетка катаклізму =====

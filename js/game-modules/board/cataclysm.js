@@ -1,6 +1,6 @@
 import { isBlockCollapsed } from './board-ui-state.js';
 import { ICONS, isSquareFrameIcon, isWideFrameIcon } from '../../constants/icons.js';
-import { esc } from '../../utils/security.js';
+import { esc } from '../../utils/auth/security.js';
 
 function renderCataclysmIcon(icon) {
   const iconSrc = icon || ICONS.HAZARD;

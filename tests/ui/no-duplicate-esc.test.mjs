@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +20,7 @@ function walk(dir) {
 }
 
 const DEFINITION = /^\s*(?:export\s+)?(?:function\s+(?:esc|escapeHtml|escHtml)\s*\(|(?:const|let|var)\s+(?:esc|escapeHtml|escHtml)\s*=)/m;
-const SECURITY = join(root, 'utils', 'security.js');
+const SECURITY = join(root, 'utils', 'auth', 'security.js');
 
 const offenders = walk(root)
   .filter((file) => file !== SECURITY)
@@ -30,8 +30,8 @@ const offenders = walk(root)
 assert.deepStrictEqual(offenders, [], `Локальні копії esc()/escapeHtml() мають бути замінені імпортом із utils/security.js: ${offenders.join(', ')}`);
 
 // utils/escape-html.js — лише реекспорт security.js (історичний шлях для редактора паків); перевіряємо, що це справді так
-const shim = readFileSync(join(root, 'utils', 'escape-html.js'), 'utf8');
-assert.ok(/export\s*\{[^}]*\besc\b[^}]*\}\s*from\s*['"]\.\/security\.js['"]/.test(shim), 'escape-html.js має лише реекспортувати esc із security.js');
+const shim = readFileSync(join(root, 'utils', 'common', 'escape-html.js'), 'utf8');
+assert.ok(/export\s*\{[^}]*\besc\b[^}]*\}\s*from\s*['"]\.\.\/auth\/security\.js['"]/.test(shim), 'escape-html.js має лише реекспортувати esc із security.js');
 
 // Файли, які використовують esc(...), мусять його імпортувати (інакше ReferenceError у браузері)
 const missingImport = walk(root)
@@ -47,7 +47,7 @@ const missingImport = walk(root)
 assert.deepStrictEqual(missingImport, [], `Використовують esc() без імпорту: ${missingImport.join(', ')}`);
 
 // Канонічна поведінка esc() збережена
-const { esc } = await import('../../js/utils/security.js');
+const { esc } = await import('../../js/utils/auth/security.js');
 assert.strictEqual(esc(`<a href="x" onclick='y'>&</a>`), '&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;&lt;/a&gt;');
 assert.strictEqual(esc(null), '');
 assert.strictEqual(esc(undefined), '');

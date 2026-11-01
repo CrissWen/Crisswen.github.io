@@ -1,5 +1,5 @@
-import { describeScale, getMonthScale } from './experience.js';
-import { esc, unescapeApos } from './security.js';
+import { describeScale, getMonthScale } from '../auth/experience.js';
+import { esc, unescapeApos } from '../auth/security.js';
 
 export function getAgeCategory(age, categories) {
   const num = Number(age);

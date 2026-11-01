@@ -1,5 +1,5 @@
-import { supabase } from '../services/supabase.js';
-import { getGameConfigSync } from '../config/config-manager.js';
+import { supabase } from '../../services/supabase.js';
+import { getGameConfigSync } from '../../config/config-manager.js';
 
 // Лог подій зберігається в bunker_state.logs — масиві записів { id, t, text }:
 //   id   — унікальний монотонно зростаючий номер запису (для кидка кубика збігається з latest_dice.id)

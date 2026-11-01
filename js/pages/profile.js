@@ -2,15 +2,15 @@ import { getCachedUserHistory, fetchUserGameHistory, checkRoomExists, fetchRoomD
 import { exportGameReplay, readReplayFile, launchOfflineReplay } from '../services/replay-service.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { supabase } from '../services/supabase.js';
-import { THEMES, getCurrentTheme, setTheme, onThemeChange } from '../utils/theme-manager.js';
+import { THEMES, getCurrentTheme, setTheme, onThemeChange } from '../utils/common/theme-manager.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
-import { setAvatarEl, applyAvatarLetterPadding } from '../utils/avatar.js';
+import { setAvatarEl, applyAvatarLetterPadding } from '../utils/auth/avatar.js';
 import { openAvatarCropper } from '../ui/avatar-cropper-modal.js';
-import { esc } from '../utils/security.js';
+import { esc } from '../utils/auth/security.js';
 import { soundManager, AUDIO_CHANNELS, SOUND_IDS } from '../services/sound-manager.js';
 import { initRangeSliders, setRangeSliderValue } from '../ui/range-slider.js';
 import { ICONS } from '../constants/icons.js';
-import { firstChar } from '../utils/initial.js';
+import { firstChar } from '../utils/auth/initial.js';
 
 
 function getAudioPercentValues(settings = {}) {

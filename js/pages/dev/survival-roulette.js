@@ -1,6 +1,6 @@
 import { getGameConfig } from '../../config/config-manager.js';
 import { ICONS } from '../../constants/icons.js';
-import { normalizeRouletteConfig } from '../../utils/roulette-config.js';
+import { normalizeRouletteConfig } from '../../utils/roulette/roulette-config.js';
 import { playRouletteOverlay, primeRouletteAudio } from '../../ui/roulette-overlay.js';
 
 // ===== Рулетка тесту виживання: дві іконки — серце («вижили») і череп («загинули») =====

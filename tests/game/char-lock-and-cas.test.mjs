@@ -7,7 +7,7 @@ const { toggleCharacteristicReveal, buildRevealChanges, revertRevealChanges } = 
   '../../js/game-modules/controllers/char-lock.js'
 );
 const { withRoomAction, undoLastAction, snapshot } = await import('../../js/utils/host/room-store.js');
-const { nextEventId } = await import('../../js/utils/log-writer.js');
+const { nextEventId } = await import('../../js/utils/game/log-writer.js');
 const { setHostEvent } = await import('../../js/utils/host/common.js');
 
 test('I6: buildRevealChanges та revertRevealChanges змінюють лише прапорці is_revealed і не затирають вкрадену картку', () => {

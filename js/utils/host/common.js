@@ -1,4 +1,4 @@
-import { pushLog, nextEventId } from '../log-writer.js';
+import { pushLog, nextEventId } from '../game/log-writer.js';
 import { CHAR_TYPE_MAP } from './constants.js';
 
 // ===== Спільні допоміжні для всіх дій ведучого =====

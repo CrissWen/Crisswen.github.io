@@ -1,5 +1,5 @@
 import { supabase } from '../../services/supabase.js';
-import { finishVoting } from '../../utils/host-actions.js';
+import { finishVoting } from '../../utils/game/host-actions.js';
 import { showGlobalToast } from '../overlays/global-toast.js';
 
 // ===== Поведінка голосування на сторінці гри (мережа, скрол, автозавершення) =====

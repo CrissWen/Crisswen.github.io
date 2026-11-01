@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js';
-import { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth-validation.js';
+import { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth/auth-validation.js';
 
 const inputStyle = "padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text);";
 

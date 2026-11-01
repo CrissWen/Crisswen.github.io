@@ -1,4 +1,4 @@
-import { isAllowedImageFormat, loadImage } from '../utils/image-file.js';
+import { isAllowedImageFormat, loadImage } from '../utils/auth/image-file.js';
 import { supabase, supabaseUrl } from './supabase.js';
 
 // ===== Аватарки гравців =====

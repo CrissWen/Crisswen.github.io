@@ -3,7 +3,7 @@
  * Аналізує назву та опис катастрофи, зіставляючи їх із тегами каталогу CATASTROPHE_ICONS.
  */
 
-import { CATASTROPHE_ICONS, CATASTROPHE_ICONS_LIST } from '../constants/icons.js';
+import { CATASTROPHE_ICONS, CATASTROPHE_ICONS_LIST } from '../../constants/icons.js';
 
 const MIN_SCORE = 3.0;
 

@@ -16,15 +16,15 @@ export {
   BUNKER_FIELDS,
   DELETABLE_CHARACTERISTICS,
   HEAL_PERFECT
-} from './host/constants.js';
+} from '../host/constants.js';
 
 // «Скасувати» та дані для випадаючих списків панелі
-export { canUndo, undoLastAction, clearSnapshot } from './host/room-store.js';
-export { getStageOptions } from './host/card-pools.js';
+export { canUndo, undoLastAction, clearSnapshot } from '../host/room-store.js';
+export { getStageOptions } from '../host/card-pools.js';
 
 // Дії ведучого
-export * from './host/actions-players.js';
-export * from './host/actions-steal.js';
-export * from './host/actions-bunker.js';
-export * from './host/actions-timer.js';
-export * from './host/actions-session.js';
+export * from '../host/actions-players.js';
+export * from '../host/actions-steal.js';
+export * from '../host/actions-bunker.js';
+export * from '../host/actions-timer.js';
+export * from '../host/actions-session.js';

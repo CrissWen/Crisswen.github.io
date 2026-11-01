@@ -5,7 +5,7 @@ import {
   landingOffsetFromSeed,
   createTravelCurve,
   buildRibbon
-} from '../../js/utils/roulette-ribbon.js';
+} from '../../js/utils/roulette/roulette-ribbon.js';
 
 let failed = 0;
 function check(name, fn) {

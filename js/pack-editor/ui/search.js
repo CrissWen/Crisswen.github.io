@@ -1,4 +1,4 @@
-import { esc } from '../../utils/escape-html.js';
+import { esc } from '../../utils/common/escape-html.js';
 import { oneLine } from '../parser.js';
 import { normalizeSearch } from '../search.js';
 import { $ } from './helpers.js';

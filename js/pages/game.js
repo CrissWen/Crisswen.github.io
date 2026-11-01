@@ -1,5 +1,5 @@
 import { ICONS } from '../constants/icons.js';
-import { esc } from '../utils/security.js';
+import { esc } from '../utils/auth/security.js';
 import { REPLAY_STORAGE_KEY } from '../services/replay-service.js';
 import { supabase } from '../services/supabase.js';
 import { checkIsAdmin } from '../services/packs-store.js';
@@ -20,7 +20,7 @@ import {
 import { mountGameTimer, unmountGameTimer } from '../game-modules/timers/game-timer.js';
 import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer } from '../game-modules/timers/cataclysm-timer.js';
 import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
-import * as HostActions from '../utils/host-actions.js';
+import * as HostActions from '../utils/game/host-actions.js';
 import { removeHostPanel } from '../game-modules/host-panel/host-panel.js';
 import { syncHostPanel } from '../game-modules/controllers/host-panel-controller.js';
 import { syncVotingScroll, maybeAutoFinishVoting, handleVoteRadioChange, handleVoteSubmit, resetVotingState } from '../game-modules/controllers/voting-controller.js';
@@ -30,17 +30,17 @@ import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/cont
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
 import { playCataclysmRoulette, hideCataclysmRoulette, isCataclysmRouletteShown, primeCataclysmRouletteAudio } from '../game-modules/overlays/cataclysm-roulette.js';
-import { isCataclysmSpinActive, getSpinTimeline } from '../utils/cataclysm-spin.js';
+import { isCataclysmSpinActive, getSpinTimeline } from '../utils/roulette/cataclysm-spin.js';
 import { showOrientationPrompt, hideOrientationPrompt } from '../game-modules/overlays/orientation-prompt.js';
 import { eventLog, toggleEventLog, scrollEventLogToBottom } from '../game-modules/board/event-log.js';
 import { personalNotes, captureNotesFocus, restoreNotesFocus } from '../game-modules/board/personal-notes.js';
-import { buildBoardViewModel } from '../utils/board-view-model.js';
-import { startGame } from '../utils/start-game.js';
+import { buildBoardViewModel } from '../utils/game/board-view-model.js';
+import { startGame } from '../utils/game/start-game.js';
 import { initCustomSelects } from '../ui/custom-select.js';
 import { subscribeToRoom } from '../services/room-subscription.js';
 import { computeRoomUpdateEffects } from '../game-modules/state/room-update-reducer.js';
 import { syncServerTime, getGlobalTime } from '../services/server-time.js';
-import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
+import { setLastRoom, clearLastRoom } from '../utils/game/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
