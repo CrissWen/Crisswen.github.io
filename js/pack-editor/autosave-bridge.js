@@ -9,8 +9,8 @@ import { draftManager, setDraftWrittenHandler, cancelPendingDraft, autoPurgeOldD
 import { historyManager } from './history.js';
 import { initHotkeys, destroyHotkeys } from './hotkeys.js';
 import { ALL_PACK_CATEGORIES } from './categories.js';
-import { cardToLine, reconcileCards } from './parser.js';
-import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS } from './payload.js';
+import { cardToLine, reconcileCards, parseLines } from './parser.js';
+import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, normalizeForm } from './payload.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { supabase } from '../services/supabase.js';
 import * as ui from './ui/ui.js';
@@ -192,8 +192,10 @@ export function doRedo() {
 // ----- Чернетка -----
 function dirtyCategories() {
   const init = state.initialForm?.texts || {};
-  const dirty = cardCategories().filter(cat => (state.form.texts[cat] || '') !== (init[cat] || ''));
-  if (JSON.stringify(state.form.cataclysms || []) !== JSON.stringify(state.initialForm?.cataclysms || [])) dirty.push('cataclysm');
+  const dirty = cardCategories().filter(cat => parseLines(state.form.texts[cat]).join('\n') !== parseLines(init[cat]).join('\n'));
+  const cataDirty = normalizeForm({ title: '', description: '', texts: {}, stages: {}, ranges: {}, cataclysms: state.form.cataclysms || [] }) !==
+    normalizeForm({ title: '', description: '', texts: {}, stages: {}, ranges: {}, cataclysms: state.initialForm?.cataclysms || [] });
+  if (cataDirty) dirty.push('cataclysm');
   return dirty;
 }
 
@@ -208,7 +210,7 @@ export function getDraftContext() {
   for (const cat of dirty) {
     if (cat === 'cataclysm') {
       if (state.viewMode === 'llm' && state.activeCategory === 'cataclysm') {
-        syncCataclysmsFromLlmText();
+        syncCataclysmsFromLlmText({ markDeleted: false });
       }
       categories[cat] = clone(state.form.cataclysms || []);
     } else if ((cat === state.activeCategory && state.viewMode === 'llm') || !state.cardData[cat]) {
@@ -525,18 +527,23 @@ function offerDraftRestore() {
 // ----- Життєвий цикл -----
 export async function initAutosave(options = {}) {
   deps = { ...deps, ...options };
+  const sessionGen = state.sessionId;
+  let resolvedUserId = null;
   try {
     // getSession читає сесію з локального сховища (працює й офлайн), getUser — лише запасний варіант.
     // Без userId чернетки не пишуться, тож залежність від мережі тут відключала би автосейв при відкритті редактора без інтернету.
     const { data: sess } = await supabase.auth.getSession();
-    state.userId = sess?.session?.user?.id || null;
-    if (!state.userId) {
+    resolvedUserId = sess?.session?.user?.id || null;
+    if (!resolvedUserId) {
       const { data } = await supabase.auth.getUser();
-      state.userId = data?.user?.id || null;
+      resolvedUserId = data?.user?.id || null;
     }
   } catch {
-    state.userId = null;
+    resolvedUserId = null;
   }
+  // Захист від гонки: якщо користувач вийшов із редактора або відкрив нову сесію, поки чекали сесію auth (I-2)
+  if (sessionGen !== state.sessionId || !ui.isEditorMounted()) return;
+  state.userId = resolvedUserId;
   state.skipDraftFlush = false;
   active = true;
   historyManager.onChange = updateHistoryButtons;

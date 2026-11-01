@@ -179,7 +179,7 @@ export async function getPack(id) {
 // Якщо packId === DEFAULT_PACK_ID і користувач — адмін, викликаємо save_default_pack (адмінський RPC).
 // expectedVersion — версія пака, на якій базувалась чернетка (optimistic locking); null = без перевірки (новий пак або примусовий перезапис).
 // Повертає об'єкт RPC: { pack_id, version, updated_at, cards_count, status }. При конфлікті версій кидає помилку з code = 'VERSION_CONFLICT'.
-export async function savePack({ id, title, description, config, cards, deletedCardIds = [], expectedVersion = null }) {
+export async function savePack({ id, isNew = false, title, description, config, cards, deletedCardIds = [], expectedVersion = null }) {
   const user = await currentUser();
   const packId = id || crypto.randomUUID();
   const isAdmin = await checkIsAdmin();
@@ -187,8 +187,10 @@ export async function savePack({ id, title, description, config, cards, deletedC
   const isSavingDefault = packId === DEFAULT_PACK_ID;
   if (isSavingDefault && !isAdmin) throw new Error('Дефолтний пак змінювати не можна');
 
-  // Ліміт діє лише на створення нового пака (id не передано); оновлення існуючого ліміт не зачіпає
-  if (!id && (await countPersonalPacks()) >= MAX_PERSONAL_PACKS) throw new Error(PACK_LIMIT_MESSAGE);
+  // Ліміт діє лише на створення нового пака (id не передано або передано isNew); оновлення існуючого ліміт не зачіпає
+  if ((!id || isNew) && !isSavingDefault && (await countPersonalPacks()) >= MAX_PERSONAL_PACKS) {
+    throw new Error(PACK_LIMIT_MESSAGE);
+  }
 
   // PostgREST шукає функцію за іменами параметрів, тому при незбігу повертає 404 (PGRST202).
   const payload = isSavingDefault

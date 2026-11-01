@@ -1,6 +1,6 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY, getPromptForCategory } from './categories.js';
 import { parseLines, oneLine, hasExplanationField, splitNameExplanation, cardToLine, reconcileCards } from './parser.js';
-import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, parseStageEntry, cataclysmToRow } from './payload.js';
+import { STAGE_KEYS, stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, parseStageEntry, cataclysmToRow, canonicalCardSnapshot } from './payload.js';
 import { getStagePrompt } from './prompts/stage-prompts.js';
 import {
   getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID,
@@ -13,9 +13,9 @@ import { findShortByCounts } from '../utils/pack-fallback.js';
 import { getGameConfigSync } from '../config/config-manager.js';
 import { initTips } from './ui/tooltip.js';
 import * as ui from './ui/ui.js';
-import { initMobileNav, setMobileCardView } from './controllers/mobile-nav.js';
+import { initMobileNav, cleanupMobileNav, setMobileCardView } from './controllers/mobile-nav.js';
 import { $ } from './ui/helpers.js';
-import { initAutosave, destroyAutosave, onEditorChanged } from './autosave-bridge.js';
+import { initAutosave, destroyAutosave, onEditorChanged, getDraftContext } from './autosave-bridge.js';
 import {
   getPackIdFromHash, isDirty, confirmAction, goToList, onBeforeUnload,
   syncCataText, syncCataclysmsFromLlmText, syncCataclysmsToLlmText,
@@ -29,7 +29,7 @@ import {
   openTextResult, openCataResult, onSearchResultClick, onSearchKeydown,
   onSearchListKeydown, initSearch, setSearchOrchestrator,
   isFormEmpty, buildConfig, handleSave, handleClear, handleReset,
-  handleExit, handleActionsClick, setSaveOrchestrator,
+  handleExit, handleActionsClick, setSaveOrchestrator, cancelSaveTimers,
   visibleListIndices, applyDeleteClick, toggleSelectVisible, areAllSelected
 } from './controllers/controllers.js';
 
@@ -67,7 +67,8 @@ function cloneForm(f) {
 setSaveOrchestrator({
   blankForm,
   cloneForm,
-  syncFieldsFromForm: () => syncFieldsFromForm()
+  syncFieldsFromForm: () => syncFieldsFromForm(),
+  getDraftContext
 });
 
 // ----- Розмітка -----
@@ -471,14 +472,14 @@ async function loadPackIntoForm(id) {
     }));
     const poolType = POOL_TYPE_BY_CATEGORY[category] || 'character';
     for (const c of objs) {
-      state.initialCardMap.set(c.id, JSON.stringify({ pool_type: poolType, category, value: c.value, meta: c.meta || {} }));
+      state.initialCardMap.set(c.id, canonicalCardSnapshot({ pool_type: poolType, category, value: c.value, meta: c.meta || {} }));
     }
   }
 
   for (const cata of pack.cataclysms || []) {
     if (cata.id) {
       const row = cataclysmToRow(cata);
-      state.initialCardMap.set(cata.id, JSON.stringify({ pool_type: row.pool_type, category: row.category, value: row.value, meta: row.meta || {} }));
+      state.initialCardMap.set(cata.id, canonicalCardSnapshot(row));
     }
   }
 
@@ -582,8 +583,16 @@ function onEditorKeydown(e) {
   }
 }
 
+let sessionAbortController = null;
+
 export async function initPackEditor() {
+  sessionAbortController?.abort();
+  sessionAbortController = new AbortController();
+  const { signal } = sessionAbortController;
+
+  state.sessionId++;
   state.packId = getPackIdFromHash();
+  state.newPackId = state.packId ? null : crypto.randomUUID();
   state.packVersion = null; // новий пак: версії ще немає
   state.packUpdatedAt = null;
   state.userId = null;
@@ -611,7 +620,7 @@ export async function initPackEditor() {
   state.searchQuery = '';
   state.searchAll = false;
 
-  window.addEventListener('beforeunload', onBeforeUnload);
+  window.addEventListener('beforeunload', onBeforeUnload, { signal });
 
   ui.setStageReorderCallback(key => {
     const text = ui.gatherStageText(key);
@@ -919,7 +928,7 @@ export async function initPackEditor() {
 
   document.addEventListener('pack:mute-shortage', () => {
     muteShortageForCurrentPack();
-  });
+  }, { signal });
 
   $('pe-cat-warn')?.addEventListener('click', e => {
     e.stopPropagation();
@@ -994,7 +1003,7 @@ export async function initPackEditor() {
     if (cancelBtn) {
       setMobileCardView('list');
     }
-  });
+  }, { signal });
 
   $('pe-mobile-add-btn')?.addEventListener('click', () => {
     if (state.activeCategory === 'cataclysm') {
@@ -1080,7 +1089,7 @@ export async function initPackEditor() {
     if (!e.target.closest('#pe-sort-wrap')) {
       closeSortMenu();
     }
-  });
+  }, { signal });
 
   $('pe-stages-nav')?.addEventListener('click', e => {
     const btn = e.target.closest('[data-stage-tab]');
@@ -1286,7 +1295,7 @@ export async function initPackEditor() {
     }
   });
 
-  document.addEventListener('keydown', onEditorKeydown);
+  document.addEventListener('keydown', onEditorKeydown, { signal });
 
 
   try {
@@ -1336,7 +1345,12 @@ export async function initPackEditor() {
 }
 
 export function cleanupPackEditor() {
+  state.sessionId++;
+  cancelSaveTimers();
   destroyAutosave(); // спершу: зберігає чернетку при виході, поки стан ще не скинуто
+  cleanupMobileNav();
+  sessionAbortController?.abort();
+  sessionAbortController = null;
   window.removeEventListener('beforeunload', onBeforeUnload);
   document.removeEventListener('keydown', onEditorKeydown);
   ui.destroyStageSortables();

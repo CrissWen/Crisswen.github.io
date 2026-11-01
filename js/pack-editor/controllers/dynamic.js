@@ -349,7 +349,7 @@ const CATEGORY_STRATEGIES = {
         if (targetCard) {
           targetCard.meta.opposite = currentName;
         } else {
-          cards.push({ value: targetName, meta: { opposite: currentName } });
+          cards.push({ id: crypto.randomUUID(), value: targetName, meta: { opposite: currentName } });
         }
       }
     }

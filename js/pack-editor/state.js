@@ -1,6 +1,8 @@
 export class EditorState {
   constructor() {
+    this.sessionId = 0;
     this.packId = null;
+    this.newPackId = null; // стабільний UUID для нового пака між спробами збереження (E-C1)
     this.packVersion = null; // версія пака на сервері (optimistic locking); null для нового пака
     this.packUpdatedAt = null;
     this.userId = null; // id користувача для ключа чернетки

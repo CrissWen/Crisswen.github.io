@@ -6,7 +6,8 @@ import { ALL_PACK_CATEGORIES } from '../categories.js';
 import { parseCards, reconcileCards } from '../parser.js';
 import {
   validateTitle, validateRanges, buildPackConfig, cataclysmToRow,
-  normalizeForm, STAGE_KEYS, OBJECT_STAGE_KEYS,
+  normalizeForm, canonicalCardSnapshot, stagesTextFromConfig, rangesFromConfig,
+  STAGE_KEYS, OBJECT_STAGE_KEYS,
   validateStageText, validateStageEntries
 } from '../payload.js';
 import {
@@ -72,8 +73,8 @@ export function setSaveStatus(status, extra = '') {
 }
 
 const isNetworkProblem = err =>
-  err?.code === 'RATE_LIMIT' || !navigator.onLine || err instanceof TypeError ||
-  /failed to fetch|networkerror|network request failed|429|too many requests/i.test(String(err?.message || ''));
+  err?.code === 'RATE_LIMIT' || !navigator.onLine ||
+  /failed to fetch|networkerror|network request failed|load failed|429|too many requests/i.test(String(err?.message || ''));
 
 function flashButton(btn, text, ms = 1500) {
   const label = btn.dataset.peLabel || (btn.dataset.peLabel = btn.textContent);
@@ -83,7 +84,7 @@ function flashButton(btn, text, ms = 1500) {
 
 // Єдина точка входу (кнопка «Зберегти», Ctrl+Shift+S, Ctrl+Enter)
 export function requestSave(btn = saveButton()) {
-  if (!btn) return;
+  if (!btn || !ui.isEditorMounted()) return;
   // Рівень 1: чисті дані — мережа не потрібна
   if (state.packId && !isDirty() && state.deletedCardIds.size === 0) {
     flashButton(btn, 'Всі зміни вже збережено');
@@ -94,8 +95,10 @@ export function requestSave(btn = saveButton()) {
   if (state.isSaving || elapsed < THROTTLE_MS) {
     if (queuedTimer) return;
     ui.setButtonState(btn, { disabled: false, text: 'Збереження заплановано...' });
+    const gen = state.sessionId;
     queuedTimer = setTimeout(() => {
       queuedTimer = null;
+      if (gen !== state.sessionId || !ui.isEditorMounted()) return;
       requestSave(btn);
     }, state.isSaving ? THROTTLE_MS : THROTTLE_MS - elapsed);
     return;
@@ -112,7 +115,12 @@ function softFallback(btn) {
   setSaveStatus('syncing');
   showGlobalToast('Зміни в безпеці. Синхронізуємо з сервером через 15 секунд...');
   clearTimeout(retryTimer);
-  retryTimer = setTimeout(() => { retryTimer = null; requestSave(btn); }, RETRY_MS);
+  const gen = state.sessionId;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    if (gen !== state.sessionId || !ui.isEditorMounted()) return;
+    requestSave(btn);
+  }, RETRY_MS);
 }
 
 export function cancelSaveTimers() {
@@ -175,7 +183,7 @@ async function resolveVersionConflict(btn) {
     const s = JSON.parse(snap);
     (initialByCat[s.category] ||= []).push({ id, value: s.value, meta: s.meta || {} });
   }
-  const sig = arr => JSON.stringify((arr || []).map(c => [c.id, c.value, c.meta || {}]).sort());
+  const sig = arr => JSON.stringify((arr || []).map(c => canonicalCardSnapshot({ category: '', value: c.value, meta: c.meta || {} }) + `|${c.id || ''}`).sort());
   const labelOf = c => c.label ?? c.title ?? c.category;
   const diffLines = [];
   const dirty = new Set();
@@ -190,6 +198,35 @@ async function resolveVersionConflict(btn) {
   }
   const cataChanged = JSON.stringify(state.form.cataclysms) !== JSON.stringify(state.initialForm?.cataclysms);
   if (cataChanged) dirty.add('cataclysm');
+  if (JSON.stringify(state.form.cataclysms) !== JSON.stringify(server.cataclysms || [])) {
+    diffLines.push(`Катаклізми: у вас ${state.form.cataclysms?.length || 0}, на сервері ${server.cataclysms?.length || 0} (${cataChanged ? 'ви змінювали' : 'змінено на сервері'})`);
+  }
+
+  // Перевірка метаданих пака (назва, опис, стадії, діапазони) (I-1)
+  const initForm = state.initialForm || {};
+  const serverStages = {
+    ...state.baseStages,
+    ...Object.fromEntries(Object.entries(stagesTextFromConfig(server.config || {})).filter(([, v]) => v))
+  };
+  const serverRanges = rangesFromConfig(server.config || {}, state.baseRanges);
+
+  const titleDirty = state.form.title.trim() !== (initForm.title || '').trim();
+  const descDirty = (state.form.description || '').trim() !== (initForm.description || '').trim();
+  const stagesDirty = JSON.stringify(state.form.stages || {}) !== JSON.stringify(initForm.stages || {});
+  const rangesDirty = JSON.stringify(state.form.ranges || {}) !== JSON.stringify(initForm.ranges || {});
+
+  if (state.form.title.trim() !== (server.title || '').trim()) {
+    diffLines.push(`Назва пака: "${state.form.title.trim()}" vs "${(server.title || '').trim()}" (${titleDirty ? 'ви змінювали' : 'змінено на сервері'})`);
+  }
+  if ((state.form.description || '').trim() !== (server.description || '').trim()) {
+    diffLines.push(`Опис пака (${descDirty ? 'ви змінювали' : 'змінено на сервері'})`);
+  }
+  if (JSON.stringify(state.form.stages || {}) !== JSON.stringify(serverStages)) {
+    diffLines.push(`Стадії пака (${stagesDirty ? 'ви змінювали' : 'змінено на сервері'})`);
+  }
+  if (JSON.stringify(state.form.ranges || {}) !== JSON.stringify(serverRanges)) {
+    diffLines.push(`Діапазони віку/зросту (${rangesDirty ? 'ви змінювали' : 'змінено на сервері'})`);
+  }
 
   let choice = await showConflictDialog(server.version, diffLines);
   if (choice === 'cancel') return false;
@@ -197,7 +234,13 @@ async function resolveVersionConflict(btn) {
     state.packVersion = null; // expectedVersion = null → сервер не перевіряє версію
     return true;
   }
-  // merge
+  // merge: незмінені локально поля та категорії беремо з сервера
+  if (!titleDirty && server.title !== undefined) state.form.title = server.title;
+  if (!descDirty && server.description !== undefined) state.form.description = server.description || '';
+  if (!stagesDirty) state.form.stages = serverStages;
+  if (!rangesDirty) state.form.ranges = serverRanges;
+  state.packConfig = server.config || {};
+
   for (const entry of ALL_PACK_CATEGORIES) {
     const cat = entry.category;
     if (cat === 'cataclysm' || dirty.has(cat)) continue;
@@ -209,13 +252,13 @@ async function resolveVersionConflict(btn) {
   state.initialCardMap = new Map();
   for (const entry of ALL_PACK_CATEGORIES) {
     for (const c of server.cardObjects?.[entry.category] || []) {
-      state.initialCardMap.set(c.id, JSON.stringify({ pool_type: entry.poolType, category: entry.category, value: c.value, meta: c.meta || {} }));
+      state.initialCardMap.set(c.id, canonicalCardSnapshot({ pool_type: entry.poolType, category: entry.category, value: c.value, meta: c.meta || {} }));
     }
   }
   for (const cata of server.cataclysms || []) {
     if (cata.id) {
       const row = cataclysmToRow(cata);
-      state.initialCardMap.set(cata.id, JSON.stringify({ pool_type: row.pool_type, category: row.category, value: row.value, meta: row.meta || {} }));
+      state.initialCardMap.set(cata.id, canonicalCardSnapshot(row));
     }
   }
   state.packVersion = server.version ?? null;
@@ -384,12 +427,16 @@ export async function handleSave(btn) {
     upsertCards = allCards.filter(c => {
       if (!state.initialCardMap.has(c.id)) return true;
       const initialSnap = state.initialCardMap.get(c.id);
-      const currentSnap = JSON.stringify({ pool_type: c.pool_type, category: c.category, value: c.value, meta: c.meta || {} });
+      const currentSnap = canonicalCardSnapshot(c);
       return initialSnap !== currentSnap;
     });
   }
 
   const isEdit = Boolean(state.packId);
+  if (!isEdit && !state.newPackId) {
+    state.newPackId = crypto.randomUUID();
+  }
+  const targetPackId = state.packId || state.newPackId;
   const originalLabel = btn.textContent;
   state.isSaving = true;
   ui.setButtonState(btn, { disabled: true, text: 'Збереження...' });
@@ -397,10 +444,13 @@ export async function handleSave(btn) {
   // Підказка про нестачу карток: для базового пака не потрібна (він сам є джерелом добору), а також якщо її вимкнено
   const notice = showShortageNotice(allCards);
 
+  let result;
+  let conflictRetryScheduled = false;
   try {
     setSaveStatus('syncing');
-    const result = await savePack({
-      id: state.packId,
+    result = await savePack({
+      id: targetPackId,
+      isNew: !isEdit,
       title,
       description: state.form.description.trim(),
       config: buildConfig(),
@@ -408,42 +458,19 @@ export async function handleSave(btn) {
       deletedCardIds: deleteCardIds,
       expectedVersion: isEdit ? state.packVersion : null
     });
-    const savedId = result?.pack_id || state.packId;
-    // Успіх: нова версія з сервера, чернетка більше не потрібна, історію скидаємо
-    state.packVersion = result?.version ?? state.packVersion;
-    state.packUpdatedAt = result?.updated_at ?? state.packUpdatedAt;
-    state.skipDraftFlush = true; // редактор зараз закриється: чернетку при виході не писати
-    if (state.userId) draftManager.clearDraft(state.packId || savedId, state.userId);
-    state.initialForm = orchestrator.cloneForm(state.form);
-    historyManager.clear();
-    cancelSaveTimers();
-    setSaveStatus('saved', result?.version ? ` в базі (версія ${result.version})` : '');
-    showGlobalToast(isEdit ? 'Пак оновлено' : 'Пак створено');
-
-    // Оновлюємо знімок стану на випадок повторного збереження без виходу з редактора
-    state.deletedCardIds.clear();
-    state.initialCardMap.clear();
-    for (const c of allCards) {
-      state.initialCardMap.set(c.id, JSON.stringify({ pool_type: c.pool_type, category: c.category, value: c.value, meta: c.meta || {} }));
-    }
-
-    // Вікно йшло паралельно зі збереженням; на список переходимо, лише коли користувач його закрив
-    if (notice) {
-      const { muted } = await notice.closed;
-      // «Більше не показувати» прив’язуємо до цього пака (id нового відомий лише після збереження); з цим статусом редактор показує іконки «мало карток»
-      if (muted) setPackNoticeMuted(savedId, true);
-    }
-    goToList();
   } catch (err) {
     console.error('Не вдалося зберегти пак:', err);
     notice?.close();
     ui.setButtonState(btn, { disabled: false, text: originalLabel });
     if (err?.code === 'VERSION_CONFLICT') {
-      // Збереження призупинено; дані користувача безпечні в чернетці
+      // Збереження призупинено; дані користувача безпечні в чернетці.
+      // Лишаємо state.isSaving = true на час роботи вікна конфлікту, щоб заблокувати конкурентні кліки (Minor 7)
       setSaveStatus('draft');
-      state.isSaving = false;
       try {
-        if (await resolveVersionConflict(btn)) setTimeout(() => handleSave(btn), 0);
+        if (await resolveVersionConflict(btn)) {
+          conflictRetryScheduled = true;
+          setTimeout(() => handleSave(btn), 0);
+        }
       } catch (e2) {
         console.error('Не вдалося вирішити конфлікт:', e2);
         showGlobalToast(e2.message || 'Не вдалося вирішити конфлікт версій');
@@ -454,8 +481,44 @@ export async function handleSave(btn) {
       setSaveStatus('draft');
       showGlobalToast(err.message || 'Не вдалося зберегти пак');
     }
-  } finally {
     state.isSaving = false;
+    return;
+  }
+
+  try {
+    const savedId = result?.pack_id || targetPackId;
+    state.packId = savedId;
+    state.newPackId = null;
+    // Успіх: нова версія з сервера, чернетка більше не потрібна, історію скидаємо
+    state.packVersion = result?.version ?? state.packVersion;
+    state.packUpdatedAt = result?.updated_at ?? state.packUpdatedAt;
+    state.skipDraftFlush = true; // редактор зараз закриється: чернетку при виході не писати
+    if (state.userId) {
+      draftManager.clearDraft('new', state.userId);
+      draftManager.clearDraft(savedId, state.userId);
+    }
+    state.initialForm = orchestrator.cloneForm(state.form);
+    historyManager.clear();
+    cancelSaveTimers();
+    setSaveStatus('saved', result?.version ? ` в базі (версія ${result.version})` : '');
+    showGlobalToast(isEdit ? 'Пак оновлено' : 'Пак створено');
+
+    // Оновлюємо знімок стану на випадок повторного збереження без виходу з редактора
+    state.deletedCardIds.clear();
+    state.initialCardMap.clear();
+    for (const c of allCards) {
+      state.initialCardMap.set(c.id, canonicalCardSnapshot(c));
+    }
+
+    // Вікно йшло паралельно зі збереженням; на список переходимо, лише коли користувач його закрив
+    if (notice) {
+      const { muted } = await notice.closed;
+      // «Більше не показувати» прив’язуємо до цього пака (id нового відомий лише після збереження); з цим статусом редактор показує іконки «мало карток»
+      if (muted) setPackNoticeMuted(savedId, true);
+    }
+    goToList();
+  } finally {
+    if (!conflictRetryScheduled) state.isSaving = false;
   }
 }
 

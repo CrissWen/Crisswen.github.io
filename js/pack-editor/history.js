@@ -52,8 +52,9 @@ export class HistoryManager {
 
   undo() {
     if (!this.canUndo()) return null;
-    const action = this.undoStack.pop();
+    const action = this.undoStack[this.undoStack.length - 1];
     this._run(action.before, action, 'undo');
+    this.undoStack.pop();
     this.redoStack.push(action);
     this._emit();
     return action;
@@ -61,8 +62,9 @@ export class HistoryManager {
 
   redo() {
     if (!this.canRedo()) return null;
-    const action = this.redoStack.pop();
+    const action = this.redoStack[this.redoStack.length - 1];
     this._run(action.after, action, 'redo');
+    this.redoStack.pop();
     this.undoStack.push(action);
     this._emit();
     return action;
