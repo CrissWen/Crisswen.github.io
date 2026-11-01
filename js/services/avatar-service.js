@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabase, supabaseUrl } from './supabase.js';
 
 // ===== Аватарки гравців =====
 // Файл → Supabase Storage (бакет avatars, папка {userId}/), посилання на нього → users.avatar_url.
@@ -21,9 +21,25 @@ const MAX_PERSISTED_ITEMS = 150;
 // userId -> { url: string | null, ts: number }
 const cache = new Map();
 
-// Показуємо лише картинки з власного бакета (на випадок, якщо в БД опинилося щось стороннє)
-export function isSafeAvatarUrl(url) {
-  return typeof url === 'string' && url.startsWith('https://') && url.includes(PUBLIC_PATH);
+const SUPABASE_ORIGIN = new URL(supabaseUrl).origin;
+const DOT_SEGMENT_RE = /(?:^|\/)(?:\.|%2e){1,2}(?:\/|\?|#|$)/i;
+
+// Показуємо лише картинки з власного бакета нашого Supabase-інстансу (на випадок, якщо в БД опинилося щось стороннє).
+// Перевіряємо саме origin, а не підрядок: інакше https://evil.com/storage/v1/object/public/avatars/x.png змусив би
+// усіх гравців слати запити на чужий сервер. Якщо передано userId — файл має лежати у його власній папці.
+export function isSafeAvatarUrl(url, userId) {
+  if (typeof url !== 'string' || DOT_SEGMENT_RE.test(url)) return false;
+  let parsed;
+  try { parsed = new URL(url); } catch (e) { return false; }
+  if (parsed.protocol !== 'https:' || parsed.origin !== SUPABASE_ORIGIN) return false;
+  if (parsed.username || parsed.password) return false;
+  if (!parsed.pathname.startsWith(PUBLIC_PATH)) return false;
+  let rest;
+  try { rest = decodeURIComponent(parsed.pathname.slice(PUBLIC_PATH.length)); } catch (e) { return false; }
+  const segments = rest.split('/');
+  if (segments.length < 2 || segments.some(s => !s)) return false;
+  if (userId && segments[0] !== userId) return false;
+  return true;
 }
 
 function loadPersistentCache() {
@@ -38,7 +54,7 @@ function loadPersistentCache() {
       const { url, ts } = item;
       const maxAge = url ? TTL_AVATAR_MS : TTL_NULL_MS;
       if (typeof ts === 'number' && (now - ts < maxAge)) {
-        if (url === null || isSafeAvatarUrl(url)) {
+        if (url === null || isSafeAvatarUrl(url, userId)) {
           cache.set(userId, { url, ts });
         }
       }
@@ -138,7 +154,7 @@ export function subscribeToUserAvatar(userId) {
         filter: `id=eq.${userId}`
       }, (payload) => {
         const nextUrl = payload?.new?.avatar_url;
-        const safeUrl = isSafeAvatarUrl(nextUrl) ? nextUrl : null;
+        const safeUrl = isSafeAvatarUrl(nextUrl, userId) ? nextUrl : null;
         setInCache(userId, safeUrl);
         savePersistentCache();
         notifyAvatarListeners(safeUrl, userId);
@@ -185,7 +201,7 @@ export async function fetchAvatars(userIds, { force = false } = {}) {
     let changedCount = 0;
     const returnedMap = new Map();
     (data || []).forEach(row => {
-      returnedMap.set(row.id, isSafeAvatarUrl(row.avatar_url) ? row.avatar_url : null);
+      returnedMap.set(row.id, isSafeAvatarUrl(row.avatar_url, row.id) ? row.avatar_url : null);
     });
 
     missing.forEach(id => {

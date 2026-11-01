@@ -4,15 +4,10 @@
 // на кожне оновлення кімнати (Realtime) — без неї текст у textarea щоразу стирався б.
 
 import { isBlockCollapsed } from './board-ui-state.js';
+import { esc } from '../../utils/security.js';
 
 let notesText = '';
 let focusState = null; // { start, end, scrollTop } — щоб набір тексту не переривався перемальовуванням
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
 
 const getTextarea = () => document.getElementById('personal-notes-input');
 

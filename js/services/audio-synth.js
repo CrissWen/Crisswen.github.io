@@ -192,6 +192,13 @@ export const AudioSynth = {
   },
 
   /**
+   * Кількість активних one-shot/loop інстансів (діагностика та тести витоків).
+   */
+  getActiveCount() {
+    return _activeInstances.size;
+  },
+
+  /**
    * Дозволяє підключити проміжний вузол виводу (напр. AnalyserNode для осцилографа в лабораторії).
    */
   setOutputNode(node) {
@@ -266,8 +273,23 @@ export const AudioSynth = {
     const timers = [];
     const instanceId = `synth_${++_instanceSeq}`;
 
+    // I-1: інстанс прибирається, коли завершились усі його джерела. Loop-інстанс (є активний таймер)
+    // живе між циклами і знімається лише через stop().
+    let pendingSources = 0;
+    const finalizeInstance = () => {
+      timers.forEach((id) => clearInterval(id));
+      timers.length = 0;
+      try { masterGain.disconnect(); } catch (_) {}
+      _activeInstances.delete(instanceId);
+    };
+
     const registerSource = (src) => {
       sources.push(src);
+      pendingSources++;
+      src.onended = () => {
+        pendingSources--;
+        if (pendingSources <= 0 && timers.length === 0) finalizeInstance();
+      };
       return src;
     };
 

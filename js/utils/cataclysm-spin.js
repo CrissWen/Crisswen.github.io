@@ -13,6 +13,7 @@ import { normalizeRouletteConfig } from './roulette-config.js';
 //   duration_ms — скільки вона крутиться; hold_ms — скільки результат лишається на екрані, поки інтерфейс заблоковано
 //   stop_index  — на скільки елементів стрічка проїжджає до результату; seed — зерно для однакової стрічки на всіх екранах
 //   pool        — іконки реальних катаклізмів пака (результат серед них); result — іконка результату; title — його назва
+//   viz         — візуальні параметри стрічки з конфігу ВЕДУЧОГО (maxFillers, fillerZone, easingPower, suspense): стрічка однакова у всіх
 // Тривалість і час пишуться разом зі спіном, тож у всіх вона однакова й береться з конфігу ВЕДУЧОГО.
 
 const MAX_POOL_ICONS = 48;          // пул у стані малий: ~35 катаклізмів × ~40 байт
@@ -37,6 +38,26 @@ export function sanitizeIconPath(path) {
 // Читання блока cataclysmRoulette з конфігу переїхало в utils/roulette-config.js (спільне з рулеткою тесту виживання);
 // тут лишається реекспорт, щоб старі імпорти працювали.
 export { normalizeRouletteConfig };
+
+// Візуальні параметри стрічки, що впливають на її вміст і траєкторію (тому мусять бути однаковими в усіх клієнтів).
+const SPIN_VIZ_KEYS = ['easingPower', 'fillerZone', 'maxFillers', 'suspense'];
+
+// Беремо параметри зі спіну (їх записав ведучий), а відсутні — з локального конфігу (старі спіни без viz).
+// Значення знову проходять нормалізацію, тож підроблений запис не вийде за допустимі межі.
+export function resolveSpinVisuals(spin, localCfg) {
+  const merged = {};
+  for (const key of SPIN_VIZ_KEYS) merged[key] = localCfg?.[key];
+  const viz = spin && typeof spin.viz === 'object' && spin.viz !== null && !Array.isArray(spin.viz) ? spin.viz : null;
+  if (viz) {
+    for (const key of SPIN_VIZ_KEYS) {
+      if (viz[key] !== undefined) merged[key] = viz[key];
+    }
+  }
+  const normalized = normalizeRouletteConfig(merged);
+  const result = {};
+  for (const key of SPIN_VIZ_KEYS) result[key] = normalized[key];
+  return result;
+}
 
 // Іконки реальних катаклізмів пака (унікальні). Результат гарантовано серед них: інакше стрічка зупинилась би на іконці,
 // якої в ній «не було». Якщо іконок забагато — обрізаємо, але результат лишаємо.
@@ -92,7 +113,14 @@ export async function attachCataclysmSpin(bunkerState, cards, now, options = {})
     seed: randomSeed(),
     pool: collectPoolIcons(cards, resultIcon),
     result: resultIcon,
-    title: String(bunkerState.cataclysm.text ?? '')
+    title: String(bunkerState.cataclysm.text ?? ''),
+    // I-10: візуальні параметри стрічки пише ХОСТ, щоб у всіх клієнтів вона збігалась незалежно від локального конфігу
+    viz: {
+      easingPower: cfg.easingPower,
+      fillerZone: cfg.fillerZone,
+      maxFillers: cfg.maxFillers,
+      suspense: cfg.suspense
+    }
   };
   bunkerState.cataclysm_spin = spin;
 

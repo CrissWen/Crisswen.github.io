@@ -4,6 +4,7 @@
 // (Хедер сторінки живе в survival-test-header.js — він єдиний читає сесію, лише для імені в профілі.)
 import { getGameConfig } from '../config/config-manager.js';
 import { playSurvivalRoulette, primeSurvivalRouletteAudio } from './survival-roulette.js';
+import { esc } from '../utils/security.js';
 //
 // ЛОГІКА
 //   Крок 1: їжа.              «Ні» -> фінал "голод"
@@ -110,12 +111,6 @@ function createDefaultAnswers() {
 }
 
 const root = document.getElementById('survival-test');
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
 
 // ---------- Підрахунок ----------
 async function computeFinalResult() {

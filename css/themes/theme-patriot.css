@@ -159,6 +159,7 @@ body .header-collapse-tab:hover{
   box-shadow: 0 10px 28px rgba(0,0,0,.6);
 }
 .pe-select-custom__item:hover,
+.pe-select-custom__item.is-active,
 .pe-combo__item:hover{
   background: color-mix(in srgb, var(--patriot-3) 25%, transparent);
   color: var(--text);

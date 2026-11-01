@@ -112,8 +112,8 @@ async function runTests() {
   soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
 
   // 3. Перевіряємо делегування фонового ембієнт-дрона до AudioSynth
-  soundManager._toggleAmbientDrone(0.5);
-  assert.strictEqual(AudioSynth.isAmbientPlaying(), true, 'AudioSynth ambient must be playing after _toggleAmbientDrone');
+  soundManager._startAmbientDrone(0.5);
+  assert.strictEqual(AudioSynth.isAmbientPlaying(), true, 'AudioSynth ambient must be playing after _startAmbientDrone');
   assert.strictEqual(soundManager.isPlaying(SOUND_IDS.BUNKER_AMBIENT), true, 'soundManager.isPlaying(BUNKER_AMBIENT) must reflect AudioSynth state');
 
   // 4. Перевіряємо stopAll()

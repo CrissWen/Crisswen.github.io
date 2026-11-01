@@ -10,6 +10,7 @@ import { esc } from '../utils/security.js';
 import { soundManager, AUDIO_CHANNELS, SOUND_IDS } from '../services/sound-manager.js';
 import { initRangeSliders, setRangeSliderValue } from '../ui/range-slider.js';
 import { ICONS } from '../constants/icons.js';
+import { firstChar } from '../utils/initial.js';
 
 export function renderProfile() {
     const settings = soundManager.getSettings();
@@ -350,6 +351,9 @@ function saveCachedStats(userId, stats) {
 let currentTabSelector = null;
 let unsubscribeProfileAudio = null;
 let unsubscribeProfileTheme = null;
+let unsubscribeProfileAvatar = null;
+// I-5: номер «життя» сторінки. cleanupProfile() його збільшує, і відкладені відповіді мережі зі старим номером нічого не пишуть у DOM
+let profileSession = 0;
 const AMBIENT_PREVIEW_DURATION_MS = 15000;
 let ambientPreviewTimer = null;
 
@@ -381,6 +385,7 @@ export function selectProfileTab(name = 'profile', focus = false) {
 }
 
 export function cleanupProfile() {
+  profileSession++; // I-5: усі ще не завершені async-операції цієї сторінки стають застарілими
   currentTabSelector = null;
   stopAmbientPreview();
   if (typeof unsubscribeProfileAudio === 'function') {
@@ -390,6 +395,10 @@ export function cleanupProfile() {
   if (typeof unsubscribeProfileTheme === 'function') {
     unsubscribeProfileTheme();
     unsubscribeProfileTheme = null;
+  }
+  if (typeof unsubscribeProfileAvatar === 'function') {
+    unsubscribeProfileAvatar();
+    unsubscribeProfileAvatar = null;
   }
 }
 
@@ -484,7 +493,9 @@ async function loadHistoryTab(userId) {
     renderHistoryCards(container, cached);
   }
 
+  const session = profileSession;
   const items = await fetchUserGameHistory(userId);
+  if (session !== profileSession) return; // I-5: користувач уже вийшов зі сторінки профілю
   historyLoaded = true;
   renderHistoryCards(container, items);
 }
@@ -720,6 +731,9 @@ function setupProfileTabs(userId = null) {
 }
 
 export async function initProfile() {
+    const mySession = ++profileSession; // I-5: застарілий initProfile (після cleanupProfile) мусить завершитись без записів у DOM
+    const isAlive = () => mySession === profileSession;
+
     // Вкладки працюють одразу, без очікування сесії та запитів до БД
     // setupProfileTabs буде ініціалізовано з userId нижче
 
@@ -759,6 +773,7 @@ export async function initProfile() {
     });
 
     const { data: { session } } = await supabase.auth.getSession();
+    if (!isAlive()) return; // I-5: сторінку вже покинули, поки чекали сесію
 
     if (!session) {
         window.location.hash = '#/login';
@@ -768,7 +783,7 @@ export async function initProfile() {
     const username = session.user?.user_metadata?.username || 'Гравець';
     nameEl.textContent = username;
 
-    const firstLetter = username.charAt(0);
+    const firstLetter = firstChar(username);
     const userId = session.user.id;
 
     // ===== Аватарка: ініціалізуємо і малюємо ОДРАЗУ, до будь-яких мережевих запитів =====
@@ -806,7 +821,9 @@ export async function initProfile() {
     }
 
     // 3. Будь-які зміни (з Realtime або фонового запиту) оновлюють аватарку на екрані
-    onAvatarChange((newUrl, changedUserId) => {
+    // Підписку зберігаємо: cleanupProfile() знімає її при виході зі сторінки, інакше кожен захід додавав би замикання з від’єднаними DOM-вузлами
+    if (typeof unsubscribeProfileAvatar === 'function') unsubscribeProfileAvatar();
+    unsubscribeProfileAvatar = onAvatarChange((newUrl, changedUserId) => {
         if (changedUserId === userId) {
             paintAvatar(newUrl);
         }
@@ -875,6 +892,8 @@ export async function initProfile() {
             userStats = basic;
         }
 
+        if (!isAlive()) return; // I-5: відповідь статистики прийшла після виходу зі сторінки
+
         if (userStats) {
             renderStatsValues(userStats);
             saveCachedStats(userId, userStats);
@@ -904,7 +923,7 @@ export async function initProfile() {
         }
 
         // Якщо користувач скасував або закрив модалку без підтвердження
-        if (!croppedBlob) {
+        if (!croppedBlob || !isAlive()) {
             return;
         }
 
@@ -912,6 +931,7 @@ export async function initProfile() {
         setAvatarStatus('Завантаження...');
         try {
             const url = await uploadAvatar(userId, croppedBlob);
+            if (!isAlive()) return;
             paintAvatar(url);
             setAvatarStatus('Аватарку оновлено');
         } catch (err) {
@@ -926,6 +946,7 @@ export async function initProfile() {
         setAvatarStatus('');
         try {
             await removeAvatar(userId);
+            if (!isAlive()) return;
             paintAvatar(null);
             setAvatarStatus('Аватарку видалено');
         } catch (err) {

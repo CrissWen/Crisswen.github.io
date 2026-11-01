@@ -7,6 +7,7 @@
 import { supabase } from '../services/supabase.js';
 import { syncGameTab } from '../utils/last-session.js';
 import { showUserAvatar, applyAvatarLetterPadding } from '../utils/avatar.js';
+import { firstChar } from '../utils/initial.js';
 
 const navEl = document.getElementById('header-nav');
 const profileLink = document.getElementById('header-profile-link');
@@ -19,7 +20,7 @@ async function initHeader() {
     if (!session) return; // без сесії лишається лише логотип — профілю показувати нема що
 
     const username = session.user?.user_metadata?.username || 'Гравець';
-    const firstLetter = username.charAt(0);
+    const firstLetter = firstChar(username);
 
     nameEl.textContent = username;
     avatarEl.textContent = firstLetter;

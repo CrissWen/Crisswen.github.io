@@ -1,23 +1,38 @@
 import { esc } from './security.js';
+import { firstChar } from './initial.js';
 import { getCachedAvatar, hasCachedAvatar, fetchAvatars } from '../services/avatar-service.js';
 
 // ===== Відображення аватарок =====
 // Літера імені завжди лежить під картинкою як запасний варіант: поки фото вантажиться або якщо воно не завантажилось,
 // гравець бачить звичну літеру. Контейнер має бути position: relative (див. css/components/avatar.css).
 
-const brokenUrls = new Set(); // адреси, які браузер не зміг завантажити — повторно не підставляємо
+// Адреси, які браузер не зміг завантажити, блокуємо лише тимчасово: збій мережі не має ховати аватарку до F5.
+// Блок знімається через BROKEN_URL_TTL_MS або одразу, коли мережа повернулась (подія online).
+const BROKEN_URL_TTL_MS = 60 * 1000;
+const brokenUrls = new Map(); // url -> час останньої помилки (мс)
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('online', () => brokenUrls.clear());
+}
 
 // Одна пара обробників на весь сайт: картинка, що не завантажилась, просто зникає і лишається літера
 document.addEventListener('error', (e) => {
   const img = e.target;
   if (img instanceof HTMLImageElement && img.classList.contains('avatar-img')) {
-    brokenUrls.add(img.getAttribute('src'));
+    brokenUrls.set(img.getAttribute('src'), Date.now());
     img.remove();
   }
 }, true);
 
 function usableUrl(url) {
-  return url && !brokenUrls.has(url) ? url : null;
+  if (!url) return null;
+  const failedAt = brokenUrls.get(url);
+  if (failedAt === undefined) return url;
+  if (Date.now() - failedAt >= BROKEN_URL_TTL_MS) {
+    brokenUrls.delete(url); // TTL минув — пробуємо ще раз
+    return url;
+  }
+  return null;
 }
 
 // <img> для вставки в рядок-шаблон (після літери всередині контейнера). Порожній рядок, якщо аватарки немає.
@@ -38,7 +53,7 @@ export function profileTriggerAttrs(userId, name, { focusable = false } = {}) {
 // Готовий круглий бейдж (літера + фото) заданого розміру — для списків, де окремого контейнера аватарки ще немає.
 // clickable=true — бейдж відкриває вікно профілю гравця.
 export function avatarBadgeHtml(userId, name, size = 28, { clickable = false } = {}) {
-  const letter = String(name ?? '').charAt(0);
+  const letter = firstChar(name);
   const fontSize = Math.max(10, Math.round(size * 0.46));
   const trigger = clickable ? ` ${profileTriggerAttrs(userId, name, { focusable: true })}` : '';
   return `<span class="avatar-badge" style="--avatar-size:${size}px;font-size:${fontSize}px;"${trigger}>${esc(letter)}${avatarImgHtml(userId)}</span>`;
@@ -92,7 +107,7 @@ export function showUserAvatar(el, userId, letter) {
 const DESCENDER_REGEX = /^[gjpqyуфщц]/i;
 
 export function hasLetterDescender(text) {
-  const char = String(text ?? '').trim().charAt(0);
+  const char = firstChar(String(text ?? '').trim());
   return DESCENDER_REGEX.test(char);
 }
 

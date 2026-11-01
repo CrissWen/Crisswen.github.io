@@ -10,12 +10,7 @@
 //   5. Голосування ще не запускалось — секція порожня.
 
 import { avatarBadgeHtml } from '../../utils/avatar.js';
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
+import { esc } from '../../utils/security.js';
 
 function candidateTile(id, name) {
   return `

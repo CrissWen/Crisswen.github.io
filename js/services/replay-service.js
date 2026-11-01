@@ -8,6 +8,73 @@ const REPLAY_HEADER = 'TBRP1';
 export const REPLAY_STORAGE_KEY = 'truebunker_offline_replay_payload_v1';
 export const OFFLINE_REPLAY_HASH = '#/game?mode=offline_replay';
 
+// ===== I-8: перевірка структури реплею =====
+// XOR + FNV-1a з публічним ключем — це маскування, а не захист: хто знає схему, перерахує суму для підробленого JSON.
+// Тому структура кімнати перевіряється окремо і при читанні файлу, і перед записом у sessionStorage.
+const REPLAY_MAX_PLAYERS = 100;
+const REPLAY_MAX_DEPTH = 24;
+const REPLAY_MAX_JSON_LENGTH = 4_000_000; // sessionStorage ~5 МБ
+const REPLAY_ROOM_CODE_RE = /^[\p{L}\p{N}_-]{1,32}$/u;
+const REPLAY_FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isPlainObject(v) {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+}
+
+function findStructuralProblem(value, depth = 0) {
+  if (depth > REPLAY_MAX_DEPTH) return 'надто глибока вкладеність даних';
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const problem = findStructuralProblem(item, depth + 1);
+      if (problem) return problem;
+    }
+    return null;
+  }
+  if (value && typeof value === 'object') {
+    for (const key of Object.keys(value)) {
+      if (REPLAY_FORBIDDEN_KEYS.has(key)) return 'заборонені ключі в даних';
+      const problem = findStructuralProblem(value[key], depth + 1);
+      if (problem) return problem;
+    }
+  }
+  return null;
+}
+
+/**
+ * Перевіряє, що payload схожий на рядок таблиці rooms. Невідомі поля не відкидаємо (формат може розширюватись).
+ * @param {unknown} payload
+ * @returns {string|null} опис проблеми (без вмісту даних) або null, якщо структура коректна
+ */
+export function validateReplayPayload(payload) {
+  if (!isPlainObject(payload)) return 'дані гри мають бути об’єктом';
+
+  const structural = findStructuralProblem(payload);
+  if (structural) return structural;
+
+  const code = payload.room_code;
+  if (code != null && (typeof code !== 'string' || !REPLAY_ROOM_CODE_RE.test(code))) return 'некоректний код кімнати';
+
+  if (payload.status != null && (typeof payload.status !== 'string' || payload.status.length > 32)) {
+    return 'некоректний статус кімнати';
+  }
+
+  const players = payload.players_state;
+  if (!isPlainObject(players)) return 'відсутній або некоректний список гравців';
+  const ids = Object.keys(players);
+  if (ids.length > REPLAY_MAX_PLAYERS) return 'забагато гравців';
+  for (const id of ids) {
+    const player = players[id];
+    if (!isPlainObject(player)) return 'некоректні дані гравця';
+    if (player.name != null && (typeof player.name !== 'string' || player.name.length > 64)) return 'некоректне ім’я гравця';
+    if (player.special_abilities != null && !Array.isArray(player.special_abilities)) return 'некоректні спецможливості гравця';
+  }
+
+  if (payload.bunker_state != null && !isPlainObject(payload.bunker_state)) return 'некоректний стан бункера';
+  return null;
+}
+
 // Маска для обфускації (TrueBunker Replay Signature)
 const MASK_KEY = [0x54, 0x72, 0x75, 0x65, 0x42, 0x75, 0x6e, 0x6b, 0x65, 0x72, 0x32, 0x36];
 
@@ -115,6 +182,11 @@ export function decodeReplayData(rawContent) {
     throw new Error('Файл не є дійсним записом гри TrueBunker');
   }
 
+  const schemaError = validateReplayPayload(container.payload);
+  if (schemaError) {
+    throw new Error(`Файл запису має некоректну структуру: ${schemaError}`);
+  }
+
   return container.payload;
 }
 
@@ -172,6 +244,14 @@ export async function readReplayFile(file) {
  */
 export function launchOfflineReplay(roomData) {
   if (!roomData) throw new Error('Дані гри відсутні');
+
+  const schemaError = validateReplayPayload(roomData);
+  if (schemaError) {
+    throw new Error(`Дані гри мають некоректну структуру: ${schemaError}`);
+  }
+  if (JSON.stringify(roomData).length > REPLAY_MAX_JSON_LENGTH) {
+    throw new Error('Запис гри завеликий для перегляду в браузері');
+  }
 
   // Гарантуємо статус закритої кімнати для режиму глядача
   const safeRoom = {

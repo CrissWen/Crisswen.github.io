@@ -1,3 +1,4 @@
+import { esc } from '../../utils/security.js';
 // Інформаційне вікно редактора паків: після збереження показує категорії, де власних карток менше, ніж потрібно для гри,
 // і пояснює, що решту гра добере з базового пака. На відміну від pack-confirm.js, це модальне вікно на весь екран
 // із затемненим фоном: воно не блокує збереження, а лише інформує.
@@ -9,12 +10,6 @@ const NOTICE_ID = 'pack-notice-root';
 const MUTE_KEY_PREFIX = 'pack_notice_muted:';
 const SHORTAGE_MUTE_PREFIX = 'pack_shortage_muted:';
 const CLOSE_MS = 220;
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
 
 export function isPackNoticeMuted(packId) {
   if (!packId) return false;

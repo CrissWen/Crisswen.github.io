@@ -1,3 +1,4 @@
+import { esc } from '../../utils/security.js';
 // Кастомне вікно підтвердження дії — заміна стандартного window.confirm().
 // З'являється безпосередньо біля натиснутої кнопки (ліворуч від неї, по вертикалі по центру кнопки),
 // а не в фіксованому кутку екрана і не як системний alert згори.
@@ -5,12 +6,6 @@
 const CONFIRM_ID = 'custom-confirm-root';
 const GAP = 12;       // відступ між кнопкою і вікном
 const EDGE = 8;        // мінімальний відступ від країв екрана
-
-function esc(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-  ));
-}
 
 function dialogHtml(message) {
   return `

@@ -2,6 +2,7 @@ import { supabase } from '../services/supabase.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale } from '../services/avatar-service.js';
 import { setAvatarEl, applyAvatarLetterPadding } from '../utils/avatar.js';
 import { esc } from '../utils/security.js';
+import { firstChar } from '../utils/initial.js';
 
 // ===== Картка профілю гравця (невелике спливне вікно біля аватарки) =====
 // Відкривається кліком по аватарці будь-якого гравця під час гри (елементи з data-profile-user, див. utils/avatar.js).
@@ -158,7 +159,7 @@ export function openPlayerProfile({ userId, name, opener = null }) {
   document.getElementById(ROOT_ID)?.remove();
 
   const cleanName = String(name ?? '').trim() || 'Гравець';
-  const letter = cleanName.charAt(0);
+  const letter = firstChar(cleanName);
 
   const root = document.createElement('div');
   root.id = ROOT_ID;

@@ -21,6 +21,7 @@ let dialogEl = null;
 let canvasEl = null;
 let sliderEl = null;
 let currentResolve = null;
+let openToken = 0; // I-6: номер останнього виклику openAvatarCropper(): застарілі виклики не чіпають спільний стан
 
 let imgSource = null;
 let imgWidth = 0;
@@ -343,11 +344,22 @@ export async function openAvatarCropper(file) {
 
   initDialog();
 
-  imgSource = await readAndDownscaleImage(file);
+  // I-6: новий виклик скасовує попередній (його проміс завершується null, а не висить назавжди)
+  const token = ++openToken;
+  if (currentResolve) closeDialog(null);
+
+  const loaded = await readAndDownscaleImage(file);
+  if (token !== openToken) { // поки читали файл, нас витіснив новіший виклик
+    if (typeof loaded.close === 'function') loaded.close();
+    return null;
+  }
+  imgSource = loaded;
   imgWidth = imgSource.width || imgSource.naturalWidth;
   imgHeight = imgSource.height || imgSource.naturalHeight;
 
   if (!imgWidth || !imgHeight) {
+    imgSource = null;
+    if (typeof loaded.close === 'function') loaded.close();
     throw new Error('Не вдалося визначити розміри зображення');
   }
 

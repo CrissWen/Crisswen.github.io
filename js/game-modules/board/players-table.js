@@ -3,6 +3,7 @@ import { esc, unescapeApos, renderSafeNodes } from '../../utils/security.js';
 import { avatarImgHtml, getAvatarPaddingStyle, profileTriggerAttrs } from '../../utils/avatar.js';
 import { getPlayersViewMode, isPlayerCardExpanded } from './board-ui-state.js';
 import { ICONS } from '../../constants/icons.js';
+import { firstChar } from '../../utils/initial.js';
 
 // Безпечний рендер підказки: дозволяє лише текст, <b> та <br>, відкидає будь-які інші теги, атрибути та скрипти
 function renderSafeTooltip(popup, rawTooltip) {
@@ -97,7 +98,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
         .join("");
       const rowClass = isOutPlayer(p) ? 'kicked-player' : '';
       const cleanName = unescapeApos(p.name);
-      const firstLetter = (cleanName || '').charAt(0);
+      const firstLetter = firstChar(cleanName);
       const avatarPadding = getAvatarPaddingStyle(firstLetter, 2);
       return `
         <tr data-player="${esc(cleanName)}" class="${rowClass}">
@@ -125,7 +126,7 @@ export function playersTable(columns, players, aliveCount, totalCount, isHost, s
       const playerKey = String(p.id || cleanName || index);
       playerKeys.push(playerKey);
       const isExpanded = isPlayerCardExpanded(playerKey);
-      const firstLetter = (cleanName || '').charAt(0);
+      const firstLetter = firstChar(cleanName);
       const avatarPadding = getAvatarPaddingStyle(firstLetter, 2);
       const kickedClass = isOutPlayer(p) ? ' kicked-player' : '';
       const expandedClass = isExpanded ? ' is-expanded' : '';

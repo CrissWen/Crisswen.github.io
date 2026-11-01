@@ -5,6 +5,7 @@
 // Гучність і вимкнення звуку задає спільний SoundManager: канал «Ігрові ефекти» (SFX) та Master.
 
 import { soundManager, AUDIO_CHANNELS } from '../services/sound-manager.js';
+import { AudioSynth } from '../services/audio-synth.js';
 
 const MIN_TICK_GAP_MS = 30; // «тіки» частіші за це зливаються в тріск, тож пропускаємо зайві
 
@@ -26,10 +27,10 @@ function getVolume() {
 function ensureContext() {
   if (audioCtx) return audioCtx;
   if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return null;
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
+  // Єдиний AudioContext застосунку беремо в AudioSynth: на мобільних браузерах ліміт одночасних контекстів малий
   try {
-    audioCtx = new AudioContextClass();
+    audioCtx = AudioSynth.getContext();
+    if (!audioCtx) return null;
     masterGain = audioCtx.createGain();
     masterGain.gain.value = getVolume();
     masterGain.connect(audioCtx.destination);
