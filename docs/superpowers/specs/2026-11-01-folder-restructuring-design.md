@@ -63,7 +63,7 @@
 ### 4.3. `js/pages/` та `js/game-modules/`
 | Цільова папка | Файли |
 |---|---|
-| `js/pages/dev/` | `survival-test.js`, `survival-test-header.js`, `survival-roulette.js` |
+| `js/pages/survival/` | `survival-test.js`, `survival-test-header.js`, `survival-roulette.js` |
 | `js/game-modules/state/` | `room-update-reducer.js` |
 
 ---
