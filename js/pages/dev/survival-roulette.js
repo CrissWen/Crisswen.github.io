@@ -1,7 +1,7 @@
-import { getGameConfig } from '../config/config-manager.js';
-import { ICONS } from '../constants/icons.js';
-import { normalizeRouletteConfig } from '../utils/roulette-config.js';
-import { playRouletteOverlay, primeRouletteAudio } from '../ui/roulette-overlay.js';
+import { getGameConfig } from '../../config/config-manager.js';
+import { ICONS } from '../../constants/icons.js';
+import { normalizeRouletteConfig } from '../../utils/roulette-config.js';
+import { playRouletteOverlay, primeRouletteAudio } from '../../ui/roulette-overlay.js';
 
 // ===== Рулетка тесту виживання: дві іконки — серце («вижили») і череп («загинули») =====
 // Підсумок тесту (вижили чи ні) вже пораховано за балами ДО рулетки: вона лише розігрує його. Стрічка — випадково

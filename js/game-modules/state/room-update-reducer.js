@@ -1,4 +1,4 @@
-import { mergeRoomState } from '../services/room-subscription.js';
+import { mergeRoomState } from '../../services/room-subscription.js';
 
 // Чистий обчислювач ефектів при отриманні Realtime-оновлення рядка кімнати (виправляє I1).
 // Відокремлює логіку переходів стану (вигнання з лобі, закриття, фінал, старт гри, тост ведучого, кидок кубика)

@@ -38,7 +38,7 @@ import { buildBoardViewModel } from '../utils/board-view-model.js';
 import { startGame } from '../utils/start-game.js';
 import { initCustomSelects } from '../ui/custom-select.js';
 import { subscribeToRoom } from '../services/room-subscription.js';
-import { computeRoomUpdateEffects } from '../game-modules/room-update-reducer.js';
+import { computeRoomUpdateEffects } from '../game-modules/state/room-update-reducer.js';
 import { syncServerTime, getGlobalTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/last-session.js';
 import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';

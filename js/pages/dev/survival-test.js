@@ -2,9 +2,9 @@
 // З решти гри імпортує лише config-manager (числа тесту — секція survivalTest у game-config.base.js / .local.js)
 // і не звертається до Supabase: усе рахується локально в цій вкладці.
 // (Хедер сторінки живе в survival-test-header.js — він єдиний читає сесію, лише для імені в профілі.)
-import { getGameConfig } from '../config/config-manager.js';
+import { getGameConfig } from '../../config/config-manager.js';
 import { playSurvivalRoulette, primeSurvivalRouletteAudio } from './survival-roulette.js';
-import { esc } from '../utils/security.js';
+import { esc } from '../../utils/security.js';
 //
 // ЛОГІКА
 //   Крок 1: їжа.              «Ні» -> фінал "голод"

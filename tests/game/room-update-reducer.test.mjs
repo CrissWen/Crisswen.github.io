@@ -1,9 +1,9 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installFakeSupabaseEnv } from '../helpers/fake-supabase.mjs';
 
 installFakeSupabaseEnv();
-const { computeRoomUpdateEffects } = await import('../../js/game-modules/room-update-reducer.js');
+const { computeRoomUpdateEffects } = await import('../../js/game-modules/state/room-update-reducer.js');
 
 test('I1: computeRoomUpdateEffects визначає вигнання гравця з лобі', () => {
   const prev = {

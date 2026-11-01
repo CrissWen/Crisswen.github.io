@@ -4,10 +4,10 @@
 //
 // Навігація «Паки» / «Гра» — як в index.html, але посилання ведуть на index.html#/..., бо ця сторінка не є частиною SPA-роутера.
 // У обох файлах хедер має лишатися однаковим.
-import { supabase } from '../services/supabase.js';
-import { syncGameTab } from '../utils/last-session.js';
-import { showUserAvatar, applyAvatarLetterPadding } from '../utils/avatar.js';
-import { firstChar } from '../utils/initial.js';
+import { supabase } from '../../services/supabase.js';
+import { syncGameTab } from '../../utils/last-session.js';
+import { showUserAvatar, applyAvatarLetterPadding } from '../../utils/avatar.js';
+import { firstChar } from '../../utils/initial.js';
 
 const navEl = document.getElementById('header-nav');
 const profileLink = document.getElementById('header-profile-link');
