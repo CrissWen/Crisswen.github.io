@@ -3,7 +3,7 @@
 // I-7: валідація нікнейму при реєстрації та чесні повідомлення про помилки авторизації.
 // Раніше будь-який збій signUp (мережа, слабкий пароль, ліміт запитів) маскувався під «Це ім'я вже зайняте».
 
-const { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } = await import('../../js/utils/auth/auth-validation.js');
+const { validateUsername, validatePassword, buildFakeEmail, mapAuthError, AuthUiError } = await import('../../js/utils/auth/auth-validation.js');
 
 let failed = 0;
 function check(name, fn) {
@@ -37,6 +37,35 @@ check('вхід: ім’я зі знаком @ відхиляється (зла�
 });
 check('вхід: ім’я з пробілом відхиляється (недійсна адреса)', () => {
   assert.strictEqual(typeof validateUsername('a b', { strict: false }), 'string');
+});
+
+// ===== validatePassword (і реєстрація, і вхід): лише літери, цифри, «_» та «-», без пробілів, мін. 6 =====
+for (const good of ['abcdef', 'Пароль_1', 'a-b-c-1', 'ЇжакҐанок', '123456', 'дуже_довгий_пароль-1234567890']) {
+  check(`пароль: приймає «${good}»`, () => assert.strictEqual(validatePassword(good), null));
+}
+for (const [bad, why] of [
+  ['', 'порожній'], ['      ', 'самі пробіли'], ['abc def', 'пробіл всередині'], [' abcdef', 'пробіл на початку'], ['abcdef ', 'пробіл у кінці'],
+  ['abc\tdef', 'табуляція'], ['abc!def', 'знак !'], ['abc@def', 'знак @'], ['abc#def', 'знак #'], ['abc$def', 'знак $'],
+  ['abc.def', 'крапка'], ['abc+def', 'плюс'], ['abc%def', 'відсоток'], ['<script>', 'HTML'], ['abc😀def', 'емодзі'], ['abc/def', 'слеш']
+]) {
+  check(`пароль: відкидає ${why}`, () => {
+    const err = validatePassword(bad);
+    assert.strictEqual(typeof err, 'string', `«${bad}» мало бути відхилене`);
+    assert.ok(err.length > 0);
+  });
+}
+check('пароль: надто короткий -> мінімум 6 символів', () => {
+  assert.match(validatePassword('abc12'), /мінімум 6/);
+});
+check('пароль: пробіл -> окреме повідомлення про пробіли', () => {
+  assert.match(validatePassword('abc def'), /пробіл/);
+});
+check('пароль: спецсимвол -> повідомлення з переліком дозволених символів', () => {
+  assert.match(validatePassword('abc!def'), /лише літери, цифри/);
+});
+check('пароль: не-рядок не кидає виняток', () => {
+  assert.strictEqual(typeof validatePassword(null), 'string');
+  assert.strictEqual(typeof validatePassword(undefined), 'string');
 });
 
 // ===== buildFakeEmail =====

@@ -26,6 +26,23 @@ export function validateUsername(name, { strict = true } = {}) {
   return null;
 }
 
+export const PASSWORD_MIN_LENGTH = 6;
+// Той самий набір символів, що й у нікнеймі: літери (латиниця й українська), цифри, «_» та «-». Довжина без верхньої межі.
+const STRICT_PASSWORD_RE = /^[A-Za-z0-9_\-а-яіїєґА-ЯІЇЄҐ]+$/u;
+
+/**
+ * Перевіряє пароль. Повертає текст помилки або null. Пароль НЕ обрізається (trim),
+ * тому пароль із самих пробілів теж потрапляє сюди й відхиляється.
+ * Діє і при реєстрації, і при вході.
+ */
+export function validatePassword(password) {
+  if (typeof password !== 'string' || !password) return 'Будь ласка, введіть пароль!';
+  if (/\s/u.test(password)) return 'Пароль не може містити пробіли';
+  if (!STRICT_PASSWORD_RE.test(password)) return 'Пароль може містити лише літери, цифри, «_» та «-»';
+  if ([...password].length < PASSWORD_MIN_LENGTH) return `Пароль має містити мінімум ${PASSWORD_MIN_LENGTH} символів`;
+  return null;
+}
+
 /** Supabase Auth працює з email, тому для входу за нікнеймом використовуємо фейкову пошту. */
 export function buildFakeEmail(username) {
   return `${username}@bunker.local`;

@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js';
-import { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth/auth-validation.js';
+import { validateUsername, validatePassword, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth/auth-validation.js';
 
 const inputStyle = "padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text);";
 
@@ -117,14 +117,10 @@ export async function initAuth() {
       errorText.style.display = 'block';
       return;
     }
-    if (!password) {
-      errorText.textContent = "Будь ласка, введіть пароль!";
-      errorText.style.display = 'block';
-      return;
-    }
-    // Вимога Supabase: пароль — мінімум 6 символів
-    if (password.length < 6) {
-      errorText.textContent = "Пароль має містити мінімум 6 символів";
+    // Пароль: без пробілів і спецсимволів (лише літери, цифри, «_» та «-»), мінімум 6 символів. Діє і при вході, і при реєстрації.
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      errorText.textContent = passwordError;
       errorText.style.display = 'block';
       return;
     }
