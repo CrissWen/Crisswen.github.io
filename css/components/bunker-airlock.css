@@ -5,13 +5,14 @@
 .bunker-airlock {
   position: fixed;
   inset: 0;
-  z-index: 9500;
+  z-index: 10100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   cursor: pointer;
   user-select: none;
+  pointer-events: auto;
   will-change: opacity, transform;
 }
 
@@ -109,6 +110,7 @@
 .bunker-airlock__card {
   position: relative;
   z-index: 2;
+  pointer-events: auto;
   width: min(440px, 100%);
   padding: clamp(22px, 4vw, 32px);
   border-radius: var(--radius-md, 10px);
@@ -297,8 +299,38 @@
   opacity: 0.75;
 }
 
+/* --- Стан: Гра стартувала під час очікування у шлюзі лобі --- */
+.bunker-airlock--game-started .bunker-airlock__card {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 60%, var(--metal, #2b3142));
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.75),
+    0 0 32px color-mix(in srgb, var(--danger, #ef4444) 30%, transparent);
+  animation: airlock-urgent-pulse 1.8s infinite ease-in-out;
+}
+
+.bunker-airlock--game-started .bunker-airlock__core {
+  background: var(--danger, #ef4444);
+  box-shadow: 0 0 16px var(--danger, #ef4444);
+}
+
+.bunker-airlock--game-started.is-opening .bunker-airlock__card {
+  animation: none;
+}
+
+@keyframes airlock-urgent-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 24px color-mix(in srgb, var(--danger, #ef4444) 25%, transparent);
+  }
+  50% {
+    transform: scale(1.012);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 40px color-mix(in srgb, var(--danger, #ef4444) 45%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bunker-airlock,
+  .bunker-airlock__card,
   .bunker-airlock__leaf,
   .bunker-airlock__wheel,
   .bunker-airlock__core,

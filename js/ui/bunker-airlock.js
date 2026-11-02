@@ -10,6 +10,7 @@ import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 import { esc } from '../utils/auth/security.js';
 
 let activeCleanup = null;
+let isGameStartedState = false;
 
 function buildJoinMarkup({ code, name }) {
   return `
@@ -23,8 +24,8 @@ function buildJoinMarkup({ code, name }) {
     </div>
     <div class="bunker-airlock__card bunker-airlock__card--join">
       <div class="bunker-airlock__beacon">
-        <span class="bunker-airlock__dot bunker-airlock__dot--warning"></span>
-        <span>СТАТУС: ОЧІКУВАННЯ ДОПУСКУ</span>
+        <span class="bunker-airlock__dot bunker-airlock__dot--warning" data-airlock-status-dot></span>
+        <span data-airlock-status-text aria-live="polite">СТАТУС: ОЧІКУВАННЯ ДОПУСКУ</span>
       </div>
       <div class="bunker-airlock__lock" aria-hidden="true">
         <svg class="bunker-airlock__wheel" viewBox="0 0 120 120">
@@ -46,9 +47,9 @@ function buildJoinMarkup({ code, name }) {
         <div class="bunker-airlock__core"></div>
       </div>
       <h2 class="bunker-airlock__title">ШЛЮЗ БУНКЕРА #${esc(code)}</h2>
-      <p class="bunker-airlock__sub">ВИЖИЛИЙ: <strong>${esc(name)}</strong> • СЕКТОР #${esc(code)}</p>
+      <p class="bunker-airlock__sub" data-airlock-sub>ВИЖИЛИЙ: <strong>${esc(name)}</strong> • СЕКТОР #${esc(code)}</p>
       <button type="button" class="bunker-airlock__btn bunker-airlock__btn--hazard" data-airlock-btn>
-        <span>ВІДЧИНИТИ ГЕРМОШЛЮЗ</span>
+        <span data-airlock-btn-text>ВІДЧИНИТИ ГЕРМОШЛЮЗ</span>
       </button>
       <span class="bunker-airlock__hint">Клацніть у будь-якому місці або натисніть Enter для входу</span>
     </div>
@@ -111,6 +112,7 @@ export function mountBunkerAirlock({
   if (typeof activeCleanup === 'function') {
     activeCleanup();
   }
+  isGameStartedState = false;
 
   const normalizedMode = mode === 'reconnect' || mode === 'spectator' ? mode : 'join';
   const code = String(roomCode || '0000').toUpperCase();
@@ -153,6 +155,7 @@ export function mountBunkerAirlock({
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
+    isGameStartedState = false;
     if (exitTimer) {
       clearTimeout(exitTimer);
       exitTimer = null;
@@ -198,7 +201,7 @@ export function mountBunkerAirlock({
     }
 
     overlay.classList.add('is-opening');
-    const exitDurationMs = normalizedMode === 'join' ? 240 : 110;
+    const exitDurationMs = normalizedMode === 'join' && !isGameStartedState ? 240 : 110;
     exitTimer = setTimeout(() => {
       cleanup();
     }, exitDurationMs);
@@ -225,6 +228,49 @@ export function mountBunkerAirlock({
 export function unmountBunkerAirlock() {
   if (typeof activeCleanup === 'function') {
     activeCleanup();
+  }
+  isGameStartedState = false;
+}
+
+export function isBunkerAirlockMounted() {
+  return Boolean(
+    typeof document !== 'undefined' &&
+    document.getElementById('bunker-airlock-overlay')
+  );
+}
+
+export function notifyAirlockGameStarted() {
+  if (typeof document === 'undefined') return;
+  const overlay = document.getElementById('bunker-airlock-overlay');
+  if (!overlay || !overlay.classList.contains('bunker-airlock--join')) return;
+
+  isGameStartedState = true;
+  overlay.classList.add('bunker-airlock--game-started');
+  overlay.setAttribute('aria-label', 'Увага! Гра розпочалася. Натисніть для входу в бункер');
+
+  const dot = overlay.querySelector('[data-airlock-status-dot]');
+  if (dot) {
+    dot.className = 'bunker-airlock__dot bunker-airlock__dot--danger';
+  }
+
+  const statusText = overlay.querySelector('[data-airlock-status-text]');
+  if (statusText) {
+    statusText.textContent = 'УВАГА // ГРА РОЗПОЧАЛАСЯ!';
+  }
+
+  const sub = overlay.querySelector('[data-airlock-sub]');
+  if (sub) {
+    sub.textContent = 'Матч уже розпочато! Натисніть для негайного підключення.';
+  }
+
+  const btn = overlay.querySelector('[data-airlock-btn]');
+  if (btn) {
+    btn.className = 'bunker-airlock__btn bunker-airlock__btn--danger';
+  }
+
+  const btnText = overlay.querySelector('[data-airlock-btn-text]');
+  if (btnText) {
+    btnText.textContent = 'УВІЙТИ ДО ГРИ (МАТЧ ТРИВАЄ)';
   }
 }
 

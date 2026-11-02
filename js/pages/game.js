@@ -47,7 +47,7 @@ import { firstChar } from '../utils/auth/initial.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
 import { soundManager } from '../services/sound-manager.js';
-import { mountBunkerAirlock, unmountBunkerAirlock } from '../ui/bunker-airlock.js';
+import { mountBunkerAirlock, unmountBunkerAirlock, notifyAirlockGameStarted } from '../ui/bunker-airlock.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -549,7 +549,7 @@ function handleRoomUpdate(patch) {
     hideCataclysmRoulette(); // рулетка не повинна блокувати вихід із закритої кімнати
     awaitingDoorSeal = false;
     cancelBunkerDoorTransition();
-  unmountBunkerAirlock();
+    unmountBunkerAirlock();
     if (fx.notifyHostClosed) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
@@ -577,6 +577,7 @@ function handleRoomUpdate(patch) {
 
   // Гра щойно почалася (характеристики роздано)
   if (fx.playStartDoor) {
+    notifyAirlockGameStarted();
     awaitingDoorSeal = true;
     playBunkerDoorTransition({
       roomCode: currentRoomCode || localRoomState?.room_code,
@@ -599,6 +600,7 @@ function handleRoomUpdate(patch) {
   }
 
   if (fx.isGameStartedNow) {
+    notifyAirlockGameStarted();
     maybePlayCataclysmRoulette(localRoomState);
   } else {
     hideCataclysmRoulette();

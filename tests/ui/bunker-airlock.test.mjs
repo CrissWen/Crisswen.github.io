@@ -6,7 +6,7 @@ const playedSounds = [];
 class FakeElement {
   constructor(tag) {
     this.tagName = tag.toUpperCase();
-    this.className = '';
+    this._className = '';
     this.id = '';
     this.innerHTML = '';
     this.dataset = {};
@@ -17,8 +17,14 @@ class FakeElement {
     this.focused = false;
     this._classes = new Set();
     this.classList = {
-      add: (...cls) => cls.forEach(c => this._classes.add(c)),
-      remove: (...cls) => cls.forEach(c => this._classes.delete(c)),
+      add: (...cls) => {
+        cls.forEach(c => this._classes.add(c));
+        this._className = Array.from(this._classes).join(' ');
+      },
+      remove: (...cls) => {
+        cls.forEach(c => this._classes.delete(c));
+        this._className = Array.from(this._classes).join(' ');
+      },
       contains: (c) => this._classes.has(c),
       toggle: (c, v) => {
         if (v === undefined) {
@@ -26,8 +32,14 @@ class FakeElement {
           else this._classes.add(c);
         } else if (v) this._classes.add(c);
         else this._classes.delete(c);
+        this._className = Array.from(this._classes).join(' ');
       }
     };
+  }
+  get className() { return this._className; }
+  set className(val) {
+    this._className = String(val || '');
+    this._classes = new Set(this._className.split(/\s+/).filter(Boolean));
   }
   setAttribute(k, v) { this.attributes[k] = String(v); }
   getAttribute(k) { return this.attributes[k] ?? null; }
@@ -56,10 +68,11 @@ class FakeElement {
     for (const fn of [...list]) fn(evt);
   }
   querySelector(sel) {
-    if (sel === '[data-airlock-btn]') {
-      return this._btn || (this._btn = new FakeElement('button'));
-    }
-    return null;
+    if (!this._queried) this._queried = new Map();
+    if (this._queried.has(sel)) return this._queried.get(sel);
+    const el = new FakeElement(sel.includes('btn') ? 'button' : 'div');
+    this._queried.set(sel, el);
+    return el;
   }
 }
 
@@ -99,7 +112,12 @@ const { soundManager, SOUND_IDS } = await import('../../js/services/sound-manage
 soundManager.unlock = async () => { unlockedCalled++; };
 soundManager.play = (id) => { playedSounds.push(id); };
 
-const { mountBunkerAirlock } = await import('../../js/ui/bunker-airlock.js');
+const {
+  mountBunkerAirlock,
+  unmountBunkerAirlock,
+  isBunkerAirlockMounted,
+  notifyAirlockGameStarted
+} = await import('../../js/ui/bunker-airlock.js');
 
 console.log('Running bunker-airlock unit tests...');
 
@@ -173,6 +191,43 @@ assert.ok(specEl.innerHTML.includes('ДИВИТИСЯ ГРУ'), 'Should display 
 // Manual unmount before click should cleanly remove from DOM
 unmountSpec();
 assert.strictEqual(body.children.length, 0, 'Manual unmount should immediately remove element');
+assert.strictEqual(isBunkerAirlockMounted(), false, 'isBunkerAirlockMounted should return false when unmounted');
+
+// 4. Dynamic game-started update in 'join' mode
+playedSounds.length = 0;
+let cbStarted = 0;
+mountBunkerAirlock({
+  roomCode: 'D4W1',
+  mode: 'join',
+  userName: 'TestUser',
+  onUnlocked: () => { cbStarted++; }
+});
+
+assert.strictEqual(isBunkerAirlockMounted(), true, 'isBunkerAirlockMounted should return true when mounted');
+const joinGameEl = body.children[0];
+assert.strictEqual(joinGameEl.classList.contains('bunker-airlock--game-started'), false);
+
+// Host starts game: notify airlock
+notifyAirlockGameStarted();
+assert.strictEqual(joinGameEl.classList.contains('bunker-airlock--game-started'), true, 'Should add bunker-airlock--game-started class');
+const statusTextEl = joinGameEl.querySelector('[data-airlock-status-text]');
+assert.strictEqual(statusTextEl.textContent, 'УВАГА // ГРА РОЗПОЧАЛАСЯ!', 'Status text should reflect game started');
+const btnTextEl = joinGameEl.querySelector('[data-airlock-btn-text]');
+assert.strictEqual(btnTextEl.textContent, 'УВІЙТИ ДО ГРИ (МАТЧ ТРИВАЄ)', 'Button text should reflect game started');
+const dotEl = joinGameEl.querySelector('[data-airlock-status-dot]');
+assert.ok(dotEl.className.includes('bunker-airlock__dot--danger'), 'Dot should become danger dot');
+
+// Click on updated airlock
+joinGameEl.dispatchEvent({ type: 'click', target: joinGameEl });
+await new Promise(r => setTimeout(r, 160));
+assert.strictEqual(cbStarted, 1, 'onUnlocked should be called after click');
+assert.strictEqual(body.children.length, 0, 'Overlay should be removed after accelerated exit animation');
+assert.strictEqual(isBunkerAirlockMounted(), false, 'isBunkerAirlockMounted should return false after exit');
+
+// Safe no-op when not mounted
+assert.doesNotThrow(() => {
+  notifyAirlockGameStarted();
+}, 'notifyAirlockGameStarted should be safe no-op when unmounted');
 
 console.log('PASS: All bunker-airlock tests passed!');
 
