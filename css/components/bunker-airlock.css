@@ -1,0 +1,310 @@
+/* ==========================================================================
+   BUNKER AIRLOCK OVERLAY (Лобі / Відновлення зв'язку / Режим глядача)
+   ========================================================================== */
+
+.bunker-airlock {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  cursor: pointer;
+  user-select: none;
+  will-change: opacity, transform;
+}
+
+/* --- Режим 1: ШЛЮЗ ЛОБІ (join) --- */
+.bunker-airlock--join {
+  background: radial-gradient(circle at 50% 50%, rgba(18, 22, 31, 0.96) 0%, rgba(7, 9, 13, 0.99) 100%);
+}
+
+/* Стулки шлюзу */
+.bunker-airlock__leaves {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bunker-airlock__leaf {
+  flex: 1;
+  background: linear-gradient(180deg, var(--panel-2, #181c26) 0%, var(--panel, #12151e) 100%);
+  border: 1px solid var(--metal, #2b3142);
+  position: relative;
+  transition:
+    transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease;
+  will-change: transform, opacity;
+}
+
+.bunker-airlock__leaf--left {
+  border-right: 2px solid var(--hazard, #f59e0b);
+}
+
+.bunker-airlock__leaf--right {
+  border-left: 2px solid var(--hazard, #f59e0b);
+}
+
+.bunker-airlock__hazard-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard, #f59e0b),
+    var(--hazard, #f59e0b) 10px,
+    #0b0d13 10px,
+    #0b0d13 20px
+  );
+  opacity: 0.75;
+}
+
+.bunker-airlock__leaf--left .bunker-airlock__hazard-strip {
+  right: 0;
+}
+
+.bunker-airlock__leaf--right .bunker-airlock__hazard-strip {
+  left: 0;
+}
+
+/* Розсування стулок при відкритті (join) */
+.bunker-airlock--join.is-opening .bunker-airlock__leaf--left {
+  transform: translateX(-60px);
+  opacity: 0;
+}
+
+.bunker-airlock--join.is-opening .bunker-airlock__leaf--right {
+  transform: translateX(60px);
+  opacity: 0;
+}
+
+.bunker-airlock--join.is-opening .bunker-airlock__card {
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+/* --- Режим 2 та 3: У ГРІ (reconnect) та ГЛЯДАЧ (spectator) --- */
+.bunker-airlock--reconnect,
+.bunker-airlock--spectator {
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    opacity 100ms ease-out,
+    transform 100ms ease-out;
+}
+
+.bunker-airlock--reconnect.is-opening,
+.bunker-airlock--spectator.is-opening {
+  opacity: 0;
+  transform: scale(1.02);
+}
+
+/* --- Картка термінала --- */
+.bunker-airlock__card {
+  position: relative;
+  z-index: 2;
+  width: min(440px, 100%);
+  padding: clamp(22px, 4vw, 32px);
+  border-radius: var(--radius-md, 10px);
+  background: color-mix(in srgb, var(--panel, #12151e) 94%, #000 6%);
+  border: 1px solid var(--metal-lt, #3a4256);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.bunker-airlock__card--reconnect {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 65%, var(--metal, #2b3142));
+  box-shadow:
+    0 0 32px rgba(239, 68, 68, 0.22),
+    0 20px 50px rgba(0, 0, 0, 0.85);
+}
+
+.bunker-airlock__card--spectator {
+  border-color: color-mix(in srgb, var(--hazard, #f59e0b) 55%, var(--metal, #2b3142));
+}
+
+/* --- Індикатор статусу (Beacon) --- */
+.bunker-airlock__beacon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mute, #9ca3af);
+}
+
+.bunker-airlock__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hazard, #f59e0b);
+  box-shadow: 0 0 10px var(--hazard, #f59e0b);
+  animation: airlockPulse 1.6s infinite ease-in-out;
+}
+
+.bunker-airlock__dot--danger {
+  background: var(--danger, #ef4444);
+  box-shadow: 0 0 12px var(--danger, #ef4444);
+}
+
+.bunker-airlock__dot--live {
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981;
+}
+
+@keyframes airlockPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.88); }
+}
+
+/* --- Штурвал замка (для режиму join) --- */
+.bunker-airlock__lock {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  margin: 4px 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #1c2230 0%, #0b0e14 75%);
+  border: 2px solid var(--metal-lt, #3a4256);
+  box-shadow:
+    0 0 25px rgba(0, 0, 0, 0.9),
+    inset 0 0 16px rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bunker-airlock__wheel {
+  width: 86%;
+  height: 86%;
+  color: var(--text, #f3f4f6);
+  transform: rotate(0deg);
+  transition: transform 220ms cubic-bezier(0.18, 0.9, 0.32, 1.25);
+  will-change: transform;
+}
+
+.bunker-airlock--join.is-opening .bunker-airlock__wheel {
+  transform: rotate(45deg);
+}
+
+.bunker-airlock__core {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--danger, #ef4444);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 16px var(--danger, #ef4444);
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.bunker-airlock--join.is-opening .bunker-airlock__core {
+  background: #10b981;
+  box-shadow: 0 0 25px #10b981;
+}
+
+/* --- Типографіка --- */
+.bunker-airlock__title {
+  margin: 0;
+  font-size: clamp(1.15rem, 2.5vw, 1.4rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text, #f3f4f6);
+}
+
+.bunker-airlock__sub {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-mute, #9ca3af);
+}
+
+.bunker-airlock__sub strong {
+  color: var(--text, #f3f4f6);
+}
+
+/* --- Головна кнопка дії --- */
+.bunker-airlock__btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 13px 20px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--hazard, #f59e0b);
+  background: color-mix(in srgb, var(--hazard, #f59e0b) 18%, var(--panel-2, #181c26));
+  color: var(--hazard, #f59e0b);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  transition:
+    background-color 150ms ease,
+    transform 120ms ease,
+    box-shadow 150ms ease;
+}
+
+.bunker-airlock__btn:hover,
+.bunker-airlock__btn:focus-visible {
+  background: var(--hazard, #f59e0b);
+  color: #0b0d13;
+  box-shadow: 0 0 28px rgba(245, 158, 11, 0.45);
+  outline: none;
+}
+
+.bunker-airlock__btn:active {
+  transform: scale(0.97);
+}
+
+.bunker-airlock__btn--danger {
+  border-color: var(--danger, #ef4444);
+  background: color-mix(in srgb, var(--danger, #ef4444) 22%, var(--panel-2, #181c26));
+  color: #fecaca;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.28);
+}
+
+.bunker-airlock__btn--danger:hover,
+.bunker-airlock__btn--danger:focus-visible {
+  background: var(--danger, #ef4444);
+  color: #fff;
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.55);
+}
+
+.bunker-airlock__hint {
+  font-size: 0.75rem;
+  color: var(--text-mute, #9ca3af);
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bunker-airlock,
+  .bunker-airlock__leaf,
+  .bunker-airlock__wheel,
+  .bunker-airlock__core,
+  .bunker-airlock__dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

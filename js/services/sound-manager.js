@@ -39,6 +39,8 @@ class SoundManager {
     this._wasDroneBeforeHide = false;
     this._ambientFadeTimeout = null; // Таймаут згасання при згортанні вкладки
     this._initialized = false;
+    this._unlocked = false;
+    this._ambientPendingUnlock = false;
     this._globalClicksDisabled = false;
     this._domCleanups = []; // функції зняття глобальних слухачів (для destroy())
 
@@ -74,6 +76,8 @@ class SoundManager {
     this._ambientFadeTimeout = null;
     this.stopAll();
     this._initialized = false;
+    this._unlocked = false;
+    this._ambientPendingUnlock = false;
   }
 
   /**
@@ -344,8 +348,8 @@ class SoundManager {
 
     if (this._settings.muted) return null;
 
-    // Спроба автоматично розблокувати Howler AudioContext (актуально при виклику з консолі або передчасному запуску)
-    if (typeof window !== 'undefined' && window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
+    // Спроба автоматично розблокувати Howler AudioContext лише після жесту користувача
+    if (this._unlocked && typeof window !== 'undefined' && window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
       window.Howler.ctx.resume().catch(() => {});
     }
 
@@ -536,11 +540,13 @@ class SoundManager {
       onstop: (id) => {
         activeSet.delete(id);
       },
-      onplayerror: (id, err) => {
-        console.warn(`[SoundManager] Відтворення "${config.id}" заблоковане політикою браузера (Autoplay). Клікніть на сторінці для розблокування:`, err);
-        howl.once('unlock', () => {
-          howl.play(id);
-        });
+      onplayerror: (id) => {
+        activeSet.delete(id);
+        if (config.id === SOUND_IDS.BUNKER_AMBIENT) {
+          this._ambientPendingUnlock = true;
+        }
+        // Одноразові ефекти (SFX / UI) свідомо НЕ ставимо в чергу howl.once('unlock'):
+        // інакше при першому кліку користувача оглушить 50 накопичених старих звуків одночасно.
       },
       onloaderror: (id, err) => {
         console.warn(`[SoundManager] Помилка завантаження аудіофайлу для "${config.id}":`, err);
@@ -647,15 +653,39 @@ class SoundManager {
   // Браузерні життєві цикли (Autoplay Unlock, Visibility, Делеговані UI-хуки)
   // ===========================================================================
 
+  /**
+   * Перевіряє, чи аудіоконтекст уже розблоковано жестом користувача.
+   */
+  isUnlocked() {
+    if (this._unlocked) return true;
+    if (typeof navigator !== 'undefined' && navigator.userActivation?.hasBeenActive) return true;
+    if (this._audioCtx && this._audioCtx.state === 'running') return true;
+    if (typeof window !== 'undefined' && window.Howler?.ctx?.state === 'running') return true;
+    if (AudioSynth.isUnlocked?.()) return true;
+    return false;
+  }
+
+  /**
+   * Явно розблоковує AudioContext (Web Audio + Howler) та запускає відкладений ембієнт, якщо він був потрібен.
+   */
+  async unlock() {
+    this._unlocked = true;
+    await AudioSynth.unlock();
+    if (this._audioCtx && this._audioCtx.state === 'suspended') {
+      try { await this._audioCtx.resume(); } catch (_) {}
+    }
+    if (typeof window !== 'undefined' && window.Howler?.ctx?.state === 'suspended') {
+      try { await window.Howler.ctx.resume(); } catch (_) {}
+    }
+    if (this._ambientWanted && (this._ambientPendingUnlock || !this.isPlaying(SOUND_IDS.BUNKER_AMBIENT))) {
+      this._ambientPendingUnlock = false;
+      this.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
+    }
+  }
+
   _setupUnlockListeners() {
     const unlock = () => {
-      AudioSynth.unlock();
-      if (this._audioCtx && this._audioCtx.state === 'suspended') {
-        this._audioCtx.resume().catch(() => {});
-      }
-      if (window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
-        window.Howler.ctx.resume().catch(() => {});
-      }
+      this.unlock();
       window.removeEventListener('pointerdown', unlock, true);
       window.removeEventListener('keydown', unlock, true);
       window.removeEventListener('click', unlock, true);

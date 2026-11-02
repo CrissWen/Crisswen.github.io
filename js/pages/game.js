@@ -47,6 +47,7 @@ import { firstChar } from '../utils/auth/initial.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
 import { soundManager } from '../services/sound-manager.js';
+import { mountBunkerAirlock, unmountBunkerAirlock } from '../ui/bunker-airlock.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -292,6 +293,20 @@ export async function initGame() {
     boardEl.style.display = 'block';
 
     // Гравець зайшов (зокрема кнопкою «Повернутися» з лобі) у кімнату, де гра вже йде — пропонуємо повернути телефон горизонтально або продовжити вертикально
+    if (!soundManager.isUnlocked() && room.status !== 'closed' && room.status !== 'finished') {
+      const airlockMode = isGameStarted ? (isSpectator ? 'spectator' : 'reconnect') : 'join';
+      mountBunkerAirlock({
+        roomCode: currentRoomCode,
+        mode: airlockMode,
+        userName: currentUserName,
+        onUnlocked: () => {
+          if (Object.keys(localRoomState?.bunker_state || {}).length > 0 && localRoomState?.status !== 'closed' && localRoomState?.status !== 'finished') {
+            soundManager.startAmbient();
+          }
+        },
+      });
+    }
+
     if (isGameStarted && room.status !== 'closed' && room.status !== 'finished') showOrientationPrompt();
 
     if (unsubscribeAvatarChange) unsubscribeAvatarChange();
@@ -392,7 +407,10 @@ function updateGameBoard(roomData, container) {
   } else {
     // Атмосфера бункера грає все время, поки гра йде. Дошка монтується в момент герметизації дверей, тож звук стартує разом з ним.
     // Виклик ідемпотентний, тому не дублюється при кожному оновленні кімнати. Закрита кімната (включно з записом збереженої гри) без атмосфери.
-    if (roomData.status === 'closed' || roomData.status === 'finished') soundManager.stopAmbient();
+    if (roomData.status === 'closed' || roomData.status === 'finished') {
+      unmountBunkerAirlock();
+      soundManager.stopAmbient();
+    }
     else soundManager.startAmbient();
     mountHeaderCollapseTab();
     renderActiveGame(roomData, container);
@@ -531,6 +549,7 @@ function handleRoomUpdate(patch) {
     hideCataclysmRoulette(); // рулетка не повинна блокувати вихід із закритої кімнати
     awaitingDoorSeal = false;
     cancelBunkerDoorTransition();
+  unmountBunkerAirlock();
     if (fx.notifyHostClosed) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
@@ -539,6 +558,7 @@ function handleRoomUpdate(patch) {
 
   // Ведучий завершив гру: гравців не перекидаємо, а в момент переходу в finished граємо двері бункера
   if (fx.roomFinished) {
+    unmountBunkerAirlock();
     hideCataclysmRoulette();
     clearLastRoom(currentUserId);
     if (fx.playFinishDoor) {
@@ -811,5 +831,6 @@ export function cleanupGame() {
   pendingDiceLogId = null;
   awaitingDoorSeal = false;
   cancelBunkerDoorTransition();
+  unmountBunkerAirlock();
   soundManager.stopAmbient(); // вийшли з кімнати — атмосфера зупиняється
 }
