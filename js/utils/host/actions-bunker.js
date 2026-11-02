@@ -9,6 +9,11 @@ import { detectCataclysmIcon } from '../roulette/cataclysm-detector.js';
 import { attachCataclysmSpin, isCataclysmSpinActive } from '../roulette/cataclysm-spin.js';
 import { pushLog } from '../game/log-writer.js';
 
+// Пауза між записом спіну й стартом стрічки при ручній зміні катаклізму. Бункерних дверей тут немає (на відміну від старту гри,
+// де стандартні ~4.6 с синхронізовані з їхнім відкриттям), тож потрібен лише запас на доставку оновлення всім клієнтам через Realtime.
+// Інакше оверлей з'являється одразу, а стрічка кілька секунд стоїть на місці.
+const CHANGE_CATACLYSM_LEAD_MS = 1200;
+
 // ===== Дії з бункером =====
 
 // Розбирає текст "предмет1, предмет2" у масив чистих рядків: прибирає зайві пробіли
@@ -119,7 +124,7 @@ export async function changeCataclysm(roomCode) {
   bState.cataclysm_timer_end = timerMinutes > 0 ? getGlobalTime() + timerMinutes * 60 * 1000 : null;
   // Рулетка: результат уже записаний у bState.cataclysm, спін лише показує його всім за серверним часом. Запис у лозі отримує id спіну,
   // щоб клієнти ховали його до зупинки стрічки (тост про зміну видав би результат раніше). Рулетку вимкнено — подія одразу, як раніше.
-  const spin = await attachCataclysmSpin(bState, pools.bunker?.cataclysm, getGlobalTime());
+  const spin = await attachCataclysmSpin(bState, pools.bunker?.cataclysm, getGlobalTime(), { leadMs: CHANGE_CATACLYSM_LEAD_MS });
   if (spin) pushLog(bState, `Ведучий змінив катаклізм: ${card.value}`, spin.id);
   else setHostEvent(bState, `Ведучий змінив катаклізм: ${card.value}`);
   await saveRoom(roomCode, { bunker_state: bState }, room.version);
