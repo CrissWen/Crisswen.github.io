@@ -126,6 +126,14 @@
 .char-item.open .char-lock .lock-closed { display: none; }
 .char-item.open .char-lock .lock-open { display: block; }
 
+/* Завершена гра / перегляд запису (.final-screen ставить game.js): замки лише показують стан і не реагують на курсор.
+   pointer-events: none разом вимикає покачування, підсвітку, «присідання» й звук наведення (sound-manager слухає pointerover саме на .char-lock),
+   а клік по замку в цьому режимі й так ігнорується (див. handleGlobalClick у game.js). */
+.final-screen .char-lock {
+  pointer-events: none;
+  cursor: default;
+}
+
 /* ===== Special abilities sub-block (inside block 3) ===== */
 .abilities-block{margin-top:18px;padding-top:16px;border-top:2px dashed var(--metal);}
 .abilities-title{
