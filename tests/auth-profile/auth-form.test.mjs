@@ -23,14 +23,22 @@ const hooksSource = `
 register('data:text/javascript,' + encodeURIComponent(hooksSource));
 
 class FakeNode {
-  constructor() { this.style = {}; this.dataset = {}; this.textContent = ''; this.value = ''; this.disabled = false; this.listeners = {};
+  constructor() { this.style = {}; this.dataset = {}; this.textContent = ''; this.value = ''; this.disabled = false; this.isConnected = true; this.listeners = {};
     this.classList = { add() {}, remove() {}, toggle() {}, contains: () => false }; }
   addEventListener(t, fn) { (this.listeners[t] ||= []).push(fn); }
   querySelectorAll() { return []; }
   async fire(t, ev = {}) { for (const fn of this.listeners[t] || []) await fn(ev); }
+  click() { return this.disabled ? Promise.resolve() : this.fire('click'); }
+  focus() { document.activeElement = this; }
 }
 let nodes;
-globalThis.document = { getElementById: id => { if (!nodes.has(id)) nodes.set(id, new FakeNode()); return nodes.get(id); } };
+const docListeners = { keydown: [] };
+globalThis.document = {
+  body: { tag: 'body' }, documentElement: { tag: 'html' }, activeElement: null,
+  getElementById: id => { if (!nodes.has(id)) nodes.set(id, new FakeNode()); return nodes.get(id); },
+  addEventListener(t, fn) { (docListeners[t] ||= []).push(fn); },
+  removeEventListener(t, fn) { docListeners[t] = (docListeners[t] || []).filter(f => f !== fn); }
+};
 globalThis.window = { location: { hash: '#/login' } };
 
 const { initAuth } = await import('../../js/pages/auth.js');
@@ -38,6 +46,7 @@ const $ = id => document.getElementById(id);
 
 async function submit({ mode, username, password = 'secret1' }) {
   nodes = new Map();
+  docListeners.keydown = [];
   window.location.hash = '#/login';
   await initAuth();
   if (mode === 'register') {
@@ -124,6 +133,104 @@ await check('вхід: мережевий збій не видається за 
   const r = await submit({ mode: 'login', username: 'Гравець' });
   assert.doesNotMatch(r.error, /Невірне/);
   assert.match(r.error, /мереж|інтернет/i);
+});
+
+// ===== Enter: ім'я → пароль → підтвердження; без фокуса — головна кнопка =====
+async function mount(mode = 'login') {
+  nodes = new Map();
+  docListeners.keydown = [];
+  document.activeElement = null;
+  window.location.hash = '#/login';
+  await initAuth();
+  if (mode === 'register') {
+    await $('auth-mode-switch').fire('click', { target: { closest: () => ({ dataset: { mode: 'register' } }) } });
+  }
+  $('username').value = 'Гравець';
+  $('password').value = 'secret1';
+}
+async function pressEnter(target, extra = {}) {
+  const ev = { key: 'Enter', target, prevented: false, preventDefault() { this.prevented = true; }, ...extra };
+  for (const fn of [...docListeners.keydown]) await fn(ev);
+  await new Promise(r => setTimeout(r, 0)); // дати завершитися async-обробнику кліку
+  return ev;
+}
+const calls = () => globalThis.__calls.length;
+
+await check('Enter у полі імені перекидає на пароль і не відправляє форму', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  const ev = await pressEnter($('username'));
+  assert.strictEqual(document.activeElement, $('password'));
+  assert.strictEqual(ev.prevented, true);
+  assert.strictEqual(calls(), 0, 'вхід не мав викликатись');
+});
+
+await check('Enter у полі пароля підтверджує вхід', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  const ev = await pressEnter($('password'));
+  assert.strictEqual(ev.prevented, true);
+  assert.strictEqual(calls(), 1);
+  assert.strictEqual(window.location.hash, '#/lobby');
+});
+
+await check('Enter у полі пароля на вкладці «Зареєструвати» реєструє', async () => {
+  globalThis.__signUp = async (...a) => { globalThis.__calls.push(['signUp', ...a]); return ok(); };
+  await mount('register');
+  await pressEnter($('password'));
+  assert.strictEqual(calls(), 1);
+  assert.strictEqual(globalThis.__calls[0][0], 'signUp');
+});
+
+await check('Enter без фокуса у вихідній вкладці тисне «Увійти»', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  await pressEnter(document.body);
+  assert.strictEqual(calls(), 1);
+  assert.strictEqual(globalThis.__calls[0][0], 'signIn');
+});
+
+await check('Enter без фокуса на вкладці «Зареєструвати» тисне «Створити акаунт»', async () => {
+  globalThis.__signUp = async (...a) => { globalThis.__calls.push(['signUp', ...a]); return ok(); };
+  await mount('register');
+  await pressEnter(document.documentElement);
+  assert.strictEqual(calls(), 1);
+  assert.strictEqual(globalThis.__calls[0][0], 'signUp');
+});
+
+await check('Enter на сторонньому елементі (кнопка/вкладка) нічого не робить', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  const ev = await pressEnter({ tag: 'button' });
+  assert.strictEqual(calls(), 0);
+  assert.strictEqual(ev.prevented, false, 'рідну поведінку Enter на кнопці не блокуємо');
+});
+
+await check('Інші клавіші, притиснутий Enter у циклі (repeat) і Shift+Enter ігноруються', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  await pressEnter($('password'), { key: 'a' });
+  await pressEnter($('password'), { repeat: true });
+  await pressEnter($('password'), { shiftKey: true });
+  assert.strictEqual(calls(), 0);
+});
+
+await check('Enter, коли показано профіль (форма прихована), нічого не робить', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  $('auth-form-container').style.display = 'none';
+  await pressEnter(document.body);
+  assert.strictEqual(calls(), 0);
+});
+
+await check('Коли форму прибрали зі сторінки, слухач Enter сам знімається і нічого не робить', async () => {
+  globalThis.__signIn = async (...a) => { globalThis.__calls.push(['signIn', ...a]); return ok(); };
+  await mount('login');
+  assert.strictEqual(docListeners.keydown.length, 1);
+  $('login-btn').isConnected = false;
+  await pressEnter(document.body);
+  assert.strictEqual(calls(), 0);
+  assert.strictEqual(docListeners.keydown.length, 0, 'слухач мав знятися');
 });
 
 if (failed) {

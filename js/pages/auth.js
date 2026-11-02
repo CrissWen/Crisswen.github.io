@@ -169,6 +169,33 @@ export async function initAuth() {
     }
   });
 
+  // ===== Клавіша Enter =====
+  // Поле імені → фокус на пароль; поле пароля → підтвердження (клік по головній кнопці);
+  // фокус ні в якому полі → теж клік по головній кнопці (вхід чи реєстрація — залежно від активної вкладки).
+  // Слухач на document, бо без фокуса keydown летить саме туди; сам знімається, коли роутер прибрав форму зі сторінки.
+  function onEnterKey(e) {
+    if (!loginBtn.isConnected) {
+      document.removeEventListener('keydown', onEnterKey);
+      return;
+    }
+    if (e.key !== 'Enter' || e.isComposing || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    if (formContainer.style.display === 'none') return; // показано профіль залогіненого гравця, форми немає
+
+    const target = e.target;
+    if (target === usernameInput) {
+      e.preventDefault();
+      passwordInput.focus();
+    } else if (target === passwordInput) {
+      e.preventDefault();
+      loginBtn.click();
+    } else if (!target || target === document.body || target === document.documentElement) {
+      e.preventDefault();
+      loginBtn.click();
+    }
+    // Фокус на кнопці/вкладці/посиланні — лишаємо їхню рідну поведінку Enter.
+  }
+  document.addEventListener('keydown', onEnterKey);
+
   // ===== Контейнер Б: кнопки профілю (лише коли сесія є, прив'язуємо завжди — байдуже, бо приховано) =====
 
   profileLobbyBtn.addEventListener('click', () => {
