@@ -46,7 +46,8 @@ import { setAvatarEl, clearBrokenAvatarUrl } from '../utils/auth/avatar.js';
 import { firstChar } from '../utils/auth/initial.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
 import { playBunkerDoorTransition, cancelBunkerDoorTransition, isBunkerDoorTransitionActive } from '../fx/bunker-transition.js';
-import { soundManager } from '../services/sound-manager.js';
+import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
+import { unmountCataclysmVignette } from '../fx/cataclysm-vignette.js';
 import { mountBunkerAirlock, unmountBunkerAirlock, notifyAirlockGameStarted } from '../ui/bunker-airlock.js';
 
 // ===== Оркестратор сторінки гри =====
@@ -494,6 +495,9 @@ function renderActiveGame(roomData, container) {
   initCustomSelects(container);
   if (!isOfflineReplay) {
     container.querySelector('[data-final-home]')?.addEventListener('click', () => {
+      unmountCataclysmVignette();
+      document.getElementById('cataclysm-end-modal')?.remove();
+      soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
       clearLastRoom(currentUserId);
       window.location.hash = '#/lobby';
     });
@@ -503,7 +507,7 @@ function renderActiveGame(roomData, container) {
   scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
 
   if (roomData.status === 'finished' && roomData.bunker_state?.finish_reason === 'cataclysm_timeout') {
-    if (!awaitingDoorSeal && !isBunkerDoorTransitionActive()) {
+    if (!awaitingDoorSeal) {
       showCataclysmEndModal();
     }
   }
@@ -566,6 +570,9 @@ function handleRoomUpdate(patch) {
     awaitingDoorSeal = false;
     cancelBunkerDoorTransition();
     unmountBunkerAirlock();
+    unmountCataclysmVignette();
+    document.getElementById('cataclysm-end-modal')?.remove();
+    soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
     if (fx.notifyHostClosed) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
@@ -585,6 +592,9 @@ function handleRoomUpdate(patch) {
         onSealed: () => {
           awaitingDoorSeal = false;
           ctx.refreshBoard();
+          if (fx.doorTransitionMode === 'cataclysm_timeout') {
+            showCataclysmEndModal();
+          }
         },
         onComplete: () => {
           if (fx.doorTransitionMode === 'cataclysm_timeout') {
@@ -831,6 +841,9 @@ export function cleanupGame() {
   HostActions.clearSnapshot(); // знімок «Скасувати» живе в пам'яті модуля: без цього після виходу й повернення в ту саму кімнату він би лишився
   unmountGameTimer();
   unmountCataclysmTimer();
+  unmountCataclysmVignette();
+  document.getElementById('cataclysm-end-modal')?.remove();
+  soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
   if (unsubscribeAvatarChange) {
     unsubscribeAvatarChange();
     unsubscribeAvatarChange = null;
