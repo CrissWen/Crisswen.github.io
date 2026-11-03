@@ -35,6 +35,8 @@ const PLAYER_SELECT_MODES = {
 };
 
 const charTypeOptions = () => optionsHtml(CHARACTERISTIC_TYPES.map(c => ({ value: c.key, label: c.label })));
+// Без спеціальних можливостей: їх можна лише обмінювати, тому в інших діях (змінити, вкрасти, зсунути) їх не показуємо.
+const charTypeOptionsNoAbility = () => optionsHtml(CHARACTERISTIC_TYPES.filter(c => c.key !== 'special_abilities').map(c => ({ value: c.key, label: c.label })));
 const extraTypeOptions = () => optionsHtml(EXTRA_CHARACTERISTIC_TYPES.map(c => ({ value: c.key, label: c.label })));
 const bunkerFieldOptions = () => optionsHtml(BUNKER_FIELDS.map(f => ({ value: f.key, label: f.label })));
 // Список для «Видалити характеристику»: заглушка без значення + усі поля з DELETABLE_CHARACTERISTICS (ключ = поле в players_state).
@@ -143,7 +145,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
 
             ${acc('Змінити характеристику', `
               ${field('Гравець', playersSelect('all'))}
-              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptionsNoAbility()}</select>`)}
               ${actionBtn('Змінити на випадкову', 'changeCharacteristic')}
             `)}
 
@@ -151,7 +153,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
               ${field('Гравець', playersSelect('all'))}
               ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="expType">
                 <option value="profession" selected>Професія</option>
-                <option value="hobby">Хобі</option>
+                <option value="hobby">Хобі / Навички</option>
               </select>`)}
               <label class="hp-field" data-exp-sub="profession"><span>Стаж</span><select class="hp-select pe-select-custom" data-field="levelProf" data-stages="profession"></select></label>
               <label class="hp-field" data-exp-sub="hobby" style="display:none"><span>Стаж</span><select class="hp-select pe-select-custom" data-field="levelHobby" data-stages="hobby"></select></label>
@@ -189,7 +191,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
             ${acc('Вкрасти характеристику', `
               ${field('Хто краде', playersSelect('only', 'thief'))}
               ${field('У кого краде', playersSelect('only', 'victim'))}
-              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptionsNoAbility()}</select>`)}
               ${actionBtn('Вкрасти', 'stealCharacteristic')}
             `)}
 
@@ -204,7 +206,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
               ${actionBtn('Застосувати', 'healMake')}
             `)}
 
-            ${acc('Додати доп. характеристику', `
+            ${acc('Додати додаткову характеристику', `
               ${field('Гравець', playersSelect('all'))}
               ${field('Категорія', `<select class="hp-select pe-select-custom" data-field="category">${extraTypeOptions()}</select>`)}
               <input type="text" class="hp-input" data-field="customExtra" placeholder="Або введіть вручну..." maxlength="300">
@@ -218,7 +220,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
             `)}
 
             ${acc('Зсув характеристик', `
-              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptions()}</select>`)}
+              ${field('Характеристика', `<select class="hp-select pe-select-custom" data-field="charType">${charTypeOptionsNoAbility()}</select>`)}
               <div class="hp-row hp-row-stack">
                 ${actionBtn('За годинниковою стрілкою', 'shift', 'data-arg="cw"')}
                 ${actionBtn('Проти годинникової стрілки', 'shift', 'data-arg="ccw"')}
@@ -227,7 +229,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
 
             ${acc('Змінити параметр бункера', `
               ${field('Параметр', `<select class="hp-select pe-select-custom" data-field="bunkerField">${bunkerFieldOptions()}</select>`)}
-              ${field('Ваша характеристика', `<input type="text" class="hp-input" data-field="customValue" placeholder="Власне значення (порожнє — випадкове)" maxlength="300">`)}
+              ${field('Власне значення', `<input type="text" class="hp-input" data-field="customValue" placeholder="Власне значення (порожнє — випадкове)" maxlength="300">`)}
               <!-- Керування предметами: показується лише для параметра "items" (перемикає game.js) -->
               <select class="hp-select pe-select-custom" id="bunker-item-action" data-field="itemAction" style="display:none">
                 <option value="add" selected>Додати</option>
@@ -248,7 +250,7 @@ export function renderHostPanel({ capacity = 1, canUndo = false, timer = {}, can
 
             ${acc('Передати роль ведучого', `
               ${field('Новий ведучий', playersSelect('others', 'newHost'))}
-              ${actionBtn('Передати права', 'changeHost')}
+              ${actionBtn('Передати роль', 'changeHost')}
             `)}
           </section>
         </div>

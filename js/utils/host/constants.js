@@ -3,14 +3,14 @@
 
 export const CHARACTERISTIC_TYPES = [
   { key: 'professions',       label: 'Професія',            category: 'profession',      isArray: true,  stagesKey: 'profession' },
-  { key: 'hobbies',           label: 'Хобі',                 category: 'hobby',           isArray: true,  stagesKey: 'hobby' },
+  { key: 'hobbies',           label: 'Хобі / Навички',       category: 'hobby',           isArray: true,  stagesKey: 'hobby' },
   { key: 'health',            label: "Здоров'я",             category: 'health',          isArray: true,  stagesKey: 'health' },
   { key: 'traits',            label: 'Риса характеру',       category: 'trait',           isArray: true },
   { key: 'phobias',           label: 'Фобія',                category: 'phobia',          isArray: true },
   { key: 'backpack',          label: 'Рюкзак',               category: 'backpack',        isArray: true },
   { key: 'large_inventory',   label: 'Крупний інвентар',     category: 'large_inventory', isArray: true },
-  { key: 'extra_info',        label: 'Дод. відомості',       category: 'extra_info',      isArray: true },
-  { key: 'special_abilities', label: 'Спец. можливість',     category: 'special_ability', isArray: true,  noExtra: true },
+  { key: 'extra_info',        label: 'Додаткові відомості',  category: 'extra_info',      isArray: true },
+  { key: 'special_abilities', label: 'Спеціальна можливість', category: 'special_ability', isArray: true,  noExtra: true },
   { key: 'body',              label: 'Статура',              category: 'body_type',       isArray: false },
   { key: 'gender',            label: 'Стать',                category: 'gender',          isArray: false }
 ];
@@ -39,8 +39,8 @@ export const BUNKER_FIELDS = [
 // так само як здоров'я, риса характеру та статура — видаляти їх (лишати гравця без цих карток) не має сенсу.
 export const DELETABLE_CHARACTERISTICS = [
   { key: 'professions',     label: 'Професія' },
-  { key: 'phobias',         label: 'Фобія / Страх' },
-  { key: 'hobbies',         label: 'Хобі / Захоплення' },
+  { key: 'phobias',         label: 'Фобія' },
+  { key: 'hobbies',         label: 'Хобі / Навички' },
   { key: 'extra_info',      label: 'Додаткові відомості' },
   { key: 'backpack',        label: 'Рюкзак' },
   { key: 'large_inventory', label: 'Крупний інвентар' }
@@ -53,9 +53,9 @@ export const PERFECT_HEALTH_LABEL = 'Ідеально здоровий';
 
 // ===== "Вкрасти характеристику" (actions-steal.js) =====
 // Гілка 1: жертва отримує нову випадкову картку, злодій ЗАМІЩУЄ свою вкраденою.
-export const STEAL_REPLACE_KEYS = ['gender', 'body', 'traits', 'health', 'phobias'];
+export const STEAL_REPLACE_KEYS = ['gender', 'body', 'traits', 'health'];
 // Гілка 2: жертва лишається "Пусто", злодій отримує картку ДОДАТКОВО до своєї.
-export const STEAL_APPEND_KEYS = ['professions', 'hobbies', 'large_inventory', 'backpack', 'extra_info'];
+export const STEAL_APPEND_KEYS = ['professions', 'hobbies', 'phobias', 'large_inventory', 'backpack', 'extra_info'];
 
 // Текст маркера-заглушки для жертви крадіжки (Гілка 2). Для професії — окремий напис.
-export const STEAL_EMPTY_TEXT = { professions: 'Без професії' };
+export const STEAL_EMPTY_TEXT = { professions: 'Без професії', phobias: 'Немає' };
