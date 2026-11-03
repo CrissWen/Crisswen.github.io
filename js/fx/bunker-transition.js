@@ -10,7 +10,7 @@ let activeTransition = null;
 
 // Тексти HUD на дверях за режимами: 'start' — старт гри, 'finish' — завершення гри (там сама анімація, інші написи).
 // closing — початок (закриття стулок), sealed — повна герметизація, opening — відкриття.
-const TRANSITION_TEXTS = {
+export const TRANSITION_TEXTS = {
   start: {
     aria: 'Запуск гри: герметизація бункера',
     closing: ['ТРИВОГА // ПРОТОКОЛ ІЗОЛЯЦІЇ', 'УВАГА! ЗАКРИТТЯ ШЛЮЗУ', 'LOCKDOWN PROTOCOL // INITIATED'],
@@ -24,7 +24,14 @@ const TRANSITION_TEXTS = {
     sealed: ['СТАТУС: ЗАФІКСОВАНО', 'ПІДРАХУНОК ЗАВЕРШЕНО', 'ФОРМУВАННЯ ЗВІТУ // 100%'],
     sealedReduced: ['СТАТУС: ЗАФІКСОВАНО', 'ПІДРАХУНОК ЗАВЕРШЕНО', 'ЗВІТ ГОТОВИЙ'],
     opening: ['ДОСТУП ДОЗВОЛЕНО', 'ДВЕРІ ВІДЧИНЯЮТЬСЯ', 'ПІДСУМКИ ГРИ']
-  }
+  },
+  cataclysm_timeout: {
+    aria: 'Катаклізм: аварійне закриття бункера',
+    closing: ['ПРОТОКОЛ: АВАРІЙНА ІЗОЛЯЦІЯ', 'ЧАС ВИЧЕРПАНО // ЕВАКУАЦІЮ ЗАКРИТО', 'EMERGENCY LOCKDOWN // PROTOCOL ACTIVE'],
+    sealed: ['СТАТУС: БУНКЕР ЗАПЕЧАТАНО', 'ЖОДЕН НЕ ВСТИГ', 'СИСТЕМА ЖИТТЄЗАБЕЗПЕЧЕННЯ // АВТОНОМНО'],
+    sealedReduced: ['СТАТУС: БУНКЕР ЗАПЕЧАТАНО', 'АВАРІЙНЕ ЗАКРИТТЯ', 'ЧАС ВИЧЕРПАНО'],
+    opening: ['ВХІД ЗАБЛОКОВАНО', 'ДВЕРІ ЗАПЕЧАТАНІ', 'РЕЗУЛЬТАТИ КАТАКЛІЗМУ']
+  },
 };
 
 function resolveRoomCode(roomCode) {
@@ -423,7 +430,9 @@ export async function playBunkerDoorTransition({
   // ===========================================================================
 
   // --- Фаза 0 + 1: Передчуття, сирена та повільне масивне насування стулок (0.0s -> 1.60s) ---
-  soundManager.play(SOUND_IDS.CATACLYSM_ALERT, { bypassThrottle: true, loop: true });
+  if (!soundManager.playing?.(SOUND_IDS.CATACLYSM_ALERT)) {
+    soundManager.play(SOUND_IDS.CATACLYSM_ALERT, { bypassThrottle: true, loop: true });
+  }
   soundManager.play(SOUND_IDS.BUNKER_DOOR_CLOSE, { bypassThrottle: true });
 
   // Зациклена сирена триває перші 2.5 секунди переходу, після чого плавно згасає

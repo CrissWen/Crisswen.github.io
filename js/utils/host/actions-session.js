@@ -242,3 +242,44 @@ export async function finishGame(roomCode, stoppedTimer = null) {
   const recorded = await recordGameResults(roomCode);
   if (!recorded) throw new Error('Гру завершено, але статистику не вдалося зарахувати. Повідомте адміністратора');
 }
+
+// Автоматичне аварійне завершення гри при вичерпанні таймера катаклізму.
+// Всі живі гравці отримують is_kicked = true (жоден не потрапив у бункер),
+// status -> 'finished', bunker_state.finish_reason = 'cataclysm_timeout'.
+export async function finishGameOnCataclysmTimeout(roomCode, stoppedTimer = null) {
+  const room = await getRoom(roomCode);
+  if (room.status === 'finished' || room.status === 'closed') return;
+
+  const bState = { ...(room.bunker_state || {}) };
+  if (Object.keys(bState).length === 0) return;
+
+  const pState = { ...(room.players_state || {}) };
+  for (const pid of Object.keys(pState)) {
+    if (pState[pid]) {
+      pState[pid] = { ...pState[pid], is_kicked: true };
+    }
+  }
+
+  bState.finish_reason = 'cataclysm_timeout';
+  if (bState.voting?.isActive === true) bState.voting = { ...bState.voting, isActive: false };
+  clearTimerAutoStop();
+  bState.global_timer_end = null;
+  bState.timer_paused_left = null;
+  if (stoppedTimer) bState.stopped_timer = stoppedTimer;
+  else if (bState.cataclysm_timer_end) bState.stopped_timer = '00:00:00';
+
+  pushLog(bState, 'Час катаклізму вичерпано. Всіх вигнано. Бункер запечатано');
+
+  const { data, error } = await supabase
+    .from('rooms')
+    .update({ status: 'finished', bunker_state: bState, players_state: pState })
+    .eq('room_code', roomCode)
+    .not('status', 'in', '(finished,closed)')
+    .select('room_code');
+
+  if (error) throw new Error(error.message || 'Не вдалося завершити гру при катаклізмі');
+  if (!data || data.length === 0) return;
+
+  clearSnapshot();
+  await recordGameResults(roomCode);
+}

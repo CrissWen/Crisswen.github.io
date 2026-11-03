@@ -18,7 +18,7 @@ import {
   resetBoardUiState
 } from '../game-modules/board/board-ui-state.js';
 import { mountGameTimer, unmountGameTimer } from '../game-modules/timers/game-timer.js';
-import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer } from '../game-modules/timers/cataclysm-timer.js';
+import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer, getCataclysmTimerText } from '../game-modules/timers/cataclysm-timer.js';
 import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
 import * as HostActions from '../utils/game/host-actions.js';
 import { removeHostPanel } from '../game-modules/host-panel/host-panel.js';
@@ -26,7 +26,7 @@ import { syncHostPanel } from '../game-modules/controllers/host-panel-controller
 import { syncVotingScroll, maybeAutoFinishVoting, handleVoteRadioChange, handleVoteSubmit, resetVotingState } from '../game-modules/controllers/voting-controller.js';
 import { handleCharLockClick } from '../game-modules/controllers/char-lock.js';
 import { ensurePackOptions, getPackOptions, handlePackChange, resetPackSelect } from '../game-modules/controllers/pack-select-controller.js';
-import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/controllers/cataclysm-end-modal.js';
+import { trackCataclysmEnd, showCataclysmEndModal } from '../game-modules/controllers/cataclysm-end-modal.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
 import { playCataclysmRoulette, hideCataclysmRoulette, isCataclysmRouletteShown, primeCataclysmRouletteAudio } from '../game-modules/overlays/cataclysm-roulette.js';
@@ -45,7 +45,7 @@ import { fetchAvatars, hasCachedAvatar, isAvatarStale, getCachedAvatar, onAvatar
 import { setAvatarEl, clearBrokenAvatarUrl } from '../utils/auth/avatar.js';
 import { firstChar } from '../utils/auth/initial.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
-import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
+import { playBunkerDoorTransition, cancelBunkerDoorTransition, isBunkerDoorTransitionActive } from '../fx/bunker-transition.js';
 import { soundManager } from '../services/sound-manager.js';
 import { mountBunkerAirlock, unmountBunkerAirlock, notifyAirlockGameStarted } from '../ui/bunker-airlock.js';
 
@@ -212,7 +212,7 @@ export async function initGame() {
       setupActionListeners();
 
       mountGameTimer(() => localRoomState?.bunker_state);
-      mountCataclysmTimer(onCataclysmTimerExpired);
+      mountCataclysmTimer(handleCataclysmTimerExpired);
       syncCataclysm(localRoomState.bunker_state, localRoomState.status);
       return;
     } catch (err) {
@@ -318,7 +318,7 @@ export async function initGame() {
     maybePlayCataclysmRoulette(localRoomState); // зайшли посеред рулетки (перезавантаження сторінки) — вона продовжується з потрібного місця
     setupActionListeners();
     mountGameTimer(() => localRoomState?.bunker_state);
-    mountCataclysmTimer(onCataclysmTimerExpired);
+    mountCataclysmTimer(handleCataclysmTimerExpired);
     syncCataclysm(localRoomState.bunker_state, localRoomState.status);
 
   } catch (err) {
@@ -434,6 +434,17 @@ async function handleStartGame(e) {
   }
 }
 
+
+function handleCataclysmTimerExpired() {
+  if (localRoomState?.status === 'closed' || localRoomState?.status === 'finished') return;
+  const isHost = localRoomState?.host_id === currentUserId;
+  if (isHost && currentRoomCode) {
+    const timerText = getCataclysmTimerText() || '00:00:00';
+    HostActions.finishGameOnCataclysmTimeout(currentRoomCode, timerText)
+      .catch(err => console.error('Помилка автоматичного завершення гри при катаклізмі:', err));
+  }
+}
+
 function renderActiveGame(roomData, container) {
   const bState = roomData.bunker_state || {};
   const pState = roomData.players_state || {};
@@ -491,6 +502,11 @@ function renderActiveGame(roomData, container) {
   restoreNotesFocus();
   scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
 
+  if (roomData.status === 'finished' && roomData.bunker_state?.finish_reason === 'cataclysm_timeout') {
+    if (!awaitingDoorSeal && !isBunkerDoorTransitionActive()) {
+      showCataclysmEndModal();
+    }
+  }
   syncVotingScroll(pState, bState, ctx); // автоскрол до голосування рівно один раз на його запуск
   maybeAutoFinishVoting(roomData, ctx); // лише клієнт ведучого фіксує фінал голосування
 }
@@ -564,11 +580,16 @@ function handleRoomUpdate(patch) {
     if (fx.playFinishDoor) {
       awaitingDoorSeal = true;
       playBunkerDoorTransition({
-        mode: 'finish',
+        mode: fx.doorTransitionMode || 'finish',
         roomCode: currentRoomCode || localRoomState?.room_code,
         onSealed: () => {
           awaitingDoorSeal = false;
           ctx.refreshBoard();
+        },
+        onComplete: () => {
+          if (fx.doorTransitionMode === 'cataclysm_timeout') {
+            showCataclysmEndModal();
+          }
         }
       });
       return;
