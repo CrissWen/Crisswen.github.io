@@ -25,6 +25,7 @@ export function computeRoomUpdateEffects(prevRoomState, patch, { currentUserId }
 
   const roomFinished = nextState.status === 'finished';
   const playFinishDoor = Boolean(roomFinished && prevStatus !== 'finished' && isGameStartedNow);
+  const doorTransitionMode = nextState.bunker_state?.finish_reason === 'cataclysm_timeout' ? 'cataclysm_timeout' : 'finish';
   const playStartDoor = Boolean(
     !wasGameStarted &&
     isGameStartedNow &&
@@ -51,6 +52,7 @@ export function computeRoomUpdateEffects(prevRoomState, patch, { currentUserId }
     notifyHostClosed,
     roomFinished,
     playFinishDoor,
+    doorTransitionMode,
     playStartDoor,
     hostEventText,
     newDiceRoll

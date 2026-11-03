@@ -82,13 +82,30 @@ const headerUserAvatar = document.getElementById("header-user-avatar");
   }
 })();
 
+let currentSessionUserId = null;
+
+export function setCurrentSessionUserId(id) {
+  currentSessionUserId = id;
+}
+
+export function getCurrentSessionUserId() {
+  return currentSessionUserId;
+}
+
 // Автоматичне оновлення аватарки в хедері при надходженні Realtime-події
-onAvatarChange((newUrl) => {
+// Ізоляція: оновлюємо хедер виключно для поточного залогіненого користувача (changedUserId === currentSessionUserId),
+// щоб групове підвантаження аватарок у лобі (fetchAvatars) не підставляло чужі фото в шапку сайту.
+export function handleHeaderAvatarChange(newUrl, changedUserId) {
+  if (!currentSessionUserId || changedUserId !== currentSessionUserId) return false;
   if (headerUserAvatar && headerUserName) {
     const letter = firstChar(headerUserName.textContent.trim()) || '?';
     setAvatarEl(headerUserAvatar, letter, newUrl);
+    return true;
   }
-});
+  return false;
+}
+
+onAvatarChange(handleHeaderAvatarChange);
 
 // Додаємо новий роут
 const routes = {
@@ -120,6 +137,7 @@ async function router() {
 
   // --- ЛОГІКА ХЕДЕРА ---
   if (session && path !== '#/login') {
+    currentSessionUserId = session.user.id;
     globalHeader.style.display = 'flex';
     const username = session.user?.user_metadata?.username || 'Гравець';
 
@@ -140,6 +158,7 @@ async function router() {
     // Підписка на зміну аватарки в реальному часі (якщо гравець замінить її на іншому пристрої)
     subscribeToUserAvatar(session.user.id);
   } else {
+    currentSessionUserId = null;
     globalHeader.style.display = 'none';
     if (!session) unsubscribeUserAvatar();
   }

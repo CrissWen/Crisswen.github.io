@@ -95,3 +95,29 @@ test('I1: computeRoomUpdateEffects відрізняє нові події вед
   assert.equal(nextFx.hostEventText, 'Нова подія');
   assert.deepEqual(nextFx.newDiceRoll, { id: 201, type: 'd6', value: 5 });
 });
+
+test('computeRoomUpdateEffects повертає doorTransitionMode: cataclysm_timeout при аварійному фіналі', () => {
+  const inProgressState = {
+    room_code: 'RM4',
+    host_id: 'host-1',
+    status: 'in_progress',
+    bunker_state: { capacity: 2 },
+    players_state: { 'host-1': { name: 'Ведучий' } },
+  };
+
+  const finishCatacFx = computeRoomUpdateEffects(
+    inProgressState,
+    { status: 'finished', bunker_state: { capacity: 2, finish_reason: 'cataclysm_timeout' } },
+    { currentUserId: 'host-1' }
+  );
+  assert.equal(finishCatacFx.playFinishDoor, true);
+  assert.equal(finishCatacFx.doorTransitionMode, 'cataclysm_timeout');
+
+  const finishNormalFx = computeRoomUpdateEffects(
+    inProgressState,
+    { status: 'finished', bunker_state: { capacity: 2 } },
+    { currentUserId: 'host-1' }
+  );
+  assert.equal(finishNormalFx.playFinishDoor, true);
+  assert.equal(finishNormalFx.doorTransitionMode, 'finish');
+});

@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js';
-import { validateUsername, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth/auth-validation.js';
+import { validateUsername, validatePassword, buildFakeEmail, mapAuthError, AuthUiError } from '../utils/auth/auth-validation.js';
 
 const inputStyle = "padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text);";
 
@@ -117,14 +117,10 @@ export async function initAuth() {
       errorText.style.display = 'block';
       return;
     }
-    if (!password) {
-      errorText.textContent = "Будь ласка, введіть пароль!";
-      errorText.style.display = 'block';
-      return;
-    }
-    // Вимога Supabase: пароль — мінімум 6 символів
-    if (password.length < 6) {
-      errorText.textContent = "Пароль має містити мінімум 6 символів";
+    // Пароль: без пробілів і спецсимволів (лише літери, цифри, «_» та «-»), мінімум 6 символів. Діє і при вході, і при реєстрації.
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      errorText.textContent = passwordError;
       errorText.style.display = 'block';
       return;
     }
@@ -172,6 +168,33 @@ export async function initAuth() {
       loginBtn.disabled = false;
     }
   });
+
+  // ===== Клавіша Enter =====
+  // Поле імені → фокус на пароль; поле пароля → підтвердження (клік по головній кнопці);
+  // фокус ні в якому полі → теж клік по головній кнопці (вхід чи реєстрація — залежно від активної вкладки).
+  // Слухач на document, бо без фокуса keydown летить саме туди; сам знімається, коли роутер прибрав форму зі сторінки.
+  function onEnterKey(e) {
+    if (!loginBtn.isConnected) {
+      document.removeEventListener('keydown', onEnterKey);
+      return;
+    }
+    if (e.key !== 'Enter' || e.isComposing || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    if (formContainer.style.display === 'none') return; // показано профіль залогіненого гравця, форми немає
+
+    const target = e.target;
+    if (target === usernameInput) {
+      e.preventDefault();
+      passwordInput.focus();
+    } else if (target === passwordInput) {
+      e.preventDefault();
+      loginBtn.click();
+    } else if (!target || target === document.body || target === document.documentElement) {
+      e.preventDefault();
+      loginBtn.click();
+    }
+    // Фокус на кнопці/вкладці/посиланні — лишаємо їхню рідну поведінку Enter.
+  }
+  document.addEventListener('keydown', onEnterKey);
 
   // ===== Контейнер Б: кнопки профілю (лише коли сесія є, прив'язуємо завжди — байдуже, бо приховано) =====
 

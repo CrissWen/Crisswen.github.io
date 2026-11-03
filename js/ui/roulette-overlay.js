@@ -73,7 +73,13 @@ const prefersReducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motio
 function lockPage(overlay) {
   const locked = [];
   Array.from(document.body.children).forEach(node => {
-    if (node === overlay || node.tagName === 'SCRIPT' || node.classList?.contains('bunker-vault-overlay')) return;
+    if (
+      node === overlay ||
+      node.tagName === 'SCRIPT' ||
+      node.classList?.contains('bunker-vault-overlay') ||
+      node.classList?.contains('bunker-airlock') ||
+      node.id === 'bunker-airlock-overlay'
+    ) return;
     if (!node.inert) {
       node.inert = true;
       locked.push(node);

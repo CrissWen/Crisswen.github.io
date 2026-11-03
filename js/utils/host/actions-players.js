@@ -55,7 +55,7 @@ export async function changeExperience(roomCode, targetId, charType, newExpLevel
     }
   });
 
-  const typeName = charType === 'hobby' ? 'хобі' : 'професії';
+  const typeName = charType === 'hobby' ? 'хобі / навичок' : 'професії';
   setHostEvent(bState, `Ведучий встановив стаж ${typeName} «${newExpLevel}» ${targetPhrase(pState, targetId)}`);
 
   await saveRoom(roomCode, { players_state: pState, bunker_state: bState }, room.version);

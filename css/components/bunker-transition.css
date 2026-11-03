@@ -706,3 +706,27 @@
   }
 }
 
+/* ===== АТМОСФЕРНА ЧЕРВОНА ДИМКА КАТАКЛІЗМУ ===== */
+.cataclysm-hazard-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10002;
+  opacity: 0;
+  box-shadow: inset 0 0 60px 10px rgba(255, 30, 30, 0.22), inset 0 0 120px 30px rgba(180, 0, 0, 0.12);
+  transition: opacity 0.8s ease;
+}
+
+.cataclysm-hazard-vignette.is-active {
+  opacity: 1;
+  animation: cataclysmVignettePulse 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes cataclysmVignettePulse {
+  0% {
+    box-shadow: inset 0 0 50px 8px rgba(255, 30, 30, 0.18), inset 0 0 90px 20px rgba(180, 0, 0, 0.1);
+  }
+  100% {
+    box-shadow: inset 0 0 85px 16px rgba(255, 30, 30, 0.35), inset 0 0 150px 45px rgba(200, 0, 0, 0.2);
+  }
+}

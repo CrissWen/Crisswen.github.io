@@ -37,8 +37,11 @@ class SoundManager {
     this._ambientDroneNodes = null; // Активні вузли синтезованого ембієнту
     this._wasAmbientPlayingBeforeHide = false;
     this._wasDroneBeforeHide = false;
+    this._ambientPausedByBackground = false;
     this._ambientFadeTimeout = null; // Таймаут згасання при згортанні вкладки
     this._initialized = false;
+    this._unlocked = false;
+    this._ambientPendingUnlock = false;
     this._globalClicksDisabled = false;
     this._domCleanups = []; // функції зняття глобальних слухачів (для destroy())
 
@@ -51,6 +54,7 @@ class SoundManager {
         this._loadFromStorage();
         this._applyGlobalHowlerState();
         this._refreshAllActiveVolumes();
+        this._syncVisibilityPlayback();
         this._notifyListeners();
       });
     }
@@ -74,6 +78,9 @@ class SoundManager {
     this._ambientFadeTimeout = null;
     this.stopAll();
     this._initialized = false;
+    this._unlocked = false;
+    this._ambientPendingUnlock = false;
+    this._ambientPausedByBackground = false;
   }
 
   /**
@@ -261,6 +268,7 @@ class SoundManager {
   setBackgroundAmbient(enabled) {
     this._settings.backgroundAmbient = Boolean(enabled);
     this._saveSettings();
+    this._syncVisibilityPlayback();
     this._notifyListeners();
   }
 
@@ -344,8 +352,8 @@ class SoundManager {
 
     if (this._settings.muted) return null;
 
-    // Спроба автоматично розблокувати Howler AudioContext (актуально при виклику з консолі або передчасному запуску)
-    if (typeof window !== 'undefined' && window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
+    // Спроба автоматично розблокувати Howler AudioContext лише після жесту користувача
+    if (this._unlocked && typeof window !== 'undefined' && window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
       window.Howler.ctx.resume().catch(() => {});
     }
 
@@ -378,6 +386,11 @@ class SoundManager {
 
     if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
       this._ambientWanted = true;
+      if (typeof document !== 'undefined' && document.hidden && !this._settings.backgroundAmbient) {
+        this._wasAmbientPlayingBeforeHide = true;
+        this._ambientPausedByBackground = true;
+        return null;
+      }
     }
 
     // 4. Якщо файл раніше не знайдено на диску або Howler недоступний — граємо синтезований фоллбек
@@ -441,6 +454,8 @@ class SoundManager {
 
     if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
       this._ambientWanted = false;
+      this._wasAmbientPlayingBeforeHide = false;
+      this._ambientPausedByBackground = false;
       this._stopAmbientDrone();
     }
   }
@@ -450,6 +465,8 @@ class SoundManager {
    */
   stopAll() {
     this._ambientWanted = false;
+    this._wasAmbientPlayingBeforeHide = false;
+    this._ambientPausedByBackground = false;
     if (this._customFadeIntervals) { // I-2: гасимо всі активні фейди
       for (const id of this._customFadeIntervals.values()) clearInterval(id);
       this._customFadeIntervals.clear();
@@ -485,13 +502,16 @@ class SoundManager {
    */
   isPlaying(soundId) {
     if (soundId === SOUND_IDS.BUNKER_AMBIENT) {
+      if (typeof document !== 'undefined' && document.hidden && !this._settings.backgroundAmbient) {
+        return false;
+      }
       if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
         return true;
       }
       const howl = this._howls.get(soundId);
       if (howl && howl.playing()) return true;
       // Якщо ембієнт запущений, але Howl ще вантажить аудіофайл (html5 audio стрімінг):
-      return Boolean(this._ambientWanted);
+      return Boolean(this._ambientWanted && !this._ambientPausedByBackground);
     }
     const howl = this._howls.get(soundId);
     return Boolean(howl && howl.playing());
@@ -527,6 +547,16 @@ class SoundManager {
       onload: () => {
         this._missingAttempts.delete(config.id); // I-3: успішне завантаження скидає лічильник збоїв
         this._silentLoad.delete(config.id);
+        if (config.id === SOUND_IDS.BUNKER_AMBIENT && typeof document !== 'undefined' && document.hidden && !this._settings.backgroundAmbient) {
+          if (howl.playing()) {
+            howl.pause();
+          }
+        }
+      },
+      onplay: (id) => {
+        if (config.id === SOUND_IDS.BUNKER_AMBIENT && typeof document !== 'undefined' && document.hidden && !this._settings.backgroundAmbient) {
+          howl.pause(id);
+        }
       },
       onend: (id) => {
         activeSet.delete(id);
@@ -536,11 +566,13 @@ class SoundManager {
       onstop: (id) => {
         activeSet.delete(id);
       },
-      onplayerror: (id, err) => {
-        console.warn(`[SoundManager] Відтворення "${config.id}" заблоковане політикою браузера (Autoplay). Клікніть на сторінці для розблокування:`, err);
-        howl.once('unlock', () => {
-          howl.play(id);
-        });
+      onplayerror: (id) => {
+        activeSet.delete(id);
+        if (config.id === SOUND_IDS.BUNKER_AMBIENT) {
+          this._ambientPendingUnlock = true;
+        }
+        // Одноразові ефекти (SFX / UI) свідомо НЕ ставимо в чергу howl.once('unlock'):
+        // інакше при першому кліку користувача оглушить 50 накопичених старих звуків одночасно.
       },
       onloaderror: (id, err) => {
         console.warn(`[SoundManager] Помилка завантаження аудіофайлу для "${config.id}":`, err);
@@ -647,15 +679,39 @@ class SoundManager {
   // Браузерні життєві цикли (Autoplay Unlock, Visibility, Делеговані UI-хуки)
   // ===========================================================================
 
+  /**
+   * Перевіряє, чи аудіоконтекст уже розблоковано жестом користувача.
+   */
+  isUnlocked() {
+    if (this._unlocked) return true;
+    if (typeof navigator !== 'undefined' && navigator.userActivation?.hasBeenActive) return true;
+    if (this._audioCtx && this._audioCtx.state === 'running') return true;
+    if (typeof window !== 'undefined' && window.Howler?.ctx?.state === 'running') return true;
+    if (AudioSynth.isUnlocked?.()) return true;
+    return false;
+  }
+
+  /**
+   * Явно розблоковує AudioContext (Web Audio + Howler) та запускає відкладений ембієнт, якщо він був потрібен.
+   */
+  async unlock() {
+    this._unlocked = true;
+    await AudioSynth.unlock();
+    if (this._audioCtx && this._audioCtx.state === 'suspended') {
+      try { await this._audioCtx.resume(); } catch (_) {}
+    }
+    if (typeof window !== 'undefined' && window.Howler?.ctx?.state === 'suspended') {
+      try { await window.Howler.ctx.resume(); } catch (_) {}
+    }
+    if (this._ambientWanted && (this._ambientPendingUnlock || !this.isPlaying(SOUND_IDS.BUNKER_AMBIENT))) {
+      this._ambientPendingUnlock = false;
+      this.play(SOUND_IDS.BUNKER_AMBIENT, { bypassThrottle: true });
+    }
+  }
+
   _setupUnlockListeners() {
     const unlock = () => {
-      AudioSynth.unlock();
-      if (this._audioCtx && this._audioCtx.state === 'suspended') {
-        this._audioCtx.resume().catch(() => {});
-      }
-      if (window.Howler && window.Howler.ctx && window.Howler.ctx.state === 'suspended') {
-        window.Howler.ctx.resume().catch(() => {});
-      }
+      this.unlock();
       window.removeEventListener('pointerdown', unlock, true);
       window.removeEventListener('keydown', unlock, true);
       window.removeEventListener('click', unlock, true);
@@ -719,83 +775,83 @@ class SoundManager {
     }
   }
 
-  _setupVisibilityListener() {
+  _syncVisibilityPlayback() {
+    if (typeof document === 'undefined') return;
+
     const FADE_DURATION_MS = 350;
+    const isHidden = Boolean(document.hidden);
+    const allowBackground = Boolean(this._settings.backgroundAmbient);
 
-    this._listen(document, 'visibilitychange', () => {
-      if (this._settings.backgroundAmbient) return;
-
-      if (document.hidden) {
-        this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
-        if (this._ambientFadeTimeout) {
-          clearTimeout(this._ambientFadeTimeout);
-          this._ambientFadeTimeout = null;
-        }
-
-        const isDrone = Boolean(AudioSynth.isAmbientPlaying() || this._ambientDroneNodes);
-        const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
-        const isHowl = Boolean(ambientHowl && ambientHowl.playing());
-
-        if (isDrone || isHowl || this._ambientWanted) {
-          this._wasAmbientPlayingBeforeHide = true;
-          this._wasDroneBeforeHide = isDrone;
-        }
-
-        if (isDrone) {
-          AudioSynth.setAmbientVolume(0.0001, FADE_DURATION_MS);
-          this._ambientFadeTimeout = setTimeout(() => {
-            this._ambientFadeTimeout = null;
-            if (document.hidden && !this._settings.backgroundAmbient) {
-              this._stopAmbientDrone();
-            }
-          }, FADE_DURATION_MS);
-        }
-
-        if (isHowl) {
-          // Плавно затухаємо до 0, і лише після досягнення 0 ставимо на паузу
-          const startVol = ambientHowl.volume();
-          this._fadeAudio(SOUND_IDS.BUNKER_AMBIENT, startVol, 0, FADE_DURATION_MS, () => {
-            if (document.hidden && !this._settings.backgroundAmbient) {
-              ambientHowl.pause();
-            }
-          });
-        }
-      } else {
-        this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
-        if (this._ambientFadeTimeout) {
-          clearTimeout(this._ambientFadeTimeout);
-          this._ambientFadeTimeout = null;
-        }
-
-        const shouldResume = this._wasAmbientPlayingBeforeHide || this._ambientWanted;
-        const wasDrone = this._wasDroneBeforeHide;
-        this._wasAmbientPlayingBeforeHide = false;
-        this._wasDroneBeforeHide = false;
-
-        if (!shouldResume || this._settings.muted) return;
-
-        const effVol = this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT);
-        if (effVol <= 0.001) return;
-
-        const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
-        if (ambientHowl && !this._isMissing(SOUND_IDS.BUNKER_AMBIENT) && !wasDrone) {
-          if (Array.isArray(ambientHowl._queue)) {
-            ambientHowl._queue = [];
-          }
-
-          const currentVol = ambientHowl.playing() ? ambientHowl.volume() : 0;
-          if (!ambientHowl.playing()) {
-            ambientHowl.volume(0);
-            ambientHowl.play();
-          }
-          // Плавно нарощуємо гучність від поточної до повної
-          this._fadeAudio(SOUND_IDS.BUNKER_AMBIENT, currentVol, effVol, FADE_DURATION_MS);
-        } else if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
-          AudioSynth.setAmbientVolume(effVol, FADE_DURATION_MS);
-        } else if (shouldResume) {
-          this._startAmbientDrone(effVol, FADE_DURATION_MS / 1000);
-        }
+    if (isHidden && !allowBackground) {
+      this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
+      if (this._ambientFadeTimeout) {
+        clearTimeout(this._ambientFadeTimeout);
+        this._ambientFadeTimeout = null;
       }
+
+      const isDrone = Boolean(AudioSynth.isAmbientPlaying() || this._ambientDroneNodes);
+      const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
+      const isHowl = Boolean(ambientHowl && (ambientHowl.playing() || ambientHowl.state() === 'loading'));
+
+      if (isDrone || isHowl || this._ambientWanted) {
+        this._wasAmbientPlayingBeforeHide = true;
+        this._wasDroneBeforeHide = isDrone;
+        this._ambientPausedByBackground = true;
+      }
+
+      if (isDrone) {
+        this._stopAmbientDrone();
+      }
+
+      if (ambientHowl) {
+        ambientHowl.pause();
+      }
+    } else {
+      this._stopCustomFade(SOUND_IDS.BUNKER_AMBIENT);
+      if (this._ambientFadeTimeout) {
+        clearTimeout(this._ambientFadeTimeout);
+        this._ambientFadeTimeout = null;
+      }
+
+      const shouldResume = this._ambientPausedByBackground || (!isHidden && this._wasAmbientPlayingBeforeHide) || (this._ambientWanted && !this.isPlaying(SOUND_IDS.BUNKER_AMBIENT));
+      const wasDrone = this._wasDroneBeforeHide;
+
+      this._ambientPausedByBackground = false;
+      this._wasAmbientPlayingBeforeHide = false;
+      this._wasDroneBeforeHide = false;
+
+      if (!shouldResume || !this._ambientWanted || this._settings.muted) return;
+
+      const effVol = this.getEffectiveVolume(SOUND_IDS.BUNKER_AMBIENT);
+      if (effVol <= 0.001) return;
+
+      const ambientHowl = this._howls.get(SOUND_IDS.BUNKER_AMBIENT);
+      if (ambientHowl && !this._isMissing(SOUND_IDS.BUNKER_AMBIENT) && !wasDrone) {
+        if (Array.isArray(ambientHowl._queue)) {
+          ambientHowl._queue = [];
+        }
+
+        const currentVol = ambientHowl.playing() ? ambientHowl.volume() : 0;
+        if (!ambientHowl.playing()) {
+          ambientHowl.volume(0);
+          ambientHowl.play();
+        }
+        if (isHidden) {
+          ambientHowl.volume(effVol);
+        } else {
+          this._fadeAudio(SOUND_IDS.BUNKER_AMBIENT, currentVol, effVol, FADE_DURATION_MS);
+        }
+      } else if (AudioSynth.isAmbientPlaying() || this._ambientDroneNodes) {
+        AudioSynth.setAmbientVolume(effVol, isHidden ? 50 : FADE_DURATION_MS);
+      } else if (shouldResume) {
+        this._startAmbientDrone(effVol, isHidden ? 0.05 : FADE_DURATION_MS / 1000);
+      }
+    }
+  }
+
+  _setupVisibilityListener() {
+    this._listen(document, 'visibilitychange', () => {
+      this._syncVisibilityPlayback();
     });
   }
 

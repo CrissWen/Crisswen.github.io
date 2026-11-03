@@ -120,6 +120,20 @@ await check('resolveSpinVisuals віддає лише візуальні пол�
   assert.strictEqual(v.maxFillers, 5);
 });
 
+await check('явний leadMs задає старт стрічки без мінімуму 4600 мс (зміна катаклізму ведучим)', async () => {
+  globalThis.__cfg = { cataclysmRoulette: { ...HOST, startLeadMs: 4600 } };
+  const state = { cataclysm: { icon: './icons/p2.svg', text: 'Тест' } };
+  const spin = await spinMod.attachCataclysmSpin(state, [], 1000, { leadMs: 1200 });
+  assert.strictEqual(spin.started_at, 2200, 'стрічка має стартувати через 1200 мс після запису, а не через 4600');
+});
+
+await check('без leadMs (старт гри) пауза лишається не меншою за 4600 мс під відкриття дверей', async () => {
+  globalThis.__cfg = { cataclysmRoulette: { ...HOST, startLeadMs: 1500 } };
+  const state = { cataclysm: { icon: './icons/p2.svg', text: 'Тест' } };
+  const spin = await spinMod.attachCataclysmSpin(state, [], 1000);
+  assert.ok(spin.started_at - 1000 >= 4600, `пауза зі старту гри: ${spin.started_at - 1000} мс`);
+});
+
 if (failed) {
   console.error(`FAIL: cataclysm-spin-visuals (${failed} failed)`);
   process.exit(1);

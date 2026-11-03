@@ -127,6 +127,7 @@ let _instanceSeq = 0;
 let _outputDestination = null; // Дозволяє підключити AnalyserNode в audio-lab.html
 const _activeInstances = new Map();
 let _ambientState = null;
+let _unlocked = false;
 
 function _resolveId(soundIdOrType) {
   if (!soundIdOrType) return 'ui-click';
@@ -208,7 +209,12 @@ export const AudioSynth = {
   /**
    * Розблоковує AudioContext після жесту користувача.
    */
+  isUnlocked() {
+    return Boolean(_unlocked || (_sharedCtx && _sharedCtx.state === 'running'));
+  },
+
   async unlock() {
+    _unlocked = true;
     const ctx = _getContext();
     if (!ctx) return;
     if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
@@ -246,7 +252,7 @@ export const AudioSynth = {
     const ctx = _getContext();
     if (!ctx) return null;
     if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
-      ctx.resume().catch(() => {});
+      if (_unlocked) ctx.resume().catch(() => {});
     }
 
     const canonicalId = _resolveId(soundId);
@@ -876,7 +882,7 @@ export const AudioSynth = {
     const ctx = _getContext();
     if (!ctx) return;
     if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
-      ctx.resume().catch(() => {});
+      if (_unlocked) ctx.resume().catch(() => {});
     }
 
     const vol = Math.max(0.0001, Math.min(1, Number(options.volume ?? 0.4)));

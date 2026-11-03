@@ -18,7 +18,7 @@ import {
   resetBoardUiState
 } from '../game-modules/board/board-ui-state.js';
 import { mountGameTimer, unmountGameTimer } from '../game-modules/timers/game-timer.js';
-import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer } from '../game-modules/timers/cataclysm-timer.js';
+import { mountCataclysmTimer, unmountCataclysmTimer, syncCataclysmTimer, freezeCataclysmTimer, getCataclysmTimerText } from '../game-modules/timers/cataclysm-timer.js';
 import { getGameConfig, getGameConfigSync } from '../config/config-manager.js';
 import * as HostActions from '../utils/game/host-actions.js';
 import { removeHostPanel } from '../game-modules/host-panel/host-panel.js';
@@ -26,7 +26,7 @@ import { syncHostPanel } from '../game-modules/controllers/host-panel-controller
 import { syncVotingScroll, maybeAutoFinishVoting, handleVoteRadioChange, handleVoteSubmit, resetVotingState } from '../game-modules/controllers/voting-controller.js';
 import { handleCharLockClick } from '../game-modules/controllers/char-lock.js';
 import { ensurePackOptions, getPackOptions, handlePackChange, resetPackSelect } from '../game-modules/controllers/pack-select-controller.js';
-import { trackCataclysmEnd, onCataclysmTimerExpired } from '../game-modules/controllers/cataclysm-end-modal.js';
+import { trackCataclysmEnd, showCataclysmEndModal } from '../game-modules/controllers/cataclysm-end-modal.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { showDiceRoll, ROLL_MS as DICE_ROLL_MS } from '../game-modules/overlays/dice-overlay.js';
 import { playCataclysmRoulette, hideCataclysmRoulette, isCataclysmRouletteShown, primeCataclysmRouletteAudio } from '../game-modules/overlays/cataclysm-roulette.js';
@@ -41,10 +41,14 @@ import { subscribeToRoom } from '../services/room-subscription.js';
 import { computeRoomUpdateEffects } from '../game-modules/state/room-update-reducer.js';
 import { syncServerTime, getGlobalTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/game/last-session.js';
-import { fetchAvatars, hasCachedAvatar } from '../services/avatar-service.js';
+import { fetchAvatars, hasCachedAvatar, isAvatarStale, getCachedAvatar, onAvatarChange } from '../services/avatar-service.js';
+import { setAvatarEl, clearBrokenAvatarUrl } from '../utils/auth/avatar.js';
+import { firstChar } from '../utils/auth/initial.js';
 import { openPlayerProfile, closePlayerProfile } from '../ui/player-profile-modal.js';
-import { playBunkerDoorTransition, cancelBunkerDoorTransition } from '../fx/bunker-transition.js';
-import { soundManager } from '../services/sound-manager.js';
+import { playBunkerDoorTransition, cancelBunkerDoorTransition, isBunkerDoorTransitionActive } from '../fx/bunker-transition.js';
+import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
+import { unmountCataclysmVignette } from '../fx/cataclysm-vignette.js';
+import { mountBunkerAirlock, unmountBunkerAirlock, notifyAirlockGameStarted } from '../ui/bunker-airlock.js';
 
 // ===== Оркестратор сторінки гри =====
 // Тут лишилися: ініціалізація кімнати, підписка на Realtime, перемальовування дошки і диспетчер кліків.
@@ -53,6 +57,7 @@ import { soundManager } from '../services/sound-manager.js';
 
 let currentRoomCode = null;
 let unsubscribeRoom = null; // відписка від Realtime-каналу кімнати (services/room-subscription.js)
+let unsubscribeAvatarChange = null; // відписка від оновлень аватарок гравців (services/avatar-service.js)
 let currentUserId = null;
 let currentUserName = null;
 let isCurrentUserAdmin = false;
@@ -208,7 +213,7 @@ export async function initGame() {
       setupActionListeners();
 
       mountGameTimer(() => localRoomState?.bunker_state);
-      mountCataclysmTimer(onCataclysmTimerExpired);
+      mountCataclysmTimer(handleCataclysmTimerExpired);
       syncCataclysm(localRoomState.bunker_state, localRoomState.status);
       return;
     } catch (err) {
@@ -289,13 +294,32 @@ export async function initGame() {
     boardEl.style.display = 'block';
 
     // Гравець зайшов (зокрема кнопкою «Повернутися» з лобі) у кімнату, де гра вже йде — пропонуємо повернути телефон горизонтально або продовжити вертикально
+    if (!soundManager.isUnlocked() && room.status !== 'closed' && room.status !== 'finished') {
+      const airlockMode = isGameStarted ? (isSpectator ? 'spectator' : 'reconnect') : 'join';
+      mountBunkerAirlock({
+        roomCode: currentRoomCode,
+        mode: airlockMode,
+        userName: currentUserName,
+        onUnlocked: () => {
+          if (Object.keys(localRoomState?.bunker_state || {}).length > 0 && localRoomState?.status !== 'closed' && localRoomState?.status !== 'finished') {
+            soundManager.startAmbient();
+          }
+        },
+      });
+    }
+
     if (isGameStarted && room.status !== 'closed' && room.status !== 'finished') showOrientationPrompt();
+
+    if (unsubscribeAvatarChange) unsubscribeAvatarChange();
+    unsubscribeAvatarChange = onAvatarChange((newUrl, changedUserId) => {
+      applyPlayerAvatarUpdate(changedUserId, newUrl);
+    });
 
     subscribeToRoomUpdates();
     maybePlayCataclysmRoulette(localRoomState); // зайшли посеред рулетки (перезавантаження сторінки) — вона продовжується з потрібного місця
     setupActionListeners();
     mountGameTimer(() => localRoomState?.bunker_state);
-    mountCataclysmTimer(onCataclysmTimerExpired);
+    mountCataclysmTimer(handleCataclysmTimerExpired);
     syncCataclysm(localRoomState.bunker_state, localRoomState.status);
 
   } catch (err) {
@@ -304,13 +328,30 @@ export async function initGame() {
   }
 }
 
-// Хтось новий зайшов у кімнату — докачуємо його аватарку (раз на гравця) і перемальовуємо дошку, коли вона з'явиться.
-// Невдалий запит нічого не кешує і не дає перемальовування, тож зациклитись це не може.
-function prefetchAvatars(roomData) {
-  const ids = Object.keys(roomData.players_state || {});
-  if (!ids.length || ids.every(hasCachedAvatar)) return;
-  fetchAvatars(ids).then(loaded => {
-    if (loaded > 0) ctx.refreshBoard();
+// Точково оновлює аватарку гравця на дошці (бейджі в лобі, списки тощо) без перезапису всього innerHTML
+export function applyPlayerAvatarUpdate(changedUserId, newUrl) {
+  if (!changedUserId) return;
+  if (newUrl) clearBrokenAvatarUrl(newUrl);
+  const board = document.getElementById('game-board');
+  if (!board) return;
+  const badges = board.querySelectorAll(`[data-profile-user="${changedUserId}"]`);
+  badges.forEach(badge => {
+    const name = badge.getAttribute('data-profile-name') || '';
+    const letter = firstChar(name) || badge.textContent.trim().slice(0, 1) || '?';
+    setAvatarEl(badge, letter, newUrl);
+  });
+}
+
+// Хтось новий зайшов у кімнату — докачуємо його аватарку (якщо її немає або застаріла)
+// і точково оновлюємо бейджі на дошці, уникаючи повторного перетирання всього HTML кімнати.
+export function prefetchAvatars(roomData) {
+  const ids = Object.keys(roomData?.players_state || {});
+  const needsFetch = ids.filter(id => !hasCachedAvatar(id) || isAvatarStale(id) || getCachedAvatar(id) === null);
+  if (!needsFetch.length) return;
+  fetchAvatars(needsFetch).then(loaded => {
+    needsFetch.forEach(id => {
+      applyPlayerAvatarUpdate(id, getCachedAvatar(id));
+    });
   });
 }
 
@@ -367,7 +408,10 @@ function updateGameBoard(roomData, container) {
   } else {
     // Атмосфера бункера грає все время, поки гра йде. Дошка монтується в момент герметизації дверей, тож звук стартує разом з ним.
     // Виклик ідемпотентний, тому не дублюється при кожному оновленні кімнати. Закрита кімната (включно з записом збереженої гри) без атмосфери.
-    if (roomData.status === 'closed' || roomData.status === 'finished') soundManager.stopAmbient();
+    if (roomData.status === 'closed' || roomData.status === 'finished') {
+      unmountBunkerAirlock();
+      soundManager.stopAmbient();
+    }
     else soundManager.startAmbient();
     mountHeaderCollapseTab();
     renderActiveGame(roomData, container);
@@ -388,6 +432,17 @@ async function handleStartGame(e) {
     showGlobalToast(err.message || 'Не вдалося почати гру');
     btn.disabled = false;
     btn.textContent = "Почати гру";
+  }
+}
+
+
+function handleCataclysmTimerExpired() {
+  if (localRoomState?.status === 'closed' || localRoomState?.status === 'finished') return;
+  const isHost = localRoomState?.host_id === currentUserId;
+  if (isHost && currentRoomCode) {
+    const timerText = getCataclysmTimerText() || '00:00:00';
+    HostActions.finishGameOnCataclysmTimeout(currentRoomCode, timerText)
+      .catch(err => console.error('Помилка автоматичного завершення гри при катаклізмі:', err));
   }
 }
 
@@ -440,6 +495,9 @@ function renderActiveGame(roomData, container) {
   initCustomSelects(container);
   if (!isOfflineReplay) {
     container.querySelector('[data-final-home]')?.addEventListener('click', () => {
+      unmountCataclysmVignette();
+      document.getElementById('cataclysm-end-modal')?.remove();
+      soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
       clearLastRoom(currentUserId);
       window.location.hash = '#/lobby';
     });
@@ -448,6 +506,11 @@ function renderActiveGame(roomData, container) {
   restoreNotesFocus();
   scrollEventLogToBottom(); // автоскрол логу до найсвіжішої події після кожного перемалювання
 
+  if (roomData.status === 'finished' && roomData.bunker_state?.finish_reason === 'cataclysm_timeout') {
+    if (!awaitingDoorSeal) {
+      showCataclysmEndModal();
+    }
+  }
   syncVotingScroll(pState, bState, ctx); // автоскрол до голосування рівно один раз на його запуск
   maybeAutoFinishVoting(roomData, ctx); // лише клієнт ведучого фіксує фінал голосування
 }
@@ -506,6 +569,10 @@ function handleRoomUpdate(patch) {
     hideCataclysmRoulette(); // рулетка не повинна блокувати вихід із закритої кімнати
     awaitingDoorSeal = false;
     cancelBunkerDoorTransition();
+    unmountBunkerAirlock();
+    unmountCataclysmVignette();
+    document.getElementById('cataclysm-end-modal')?.remove();
+    soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
     if (fx.notifyHostClosed) showGlobalToast('Ведучий закрив кімнату.');
     clearLastRoom(currentUserId);
     window.location.hash = '#/lobby';
@@ -514,16 +581,25 @@ function handleRoomUpdate(patch) {
 
   // Ведучий завершив гру: гравців не перекидаємо, а в момент переходу в finished граємо двері бункера
   if (fx.roomFinished) {
+    unmountBunkerAirlock();
     hideCataclysmRoulette();
     clearLastRoom(currentUserId);
     if (fx.playFinishDoor) {
       awaitingDoorSeal = true;
       playBunkerDoorTransition({
-        mode: 'finish',
+        mode: fx.doorTransitionMode || 'finish',
         roomCode: currentRoomCode || localRoomState?.room_code,
         onSealed: () => {
           awaitingDoorSeal = false;
           ctx.refreshBoard();
+          if (fx.doorTransitionMode === 'cataclysm_timeout') {
+            showCataclysmEndModal();
+          }
+        },
+        onComplete: () => {
+          if (fx.doorTransitionMode === 'cataclysm_timeout') {
+            showCataclysmEndModal();
+          }
         }
       });
       return;
@@ -532,6 +608,7 @@ function handleRoomUpdate(patch) {
 
   // Гра щойно почалася (характеристики роздано)
   if (fx.playStartDoor) {
+    notifyAirlockGameStarted();
     awaitingDoorSeal = true;
     playBunkerDoorTransition({
       roomCode: currentRoomCode || localRoomState?.room_code,
@@ -554,6 +631,7 @@ function handleRoomUpdate(patch) {
   }
 
   if (fx.isGameStartedNow) {
+    notifyAirlockGameStarted();
     maybePlayCataclysmRoulette(localRoomState);
   } else {
     hideCataclysmRoulette();
@@ -763,6 +841,13 @@ export function cleanupGame() {
   HostActions.clearSnapshot(); // знімок «Скасувати» живе в пам'яті модуля: без цього після виходу й повернення в ту саму кімнату він би лишився
   unmountGameTimer();
   unmountCataclysmTimer();
+  unmountCataclysmVignette();
+  document.getElementById('cataclysm-end-modal')?.remove();
+  soundManager.stop(SOUND_IDS.CATACLYSM_ALERT);
+  if (unsubscribeAvatarChange) {
+    unsubscribeAvatarChange();
+    unsubscribeAvatarChange = null;
+  }
   if (unsubscribeRoom) {
     unsubscribeRoom();
     unsubscribeRoom = null;
@@ -782,5 +867,6 @@ export function cleanupGame() {
   pendingDiceLogId = null;
   awaitingDoorSeal = false;
   cancelBunkerDoorTransition();
+  unmountBunkerAirlock();
   soundManager.stopAmbient(); // вийшли з кімнати — атмосфера зупиняється
 }

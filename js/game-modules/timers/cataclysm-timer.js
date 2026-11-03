@@ -1,5 +1,7 @@
 import { getGlobalTime } from '../../services/server-time.js';
 import { ICONS } from '../../constants/icons.js';
+import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
+import { mountCataclysmVignette, unmountCataclysmVignette } from '../../fx/cataclysm-vignette.js';
 
 // Таймер катаклізму — окремий від таймера обговорень (game-timer.js), синхронізований через
 // bunker_state.cataclysm_timer_end. Живе поза #game-board (як і game-timer/host-panel), у лівому
@@ -43,6 +45,8 @@ function stopInterval() {
 // Викликається ровно один раз на той тік, коли відлік для цього end вперше досягає нуля (завдяки stopInterval() в tick()).
 // game.js використовує цей колбек, щоб показати модалку "Час сплив"; власний захист від повторного показу (hasSeenCataclysmEnd) живе там.
 let onExpireCallback = null;
+let onWarning5sCallback = null;
+let warningTriggeredForEnd = null;
 
 // Повертає залишок у секундах (для перевірки на завершення) і одразу малює його в DOM
 function renderRemaining(end) {
@@ -54,12 +58,21 @@ function renderRemaining(end) {
   return remaining;
 }
 
+function checkWarning(remaining, end) {
+  if (remaining <= 5 && remaining > 0) {
+    if (warningTriggeredForEnd !== end) {
+      warningTriggeredForEnd = end;
+      soundManager?.play?.(SOUND_IDS.CATACLYSM_ALERT, { bypassThrottle: true, loop: true });
+      mountCataclysmVignette();
+      onWarning5sCallback?.();
+    }
+  }
+}
+
 function tick(end) {
   const remaining = renderRemaining(end);
+  checkWarning(remaining, end);
   if (remaining <= 0) {
-    // Досягли нуля — фіксуємо 00:00:00 (без від'ємних значень) і зупиняємо інтервал,
-    // щоб не рахувати далі в мінус. syncCataclysmTimer() перезапустить його, якщо
-    // ведучий поставить новий катаклізм з власним таймером.
     stopInterval();
     onExpireCallback?.();
   }
@@ -68,20 +81,32 @@ function tick(end) {
 // Вставляє (порожній, прихований) контейнер віджета в DOM. Викликати один раз при вході в гру.
 // onExpire (необов'язково) — колбек, що спрацьовує РІВНО ОДИН РАЗ на кожен новий кінцевий час,
 // коли відлік вперше досягає нуля (game.js використовує його, щоб показати модалку "Час сплив").
-export function mountCataclysmTimer(onExpire) {
+export function mountCataclysmTimer(optionsOrExpire) {
   unmountCataclysmTimer();
   document.body.insertAdjacentHTML('beforeend', widgetHtml());
   trackedEnd = null;
+  warningTriggeredForEnd = null;
   isFrozen = false;
-  onExpireCallback = typeof onExpire === 'function' ? onExpire : null;
+  if (typeof optionsOrExpire === 'function') {
+    onExpireCallback = optionsOrExpire;
+    onWarning5sCallback = null;
+  } else if (optionsOrExpire && typeof optionsOrExpire === 'object') {
+    onExpireCallback = typeof optionsOrExpire.onExpire === 'function' ? optionsOrExpire.onExpire : null;
+    onWarning5sCallback = typeof optionsOrExpire.onWarning5s === 'function' ? optionsOrExpire.onWarning5s : null;
+  } else {
+    onExpireCallback = null;
+    onWarning5sCallback = null;
+  }
 }
 
 export function unmountCataclysmTimer() {
   stopInterval();
   document.getElementById(WIDGET_ID)?.remove();
   trackedEnd = null;
+  warningTriggeredForEnd = null;
   isFrozen = false;
   onExpireCallback = null;
+  onWarning5sCallback = null;
 }
 
 // Заморожує таймер на поточному значенні (викликається, коли кімната стає closed): зупиняє інтервал
@@ -113,6 +138,12 @@ export function syncCataclysmTimer(bunkerState, roomStatus) {
   // і одразу виходимо: setInterval не створюється, onExpire (модалка "Час сплив") не спрацює.
   if (roomStatus === 'closed' || roomStatus === 'finished') {
     stopInterval();
+    if (roomStatus === 'finished' && bunkerState?.finish_reason === 'cataclysm_timeout') {
+      mountCataclysmVignette();
+    } else {
+      unmountCataclysmVignette();
+      soundManager?.stop?.(SOUND_IDS.CATACLYSM_ALERT);
+    }
     const stopped = bunkerState?.stopped_timer;
     const timeEl = root.querySelector('[data-cata-time]');
     if (stopped && timeEl) {
@@ -129,7 +160,10 @@ export function syncCataclysmTimer(bunkerState, roomStatus) {
   if (end === undefined || end === null) {
     root.hidden = true;
     stopInterval();
+    unmountCataclysmVignette();
+    soundManager?.stop?.(SOUND_IDS.CATACLYSM_ALERT);
     trackedEnd = null;
+    warningTriggeredForEnd = null;
     return;
   }
 

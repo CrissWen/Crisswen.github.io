@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { register } from 'node:module';
 
 // ===== Підміна важких залежностей оверлея (стрічка, звук) через module-хуки: тестуємо саме життєвий цикл оверлея =====
@@ -151,6 +151,18 @@ await check('R-C1: примусове приховування прибирає 
   assert.strictEqual(page.inert, false);
   assert.strictEqual(isRouletteOverlayShown(), false);
   assert.strictEqual(document.body.children.length, 1);
+});
+
+await check('lockPage: не робить inert оверлей шлюзу бункера (#bunker-airlock-overlay)', async () => {
+  const airlock = new FakeNode('div');
+  airlock.id = 'bunker-airlock-overlay';
+  airlock.classList.add('bunker-airlock');
+  document.body.appendChild(airlock);
+  await start(() => {});
+  assert.strictEqual(airlock.inert, false, 'шлюз бункера не повинен блокуватись inert під час рулетки');
+  assert.strictEqual(page.inert, true, 'основна сторінка має блокуватись');
+  hideRouletteOverlay();
+  assert.strictEqual(airlock.inert, false);
 });
 
 await check('R-C1: запуск нового оверлея скасовує попередній (onFinish попереднього з cancelled)', async () => {
