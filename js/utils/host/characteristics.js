@@ -232,7 +232,11 @@ export function realCards(val) {
 // Статус відкриття слота. Порожній слот (нічого немає або лише маркер порожнечі) вважаємо закритим.
 export function slotRevealed(val) {
   const cards = realCards(val);
-  return cards.length ? !!cards[0].is_revealed : false;
+  if (cards.length) return !!cards[0].is_revealed;
+  // Слот з маркером порожнечі («Без професії», «Немає», «Пусто») пам'ятає свій статус відкриття — беремо його,
+  // інакше злодій, у якого щойно вкрали картку (маркер було відкритий), при власній крадіжці закривався би.
+  const marker = Array.isArray(val) ? val.find(x => x && x.isEmpty) : (val && val.isEmpty ? val : null);
+  return marker ? !!marker.is_revealed : false;
 }
 
 // Жорстко проставляє переданий статус відкриття (слота) на всі картки значення, ігноруючи
