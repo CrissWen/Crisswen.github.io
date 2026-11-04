@@ -314,3 +314,19 @@ body:has(.spectator-badge:not(.is-hidden)) .back-to-top {
     transition: none;
   }
 }
+
+/* ===== Іконки з SVG-файлів (/icons): маска + currentColor, розмір — через --icon-size (див. js/utils/common/icon-mask.js) ===== */
+.ui-icon {
+  display: inline-block;
+  flex: none;
+  width: var(--icon-size, 16px);
+  height: var(--icon-size, 16px);
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+

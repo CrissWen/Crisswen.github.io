@@ -37,6 +37,19 @@ export const ICONS = Object.freeze({
   AUDIO_MUSIC: './icons/audio/music.svg',
   AUDIO_PLAY: './icons/audio/play.svg',
   AUDIO_STOP: './icons/audio/stop.svg',
+
+  // Іконки футера й кнопки «Нагору» (/icons/footer)
+  FOOTER_BUG: './icons/footer/bug.svg',
+  FOOTER_IDEA: './icons/footer/idea.svg',
+  FOOTER_STAR: './icons/footer/star.svg',
+  FOOTER_HEART: './icons/footer/heart.svg',
+  FOOTER_HELP: './icons/footer/help.svg',
+  FOOTER_ARROW_UP: './icons/footer/arrow-up.svg',
+
+  // Іконки типів змін на сторінці «Що нового» (/icons/changelog)
+  CHANGELOG_NEW: './icons/changelog/new.svg',
+  CHANGELOG_CHANGE: './icons/changelog/change.svg',
+  CHANGELOG_FIX: './icons/changelog/fix.svg',
 });
 
 // Іменовані експорти для зручного прямого імпорту
@@ -65,6 +78,23 @@ export const ICON_AUDIO_UI = ICONS.AUDIO_UI;
 export const ICON_AUDIO_MUSIC = ICONS.AUDIO_MUSIC;
 export const ICON_AUDIO_PLAY = ICONS.AUDIO_PLAY;
 export const ICON_AUDIO_STOP = ICONS.AUDIO_STOP;
+
+// Іконки футера: ключ = поле icon у FOOTER_COLUMNS (js/config/footer-config.js), плюс arrowUp для кнопки «Нагору»
+export const FOOTER_ICONS = Object.freeze({
+  bug: ICONS.FOOTER_BUG,
+  idea: ICONS.FOOTER_IDEA,
+  star: ICONS.FOOTER_STAR,
+  heart: ICONS.FOOTER_HEART,
+  help: ICONS.FOOTER_HELP,
+  arrowUp: ICONS.FOOTER_ARROW_UP,
+});
+
+// Іконки типів змін: ключ = type у CHANGELOG (js/config/changelog-config.js) і в CHANGE_TYPES
+export const CHANGELOG_ICONS = Object.freeze({
+  new: ICONS.CHANGELOG_NEW,
+  change: ICONS.CHANGELOG_CHANGE,
+  fix: ICONS.CHANGELOG_FIX,
+});
 
 // Експорт каталогу катаклізмів та катастроф
 export {

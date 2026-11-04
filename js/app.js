@@ -14,6 +14,8 @@ import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
 import { firstChar } from './utils/auth/initial.js';
 import { initSiteFooter } from './ui/site-footer.js';
+import { renderFaq, renderChangelog, initInfoPage } from './pages/info.js';
+import { consumeScrollTopRequest, scrollToTopNow } from './utils/common/scroll-top.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -117,6 +119,9 @@ const routes = {
   '#/profile': { render: renderProfile, init: initProfile, cleanup: cleanupProfile },
   '#/packs': { render: renderPacks, init: initPacks, cleanup: cleanupPacks },
   '#/pack-editor': { render: renderPackEditor, init: initPackEditor, cleanup: cleanupPackEditor },
+  // Публічні інформаційні сторінки (футер): відкриваються й без входу, тому їх немає в PROTECTED_ROUTES
+  '#/faq': { render: renderFaq, init: initInfoPage, cleanup: null },
+  '#/changelog': { render: renderChangelog, init: initInfoPage, cleanup: null },
 };
 
 // Маршрути, доступні лише авторизованим (інакше редірект на логін)
@@ -199,6 +204,12 @@ async function router() {
   if (route.init) route.init();
   initCustomSelects(appContainer);
   initRangeSliders(appContainer);
+
+  // Запитано зверху (наприклад, «Назад» зі сторінок футера) — показуємо сторінку з початку, а не з відновленого скролу
+  if (consumeScrollTopRequest()) {
+    scrollToTopNow();
+    requestAnimationFrame(scrollToTopNow);
+  }
 }
 
 window.addEventListener('hashchange', router);
