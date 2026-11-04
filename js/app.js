@@ -13,12 +13,14 @@ import { initCustomSelects } from './ui/custom-select.js';
 import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
 import { firstChar } from './utils/auth/initial.js';
+import { initSiteFooter } from './ui/site-footer.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
 applyStoredTheme();
 soundManager.init();
 initRangeSliders(document);
+initSiteFooter();
 
 const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");
