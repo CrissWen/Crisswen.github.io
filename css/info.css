@@ -270,8 +270,80 @@
   border-radius: var(--radius-xs);
 }
 
+/* ----- Конфіденційність і Умови (#/privacy, #/terms; js/config/legal-config.js) ----- */
+.legal-meta {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--text-mute);
+}
+.legal-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.legal-section {
+  padding: 16px 20px;
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  border-left: 3px solid var(--metal);
+  border-radius: var(--radius-xs);
+  scroll-margin-top: 80px;
+}
+.legal-section__title {
+  margin: 0 0 10px;
+  font-family: var(--head);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--text);
+}
+.legal-section__num { color: var(--hazard); }
+.legal-section__body { color: var(--text-mute); }
+.legal-section__body p { margin: 0 0 10px; }
+.legal-section__body p:last-child { margin-bottom: 0; }
+.legal-section__list {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+.legal-section__list:last-child { margin-bottom: 0; }
+.legal-section__list li { margin-bottom: 6px; padding-left: 2px; }
+.legal-section__list li:last-child { margin-bottom: 0; }
+.legal-section__list li::marker { color: var(--hazard); }
+.legal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--metal);
+}
+.legal-foot__copy {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .03em;
+  color: var(--text-mute);
+}
+.legal-foot__link {
+  font-size: 14px;
+  color: var(--hazard);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal-foot__link:hover { color: var(--text); }
+.legal-foot__link:focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+
 @media (max-width: 920px) {
   .info-page { padding-inline: 2px; }
+  .legal-section { padding: 14px 14px; }
+  .legal-section__title { font-size: 17px; }
   .info-page__title { font-size: 26px; }
   .changelog-entry { padding: 14px 14px; }
   .changelog-entry__date { margin-left: 0; width: 100%; }

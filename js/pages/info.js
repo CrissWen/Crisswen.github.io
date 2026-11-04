@@ -1,14 +1,16 @@
-// Інформаційні сторінки: «ЧаПи» (#/faq), «Що нового» (#/changelog) і «Автори» (#/credits).
-// Спільний каркас (renderInfoShell) — на ньому ж потім можна зробити «Правила», «Конфіденційність», «Умови».
-// Дані: js/config/faq-config.js і js/config/changelog-config.js. Стилі: css/info.css (лише змінні теми).
+// Інформаційні сторінки: «ЧаПи» (#/faq), «Що нового» (#/changelog), «Автори» (#/credits),
+// «Конфіденційність» (#/privacy) і «Умови» (#/terms).
+// Спільний каркас (renderInfoShell) — на ньому ж потім можна зробити «Правила».
+// Дані: js/config/faq-config.js, changelog-config.js, credits-config.js і legal-config.js. Стилі: css/info.css (лише змінні теми).
 // Сторінки відкриті без входу в акаунт (не входять у PROTECTED_ROUTES у app.js).
 
 import { esc } from '../utils/common/escape-html.js';
 import { FAQ_ITEMS } from '../config/faq-config.js';
 import { CREDITS } from '../config/credits-config.js';
 import { CHANGELOG, CHANGE_TYPES } from '../config/changelog-config.js';
-import { FORM_LINKS } from '../config/footer-config.js';
-import { formatUpdateDate } from '../utils/common/footer-helpers.js';
+import { FORM_LINKS, FOOTER_CONFIG } from '../config/footer-config.js';
+import { LEGAL_PAGES, LEGAL_UPDATED } from '../config/legal-config.js';
+import { formatUpdateDate, formatCopyright } from '../utils/common/footer-helpers.js';
 import { maskIcon } from '../utils/common/icon-mask.js';
 import { CHANGELOG_ICONS } from '../constants/icons.js';
 import { requestScrollTopOnNextRoute } from '../utils/common/scroll-top.js';
@@ -136,6 +138,53 @@ export function renderCredits() {
       : '<p class="info-page__empty">Список авторів поки порожній.</p>',
   });
 }
+
+// ===== «Конфіденційність» і «Умови» =====
+// Обидві сторінки будуються з js/config/legal-config.js: нумеровані пункти (заголовок, абзаци, список), нагорі — дата редакції,
+// внизу — блок зв'язку (ті самі Google-форми, що й у ЧаПи), копірайт і посилання на «сусідню» сторінку.
+// Увесь текст екранується (esc), тож HTML із конфігу в розмітку не потрапить.
+function renderLegalSection(pageId, section, index) {
+  const text = section.text ? renderParagraphs(section.text) : '';
+  const items = Array.isArray(section.items) && section.items.length
+    ? `<ul class="legal-section__list">${section.items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`
+    : '';
+  const after = section.after ? renderParagraphs(section.after) : '';
+  return `
+        <section class="legal-section" id="legal-${esc(pageId)}-${esc(section.id)}">
+          <h2 class="legal-section__title"><span class="legal-section__num">${index + 1}.</span> ${esc(section.title)}</h2>
+          <div class="legal-section__body">${text}${items}${after}</div>
+        </section>`;
+}
+
+function renderContactBlock() {
+  return `
+    <aside class="info-help" aria-labelledby="legal-contact-title">
+      <h2 class="info-help__title" id="legal-contact-title">Зв'язок з нами</h2>
+      <p class="info-help__text">Питання, скарги чи запит на видалення акаунта — напишіть нам.</p>
+      <div class="info-help__actions">
+        ${renderAction({ id: 'bug', label: 'Знайшли баг?', href: FORM_LINKS.bugReport })}
+        ${renderAction({ id: 'idea', label: 'Є ідея?', href: FORM_LINKS.ideas })}
+      </div>
+    </aside>`;
+}
+
+function renderLegalPage(key, otherKey) {
+  const page = LEGAL_PAGES[key];
+  const other = LEGAL_PAGES[otherKey];
+  const sections = page.sections.map((section, i) => renderLegalSection(page.id, section, i)).join('');
+  const body = `
+    <p class="legal-meta">Остання редакція: <time datetime="${esc(LEGAL_UPDATED)}">${esc(formatUpdateDate(LEGAL_UPDATED))}</time></p>
+    <div class="legal-sections">${sections}</div>
+    ${renderContactBlock()}
+    <footer class="legal-foot">
+      <p class="legal-foot__copy">${esc(formatCopyright(FOOTER_CONFIG))}. Усі права захищено.</p>
+      <a class="legal-foot__link" href="#/${esc(other.id)}">${esc(other.title)} &rarr;</a>
+    </footer>`;
+  return renderInfoShell({ id: page.id, title: page.title, lead: page.lead, body });
+}
+
+export function renderPrivacy() { return renderLegalPage('privacy', 'terms'); }
+export function renderTerms() { return renderLegalPage('terms', 'privacy'); }
 
 // «Назад»: у попередню сторінку історії (звідки прийшов гравець, у тому числі зі сторінки гри),
 // а якщо історії немає (сторінку відкрито напряму) — у лобі.

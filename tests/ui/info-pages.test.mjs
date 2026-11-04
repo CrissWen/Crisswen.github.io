@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { FAQ_ITEMS } from '../../js/config/faq-config.js';
 import { CREDITS } from '../../js/config/credits-config.js';
 import { CHANGELOG, CHANGE_TYPES } from '../../js/config/changelog-config.js';
-import { FOOTER_CONFIG, FOOTER_COLUMNS, FORM_LINKS } from '../../js/config/footer-config.js';
-import { renderFaq, renderChangelog, renderCredits, renderParagraphs, renderInfoShell } from '../../js/pages/info.js';
+import { FOOTER_CONFIG, FOOTER_COLUMNS, FOOTER_LEGAL, FORM_LINKS } from '../../js/config/footer-config.js';
+import { LEGAL_PAGES, LEGAL_UPDATED } from '../../js/config/legal-config.js';
+import { RATE_VIDEO } from '../../js/config/footer-config.js';
+import { renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, renderParagraphs, renderInfoShell } from '../../js/pages/info.js';
 import { ICONS, FOOTER_ICONS, CHANGELOG_ICONS } from '../../js/constants/icons.js';
 import { maskIcon } from '../../js/utils/common/icon-mask.js';
 import { existsSync } from 'node:fs';
@@ -185,6 +187,81 @@ test('ЧаПи: заглушок немає, є базові питання пр
     assert.ok(ids.includes(need), `немає питання «${need}»`);
   }
 });
+test('юридичні сторінки: пункти мають унікальні id, заголовок і зміст; дата редакції валідна', () => {
+  assert.match(LEGAL_UPDATED, /^\d{4}-\d{2}-\d{2}$/);
+  assert.deepEqual(Object.keys(LEGAL_PAGES).sort(), ['privacy', 'terms']);
+  for (const [key, page] of Object.entries(LEGAL_PAGES)) {
+    assert.equal(page.id, key);
+    assert.ok(page.title.trim() && page.lead.trim(), `порожній заголовок або лід: ${key}`);
+    assert.ok(page.sections.length >= 5, `надто мало пунктів: ${key}`);
+    const ids = page.sections.map(s => s.id);
+    assert.equal(new Set(ids).size, ids.length, `повторювані id у ${key}`);
+    for (const s of page.sections) {
+      assert.ok(s.title.trim(), `пункт без заголовка: ${key}/${s.id}`);
+      assert.ok((s.text && s.text.trim()) || (s.items && s.items.length), `порожній пункт: ${key}/${s.id}`);
+    }
+  }
+});
+
+test('«Оцінити проєкт»: робоча кнопка з дією «відео», а відео задане коректно', () => {
+  const rate = allFooterItems().find(i => i.id === 'rate');
+  assert.equal(rate.action, 'rate-video');
+  assert.match(RATE_VIDEO.videoId, /^[\w-]{11}$/, 'videoId має бути 11 символів без ?si=');
+  assert.match(RATE_VIDEO.watchUrl, /^https:\/\/youtu\.be\/[\w-]{11}$/);
+  assert.ok(RATE_VIDEO.watchUrl.endsWith(RATE_VIDEO.videoId), 'запасне посилання веде на інше відео');
+});
+
+test('«Підтримати» веде на Ko-fi (повна https-адреса, відкривається в новій вкладці)', () => {
+  const support = allFooterItems().find(i => i.id === 'support');
+  assert.match(support.href, /^https:\/\/ko-fi\.com\/truebunker/);
+});
+
+test('пункти «Конфіденційність» і «Умови» у нижньому рядку футера ведуть на свої сторінки', () => {
+  const byId = Object.fromEntries(FOOTER_LEGAL.map(i => [i.id, i]));
+  assert.equal(byId.privacy.href, '#/privacy');
+  assert.equal(byId.terms.href, '#/terms');
+});
+
+test('renderPrivacy / renderTerms: усі пункти пронумеровано, є дата, копірайт, посилання на сусідню сторінку і блок зв\'язку', () => {
+  const [y, m, d] = LEGAL_UPDATED.split('-');
+  const cases = [
+    [renderPrivacy(), LEGAL_PAGES.privacy, '#/terms'],
+    [renderTerms(), LEGAL_PAGES.terms, '#/privacy'],
+  ];
+  for (const [html, page, otherHref] of cases) {
+    assert.equal((html.match(/<section class="legal-section"/g) || []).length, page.sections.length);
+    assert.ok(html.includes('data-info-back'));
+    assert.ok(html.includes(`${d}.${m}.${y}`), 'немає дати редакції');
+    assert.ok(html.includes(`© ${FOOTER_CONFIG.startYear}`) && html.includes(FOOTER_CONFIG.teamName), 'немає копірайту');
+    assert.ok(html.includes('Усі права захищено'));
+    assert.ok(html.includes(`href="${otherHref}"`), 'немає посилання на сусідню сторінку');
+    assert.ok(html.includes('data-info-action="bug"') && html.includes('data-info-action="idea"'), 'немає блоку зв\'язку');
+  }
+});
+
+test('юридичні сторінки: текст екранується, списки виводяться <ul>', () => {
+  const page = LEGAL_PAGES.terms;
+  page.sections.push({ id: 'xss', title: '<img src=x onerror=alert(1)>', text: 'а\n\nб', items: ['<script>x</script>'], after: '<b>кінець</b>' });
+  try {
+    const html = renderTerms();
+    assert.ok(!html.includes('<img'), 'заголовок не екранується');
+    assert.ok(!html.includes('<script>'), 'пункт списку не екранується');
+    assert.ok(!html.includes('<b>кінець'), 'завершальний абзац не екранується');
+    assert.ok(html.includes('<ul class="legal-section__list">'));
+  } finally {
+    page.sections.pop();
+  }
+});
+
+test('«Конфіденційність» називає сторонні сервіси, які сайт реально підключає', () => {
+  const third = LEGAL_PAGES.privacy.sections.find(s => s.id === 'third-parties');
+  assert.ok(third, 'немає пункту про сторонні сервіси');
+  const joined = third.items.join(' ');
+  for (const name of ['Supabase', 'GitHub Pages', 'Google Fonts', 'jsDelivr', 'Google Forms', 'YouTube', 'Ko-fi']) {
+    assert.ok(joined.includes(name), `у списку сторонніх сервісів немає ${name}`);
+  }
+});
+
 test('автори: id унікальні, ім\'я й роль непорожні, посилання — лише повний https або порожнє', () => {
   assert.ok(CREDITS.length > 0);
   const ids = CREDITS.map(p => p.id);

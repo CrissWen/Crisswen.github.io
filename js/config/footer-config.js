@@ -31,6 +31,13 @@ export const FORM_LINKS = {
   ideas: 'https://docs.google.com/forms/d/e/1FAIpQLSeLJVFEwbOvXfpoeuVfv057J2IS_k37BusqWFK8nF7THoKt9A/viewform',     // форма «Є ідея?»
 };
 
+// Відео для пункту «Оцінити проєкт»: відкривається в програвачі на сайті й одразу грає.
+// videoId — частина посилання після youtu.be/ (без ?si=...); watchUrl — запасне посилання під відео.
+export const RATE_VIDEO = {
+  videoId: 'aJXkJuSlwUQ',
+  watchUrl: 'https://youtu.be/aJXkJuSlwUQ',
+};
+
 // Колонки футера. icon — ключ з FOOTER_ICONS у js/constants/icons.js (необов'язково).
 export const FOOTER_COLUMNS = [
   {
@@ -55,14 +62,14 @@ export const FOOTER_COLUMNS = [
     title: 'Проєкт',
     items: [
       { id: 'credits', label: 'Автори', href: '#/credits' },
-      { id: 'support', label: 'Підтримати', icon: 'heart', href: null },
-      { id: 'rate', label: 'Оцінити проєкт', icon: 'star', href: null },
+      { id: 'support', label: 'Підтримати', icon: 'heart', href: 'https://ko-fi.com/truebunker/goal?g=0' },
+      { id: 'rate', label: 'Оцінити проєкт', icon: 'star', href: null, action: 'rate-video' },
     ],
   },
 ];
 
 // Нижній рядок (поруч із копірайтом)
 export const FOOTER_LEGAL = [
-  { id: 'privacy', label: 'Конфіденційність', href: null },
-  { id: 'terms', label: 'Умови', href: null },
+  { id: 'privacy', label: 'Конфіденційність', href: '#/privacy' },
+  { id: 'terms', label: 'Умови', href: '#/terms' },
 ];

@@ -10,6 +10,7 @@ import { esc } from '../utils/common/escape-html.js';
 import { maskIcon } from '../utils/common/icon-mask.js';
 import { FOOTER_ICONS } from '../constants/icons.js';
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
+import { openRateVideo } from './rate-video-modal.js';
 import {
   pickDailyQuote,
   formatUpdateDate,
@@ -30,6 +31,10 @@ function renderLink(item, extraClass = '') {
     const external = /^https?:\/\//i.test(item.href);
     const ext = external ? ' target="_blank" rel="noopener noreferrer"' : '';
     return `<a class="${cls}" href="${esc(item.href)}"${ext} data-footer-link="${esc(item.id)}">${icon}${label}</a>`;
+  }
+  // Пункт із action — робоча кнопка (без «Скоро»), дію обробляє initFooterActions
+  if (item.action) {
+    return `<button type="button" class="${cls}" data-footer-link="${esc(item.id)}" data-footer-action="${esc(item.action)}">${icon}${label}</button>`;
   }
   return `<button type="button" class="${cls} is-stub" data-footer-link="${esc(item.id)}" title="Скоро">${icon}${label}</button>`;
 }
@@ -97,6 +102,15 @@ function initQuoteEasterEgg(footerEl) {
     markQuoteSeen();
     const text = pickDailyQuote(FOOTER_QUOTES, new Date(), FALLBACK_QUOTE);
     showGlobalToast(`«${text}»`, { duration: 6000 });
+  });
+}
+
+// Кнопки футера з data-footer-action: «Оцінити проєкт» відкриває програвач із відео
+function initFooterActions(footerEl) {
+  footerEl.addEventListener('click', e => {
+    const btn = e.target.closest('[data-footer-action]');
+    if (!btn) return;
+    if (btn.dataset.footerAction === 'rate-video') openRateVideo(btn);
   });
 }
 
@@ -169,6 +183,7 @@ export function initSiteFooter() {
   applyTheme(footerEl);
   initQuoteEasterEgg(footerEl);
   initSamePageScroll(footerEl);
+  initFooterActions(footerEl);
 
   // Зміна теми -> тематичний декор футера
   onThemeChange(() => applyTheme(footerEl));
