@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FAQ_ITEMS } from '../../js/config/faq-config.js';
+import { CREDITS } from '../../js/config/credits-config.js';
 import { CHANGELOG, CHANGE_TYPES } from '../../js/config/changelog-config.js';
 import { FOOTER_CONFIG, FOOTER_COLUMNS, FORM_LINKS } from '../../js/config/footer-config.js';
-import { renderFaq, renderChangelog, renderParagraphs, renderInfoShell } from '../../js/pages/info.js';
+import { renderFaq, renderChangelog, renderCredits, renderParagraphs, renderInfoShell } from '../../js/pages/info.js';
 import { ICONS, FOOTER_ICONS, CHANGELOG_ICONS } from '../../js/constants/icons.js';
 import { maskIcon } from '../../js/utils/common/icon-mask.js';
 import { existsSync } from 'node:fs';
@@ -182,5 +183,41 @@ test('ЧаПи: заглушок немає, є базові питання пр
   const ids = FAQ_ITEMS.map(i => i.id);
   for (const need of ['how-to-start', 'room-code', 'connection-lost', 'change-theme', 'change-sound', 'create-pack']) {
     assert.ok(ids.includes(need), `немає питання «${need}»`);
+  }
+});
+test('автори: id унікальні, ім\'я й роль непорожні, посилання — лише повний https або порожнє', () => {
+  assert.ok(CREDITS.length > 0);
+  const ids = CREDITS.map(p => p.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const p of CREDITS) {
+    assert.ok(p.name.trim() && p.role.trim(), `порожнє ім'я чи роль: ${p.id}`);
+    assert.ok(p.link === '' || /^https:\/\//i.test(p.link), `небезпечне посилання: ${p.id}`);
+  }
+});
+
+test('футер: пункт «Автори» веде на #/credits, старої назви «Кредітс» немає', () => {
+  const credits = allFooterItems().find(i => i.id === 'credits');
+  assert.equal(credits.href, '#/credits');
+  assert.equal(credits.label, 'Автори');
+  assert.ok(!allFooterItems().some(i => /Кредітс|Credits/i.test(i.label)));
+});
+
+test('renderCredits: усі автори на сторінці, текст екранується, посилання лише https і в новій вкладці', () => {
+  const html = renderCredits();
+  assert.ok(html.includes('Автори'));
+  assert.equal((html.match(/class="credits-card"/g) || []).length, CREDITS.length);
+  assert.ok(html.includes('data-info-back'));
+
+  CREDITS.push(
+    { id: 'xss', name: '<img src=x onerror=alert(1)>', role: 'Роль', link: 'https://github.com/test' },
+    { id: 'bad', name: 'Без посилання', role: 'Роль', link: 'javascript:alert(1)' },
+  );
+  try {
+    const dirty = renderCredits();
+    assert.ok(!dirty.includes('<img'), 'ім\'я не екранується');
+    assert.match(dirty, /<a class="credits-card__link" href="https:\/\/github\.com\/test" target="_blank" rel="noopener noreferrer">github\.com\/test<\/a>/);
+    assert.ok(!dirty.includes('javascript:'), 'небезпечна схема потрапила в розмітку');
+  } finally {
+    CREDITS.splice(-2);
   }
 });

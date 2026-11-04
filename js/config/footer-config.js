@@ -18,7 +18,7 @@ export const FOOTER_CONFIG = {
 
   // Копірайт: «© 2026 Назва команди» (з наступного року сам стане «© 2026–2027 ...»)
   teamName: 'Назва команди',
-  startYear: 2026-2027,
+  startYear: 2026,
 
   // Кнопка «Нагору»: з'являється, коли прогорнуто showAfter від довжини сторінки (0.4 = 40%).
   // minScrollable — мінімум пікселів, які взагалі є куди скролити (на коротких сторінках кнопки немає).
@@ -54,7 +54,7 @@ export const FOOTER_COLUMNS = [
     id: 'project',
     title: 'Проєкт',
     items: [
-      { id: 'credits', label: 'Кредітс', href: null },
+      { id: 'credits', label: 'Автори', href: '#/credits' },
       { id: 'support', label: 'Підтримати', icon: 'heart', href: null },
       { id: 'rate', label: 'Оцінити проєкт', icon: 'star', href: null },
     ],

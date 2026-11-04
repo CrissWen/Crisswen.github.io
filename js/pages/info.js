@@ -1,10 +1,11 @@
-// Інформаційні сторінки: «ЧаПи» (#/faq) і «Що нового» (#/changelog).
+// Інформаційні сторінки: «ЧаПи» (#/faq), «Що нового» (#/changelog) і «Автори» (#/credits).
 // Спільний каркас (renderInfoShell) — на ньому ж потім можна зробити «Правила», «Конфіденційність», «Умови».
 // Дані: js/config/faq-config.js і js/config/changelog-config.js. Стилі: css/info.css (лише змінні теми).
 // Сторінки відкриті без входу в акаунт (не входять у PROTECTED_ROUTES у app.js).
 
 import { esc } from '../utils/common/escape-html.js';
 import { FAQ_ITEMS } from '../config/faq-config.js';
+import { CREDITS } from '../config/credits-config.js';
 import { CHANGELOG, CHANGE_TYPES } from '../config/changelog-config.js';
 import { FORM_LINKS } from '../config/footer-config.js';
 import { formatUpdateDate } from '../utils/common/footer-helpers.js';
@@ -108,6 +109,31 @@ export function renderChangelog() {
     body: entries
       ? `<div class="changelog">${entries}</div>`
       : '<p class="info-page__empty">Записів поки немає.</p>',
+  });
+}
+
+// «Автори»: картки з іменем, роллю й (за наявності) посиланням. Дані — js/config/credits-config.js.
+// Посилання відкривається лише якщо це повна https-адреса, інакше показуємо картку без нього.
+export function renderCredits() {
+  const cards = CREDITS.map(person => {
+    const link = typeof person.link === 'string' && /^https:\/\//i.test(person.link)
+      ? `<a class="credits-card__link" href="${esc(person.link)}" target="_blank" rel="noopener noreferrer">${esc(person.link.replace(/^https:\/\//i, ''))}</a>`
+      : '';
+    return `
+        <article class="credits-card" data-credits-id="${esc(person.id)}">
+          <h2 class="credits-card__name">${esc(person.name)}</h2>
+          <p class="credits-card__role">${esc(person.role)}</p>
+          ${link}
+        </article>`;
+  }).join('');
+
+  return renderInfoShell({
+    id: 'credits',
+    title: 'Автори',
+    lead: 'Над грою працювали.',
+    body: cards
+      ? `<div class="credits-list">${cards}</div>`
+      : '<p class="info-page__empty">Список авторів поки порожній.</p>',
   });
 }
 
