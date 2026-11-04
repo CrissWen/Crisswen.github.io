@@ -174,3 +174,13 @@ test('scroll-top: запит спрацьовує один раз і гасне;
   requestScrollTopOnNextRoute(-1);
   assert.equal(consumeScrollTopRequest(), false, 'прострочений запит не діє');
 });
+test('ЧаПи: заглушок немає, є базові питання про теми, звук, кімнату й пак', () => {
+  for (const item of FAQ_ITEMS) {
+    assert.ok(!/з.явиться найближчим часом/i.test(item.a), `у питанні «${item.id}» лишилась заглушка`);
+    assert.ok(item.a.trim().length > 20, `надто коротка відповідь: ${item.id}`);
+  }
+  const ids = FAQ_ITEMS.map(i => i.id);
+  for (const need of ['how-to-start', 'room-code', 'connection-lost', 'change-theme', 'change-sound', 'create-pack']) {
+    assert.ok(ids.includes(need), `немає питання «${need}»`);
+  }
+});
