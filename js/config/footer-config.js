@@ -17,7 +17,7 @@ export const FOOTER_CONFIG = {
   updatedAt: CHANGELOG[0]?.date ?? '',  // дата того ж запису (РРРР-ММ-ДД)
 
   // Копірайт: «© 2026 Назва команди» (з наступного року сам стане «© 2026–2027 ...»)
-  teamName: 'Назва команди',
+  teamName: 'TrueBunker',
   startYear: 2026,
 
   // Кнопка «Нагору»: з'являється, коли прогорнуто showAfter від довжини сторінки (0.4 = 40%).
@@ -27,8 +27,8 @@ export const FOOTER_CONFIG = {
 
 // Посилання на Google-форми. Порожній рядок = форму ще не підключено (пункт працює як заглушка).
 export const FORM_LINKS = {
-  bugReport: '', // форма «Знайшли баг?»
-  ideas: '',     // форма «Є ідея?»
+  bugReport: 'https://docs.google.com/forms/d/e/1FAIpQLSeXlQsM2OoM3A37-Ih9fZED3F6x8XUOmXuF18P5esbkw9RTIA/viewform', // форма «Знайшли баг?»
+  ideas: 'https://docs.google.com/forms/d/e/1FAIpQLSeLJVFEwbOvXfpoeuVfv057J2IS_k37BusqWFK8nF7THoKt9A/viewform',     // форма «Є ідея?»
 };
 
 // Колонки футера. icon — ключ з FOOTER_ICONS у js/constants/icons.js (необов'язково).
