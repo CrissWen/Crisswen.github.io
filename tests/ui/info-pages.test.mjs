@@ -5,8 +5,9 @@ import { CREDITS } from '../../js/config/credits-config.js';
 import { CHANGELOG, CHANGE_TYPES } from '../../js/config/changelog-config.js';
 import { FOOTER_CONFIG, FOOTER_COLUMNS, FOOTER_LEGAL, FORM_LINKS } from '../../js/config/footer-config.js';
 import { LEGAL_PAGES, LEGAL_UPDATED } from '../../js/config/legal-config.js';
+import { RULES_SECTIONS } from '../../js/config/rules-config.js';
 import { RATE_VIDEO } from '../../js/config/footer-config.js';
-import { renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, renderParagraphs, renderInfoShell } from '../../js/pages/info.js';
+import { renderRules, renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, renderParagraphs, renderInfoShell } from '../../js/pages/info.js';
 import { ICONS, FOOTER_ICONS, CHANGELOG_ICONS } from '../../js/constants/icons.js';
 import { maskIcon } from '../../js/utils/common/icon-mask.js';
 import { existsSync } from 'node:fs';
@@ -15,6 +16,56 @@ import { fileURLToPath } from 'node:url';
 const rootFile = p => fileURLToPath(new URL(`../../${p.replace(/^\.\//, '')}`, import.meta.url));
 
 const allFooterItems = () => FOOTER_COLUMNS.flatMap(col => col.items);
+
+test('Правила: id унікальні, у кожного пункту є заголовок і зміст', () => {
+  assert.ok(RULES_SECTIONS.length > 0);
+  const ids = RULES_SECTIONS.map(s => s.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const s of RULES_SECTIONS) {
+    assert.ok(typeof s.title === 'string' && s.title.trim(), `порожній заголовок: ${s.id}`);
+    assert.ok((s.text && s.text.trim()) || (Array.isArray(s.items) && s.items.length), `порожній пункт: ${s.id}`);
+  }
+});
+
+test('футер: пункт «Правила» веде на #/rules, а не залишився заглушкою', () => {
+  const rules = allFooterItems().find(i => i.id === 'rules');
+  assert.ok(rules, 'немає пункту «Правила»');
+  assert.equal(rules.href, '#/rules');
+});
+
+test('renderRules: усі пункти пронумеровано, є блок зв\'язку й посилання на ЧаПи, текст екранується', () => {
+  const html = renderRules();
+  assert.equal((html.match(/<section class="legal-section"/g) || []).length, RULES_SECTIONS.length);
+  assert.ok(html.includes('data-info-back'));
+  assert.ok(html.includes('id="info-page-rules"'));
+  assert.ok(html.includes('href="#/faq"'), 'немає посилання на ЧаПи');
+  assert.ok(html.includes('data-info-action="bug"') && html.includes('data-info-action="idea"'), 'немає блоку зв\'язку');
+  assert.ok(html.includes(`${RULES_SECTIONS.length}.`), 'немає нумерації останнього пункту');
+  assert.ok(!/<script/i.test(html), 'у розмітці не має бути сирого HTML із конфігу');
+});
+
+test('Правила: в кінці гри є посилання на тест виживання в новій вкладці, таймери 15/30/60 задокументовані', () => {
+  const html = renderRules();
+  assert.ok(html.includes('href="survival-test.html"'), 'немає посилання на тест');
+  assert.ok(/href="survival-test\.html" target="_blank" rel="noopener noreferrer"/.test(html), 'тест має відкриватись у новій вкладці');
+  const timers = RULES_SECTIONS.find(s => s.id === 'timers');
+  assert.ok(timers, 'немає пункту «Таймери й слово»');
+  for (const sec of ['60 секунд', '30 секунд', '15 секунд']) {
+    assert.ok(timers.items.some(i => i.startsWith(sec)), `немає таймера ${sec}`);
+  }
+});
+
+test('Посилання в пункті правил: небезпечна адреса не потрапляє в розмітку', () => {
+  const original = RULES_SECTIONS[0].link;
+  try {
+    for (const bad of ['javascript:alert(1)', 'http://example.com', '//evil.example/x.html', '../secret.html']) {
+      RULES_SECTIONS[0].link = { label: 'Тест', href: bad };
+      assert.ok(!renderRules().includes(bad), `потрапило в розмітку: ${bad}`);
+    }
+  } finally {
+    if (original === undefined) delete RULES_SECTIONS[0].link; else RULES_SECTIONS[0].link = original;
+  }
+});
 
 test('ЧаПи: id унікальні, питання й відповіді непорожні', () => {
   assert.ok(FAQ_ITEMS.length > 0);

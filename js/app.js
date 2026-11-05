@@ -14,7 +14,7 @@ import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
 import { firstChar } from './utils/auth/initial.js';
 import { initSiteFooter } from './ui/site-footer.js';
-import { renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, initInfoPage } from './pages/info.js';
+import { renderRules, renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, initInfoPage } from './pages/info.js';
 import { consumeScrollTopRequest, scrollToTopNow } from './utils/common/scroll-top.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
@@ -120,6 +120,7 @@ const routes = {
   '#/packs': { render: renderPacks, init: initPacks, cleanup: cleanupPacks },
   '#/pack-editor': { render: renderPackEditor, init: initPackEditor, cleanup: cleanupPackEditor },
   // Публічні інформаційні сторінки (футер): відкриваються й без входу, тому їх немає в PROTECTED_ROUTES
+  '#/rules': { render: renderRules, init: initInfoPage, cleanup: null },
   '#/faq': { render: renderFaq, init: initInfoPage, cleanup: null },
   '#/changelog': { render: renderChangelog, init: initInfoPage, cleanup: null },
   '#/credits': { render: renderCredits, init: initInfoPage, cleanup: null },

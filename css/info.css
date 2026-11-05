@@ -311,6 +311,19 @@
 .legal-section__list li { margin-bottom: 6px; padding-left: 2px; }
 .legal-section__list li:last-child { margin-bottom: 0; }
 .legal-section__list li::marker { color: var(--hazard); }
+.legal-section__body p.legal-section__link-wrap { margin: 14px 0 0; }
+.legal-section__link {
+  font-size: 15px;
+  color: var(--hazard);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal-section__link:hover { color: var(--text); }
+.legal-section__link:focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
 .legal-foot {
   display: flex;
   flex-wrap: wrap;

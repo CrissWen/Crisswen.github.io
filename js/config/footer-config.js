@@ -44,7 +44,7 @@ export const FOOTER_COLUMNS = [
     id: 'game',
     title: 'Гра',
     items: [
-      { id: 'rules', label: 'Правила', href: null },
+      { id: 'rules', label: 'Правила', href: '#/rules' },
       { id: 'changelog', label: 'Що нового', href: '#/changelog' },
     ],
   },

@@ -1,7 +1,7 @@
-// Інформаційні сторінки: «ЧаПи» (#/faq), «Що нового» (#/changelog), «Автори» (#/credits),
+// Інформаційні сторінки: «Правила» (#/rules), «ЧаПи» (#/faq), «Що нового» (#/changelog), «Автори» (#/credits),
 // «Конфіденційність» (#/privacy) і «Умови» (#/terms).
-// Спільний каркас (renderInfoShell) — на ньому ж потім можна зробити «Правила».
-// Дані: js/config/faq-config.js, changelog-config.js, credits-config.js і legal-config.js. Стилі: css/info.css (лише змінні теми).
+// Спільний каркас — renderInfoShell.
+// Дані: js/config/rules-config.js, faq-config.js, changelog-config.js, credits-config.js і legal-config.js. Стилі: css/info.css (лише змінні теми).
 // Сторінки відкриті без входу в акаунт (не входять у PROTECTED_ROUTES у app.js).
 
 import { esc } from '../utils/common/escape-html.js';
@@ -10,6 +10,7 @@ import { CREDITS } from '../config/credits-config.js';
 import { CHANGELOG, CHANGE_TYPES } from '../config/changelog-config.js';
 import { FORM_LINKS, FOOTER_CONFIG } from '../config/footer-config.js';
 import { LEGAL_PAGES, LEGAL_UPDATED } from '../config/legal-config.js';
+import { RULES_SECTIONS } from '../config/rules-config.js';
 import { formatUpdateDate, formatCopyright } from '../utils/common/footer-helpers.js';
 import { maskIcon } from '../utils/common/icon-mask.js';
 import { CHANGELOG_ICONS } from '../constants/icons.js';
@@ -143,16 +144,26 @@ export function renderCredits() {
 // Обидві сторінки будуються з js/config/legal-config.js: нумеровані пункти (заголовок, абзаци, список), нагорі — дата редакції,
 // внизу — блок зв'язку (ті самі Google-форми, що й у ЧаПи), копірайт і посилання на «сусідню» сторінку.
 // Увесь текст екранується (esc), тож HTML із конфігу в розмітку не потрапить.
+// Необов'язкове посилання в кінці пункту ({ label, href }). Дозволено лише повну https-адресу або сторінку сайту вигляду 'name.html';
+// відкривається в новій вкладці (як тест «Оцінка виживання бункера» у грі). Інакше повертає порожній рядок.
+function renderSectionLink(link) {
+  const href = link && typeof link.href === 'string' ? link.href.trim() : '';
+  const label = link && typeof link.label === 'string' ? link.label.trim() : '';
+  if (!label || !(/^https:\/\//i.test(href) || /^[a-z0-9_-]+\.html$/i.test(href))) return '';
+  return `<p class="legal-section__link-wrap"><a class="legal-section__link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a></p>`;
+}
+
 function renderLegalSection(pageId, section, index) {
   const text = section.text ? renderParagraphs(section.text) : '';
   const items = Array.isArray(section.items) && section.items.length
     ? `<ul class="legal-section__list">${section.items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`
     : '';
   const after = section.after ? renderParagraphs(section.after) : '';
+  const link = renderSectionLink(section.link);
   return `
         <section class="legal-section" id="legal-${esc(pageId)}-${esc(section.id)}">
           <h2 class="legal-section__title"><span class="legal-section__num">${index + 1}.</span> ${esc(section.title)}</h2>
-          <div class="legal-section__body">${text}${items}${after}</div>
+          <div class="legal-section__body">${text}${items}${after}${link}</div>
         </section>`;
 }
 
@@ -185,6 +196,27 @@ function renderLegalPage(key, otherKey) {
 
 export function renderPrivacy() { return renderLegalPage('privacy', 'terms'); }
 export function renderTerms() { return renderLegalPage('terms', 'privacy'); }
+
+// ===== «Правила» =====
+// Нумеровані пункти з js/config/rules-config.js (той самий вигляд, що й у юридичних сторінок: renderLegalSection),
+// внизу — блок «Не знайшли відповідь?» (форми як у ЧаПи) і посилання на ЧаПи. Текст екранується (esc).
+export function renderRules() {
+  const sections = RULES_SECTIONS.map((section, i) => renderLegalSection('rules', section, i)).join('');
+  const body = sections
+    ? `
+    <div class="legal-sections">${sections}</div>
+    ${renderHelpBlock()}
+    <footer class="legal-foot">
+      <a class="legal-foot__link" href="#/faq">ЧаПи &rarr;</a>
+    </footer>`
+    : '<p class="info-page__empty">Правила поки не додані.</p>';
+  return renderInfoShell({
+    id: 'rules',
+    title: 'Правила гри',
+    lead: 'Як грати в «Бункер»: від кімнати очікування до фінального екрана.',
+    body,
+  });
+}
 
 // «Назад»: у попередню сторінку історії (звідки прийшов гравець, у тому числі зі сторінки гри),
 // а якщо історії немає (сторінку відкрито напряму) — у лобі.
