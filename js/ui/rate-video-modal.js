@@ -59,8 +59,7 @@ export function openRateVideo(opener = null) {
   const iframe = document.createElement('iframe');
   iframe.src = buildEmbedUrl(videoId);
   iframe.title = 'Відео';
-  iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-  iframe.allowFullscreen = true;
+  iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; // fullscreen уже тут: окремий allowFullscreen дає попередження
   iframe.referrerPolicy = 'strict-origin-when-cross-origin';
   frameWrap.appendChild(iframe);
 

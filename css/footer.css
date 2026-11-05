@@ -33,6 +33,9 @@ body {
   font-family: var(--body);
   font-size: 14px;
   line-height: 1.5;
+  /* iPhone в горизонтальному положенні сам збільшує «дрібний» текст і ламає розкладку; тут розмір має лишатися як у CSS */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 .site-footer:empty { display: none; }
 
@@ -95,10 +98,16 @@ body {
 .site-footer__version:not(.is-discovered) {
   animation: footer-version-glint 5.2s ease-in-out infinite;
 }
-.site-footer__version:hover,
-.site-footer__version:focus-visible {
+.site-footer__version:focus-visible,
+.site-footer__version:active {
   color: var(--hazard);
   animation: none;
+}
+@media (hover: hover) {
+  .site-footer__version:hover {
+    color: var(--hazard);
+    animation: none;
+  }
 }
 @keyframes footer-version-glint {
   0%, 68%, 100% { color: var(--text-mute); }
@@ -155,18 +164,21 @@ body {
   flex: none;
   transition: transform .18s ease;
 }
-.site-footer__link:hover,
 .site-footer__link:focus-visible {
   color: var(--hazard);
 }
-.site-footer__link:hover .site-footer__link-label,
 .site-footer__link:focus-visible .site-footer__link-label {
   background-size: 100% 1px;
 }
-.site-footer__link:hover .site-footer__icon {
-  transform: translateY(-1px) scale(1.08);
+/* Наведення — лише там, де воно справді є (миша). На сенсорних екранах :hover «залипає» після тапу, і посилання
+   лишалося б підсвіченим, поки гравець не торкнеться деінде; там підсвічується лише момент натискання (:active). */
+@media (hover: hover) {
+  .site-footer__link:hover { color: var(--hazard); }
+  .site-footer__link:hover .site-footer__link-label { background-size: 100% 1px; }
+  .site-footer__link:hover .site-footer__icon { transform: translateY(-1px) scale(1.08); }
 }
 .site-footer__link:active {
+  color: var(--hazard);
   transform: translateY(1px);
 }
 .site-footer__link:focus-visible,
@@ -249,11 +261,17 @@ body {
   visibility: visible;
   transform: translateY(0);
 }
-.back-to-top:hover {
+@media (hover: hover) {
+  .back-to-top:hover {
+    border-color: var(--hazard);
+    color: var(--hazard);
+  }
+}
+.back-to-top:active {
   border-color: var(--hazard);
   color: var(--hazard);
+  transform: translateY(1px);
 }
-.back-to-top:active { transform: translateY(1px); }
 
 /* Правий нижній кут уже займає значок глядача (spectator.css) — піднімаємося над ним */
 body:has(.spectator-badge:not(.is-hidden)) .back-to-top {
@@ -269,10 +287,16 @@ body:has(.spectator-badge:not(.is-hidden)) .back-to-top {
 /* ===== Мобільні ===== */
 @media (max-width: 920px), (max-height: 520px) {
   .site-footer { margin-top: 24px; font-size: 13.5px; }
-  .site-footer__inner { padding-inline: 14px; }
+  /* Бічні відступи не менші за вирізи екрана (телефон набік із «чубком»: у index.html стоїть viewport-fit=cover) */
+  .site-footer__inner {
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
 
   .site-footer__main { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; padding: 20px 0 18px; }
-  /* Баги й ідеї — найважливіше для зворотного зв'язку, тож «Допомога» йде першою */
+  /* Порядок явний: бренд на весь рядок, далі «Допомога» (баги й ідеї — найважливіше для зворотного зв'язку), «Гра», «Проєкт».
+     Раніше order: -1 стояв лише в «Допомоги», тож вона опинялась ПЕРЕД брендом: над ним лишалась порожня половина рядка. */
+  .site-footer__brand { order: -2; }
   .site-footer__col--help { order: -1; }
   .site-footer__logo { font-size: 20px; }
 
@@ -293,6 +317,54 @@ body:has(.spectator-badge:not(.is-hidden)) .back-to-top {
   }
   body:has(.spectator-badge:not(.is-hidden)) .back-to-top {
     bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ===== Вузькі телефони (до 519px): «Проєкт» займає весь рядок, а його посилання стають у ті самі дві колонки.
+   Інакше «Проєкт» стояв би сам у лівій половині рядка, а права лишалась порожньою ===== */
+@media (max-width: 519px) {
+  .site-footer__col--project { grid-column: 1 / -1; }
+  .site-footer__col--project .site-footer__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+    justify-items: start;
+  }
+}
+
+/* ===== Середні (520-639px, наприклад телефон набік 568px): бренд окремим рядком, під ним три колонки в одному ряду,
+   замість двох колонок на дві екранні висоти ===== */
+@media (min-width: 520px) and (max-width: 639px) {
+  .site-footer__main { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 18px; }
+  .site-footer__brand { grid-column: 1 / -1; }
+}
+
+/* ===== Широкі, але невисокі екрани (телефон набік, вузький планшет): бренд і три колонки в одному рядку ===== */
+@media (min-width: 640px) and (max-width: 920px), (min-width: 640px) and (max-height: 520px) {
+  .site-footer__main { grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .site-footer__brand { grid-column: auto; }
+}
+
+/* ===== Сенсорні екрани: цілі натискання не менші за 44px (рекомендація Apple та Google), а не ~26px, як було ===== */
+@media (pointer: coarse) {
+  .site-footer__list { gap: 0; }
+  .site-footer__link {
+    min-height: 44px;
+    padding-block: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Версія — пасхалка, сама вона дрібна: зону натискання розширено, а негативні поля повертають вигляд на місце */
+  .site-footer__version {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block: -10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back-to-top {
+    width: 44px;
+    height: 44px;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -370,6 +442,14 @@ body.has-rate-video { overflow: hidden; }
   .rate-video { padding: 10px; }
   .rate-video__box { padding: 10px 10px 8px; }
   .rate-video__close { top: -10px; right: -6px; }
+}
+/* Телефон набік: відео не вище за екран, інакше кнопку закриття зсувало за верхню межу, і вона ставала недосяжною.
+   Висота коробки = кадр 16:9 + близько 50px (відступи й запасне посилання), тож ширину рахуємо від висоти екрана. */
+@media (max-height: 520px) {
+  .rate-video__box {
+    width: min(960px, 100%, calc((100vh - 80px) * 16 / 9 + 20px));
+    width: min(960px, 100%, calc((100dvh - 80px) * 16 / 9 + 20px));
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .rate-video, .rate-video__box { transition: none; }
