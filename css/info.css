@@ -5,12 +5,18 @@
    Підключати ПІСЛЯ footer.css. */
 
 .info-page {
+  box-sizing: border-box;
   max-width: 820px;
   margin: 0 auto;
   padding: 8px 0 32px;
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
   color: var(--text);
-  font-family: var(--body);
+  font-family: 'IBM Plex Sans', var(--body);
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .info-page__back {
@@ -27,9 +33,14 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: color .18s ease;
 }
-.info-page__back:hover { color: var(--hazard); }
+@media (hover: hover) and (pointer: fine) {
+  .info-page__back:hover { color: var(--hazard); }
+}
+.info-page__back:active { color: var(--hazard); }
 
 .info-page__title {
   margin: 14px 0 6px;
@@ -311,14 +322,435 @@
 .legal-section__list li { margin-bottom: 6px; padding-left: 2px; }
 .legal-section__list li:last-child { margin-bottom: 0; }
 .legal-section__list li::marker { color: var(--hazard); }
+.legal-subheading {
+  margin: 14px 0 6px;
+  font-family: var(--head);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--text);
+}
+.legal-section__body > .legal-subheading:first-child {
+  margin-top: 0;
+}
+.legal-strong {
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0;
+}
+.legal-highlight {
+  color: var(--hazard);
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.legal-danger {
+  color: var(--danger);
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.legal-ok {
+  color: var(--ok);
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.legal-code {
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--metal) 50%, var(--panel));
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-xs);
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+.legal-callout {
+  margin: 6px 0;
+  padding: 4px 0;
+  color: var(--text-mute);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.legal-callout--danger {
+  color: var(--danger);
+}
+.legal-callout .legal-strong {
+  color: var(--text);
+}
+
+/* ----- Таблиці у правилах (.legal-table) ----- */
+.legal-table-wrap {
+  margin: 12px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-xs);
+  background: var(--panel);
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal) transparent;
+}
+.legal-table-wrap::-webkit-scrollbar {
+  height: 4px;
+}
+.legal-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--metal);
+  border-radius: 2px;
+}
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+}
+.legal-table th,
+.legal-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--metal);
+}
+.legal-table th {
+  background: color-mix(in srgb, var(--metal) 45%, var(--panel));
+  color: var(--hazard);
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.legal-table th.is-num {
+  text-align: center;
+}
+.legal-table tr:last-child td {
+  border-bottom: 0;
+}
+.legal-table tr:hover td {
+  background: color-mix(in srgb, var(--metal) 20%, transparent);
+}
+.legal-table td {
+  color: var(--text-mute);
+}
+.legal-table td.is-num {
+  text-align: center;
+  font-family: var(--mono);
+  color: var(--text);
+  font-weight: 500;
+}
+.legal-table td.is-head {
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ----- Розкривні блоки розширених правил (.legal-details) ----- */
+.legal-details {
+  margin: 12px 0 4px;
+  background: color-mix(in srgb, var(--metal) 28%, var(--panel));
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-xs);
+  transition: border-color .18s ease;
+}
+.legal-details[open] {
+  border-color: color-mix(in srgb, var(--hazard) 45%, var(--metal));
+}
+.legal-details__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .18s ease;
+}
+.legal-details__summary::-webkit-details-marker { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .legal-details__summary:hover {
+    color: var(--hazard);
+  }
+}
+.legal-details__summary:active {
+  color: var(--hazard);
+}
+.legal-details__summary:focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: -2px;
+}
+.legal-details__chevron {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--hazard);
+  border-bottom: 2px solid var(--hazard);
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+}
+.legal-details[open] .legal-details__chevron {
+  transform: rotate(-135deg);
+  margin-top: 3px;
+}
+.legal-details__body {
+  padding: 10px 14px 14px;
+  border-top: 1px solid color-mix(in srgb, var(--metal) 60%, transparent);
+  font-size: 14px;
+}
+.legal-details__body p {
+  margin: 0 0 8px;
+}
+.legal-details__body p:last-child {
+  margin-bottom: 0;
+}
+.legal-details__body .legal-subheading {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+/* ----- Бокова липка навігація сторінки правил (.rules-sidebar, .rules-nav) ----- */
+#info-page-rules {
+  max-width: 1120px;
+}
+
+.rules-layout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.rules-layout__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rules-sidebar {
+  width: 250px;
+  flex: none;
+  position: sticky;
+  top: 76px; /* 60px фіксований хедер сайту + 16px відступ — не закривається хедером */
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal) transparent;
+}
+.rules-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.rules-sidebar::-webkit-scrollbar-thumb {
+  background: var(--metal);
+  border-radius: 2px;
+}
+
+.rules-nav {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  border-left: 3px solid var(--metal);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
+}
+
+.rules-nav__head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--metal) 60%, transparent);
+}
+
+.rules-nav__title {
+  font-family: var(--head);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--hazard);
+}
+
+.rules-nav__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rules-nav__item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-mute);
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: color .16s ease, background-color .16s ease, transform .08s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rules-nav__item:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--metal) 40%, transparent);
+  }
+}
+
+.rules-nav__item:active {
+  transform: scale(0.96);
+}
+
+.rules-nav__item.is-active {
+  color: var(--hazard);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--hazard) 12%, transparent);
+}
+
+.rules-nav__num {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: .75;
+  flex: none;
+}
+
+.rules-nav__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Адаптивність для планшетів та смартфонів (вертикальна та горизонтальна орієнтація) */
+@media (max-width: 920px), (max-height: 520px) {
+  #info-page-rules {
+    max-width: 100%;
+  }
+  .rules-layout {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 16px;
+  }
+  .rules-sidebar {
+    width: 100%;
+    position: sticky;
+    top: 52px; /* 48px мобільний хедер + 4px відступ */
+    z-index: 30;
+    max-height: none;
+    overflow: visible;
+    margin-bottom: 8px;
+    transition: top .25s ease;
+  }
+  body.is-header-collapsed .rules-sidebar {
+    top: 8px;
+  }
+  .rules-nav {
+    padding: 6px 8px;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--metal);
+    border-left: 3px solid var(--hazard);
+    border-radius: var(--radius-xs);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  }
+  .rules-nav__head {
+    display: none;
+  }
+  .rules-nav__list {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    gap: 6px;
+    padding: 2px 0;
+  }
+  .rules-nav__list::-webkit-scrollbar {
+    display: none;
+  }
+  .rules-nav__item {
+    flex: none;
+    white-space: nowrap;
+    background: color-mix(in srgb, var(--metal) 35%, var(--panel));
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .legal-section {
+    scroll-margin-top: 106px;
+  }
+  body.is-header-collapsed .legal-section {
+    scroll-margin-top: 58px;
+  }
+}
+
+/* Спеціальна оптимізація для ультранизьких екранів (горизонтальне положення смартфонів) */
+@media (max-height: 520px) {
+  .info-page {
+    padding-top: 4px;
+    padding-bottom: 24px;
+  }
+  .rules-sidebar {
+    top: 50px;
+    margin-bottom: 6px;
+  }
+  body.is-header-collapsed .rules-sidebar {
+    top: 6px;
+  }
+  .rules-nav {
+    padding: 3px 6px;
+  }
+  .rules-nav__list {
+    gap: 4px;
+    padding: 0;
+  }
+  .rules-nav__item {
+    padding: 2px 8px;
+    font-size: 11.5px;
+    min-height: 28px;
+  }
+  .rules-nav__num {
+    font-size: 10.5px;
+  }
+  .legal-section {
+    scroll-margin-top: 90px;
+    padding: 12px 14px;
+  }
+  body.is-header-collapsed .legal-section {
+    scroll-margin-top: 44px;
+  }
+}
+
 .legal-section__body p.legal-section__link-wrap { margin: 14px 0 0; }
 .legal-section__link {
   font-size: 15px;
   color: var(--hazard);
   text-decoration: underline;
   text-underline-offset: 3px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.legal-section__link:hover { color: var(--text); }
+@media (hover: hover) and (pointer: fine) {
+  .legal-section__link:hover { color: var(--text); }
+}
+.legal-section__link:active { color: var(--text); }
 .legal-section__link:focus-visible {
   outline: 2px solid var(--hazard);
   outline-offset: 3px;
@@ -345,8 +777,13 @@
   color: var(--hazard);
   text-decoration: underline;
   text-underline-offset: 3px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.legal-foot__link:hover { color: var(--text); }
+@media (hover: hover) and (pointer: fine) {
+  .legal-foot__link:hover { color: var(--text); }
+}
+.legal-foot__link:active { color: var(--text); }
 .legal-foot__link:focus-visible {
   outline: 2px solid var(--hazard);
   outline-offset: 3px;
@@ -354,7 +791,10 @@
 }
 
 @media (max-width: 920px) {
-  .info-page { padding-inline: 2px; }
+  .info-page {
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
   .legal-section { padding: 14px 14px; }
   .legal-section__title { font-size: 17px; }
   .info-page__title { font-size: 26px; }
@@ -367,8 +807,10 @@
   .info-page__back,
   .faq-item,
   .faq-item__chevron,
-  .info-action {
+  .info-action,
+  .rules-nav__item {
     transition: none;
   }
-  .info-action:active { transform: none; }
+  .info-action:active,
+  .rules-nav__item:active { transform: none; }
 }

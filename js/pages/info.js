@@ -16,14 +16,175 @@ import { maskIcon } from '../utils/common/icon-mask.js';
 import { CHANGELOG_ICONS } from '../constants/icons.js';
 import { requestScrollTopOnNextRoute } from '../utils/common/scroll-top.js';
 
-// Порожній рядок між абзацами -> окремі <p>, одинарний перенос -> <br>. Текст екранується.
-export function renderParagraphs(text) {
+// Безпечне підсвічування inline-форматування після esc():
+// **жирний** -> <strong class="legal-strong">, ==акцент== -> <mark class="legal-highlight">,
+// !!небезпека/штраф!! -> <span class="legal-danger">, ++успіх++ -> <span class="legal-ok">, `код` -> <code>
+export function formatInline(escapedText) {
+  return String(escapedText ?? '')
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="legal-strong">$1</strong>')
+    .replace(/==(.+?)==/g, '<mark class="legal-highlight">$1</mark>')
+    .replace(/!!(.+?)!!/g, '<span class="legal-danger">$1</span>')
+    .replace(/\+\+(.+?)\+\+/g, '<span class="legal-ok">$1</span>')
+    .replace(/`([^`]+)`/g, '<code class="legal-code">$1</code>');
+}
+
+// Парсить Markdown-таблиці (| col1 | col2 |) у розмітку .legal-table
+function renderMarkdownTable(lines) {
+  const rows = lines.map(line => {
+    return line.split('|').map(cell => cell.trim()).filter((cell, idx, arr) => idx > 0 && idx < arr.length - 1);
+  });
+  if (rows.length < 2) return '';
+  const header = rows[0];
+  const isDivider = rows[1].every(cell => /^:?-+:?$/.test(cell));
+  const dataRows = isDivider ? rows.slice(2) : rows.slice(1);
+
+  const ths = header.map((cell, idx) => {
+    const isNum = idx > 0;
+    const numCls = isNum ? ' class="is-num"' : '';
+    return `<th${numCls}>${formatInline(esc(cell))}</th>`;
+  }).join('');
+
+  const trs = dataRows.map(row => {
+    const tds = row.map((cell, idx) => {
+      const isHead = idx === 0;
+      const cls = isHead ? ' class="is-head"' : ' class="is-num"';
+      return `<td${cls}>${formatInline(esc(cell))}</td>`;
+    }).join('');
+    return `<tr>${tds}</tr>`;
+  }).join('');
+
+  return `
+    <div class="legal-table-wrap">
+      <table class="legal-table">
+        <thead><tr>${ths}</tr></thead>
+        <tbody>${trs}</tbody>
+      </table>
+    </div>`;
+}
+
+// Парсить звичайні текстові блоки: підзаголовки (### ...), таблиці (| ... |), плашки (> ...) та списки (- / — / •)
+function renderBlocks(text) {
   return String(text ?? '')
     .split(/\n{2,}/)
     .map(p => p.trim())
     .filter(Boolean)
-    .map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)
+    .map(block => {
+      const rawLines = block.split('\n');
+      const parts = [];
+      let currentList = null;
+      let currentParagraph = null;
+
+      function flushParagraph() {
+        if (currentParagraph) {
+          parts.push(`<p>${currentParagraph.join('<br>')}</p>`);
+          currentParagraph = null;
+        }
+      }
+      function flushList() {
+        if (currentList) {
+          parts.push(`<ul class="legal-section__list">${currentList.join('')}</ul>`);
+          currentList = null;
+        }
+      }
+
+      for (let i = 0; i < rawLines.length; i++) {
+        const line = rawLines[i];
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+          flushParagraph();
+          flushList();
+          const tableLines = [trimmed];
+          while (i + 1 < rawLines.length && rawLines[i + 1].trim().startsWith('|') && rawLines[i + 1].trim().endsWith('|')) {
+            i++;
+            tableLines.push(rawLines[i].trim());
+          }
+          parts.push(renderMarkdownTable(tableLines));
+          continue;
+        }
+
+        if (/^###\s+/.test(trimmed)) {
+          flushParagraph();
+          flushList();
+          const headingText = trimmed.replace(/^###\s+/, '');
+          parts.push(`<h3 class="legal-subheading">${formatInline(esc(headingText))}</h3>`);
+          continue;
+        }
+
+        if (/^>\s*/.test(trimmed)) {
+          flushParagraph();
+          flushList();
+          const raw = trimmed.replace(/^>\s*/, '');
+          const isDanger = /^\[!(DANGER|WARNING)\]/i.test(raw);
+          const clean = raw.replace(/^\[!(DANGER|WARNING|NOTE|TIP)\]\s*/i, '');
+          const modifier = isDanger ? ' legal-callout--danger' : '';
+          parts.push(`<div class="legal-callout${modifier}">${formatInline(esc(clean))}</div>`);
+          continue;
+        }
+
+        if (/^[-—•]\s+/.test(trimmed)) {
+          flushParagraph();
+          if (!currentList) currentList = [];
+          const itemText = trimmed.replace(/^[-—•]\s+/, '');
+          currentList.push(`<li>${formatInline(esc(itemText))}</li>`);
+          continue;
+        }
+
+        flushList();
+        if (currentParagraph) {
+          currentParagraph.push(formatInline(esc(line)));
+        } else {
+          currentParagraph = [formatInline(esc(line))];
+        }
+      }
+
+      flushParagraph();
+      flushList();
+      return parts.join('');
+    })
     .join('');
+}
+
+// Порожній рядок між абзацами -> окремі блоки, одинарний перенос -> <br>. Текст екранується.
+// Підтримує розкривні блоки :::details <Заголовок>\n<Зміст>\n:::
+export function renderParagraphs(text) {
+  if (!text) return '';
+
+  const detailsRegex = /:::details\s+([^\n]+)\n([\s\S]*?)\n:::/g;
+  if (detailsRegex.test(text)) {
+    let lastIndex = 0;
+    let match;
+    const segments = [];
+    detailsRegex.lastIndex = 0;
+    while ((match = detailsRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        segments.push({ type: 'normal', content: text.slice(lastIndex, match.index) });
+      }
+      segments.push({ type: 'details', title: match[1].trim(), content: match[2].trim() });
+      lastIndex = detailsRegex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      segments.push({ type: 'normal', content: text.slice(lastIndex) });
+    }
+    return segments.map(seg => {
+      if (seg.type === 'details') {
+        const titleHtml = formatInline(esc(seg.title));
+        const bodyHtml = renderParagraphs(seg.content);
+        return `
+          <details class="legal-details">
+            <summary class="legal-details__summary">
+              <span>${titleHtml}</span>
+              <span class="legal-details__chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="legal-details__body">${bodyHtml}</div>
+          </details>`;
+      }
+      return renderBlocks(seg.content);
+    }).join('');
+  }
+
+  return renderBlocks(text);
 }
 
 export function renderInfoShell({ id, title, lead = '', body = '' }) {
@@ -156,7 +317,7 @@ function renderSectionLink(link) {
 function renderLegalSection(pageId, section, index) {
   const text = section.text ? renderParagraphs(section.text) : '';
   const items = Array.isArray(section.items) && section.items.length
-    ? `<ul class="legal-section__list">${section.items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`
+    ? `<ul class="legal-section__list">${section.items.map(item => `<li>${formatInline(esc(item))}</li>`).join('')}</ul>`
     : '';
   const after = section.after ? renderParagraphs(section.after) : '';
   const link = renderSectionLink(section.link);
@@ -198,17 +359,43 @@ export function renderPrivacy() { return renderLegalPage('privacy', 'terms'); }
 export function renderTerms() { return renderLegalPage('terms', 'privacy'); }
 
 // ===== «Правила» =====
+// Бокова липка панель швидкого переходу між розділами правил
+function renderRulesSidebar() {
+  if (!RULES_SECTIONS?.length) return '';
+  const items = RULES_SECTIONS.map((sec, i) => `
+    <a class="rules-nav__item" href="#legal-rules-${esc(sec.id)}" data-rules-nav="${esc(sec.id)}">
+      <span class="rules-nav__num">${i + 1}.</span>
+      <span class="rules-nav__label">${esc(sec.title)}</span>
+    </a>`).join('');
+
+  return `
+    <aside class="rules-sidebar" aria-label="Зміст правил">
+      <nav class="rules-nav">
+        <div class="rules-nav__head">
+          <span class="rules-nav__title">Зміст</span>
+        </div>
+        <div class="rules-nav__list">${items}</div>
+      </nav>
+    </aside>`;
+}
+
 // Нумеровані пункти з js/config/rules-config.js (той самий вигляд, що й у юридичних сторінок: renderLegalSection),
 // внизу — блок «Не знайшли відповідь?» (форми як у ЧаПи) і посилання на ЧаПи. Текст екранується (esc).
 export function renderRules() {
+  const sidebar = renderRulesSidebar();
   const sections = RULES_SECTIONS.map((section, i) => renderLegalSection('rules', section, i)).join('');
   const body = sections
     ? `
-    <div class="legal-sections">${sections}</div>
-    ${renderHelpBlock()}
-    <footer class="legal-foot">
-      <a class="legal-foot__link" href="#/faq">ЧаПи &rarr;</a>
-    </footer>`
+    <div class="rules-layout">
+      <div class="rules-layout__content">
+        <div class="legal-sections">${sections}</div>
+        ${renderHelpBlock()}
+        <footer class="legal-foot">
+          <a class="legal-foot__link" href="#/faq">ЧаПи &rarr;</a>
+        </footer>
+      </div>
+      ${sidebar}
+    </div>`
     : '<p class="info-page__empty">Правила поки не додані.</p>';
   return renderInfoShell({
     id: 'rules',
@@ -229,4 +416,40 @@ function goBack() {
 export function initInfoPage() {
   window.scrollTo(0, 0); // роутер не скролить сам, а сторінка відкривається з футера — тобто знизу довгої сторінки
   document.querySelector('[data-info-back]')?.addEventListener('click', goBack);
+
+  // Плавний перехід при кліку по пунктах навігації
+  const navItems = document.querySelectorAll('[data-rules-nav]');
+  navItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = item.getAttribute('data-rules-nav');
+      const target = document.getElementById(`legal-rules-${id}`);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        navItems.forEach(c => c.classList.remove('is-active'));
+        item.classList.add('is-active');
+      }
+    });
+  });
+
+  // Підсвічування активного розділу при скролі сторінки
+  const navList = document.querySelector('.rules-nav__list');
+  const sections = document.querySelectorAll('.legal-section');
+  if (navList && sections.length && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.id.replace('legal-rules-', '');
+          const activeItem = navList.querySelector(`[data-rules-nav="${sectionId}"]`);
+          if (activeItem) {
+            navList.querySelectorAll('.rules-nav__item').forEach(c => c.classList.remove('is-active'));
+            activeItem.classList.add('is-active');
+            activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          }
+        }
+      });
+    }, { rootMargin: '-15% 0px -65% 0px', threshold: 0 });
+
+    sections.forEach(sec => observer.observe(sec));
+  }
 }
