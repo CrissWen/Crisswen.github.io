@@ -42,6 +42,9 @@
   left: 50%;
   transform: translate(-50%, -50%) scale(.94);
   z-index: 9999;
+  /* Без width: max-content абсолютний блок із left:50% стискається до половини екрана (50vw), попри max-width, і довгий
+     текст (наприклад, цитата з футера) на телефоні перетворюється на вузьку «колонку» у 8-10 рядків. */
+  width: max-content;
   max-width: min(440px, 88vw);
   padding: 16px 24px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 20%, var(--bg)), var(--bg));

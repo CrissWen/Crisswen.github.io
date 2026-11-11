@@ -359,6 +359,7 @@ export async function playRouletteOverlay({
   const restore = lockPage(overlay);
   const onKeydown = event => trapFocus(event, overlay);
   document.addEventListener('keydown', onKeydown, true);
+  const previousFocus = document.activeElement; // куди повернути фокус, коли оверлей почне закриватись
   overlay.focus({ preventScroll: true });
 
   const state = { overlay, backdrop, stage, reel: null, timers: [], cleanups: [], restore, onKeydown, fxBack, fxFront, beatTimer: 0 };
@@ -393,6 +394,9 @@ export async function playRouletteOverlay({
     state.fading = true;
     overlay.classList.add('is-fading-out');
     overlay.style.pointerEvents = 'none';
+    // Фокус не може лишатись у піддереві з aria-hidden/inert (браузер попереджає й клавіатура «застрягає»): знімаємо його перед приховуванням
+    const focused = document.activeElement;
+    if (focused && overlay.contains?.(focused)) focused.blur?.();
     overlay.setAttribute('aria-hidden', 'true');
     overlay.setAttribute('inert', '');
 
@@ -431,6 +435,10 @@ export async function playRouletteOverlay({
     if (typeof state.restore === 'function') {
       state.restore();
       state.restore = null;
+    }
+    // Сторінка знову активна: повертаємо фокус туди, де він був до рулетки (якщо елемент ще є й фокус нікуди не потрапив)
+    if (previousFocus && previousFocus !== document.body && previousFocus.isConnected && document.activeElement === document.body) {
+      try { previousFocus.focus({ preventScroll: true }); } catch { /* необов'язково */ }
     }
 
     // Таймер прибирання ставимо до виклику колбека: збій у зовнішньому коді не має лишити оверлей у DOM

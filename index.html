@@ -6,7 +6,7 @@
   <title>БУНКЕР</title>
   <link rel="icon" type="image/svg+xml" href="icons/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- Підключаємо стилі -->
   <link rel="stylesheet" href="css/styles.css">
@@ -26,6 +26,8 @@
     })();
   </script>
   <link rel="stylesheet" href="css/header.css"> <!-- Додали новий файл -->
+  <link rel="stylesheet" href="css/footer.css"> <!-- Футер і кнопка «Нагору» (після header.css) -->
+  <link rel="stylesheet" href="css/info.css"> <!-- Сторінки «ЧаПи» і «Що нового» (після footer.css) -->
 </head>
 <body>
   
@@ -94,6 +96,9 @@
     
     <main id="app"><!-- place where router insert pages --></main>
   </div>
+
+  <!-- Футер: наповнюється js/ui/site-footer.js (дані — js/config/footer-config.js) -->
+  <footer class="site-footer" id="site-footer" aria-label="Підвал сайту"></footer>
   
   <!-- Бейдж глядача -->
   <div id="spectator-badge" class="spectator-badge is-hidden" role="status">

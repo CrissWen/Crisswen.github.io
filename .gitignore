@@ -30,3 +30,5 @@ coverage/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+#В footer-config.js знаходться версія та дата (Для того об змінити), та інше.
