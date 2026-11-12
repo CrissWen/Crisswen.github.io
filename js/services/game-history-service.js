@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { getRoomView } from './room-access.js';
 
 const STORAGE_PREFIX = 'bunker_user_history:';
 const MAX_HISTORY_ITEMS = 5;
@@ -98,13 +99,8 @@ export async function fetchUserGameHistory(userId, { force = false } = {}) {
 export async function checkRoomExists(roomCode) {
   if (!roomCode) return false;
   try {
-    const { data, error } = await supabase
-      .from('rooms')
-      .select('room_code')
-      .eq('room_code', roomCode.toUpperCase())
-      .maybeSingle();
-
-    return !error && !!data;
+    await getRoomView(roomCode.toUpperCase());
+    return true;
   } catch (err) {
     return false;
   }
@@ -118,14 +114,7 @@ export async function checkRoomExists(roomCode) {
 export async function fetchRoomDataForExport(roomCode) {
   if (!roomCode) return null;
   try {
-    const { data, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('room_code', roomCode.toUpperCase())
-      .maybeSingle();
-
-    if (error || !data) return null;
-    return data;
+    return await getRoomView(roomCode.toUpperCase());
   } catch (err) {
     console.error('Не вдалося отримати дані кімнати для експорту:', err);
     return null;

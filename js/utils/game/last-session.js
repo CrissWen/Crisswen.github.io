@@ -1,4 +1,4 @@
-import { supabase } from '../../services/supabase.js';
+import { getRoomView } from '../../services/room-access.js';
 
 // ===== «Остання активна сесія» для вкладки «Гра» в хедері =====
 // Код останньої кімнати, в яку гравець заходив на сторінці гри, зберігається в localStorage ПЕР-КОРИСТУВАЧА
@@ -67,18 +67,13 @@ export async function syncGameTab(userId, base = '') {
 
   const token = ++syncToken;
   try {
-    const { data, error } = await supabase
-      .from('rooms')
-      .select('room_code, status, room_closed:bunker_state->room_closed')
-      .eq('room_code', code)
-      .maybeSingle();
-
-    if (error) throw error;
+    const data = await getRoomView(code);
     if (token !== syncToken) return;
 
-    const isActive = data && data.status !== 'closed' && data.status !== 'finished' && data.room_closed !== true; // завершена гра теж не «активна»
+    const isActive = data && data.status !== 'closed' && data.status !== 'finished' && data.bunker_state?.room_closed !== true; // завершена гра теж не «активна»
     if (!isActive) clearLastRoom(userId);
   } catch (err) {
+    if (token === syncToken && err.code === '42501') clearLastRoom(userId);
     console.error('Не вдалося перевірити останню сесію:', err);
   }
 }
