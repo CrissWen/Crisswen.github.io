@@ -27,16 +27,22 @@ export function packDisplayName(packId, title) {
 const PAGE_SIZE = 1000; // ліміт рядків за один запит Supabase за замовчуванням
 const MAX_PAGES = 20;
 
-// Recheck every time: revoked privileges must not survive logout or a cached result.
+// Кеш прив'язаний до користувача: після зміни акаунта статус не лишається від попереднього.
+// Помилку запиту НЕ кешуємо (інакше тимчасовий збій назавжди робить адміна "звичайним" користувачем до перезавантаження).
+let _isAdmin = null;
+let _isAdminUserId = null;
 export async function checkIsAdmin() {
-  const { data: { user } = {}, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return false;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  if (_isAdmin !== null && _isAdminUserId === user.id) return _isAdmin;
   const { data, error } = await supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
   if (error) {
     console.error('checkIsAdmin: не вдалося перевірити статус адміна:', error);
     return false;
   }
-  return data?.user_id === user.id;
+  _isAdmin = !!data;
+  _isAdminUserId = user.id;
+  return _isAdmin;
 }
 
 async function currentUser() {

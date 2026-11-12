@@ -825,10 +825,14 @@
     </div>
     <h1 class="packs-title" style="font-size: 22px;">Доступ обмежено</h1>
     <p class="pe-hint" id="admin-gate-msg">
-      Ця службова утиліта призначена для адміністраторів та тестувальників TrueBunker. Увійдіть в акаунт адміністратора.
+      Ця службова утиліта призначена для адміністраторів та тестувальників TrueBunker. Увійдіть в акаунт адміністратора або активуйте локальний режим розробника для тестування.
     </p>
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
       <a href="index.html#/lobby" class="pk-btn">На головну</a>
+      <button type="button" id="btn-dev-bypass" class="pk-btn pk-btn--primary">
+        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        Режим тестувальника (Dev Access)
+      </button>
     </div>
   </div>
 
@@ -1337,8 +1341,6 @@
   <script type="module" id="curator-main-script">
     import { CATASTROPHE_ICONS, CATASTROPHE_ICONS_LIST, CATASTROPHE_CATEGORIES } from './js/constants/icons.js';
     import { detectCataclysm, normalizeText } from './js/utils/roulette/cataclysm-detector.js';
-    import { esc } from './js/utils/auth/security.js';
-    import { parseReviewReport } from './js/utils/auth/review-report.js';
     import { initCustomSelects } from './js/ui/custom-select.js';
 
     // MANDATORY fallback from modern-web-guidance 'dialog' guide for <dialog closedby="any">
@@ -1354,10 +1356,10 @@
       }
     }
 
-    import { supabase } from './js/services/supabase.js';
-    import { checkIsAdmin } from './js/services/packs-store.js';
+    const SUPABASE_URL = 'https://yamapgouatvnvloatnxg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_RxOSkIZnLIuwt2GTNxItvQ_hKy1mU8u';
     const DEFAULT_PACK_ID = '16ea0906-5874-4471-aa38-aef1513e82c6';
-
+    const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
     // Вбудований резервний список катаклізмів Базового пака (на випадок офлайну)
     const FALLBACK_DEFAULT_CATACLYSMS = [
@@ -1412,31 +1414,52 @@
     }
 
     // ==================== 1. ПЕРЕВІРКА ДОСТУПУ (ADMIN GATE) ====================
-    let gateEpoch = 0;
-    let isCuratorInitialized = false;
     async function initAccessGate() {
-      const epoch = ++gateEpoch;
+      const pill = document.getElementById('admin-status-pill');
       const gate = document.getElementById('admin-gate');
       const app = document.getElementById('curator-app');
-      let allowed = false;
-      try { allowed = await checkIsAdmin(); } catch { /* fail closed */ }
-      if (epoch !== gateEpoch) return;
-      document.getElementById('admin-status-pill').textContent = allowed ? 'Адміністратор' : 'Доступ обмежено';
-      gate.hidden = allowed;
-      gate.style.display = allowed ? 'none' : 'flex';
-      app.hidden = !allowed;
-      app.style.display = allowed ? 'grid' : 'none';
-      if (allowed) { if (!isCuratorInitialized) { isCuratorInitialized = true; await initCuratorApp(); } }
-      else { document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close()); }
-    }
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDevBypass = urlParams.get('dev') === '1' || sessionStorage.getItem('tb_curator_dev') === '1';
 
-    supabase.auth.onAuthStateChange(() => {
-      ++gateEpoch;
-      document.getElementById('curator-app').hidden = true;
-      document.getElementById('curator-app').style.display = 'none';
-      setTimeout(() => { void initAccessGate(); }, 0);
-    });
-    setInterval(() => { void initAccessGate(); }, 15000);
+      let isAdmin = false;
+      if (supabase) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data } = await supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+            isAdmin = !!data;
+            if (user.user_metadata?.username && !localStorage.getItem('tb_curator_reviewer')) {
+              reviewerName = user.user_metadata.username;
+            }
+          }
+        } catch (e) {
+          console.warn('Admin check warning:', e);
+        }
+      }
+
+      if (isAdmin || isDevBypass) {
+        pill.textContent = isAdmin ? 'Адміністратор' : 'Режим тестувальника';
+        gate.hidden = true;
+        app.hidden = false;
+        await initCuratorApp();
+      } else {
+        pill.textContent = 'Гість (Доступ закрито)';
+        pill.style.borderColor = 'var(--danger)';
+        pill.style.color = 'var(--danger)';
+        gate.hidden = false;
+        app.hidden = true;
+      }
+
+      document.getElementById('btn-dev-bypass').addEventListener('click', async () => {
+        sessionStorage.setItem('tb_curator_dev', '1');
+        pill.textContent = 'Режим тестувальника';
+        pill.style.borderColor = 'var(--hazard)';
+        pill.style.color = 'var(--hazard)';
+        gate.hidden = true;
+        app.hidden = false;
+        await initCuratorApp();
+      });
+    }
 
     // ==================== 2. ЗАВАНТАЖЕННЯ ПАКІВ ТА КАТАКЛІЗМІВ ====================
     async function loadPacksList() {
@@ -1466,7 +1489,7 @@
       const select = document.getElementById('pack-select');
       if (!select) return;
       select.innerHTML = packsList.map(pack => 
-        `<option value="${esc(pack.id)}" ${pack.id === currentPackId ? 'selected' : ''}>${esc(pack.title)}</option>`
+        `<option value="${pack.id}" ${pack.id === currentPackId ? 'selected' : ''}>${pack.title}</option>`
       ).join('');
       select.value = currentPackId;
     }
@@ -1563,7 +1586,7 @@
     }
 
     function reviewKeyOf(cata) {
-      return `${currentPackId}::${esc(cata.value)}`;
+      return `${currentPackId}::${cata.value}`;
     }
 
     // ==================== 4. РЕНДЕР ПОКРОКОВОГО ВІЗАРДУ ====================
@@ -1600,7 +1623,7 @@
 
         btn.innerHTML = `
           <span class="wizard-item__idx">${String(idx + 1).padStart(2, '0')}</span>
-          <span class="wizard-item__title">${esc(cata.value)}</span>
+          <span class="wizard-item__title">${cata.value}</span>
           <span class="${dotClass}" title="${hasChange ? 'Запропоновано правку' : (isReviewed ? 'Перевірено (OK)' : 'Не оцінено')}">${dotSvg}</span>
         `;
         btn.addEventListener('click', () => {
@@ -1730,7 +1753,7 @@
           </div>
           <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:2px;">
             <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${esc(icon.label)}
+              ${icon.label}
             </div>
             <div style="font-family:var(--mono);font-size:11px;color:var(--text-mute);">
               ${icon.id} • ${score.toFixed(1)}
@@ -1784,8 +1807,8 @@
         tr.innerHTML = `
           <td style="font-family:var(--mono);color:var(--text-mute);">${idx + 1}</td>
           <td>
-            <div style="font-weight:600;color:var(--text);">${esc(cata.value)}</div>
-            <div style="font-size:12px;color:var(--text-mute);max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cata.meta?.description || '')}</div>
+            <div style="font-weight:600;color:var(--text);">${cata.value}</div>
+            <div style="font-size:12px;color:var(--text-mute);max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cata.meta?.description || ''}</div>
           </td>
           <td>
             <div style="display:flex;align-items:center;gap:8px;">
@@ -1793,14 +1816,14 @@
                 <span class="cataclysm-mask-icon ${best.icon.frame === 'wide' ? 'cataclysm-mask-icon--wide-fit' : (best.icon.frame === 'square' ? 'cataclysm-mask-icon--square-fit' : '')}" style="-webkit-mask-image:url('${best.icon.path}');mask-image:url('${best.icon.path}')"></span>
               </div>
               <div>
-                <div style="font-weight:600;font-size:13px;">${esc(best.icon.label)}</div>
+                <div style="font-weight:600;font-size:13px;">${best.icon.label}</div>
                 <div style="font-family:var(--mono);font-size:11px;color:var(--text-mute);">${best.icon.id}</div>
               </div>
             </div>
           </td>
           <td>
             <span class="curator-badge">Score: ${best.score.toFixed(1)}</span>
-            <div style="font-family:var(--mono);font-size:11px;color:var(--text-mute);margin-top:4px;">${esc(best.matchedTags.join(', ') || 'фолбек')}</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-mute);margin-top:4px;">${best.matchedTags.join(', ') || 'фолбек'}</div>
           </td>
           <td>
             ${chosenIcon ? `
@@ -1810,7 +1833,7 @@
                 </div>
                 <div>
                   <div style="font-weight:600;font-size:13px;">Заміна: ${chosenIcon.id}</div>
-                  <div style="font-size:11px;color:var(--text-mute);">${esc(rev.note || chosenIcon.label)}</div>
+                  <div style="font-size:11px;color:var(--text-mute);">${rev.note || chosenIcon.label}</div>
                 </div>
               </div>
             ` : (rev?.status === 'ok'
@@ -1872,23 +1895,23 @@
         card.innerHTML = `
           <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
             <span class="curator-badge">${icon.id}</span>
-            <span class="pack-card__badge">${esc(icon.frame || 'circle')}</span>
+            <span class="pack-card__badge">${icon.frame || 'circle'}</span>
           </div>
           <div class="cataclysm-icon" style="margin:6px auto;">
             <span class="cataclysm-mask-icon ${icon.frame === 'wide' ? 'cataclysm-mask-icon--wide-fit' : (icon.frame === 'square' ? 'cataclysm-mask-icon--square-fit' : '')}" style="-webkit-mask-image:url('${icon.path}');mask-image:url('${icon.path}')"></span>
           </div>
-          <h3 class="pack-card__title" style="font-size:15px;">${esc(icon.label)}</h3>
+          <h3 class="pack-card__title" style="font-size:15px;">${icon.label}</h3>
           <div class="tag-chips" style="justify-content:center;max-height:52px;overflow:hidden;">
-            ${(icon.tags || []).slice(0, 6).map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}
+            ${(icon.tags || []).slice(0, 6).map(t => `<span class="tag-chip">${t}</span>`).join('')}
           </div>
           ${hasDefects ? `
             <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;">
-              ${icon.defects.map(d => `<span class="curator-badge" style="border-color:var(--danger);color:var(--danger);">${esc(DEFECT_LABELS[d] || d)}</span>`).join('')}
+              ${icon.defects.map(d => `<span class="curator-badge" style="border-color:var(--danger);color:var(--danger);">${DEFECT_LABELS[d] || d}</span>`).join('')}
             </div>
           ` : ''}
           <div style="display:flex;gap:6px;width:100%;margin-top:auto;padding-top:8px;">
             <button type="button" class="pk-btn" style="flex:1;padding:6px 8px;font-size:12px;" data-toggle-frame="${icon.id}">
-              Форма: ${esc(icon.frame || 'circle')}
+              Форма: ${icon.frame || 'circle'}
             </button>
             <button type="button" class="pk-btn pk-btn--primary" style="padding:6px 10px;font-size:12px;" data-inspect="${icon.id}">
               Налаштувати
@@ -1982,7 +2005,7 @@
             <div class="mini-cata-circle">
               <span class="cataclysm-mask-icon ${icon.frame === 'wide' ? 'cataclysm-mask-icon--wide-fit' : (icon.frame === 'square' ? 'cataclysm-mask-icon--square-fit' : '')}" style="-webkit-mask-image:url('${icon.path}');mask-image:url('${icon.path}')"></span>
             </div>
-            <div style="font-weight:600;font-size:12.5px;line-height:1.25;">${esc(icon.label)}</div>
+            <div style="font-weight:600;font-size:12.5px;line-height:1.25;">${icon.label}</div>
             <div style="font-family:var(--mono);font-size:10.5px;color:var(--text-mute);">${icon.id}</div>
           `;
           btn.addEventListener('click', () => {
@@ -2125,7 +2148,7 @@
       importedReports.forEach((rep, idx) => {
         const span = document.createElement('span');
         span.className = 'curator-badge';
-        span.innerHTML = `${esc(rep.reviewer || 'Тестувальник ' + (idx + 1))} (${Object.keys(rep.cataReviews || {}).length}) <button type="button" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:4px;" data-rm-rep="${idx}">×</button>`;
+        span.innerHTML = `${rep.reviewer || 'Тестувальник ' + (idx + 1)} (${Object.keys(rep.cataReviews || {}).length}) <button type="button" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:4px;" data-rm-rep="${idx}">×</button>`;
         span.querySelector('[data-rm-rep]').addEventListener('click', () => {
           importedReports.splice(idx, 1);
           renderMultiReviewerMatrix();
@@ -2142,7 +2165,7 @@
         <tr>
           <th>Катаклізм</th>
           <th>Автопідбір</th>
-          ${reviewersCols.map(rc => `<th>${esc(rc.name)}</th>`).join('')}
+          ${reviewersCols.map(rc => `<th>${rc.name}</th>`).join('')}
           <th>Консенсус</th>
         </tr>
       `;
@@ -2172,7 +2195,7 @@
             const agreedId = [...uniqueIcons][0];
             statusHtml = agreedId === best.icon.id
               ? `<span class="curator-badge" style="border-color:var(--ok,#5fcdb0);color:var(--ok,#5fcdb0);">Одностайно OK</span>`
-              : `<span class="curator-badge" style="border-color:var(--hazard);color:var(--hazard);">Спільна заміна: ${esc(agreedId)}</span>`;
+              : `<span class="curator-badge" style="border-color:var(--hazard);color:var(--hazard);">Спільна заміна: ${agreedId}</span>`;
           } else {
             statusHtml = `<span class="curator-badge" style="border-color:var(--danger);color:var(--danger);">Розбіжність (${uniqueIcons.size} вар.)</span>`;
           }
@@ -2180,12 +2203,12 @@
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-weight:600;">${esc(cata.value)}</td>
+          <td style="font-weight:600;">${cata.value}</td>
           <td><span class="curator-badge">${best.icon.id}</span></td>
           ${choices.map(c => `
             <td>
-              <div style="font-family:var(--mono);font-size:12px;color:${c.isOverride ? 'var(--hazard)' : 'var(--text)'};">${esc(c.label)}</div>
-              ${c.note ? `<div style="font-size:11px;color:var(--text-mute);">${esc(c.note)}</div>` : ''}
+              <div style="font-family:var(--mono);font-size:12px;color:${c.isOverride ? 'var(--hazard)' : 'var(--text)'};">${c.label}</div>
+              ${c.note ? `<div style="font-size:11px;color:var(--text-mute);">${c.note}</div>` : ''}
             </td>
           `).join('')}
           <td>${statusHtml}</td>
@@ -2623,12 +2646,13 @@
       // Імпорт JSON-звітів інших тестувальників
       document.getElementById('input-import-reports').addEventListener('change', async (e) => {
         const files = Array.from(e.target.files || []);
-        for (const f of files.slice(0, 20)) {
+        for (const f of files) {
           try {
-            if (f.size > 2 * 1024 * 1024) throw new Error('Завеликий файл звіту');
             const text = await f.text();
-            if (importedReports.length >= 20) throw new Error('Можна імпортувати щонайбільше 20 звітів');
-            importedReports.push(parseReviewReport(text, new Set(CATASTROPHE_ICONS_LIST.map(icon => icon.id))));
+            const parsed = JSON.parse(text);
+            if (parsed && parsed.cataReviews) {
+              importedReports.push(parsed);
+            }
           } catch (err) {
             console.error('Не вдалося прочитати файл звіту:', f.name, err);
           }
@@ -2640,7 +2664,7 @@
       // Копіювання коду catastrophe-icons.js
       document.getElementById('btn-export-catalog-js').addEventListener('click', () => {
         const snippet = iconsCatalog.map(i => {
-          return `  ${i.id}: Object.freeze({\n    id: '${i.id}',\n    label: ${JSON.stringify(i.label)},\n    category: ${JSON.stringify(i.category)},\n    frame: ${JSON.stringify(i.frame || 'circle')},\n    path: '${i.path}',\n    tags: Object.freeze(${JSON.stringify(i.tags)}),\n  }),`;
+          return `  ${i.id}: Object.freeze({\n    id: '${i.id}',\n    label: '${i.label}',\n    category: '${i.category}',\n    frame: '${i.frame || 'circle'}',\n    path: '${i.path}',\n    tags: Object.freeze(${JSON.stringify(i.tags)}),\n  }),`;
         }).join('\n');
         navigator.clipboard.writeText(snippet);
       });

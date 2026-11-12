@@ -38,7 +38,6 @@ import { buildBoardViewModel } from '../utils/game/board-view-model.js';
 import { startGame } from '../utils/game/start-game.js';
 import { initCustomSelects } from '../ui/custom-select.js';
 import { subscribeToRoom } from '../services/room-subscription.js';
-import { getRoomView, enterRoom } from '../services/room-access.js';
 import { computeRoomUpdateEffects } from '../game-modules/state/room-update-reducer.js';
 import { syncServerTime, getGlobalTime } from '../services/server-time.js';
 import { setLastRoom, clearLastRoom } from '../utils/game/last-session.js';
@@ -238,13 +237,50 @@ export async function initGame() {
     currentUserId = user.id;
     currentUserName = user.user_metadata?.username || "Гравець";
 
-    // Enter by invitation code before reading. Spectators receive membership too.
-    await enterRoom(currentRoomCode, currentUserName);
-    const room = await getRoomView(currentRoomCode);
+    const { data: room, error } = await supabase.from('rooms').select('*').eq('room_code', currentRoomCode).single();
+    if (error || !room) {
+      clearLastRoom(currentUserId); // кімнати більше немає — вкладка «Гра» має стати сірою
+      throw new Error("Кімнату не знайдено");
+    }
+
     localRoomState = room;
+
     const isGameStarted = Object.keys(room.bunker_state || {}).length > 0;
-    const [, , isAdmin] = await Promise.all([getGameConfig(), syncServerTime(), checkIsAdmin()]);
+    const isPlayerInRoom = room.players_state && room.players_state[currentUserId];
+
+    // Дочекуємось конфігу (base + можливий game-config.local.js) та перевірки прав адміна ДО першого рендеру кімнати.
+    const [bc, , isAdmin] = await Promise.all([getGameConfig(), syncServerTime(), checkIsAdmin()]);
     isCurrentUserAdmin = Boolean(isAdmin);
+
+    // Гра вже йде, а гравця в кімнаті немає — не відкидаємо, а пускаємо як глядача (isSpectator виставляє updateGameBoard).
+    // Атомарний вхід у лобі виконується через SECURITY DEFINER RPC join_room (із серверним контролем місткості під FOR UPDATE).
+    if (!isGameStarted && !isPlayerInRoom) {
+      const { error: joinError } = await supabase.rpc('join_room', {
+        p_room: currentRoomCode,
+        p_name: currentUserName,
+        p_max: bc.maxPlayersInLobby
+      });
+      if (joinError) {
+        if (String(joinError.message || '').includes('переповнена')) {
+          showGlobalToast('Ця кімната вже переповнена');
+          clearLastRoom(currentUserId);
+          window.location.hash = '#/lobby';
+          return;
+        }
+        throw new Error(joinError.message);
+      }
+
+      const { data: fresh, error: freshError } = await supabase
+        .from('rooms')
+        .select('players_state, bunker_state, status, version')
+        .eq('room_code', currentRoomCode)
+        .single();
+      if (freshError || !fresh) throw new Error(freshError?.message || "Кімнату не знайдено");
+      room.players_state = fresh.players_state || {};
+      if (fresh.bunker_state) room.bunker_state = fresh.bunker_state;
+      if (fresh.status) room.status = fresh.status;
+      if (typeof fresh.version === 'number') room.version = fresh.version;
+    }
 
     // Кімната успішно відкрита — запам'ятовуємо її для вкладки «Гра» в хедері
     if (room.status !== 'closed' && room.status !== 'finished') setLastRoom(currentUserId, currentRoomCode);
@@ -508,13 +544,7 @@ function maybePlayCataclysmRoulette(roomData) {
 
 function subscribeToRoomUpdates() {
   if (unsubscribeRoom) unsubscribeRoom();
-  unsubscribeRoom = subscribeToRoom(currentRoomCode, handleRoomUpdate, error => {
-    if (error.code === '42501' || error.code === 'PGRST301') {
-      clearLastRoom(currentUserId);
-      showGlobalToast('Доступ до кімнати закрито');
-      window.location.hash = '#/lobby';
-    }
-  });
+  unsubscribeRoom = subscribeToRoom(currentRoomCode, handleRoomUpdate);
 }
 
 // Реакції на оновлення рядка кімнати. Чисті переходи обчислює computeRoomUpdateEffects (room-update-reducer.js).

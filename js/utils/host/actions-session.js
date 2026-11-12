@@ -76,10 +76,9 @@ export async function changeHost(roomCode, newHostId) {
   const pState = room.players_state || {};
   if (!newHostId || !pState[newHostId]) throw new Error('Гравця не знайдено в кімнаті');
   if (newHostId === room.host_id) throw new Error('Цей гравець уже ведучий');
-  const { error } = await supabase.rpc('transfer_room_host', {
-    p_room: roomCode, p_user: newHostId, p_expected_version: room.version
-  });
-  if (error) throw new Error(error.message);
+  const bState = room.bunker_state || {};
+  setHostEvent(bState, `Ведучий передав права ведучого гравцю ${nameOf(pState, newHostId)}`);
+  await saveRoom(roomCode, { host_id: newHostId, bunker_state: bState }, room.version);
   // Передачу ролі скасувати не можна (панель зникає в колишнього ведучого одразу), тому знімка ця дія не робить, а старий скидає.
   // Інакше після повернення ролі (А -> Б -> А) «Скасувати» відкотило б усе, що зробив Б. Новий ведучий починає без знімка:
   // «Скасувати» неактивне до його першої дії.

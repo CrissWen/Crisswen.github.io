@@ -1,6 +1,7 @@
 import { supabase } from '../../services/supabase.js';
 import { showCustomConfirm } from '../overlays/confirm-dialog.js';
 import { showGlobalToast } from '../overlays/global-toast.js';
+import { addLog } from '../../utils/game/log-writer.js';
 import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
 
 // ===== Замок характеристики: гравець відкриває/ховає свою картку від інших =====
@@ -92,6 +93,7 @@ export async function handleCharLockClick(lockBtn, ctx) {
   if (!dbKey) return;
 
   const isOpen = item.classList.contains('open');
+  const label = item.querySelector('.char-label')?.textContent?.trim() || dbKey; // читаємо до перемальовування дошки
   const confirmMsg = isOpen
     ? 'Приховати цю характеристику від інших?'
     : 'Відкрити цю характеристику всім гравцям?';
@@ -134,7 +136,10 @@ export async function handleCharLockClick(lockBtn, ctx) {
       return;
     }
 
-    // The reveal RPC records the authenticated actor and event atomically.
+    // Запис у «Лог подій». Помилка логування не має ламати саме перемикання картки.
+    const who = state[userId]?.name || ctx.getUserName() || 'Гравець';
+    addLog(ctx.getRoomCode(), `Гравець ${who} ${isOpen ? 'сховав' : 'відкрив'} характеристику ${label}`)
+      .catch(err => console.error('Не вдалося записати подію в лог:', err));
   } catch (err) {
     console.error('Помилка оновлення:', err);
   } finally {

@@ -1,11 +1,38 @@
 import { supabase } from '../services/supabase.js';
-import { listMyRooms, enterRoom } from '../services/room-access.js';
 import { esc } from '../utils/auth/security.js';
 
+// Статуси кімнати, які вже не вважаються активними. closeRoom (host-actions.js) тепер сам виставляє status: 'closed'
+// в тому ж запиті, що й bunker_state.room_closed, тож цей фільтр вже працює для нових закритих кімнат.
+const EXCLUDED_ROOM_STATUSES = ['closed', 'finished'];
+const EXCLUDED_STATUSES_FILTER = `(${EXCLUDED_ROOM_STATUSES.join(',')})`; // формат PostgREST для .not('status', 'in', ...)
+
+// Активні кімнати поточного гравця — наповнюється в initLobby(), читається подальшим рендером панелі активних кімнат (наступний етап).
 let userActiveRooms = [];
 
-async function fetchUserActiveRooms() {
-  return listMyRooms();
+// Гравець належить кімнаті, якщо він її хост (host_id) АБО його id є ключем у players_state (jsonb).
+// PostgREST важко надійно запакувати в один .or() jsonb-фільтр контейнменту разом із звичайною умовою
+// (коми/двокрапки в JSON ламають його or-синтаксис), тому робимо дві окремі вибірки і мерджимо/дедуплікуємо результат по room_code.
+async function fetchUserActiveRooms(userId) {
+  const [hostRes, memberRes] = await Promise.all([
+    supabase
+      .from('rooms')
+      .select('*')
+      .eq('host_id', userId)
+      .not('status', 'in', EXCLUDED_STATUSES_FILTER),
+    supabase
+      .from('rooms')
+      .select('*')
+      .contains('players_state', { [userId]: {} })
+      .not('status', 'in', EXCLUDED_STATUSES_FILTER)
+  ]);
+
+  if (hostRes.error) throw hostRes.error;
+  if (memberRes.error) throw memberRes.error;
+
+  const byCode = new Map();
+  [...(hostRes.data || []), ...(memberRes.data || [])].forEach(room => byCode.set(room.room_code, room));
+
+  return Array.from(byCode.values()).filter(room => room.bunker_state?.room_closed !== true);
 }
 // Гра вважається розпочатою, якщо в кімнаті є bunker_state (той же критерій, що й isGameStarted у game.js) — на відміну від поля status,
 // яке в ПРОЄКТІ ніде реально не виставляється в 'playing'. Саме поле status теж перевіряю на майбутнє, якщо воно з'явиться.
@@ -57,7 +84,7 @@ export function renderLobby() {
         <div class="block-body" style="display: flex; flex-direction: column; gap: 14px;">
           <button id="create-room-btn" class="menu-btn menu-btn--accent">Створити кімнату</button>
           <hr style="width: 100%; border-color: var(--metal-lt); margin: 0;">
-          <input type="text" id="room-code" placeholder="Код кімнати (напр. AB3D7K9M)" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text); text-transform: uppercase;">
+          <input type="text" id="room-code" placeholder="Код кімнати (напр. ABCD)" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--metal); background: var(--panel-2); color: var(--text); text-transform: uppercase;">
           <button id="join-room-btn" disabled class="menu-btn menu-btn--hazard">Приєднатися</button>
           <div id="join-error-msg" class="error-text" role="alert" aria-live="polite" style="margin-top: 0; text-align: center;"></div>
         </div>
@@ -111,8 +138,8 @@ export function initLobby() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw new Error("Ви не авторизовані. Поверніться на сторінку входу.");
 
-      // 2. Код-запрошення: 40 випадкових бітів, без неоднозначних символів.
-      const roomCode = Array.from(crypto.getRandomValues(new Uint8Array(8)), n => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[n % 32]).join('');
+      // 2. Генеруємо випадковий 4-значний код (тільки літери та цифри)
+      const roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
 
       // 3. Робимо запит до вашої таблиці rooms
       const { data, error } = await supabase
@@ -169,7 +196,21 @@ export function initLobby() {
     };
 
     try {
-      await enterRoom(roomCode);
+      // maybeSingle(): "нуль рядків" — це не помилка (на відміну від single(), що кидає PGRST116),
+      // тож справжні збої мережі/доступу відрізняємо від "кімнати немає"
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('room_code')
+        .eq('room_code', roomCode)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        if (joinErrorEl) joinErrorEl.textContent = 'Кімнату не знайдено';
+        resetJoinBtn();
+        return;
+      }
 
       // Кімната знайдена — переходимо на сторінку гри з цим кодом (роутинг у проєкті через hash, а не game.html)
       window.location.hash = `#/game?room=${roomCode}`;

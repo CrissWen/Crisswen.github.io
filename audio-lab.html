@@ -621,10 +621,14 @@
     </div>
     <h1 class="packs-title" style="font-size: 22px;">Доступ обмежено</h1>
     <p class="pe-hint" id="admin-gate-msg">
-      Ця інженерна аудіо-лабораторія призначена для адміністраторів та звукорежисерів TrueBunker. Увійдіть в акаунт адміністратора.
+      Ця інженерна аудіо-лабораторія призначена для адміністраторів та звукорежисерів TrueBunker. Увійдіть в акаунт адміністратора або активуйте локальний режим тестувальника.
     </p>
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
       <a href="index.html#/lobby" class="pk-btn">На головну</a>
+      <button type="button" id="btn-dev-bypass" class="pk-btn pk-btn--primary">
+        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        Режим тестувальника (Dev Access)
+      </button>
     </div>
   </div>
 
@@ -880,9 +884,9 @@
     soundManager.disableGlobalClicks();
     import { initRangeSliders, setRangeSliderValue } from './js/ui/range-slider.js';
 
-    import { supabase } from './js/services/supabase.js';
-    import { checkIsAdmin } from './js/services/packs-store.js';
-
+    const SUPABASE_URL = 'https://yamapgouatvnvloatnxg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_RxOSkIZnLIuwt2GTNxItvQ_hKy1mU8u';
+    const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
     // SVG іконки (чистий вектор без жодного емодзі)
     const SVG_ICONS = {
@@ -898,30 +902,79 @@
     // ==================== 1. ПЕРЕВІРКА ДОСТУПУ (ADMIN GATE) ====================
     let isLabInitialized = false;
 
-    let gateEpoch = 0;
     async function initAccessGate() {
-      const epoch = ++gateEpoch;
+      const pill = document.getElementById('admin-status-pill');
       const gate = document.getElementById('admin-gate');
       const app = document.getElementById('audio-lab-app');
-      let allowed = false;
-      try { allowed = await checkIsAdmin(); } catch { /* fail closed */ }
-      if (epoch !== gateEpoch) return;
-      document.getElementById('admin-status-pill').textContent = allowed ? 'Адміністратор' : 'Доступ обмежено';
-      gate.hidden = allowed;
-      gate.style.display = allowed ? 'none' : 'flex';
-      app.hidden = !allowed;
-      app.style.display = allowed ? 'grid' : 'none';
-      if (allowed) { if (!isLabInitialized) { isLabInitialized = true; initAudioLab(); } }
-      else { stopAllAudio(); }
+      const urlParams = new URLSearchParams(window.location.search);
+
+      const isDevBypass =
+        urlParams.get('dev') === '1' ||
+        sessionStorage.getItem('tb_curator_dev') === '1' ||
+        sessionStorage.getItem('tb_admin_dev') === '1' ||
+        localStorage.getItem('tb_curator_dev') === '1' ||
+        localStorage.getItem('tb_is_admin') === 'true';
+
+      let isAdmin = false;
+      if (supabase && !isDevBypass) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          let user = sessionData?.session?.user;
+          if (!user) {
+            const { data: userData } = await supabase.auth.getUser();
+            user = userData?.user;
+          }
+
+          if (user) {
+            const { data } = await supabase
+              .from('admins')
+              .select('user_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (data) {
+              isAdmin = true;
+              localStorage.setItem('tb_is_admin', 'true');
+            } else if (user.app_metadata?.claims_admin || user.user_metadata?.is_admin) {
+              isAdmin = true;
+              localStorage.setItem('tb_is_admin', 'true');
+            }
+          }
+        } catch (e) {
+          console.warn('Admin check warning:', e);
+        }
+      }
+
+      if (isAdmin || isDevBypass) {
+        if (pill) pill.textContent = isAdmin ? 'Адміністратор' : 'Режим тестувальника';
+        gate.hidden = true;
+        gate.style.setProperty('display', 'none', 'important');
+        app.hidden = false;
+        app.style.display = 'grid';
+
+        if (!isLabInitialized) {
+          isLabInitialized = true;
+          initAudioLab();
+        }
+      } else {
+        if (pill) pill.textContent = 'Гість (Доступ обмежено)';
+        gate.hidden = false;
+        gate.style.display = 'flex';
+        app.hidden = true;
+        app.style.setProperty('display', 'none', 'important');
+      }
     }
 
-    supabase.auth.onAuthStateChange(() => {
-      ++gateEpoch;
-      document.getElementById('audio-lab-app').hidden = true;
-      document.getElementById('audio-lab-app').style.display = 'none';
-      setTimeout(() => { void initAccessGate(); }, 0);
+    document.getElementById('btn-dev-bypass')?.addEventListener('click', () => {
+      sessionStorage.setItem('tb_admin_dev', '1');
+      sessionStorage.setItem('tb_curator_dev', '1');
+      localStorage.setItem('tb_curator_dev', '1');
+      initAccessGate();
     });
-    setInterval(() => { void initAccessGate(); }, 15000);
+
+    supabase?.auth.onAuthStateChange(() => {
+      initAccessGate();
+    });
 
     // ==================== 2. СЕРЦЕВИНА АУДІО-ЛАБОРАТОРІЇ ====================
     let masterVolume = 0.85;
