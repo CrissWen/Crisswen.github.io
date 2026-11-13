@@ -22,6 +22,7 @@
     })();
   </script>
   <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/admin-panel.css"> <!-- Адмін-панель на клавішу ~ -->
 
   <style>
     /* MANDATORY (dialog guide): prevent page scroll under modal dialog */
@@ -805,14 +806,17 @@
         <img src="icons/favicon.png" alt="Лого" class="header-logo-icon">
         БУНКЕР
       </a>
-      <nav class="header-nav">
-        <a href="index.html#/packs" class="header-nav-link">Паки</a>
-        <span class="header-nav-link" style="color: var(--hazard); font-weight: 600;">Куратор іконок</span>
+      <!-- Навігація як на головній: показується, коли є сесія. Ім'я, аватар і вкладку «Гра» підставляє js/pages/survival/survival-test-header.js -->
+      <nav class="header-nav" id="header-nav" style="display: none;">
+        <a href="index.html#/rules" class="header-nav-link" data-nav-path="#/rules">Правила</a>
+        <a href="index.html#/packs" class="header-nav-link" data-nav-path="#/packs">Паки</a>
+        <a class="header-nav-link" id="header-game-link" data-nav-path="#/game" hidden>Гра</a>
       </nav>
     </div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <span id="admin-status-pill" class="pack-card__badge">Перевірка доступу...</span>
-    </div>
+    <a href="index.html#/profile" class="header-profile-link" id="header-profile-link" style="display: none;">
+      <span class="header-user-avatar" id="header-user-avatar">?</span>
+      <span class="header-user-name" id="header-user-name">Завантаження...</span>
+    </a>
   </header>
 
   <!-- ЕКРАН ДОСТУПУ (ADMIN GATE) -->
@@ -1334,6 +1338,15 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Ім'я й аватар у шапці (той самий скрипт, що й на сторінці тесту виживання) -->
+  <script type="module" src="js/pages/survival/survival-test-header.js"></script>
+  <!-- Синхронізація теми між вкладками: слухач події storage живе в theme-manager.js (інакше тема міняється лише після перезавантаження) -->
+  <script type="module">import './js/utils/common/theme-manager.js';</script>
+  <!-- Адмін-панель на клавішу ~: перехід між відладчиками -->
+  <script type="module">
+    import { initAdminPanel } from './js/ui/admin-panel.js';
+    initAdminPanel();
+  </script>
   <script type="module" id="curator-main-script">
     import { CATASTROPHE_ICONS, CATASTROPHE_ICONS_LIST, CATASTROPHE_CATEGORIES } from './js/constants/icons.js';
     import { detectCataclysm, normalizeText } from './js/utils/roulette/cataclysm-detector.js';
@@ -1439,14 +1452,11 @@
       }
 
       if (isAdmin) {
-        pill.textContent = 'Адміністратор';
+        if (pill) pill.textContent = 'Адміністратор';
         gate.hidden = true;
         app.hidden = false;
         await initCuratorApp();
       } else {
-        pill.textContent = 'Гість (Доступ закрито)';
-        pill.style.borderColor = 'var(--danger)';
-        pill.style.color = 'var(--danger)';
         gate.hidden = false;
         app.hidden = true;
       }

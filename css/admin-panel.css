@@ -1,0 +1,256 @@
+/* ===== Адмін-панель (модальне вікно, відкривається клавішею ~) =====
+   Розмітка й логіка: js/ui/admin-panel.js, дані: js/config/admin-tools-config.js.
+   Тут НЕМАЄ жорстко прописаних кольорів, тіней і шрифтів: усе береться зі змінних активної теми
+   (--bg, --panel, --panel-2, --metal, --metal-lt, --hazard, --text, --text-mute, --head, --body, --mono, --radius*),
+   тож панель сама підлаштовується під усі теми, зокрема коли тему перемикають при відкритій панелі.
+   Стиль «бункерний», як у pk-notice (packs.css): картка з металевою рамкою і смугою небезпеки зверху.
+   Файл самодостатній (власні правила для .ui-icon нижче), тож панель працює і на сторінках без footer.css:
+   index.html, audio-lab.html, cataclysm-icon-curator.html. */
+
+/* Іконки з SVG-файлів (js/utils/common/icon-mask.js): маска + currentColor. Дзеркало правила з footer.css, але лише в межах панелі. */
+.admin-panel .ui-icon {
+  display: inline-block;
+  flex: none;
+  width: var(--icon-size, 16px);
+  height: var(--icon-size, 16px);
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.admin-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 10030; /* вище за звичайні модалки й підказки (до 10020); поверх повноекранних ефектів (шлюз бункера тощо) панель і так не відкривається */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.admin-panel.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.admin-panel__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(520px, 100%);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 22px 20px 16px;
+  overflow: hidden;
+  /* Підкладка --bg під напівпрозорою --panel (у Cryo/Patriot вона прозора), інакше вміст сторінки просвічував би крізь картку */
+  background: linear-gradient(var(--panel), var(--panel)), var(--bg);
+  border: 1px solid var(--metal-lt);
+  border-radius: var(--radius);
+  box-shadow:
+    0 18px 48px color-mix(in srgb, var(--bg) 85%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--hazard) 14%, transparent);
+  color: var(--text);
+  font-family: var(--body);
+  transform: translateY(10px) scale(.97);
+  transition: transform .2s ease;
+}
+.admin-panel.is-open .admin-panel__card {
+  transform: none;
+}
+/* Смуга небезпеки по верхній межі: візерунок і кольори дає тема (--hazard-pattern) */
+.admin-panel__card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: var(--hazard-pattern);
+}
+
+/* ----- Шапка ----- */
+.admin-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-panel__title {
+  margin: 0;
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.admin-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.admin-panel__close svg {
+  width: 18px;
+  height: 18px;
+}
+.admin-panel__close:hover {
+  color: var(--text);
+  border-color: var(--hazard);
+  background: var(--panel-2);
+}
+
+/* ----- Тіло: групи інструментів ----- */
+.admin-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-x: hidden; /* без горизонтального скролбара при наведенні на картки */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal-lt) transparent;
+}
+.admin-panel__group-title {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.admin-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-panel__empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-mute);
+}
+
+/* ----- Картка інструмента (посилання або кнопка) ----- */
+.admin-panel__tool {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  background: var(--panel-2);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
+}
+/* Без зсуву на hover: картка, що тікає з-під курсора на межі пікселя, миготіла (hover вмикався й вимикався) */
+.admin-panel__tool:hover {
+  border-color: var(--hazard);
+  background: color-mix(in srgb, var(--hazard) 8%, var(--panel-2));
+}
+.admin-panel__tool:focus-visible,
+.admin-panel__close:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.admin-panel__tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--metal);
+  border-radius: var(--radius-sm);
+  color: var(--hazard);
+}
+.admin-panel__tool-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.admin-panel__tool-title {
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.admin-panel__tool-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-mute);
+}
+.admin-panel__tool-go {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--text-mute);
+  transition: color .15s ease;
+}
+.admin-panel__tool:hover .admin-panel__tool-go {
+  color: var(--hazard);
+}
+
+/* ----- Підвал із підказкою про клавіші ----- */
+.admin-panel__foot {
+  padding-top: 12px;
+  border-top: 1px solid var(--metal);
+  font-size: 13px;
+  color: var(--text-mute);
+}
+.admin-panel__key {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--metal-lt);
+  border-radius: var(--radius-xs);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: center;
+  color: var(--text);
+}
+
+@media (max-width: 480px) {
+  .admin-panel__card { padding: 20px 14px 14px; }
+  .admin-panel__title { font-size: 19px; }
+  .admin-panel__tool { gap: 10px; padding: 10px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-panel,
+  .admin-panel__card,
+  .admin-panel__tool,
+  .admin-panel__close,
+  .admin-panel__tool-go {
+    transition: none;
+  }
+  .admin-panel__tool:hover { transform: none; }
+}

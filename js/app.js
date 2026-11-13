@@ -14,6 +14,7 @@ import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
 import { firstChar } from './utils/auth/initial.js';
 import { initSiteFooter } from './ui/site-footer.js';
+import { initAdminPanel } from './ui/admin-panel.js';
 import { renderRules, renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, initInfoPage } from './pages/info.js';
 import { consumeScrollTopRequest, scrollToTopNow } from './utils/common/scroll-top.js';
 
@@ -23,6 +24,7 @@ applyStoredTheme();
 soundManager.init();
 initRangeSliders(document);
 initSiteFooter();
+initAdminPanel(); // модальна адмін-панель на клавішу ~ (лише для адмінів; реєстр інструментів: js/config/admin-tools-config.js)
 
 const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");
