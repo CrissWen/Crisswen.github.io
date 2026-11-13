@@ -825,14 +825,10 @@
     </div>
     <h1 class="packs-title" style="font-size: 22px;">Доступ обмежено</h1>
     <p class="pe-hint" id="admin-gate-msg">
-      Ця службова утиліта призначена для адміністраторів та тестувальників TrueBunker. Увійдіть в акаунт адміністратора або активуйте локальний режим розробника для тестування.
+      Ця службова утиліта призначена для адміністраторів та тестувальників TrueBunker. Увійдіть в акаунт адміністратора.
     </p>
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
       <a href="index.html#/lobby" class="pk-btn">На головну</a>
-      <button type="button" id="btn-dev-bypass" class="pk-btn pk-btn--primary">
-        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-        Режим тестувальника (Dev Access)
-      </button>
     </div>
   </div>
 
@@ -1418,8 +1414,13 @@
       const pill = document.getElementById('admin-status-pill');
       const gate = document.getElementById('admin-gate');
       const app = document.getElementById('curator-app');
-      const urlParams = new URLSearchParams(window.location.search);
-      const isDevBypass = urlParams.get('dev') === '1' || sessionStorage.getItem('tb_curator_dev') === '1';
+      // Старі прапорці обходу більше не діють — прибираємо їх з браузера
+      try {
+        sessionStorage.removeItem('tb_curator_dev');
+        sessionStorage.removeItem('tb_admin_dev');
+        localStorage.removeItem('tb_curator_dev');
+        localStorage.removeItem('tb_is_admin');
+      } catch (_) { /* сховище недоступне — це не критично */ }
 
       let isAdmin = false;
       if (supabase) {
@@ -1437,8 +1438,8 @@
         }
       }
 
-      if (isAdmin || isDevBypass) {
-        pill.textContent = isAdmin ? 'Адміністратор' : 'Режим тестувальника';
+      if (isAdmin) {
+        pill.textContent = 'Адміністратор';
         gate.hidden = true;
         app.hidden = false;
         await initCuratorApp();
@@ -1449,16 +1450,6 @@
         gate.hidden = false;
         app.hidden = true;
       }
-
-      document.getElementById('btn-dev-bypass').addEventListener('click', async () => {
-        sessionStorage.setItem('tb_curator_dev', '1');
-        pill.textContent = 'Режим тестувальника';
-        pill.style.borderColor = 'var(--hazard)';
-        pill.style.color = 'var(--hazard)';
-        gate.hidden = true;
-        app.hidden = false;
-        await initCuratorApp();
-      });
     }
 
     // ==================== 2. ЗАВАНТАЖЕННЯ ПАКІВ ТА КАТАКЛІЗМІВ ====================

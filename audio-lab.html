@@ -621,14 +621,10 @@
     </div>
     <h1 class="packs-title" style="font-size: 22px;">Доступ обмежено</h1>
     <p class="pe-hint" id="admin-gate-msg">
-      Ця інженерна аудіо-лабораторія призначена для адміністраторів та звукорежисерів TrueBunker. Увійдіть в акаунт адміністратора або активуйте локальний режим тестувальника.
+      Ця інженерна аудіо-лабораторія призначена для адміністраторів та звукорежисерів TrueBunker. Увійдіть в акаунт адміністратора.
     </p>
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
       <a href="index.html#/lobby" class="pk-btn">На головну</a>
-      <button type="button" id="btn-dev-bypass" class="pk-btn pk-btn--primary">
-        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-        Режим тестувальника (Dev Access)
-      </button>
     </div>
   </div>
 
@@ -906,17 +902,17 @@
       const pill = document.getElementById('admin-status-pill');
       const gate = document.getElementById('admin-gate');
       const app = document.getElementById('audio-lab-app');
-      const urlParams = new URLSearchParams(window.location.search);
+      // Старі прапорці обходу більше не діють — прибираємо їх з браузера
+      try {
+        sessionStorage.removeItem('tb_curator_dev');
+        sessionStorage.removeItem('tb_admin_dev');
+        localStorage.removeItem('tb_curator_dev');
+        localStorage.removeItem('tb_is_admin');
+      } catch (_) { /* сховище недоступне — це не критично */ }
 
-      const isDevBypass =
-        urlParams.get('dev') === '1' ||
-        sessionStorage.getItem('tb_curator_dev') === '1' ||
-        sessionStorage.getItem('tb_admin_dev') === '1' ||
-        localStorage.getItem('tb_curator_dev') === '1' ||
-        localStorage.getItem('tb_is_admin') === 'true';
-
+      // Єдине джерело правди — рядок у таблиці admins (читається за RLS лише для себе)
       let isAdmin = false;
-      if (supabase && !isDevBypass) {
+      if (supabase) {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           let user = sessionData?.session?.user;
@@ -932,21 +928,15 @@
               .eq('user_id', user.id)
               .maybeSingle();
 
-            if (data) {
-              isAdmin = true;
-              localStorage.setItem('tb_is_admin', 'true');
-            } else if (user.app_metadata?.claims_admin || user.user_metadata?.is_admin) {
-              isAdmin = true;
-              localStorage.setItem('tb_is_admin', 'true');
-            }
+            isAdmin = !!data;
           }
         } catch (e) {
           console.warn('Admin check warning:', e);
         }
       }
 
-      if (isAdmin || isDevBypass) {
-        if (pill) pill.textContent = isAdmin ? 'Адміністратор' : 'Режим тестувальника';
+      if (isAdmin) {
+        if (pill) pill.textContent = 'Адміністратор';
         gate.hidden = true;
         gate.style.setProperty('display', 'none', 'important');
         app.hidden = false;
@@ -964,13 +954,6 @@
         app.style.setProperty('display', 'none', 'important');
       }
     }
-
-    document.getElementById('btn-dev-bypass')?.addEventListener('click', () => {
-      sessionStorage.setItem('tb_admin_dev', '1');
-      sessionStorage.setItem('tb_curator_dev', '1');
-      localStorage.setItem('tb_curator_dev', '1');
-      initAccessGate();
-    });
 
     supabase?.auth.onAuthStateChange(() => {
       initAccessGate();
