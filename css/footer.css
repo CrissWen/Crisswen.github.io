@@ -455,6 +455,42 @@ body.has-rate-video { overflow: hidden; }
   .rate-video, .rate-video__box { transition: none; }
 }
 
+/* ----- Фото у тій же модалці (js/ui/photo-modal.js, «Автори») ----- */
+/* Коробка стискається під фото (не фіксована ширина), а фото вписується в екран за висотою й шириною без обрізання.
+   Хрестик всередині кутка: зверху за межею екрана він був би недосяжним. */
+.photo-modal { z-index: 10000; } /* шапка сайту має z-index 9998 і її треба перекрити, інакше вона закриває верх фото й хрестик */
+.photo-modal__box {
+  width: auto;
+  max-width: 100%;
+  padding: 8px;
+}
+.photo-modal__img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 60px);
+  max-height: calc(100dvh - 60px);
+  margin: 0 auto;
+  object-fit: contain;
+  background: #000;
+}
+.photo-modal__box .rate-video__close { top: 14px; right: 14px; background: rgba(0, 0, 0, .65); }
+.photo-modal__caption {
+  margin: 10px 0 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-align: center;
+  color: var(--text-mute);
+}
+.photo-modal__missing {
+  margin: 0;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-mute);
+}
+
 /* ===== Менше анімацій для тих, хто їх вимкнув у системі ===== */
 @media (prefers-reduced-motion: reduce) {
   .site-footer__link,

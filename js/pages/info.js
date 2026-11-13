@@ -15,6 +15,7 @@ import { formatUpdateDate, formatCopyright } from '../utils/common/footer-helper
 import { maskIcon } from '../utils/common/icon-mask.js';
 import { CHANGELOG_ICONS } from '../constants/icons.js';
 import { requestScrollTopOnNextRoute } from '../utils/common/scroll-top.js';
+import { openPhotoModal, isSafePhotoPath } from '../ui/photo-modal.js';
 
 // Безпечне підсвічування inline-форматування після esc():
 // **жирний** -> <strong class="legal-strong">, ==акцент== -> <mark class="legal-highlight">,
@@ -283,11 +284,18 @@ export function renderCredits() {
     const link = typeof person.link === 'string' && /^https:\/\//i.test(person.link)
       ? `<a class="credits-card__link" href="${esc(person.link)}" target="_blank" rel="noopener noreferrer">${esc(person.link.replace(/^https:\/\//i, ''))}</a>`
       : '';
+    // Картка з фото клікабельна: відкриває вікно з фото (initInfoPage → openPhotoModal)
+    const hasPhoto = isSafePhotoPath(person.photo);
+    const photoAttrs = hasPhoto
+      ? ` role="button" tabindex="0" aria-haspopup="dialog" data-credits-photo="${esc(person.photo)}" data-credits-alt="${esc(person.photoAlt || '')}" data-credits-caption="${esc(person.photoCaption || '')}"`
+      : '';
+    const hint = hasPhoto ? '<span class="credits-card__hint">Натисніть, щоб побачити фото</span>' : '';
     return `
-        <article class="credits-card" data-credits-id="${esc(person.id)}">
+        <article class="credits-card${hasPhoto ? ' credits-card--photo' : ''}" data-credits-id="${esc(person.id)}"${photoAttrs}>
           <h2 class="credits-card__name">${esc(person.name)}</h2>
           <p class="credits-card__role">${esc(person.role)}</p>
           ${link}
+          ${hint}
         </article>`;
   }).join('');
 
@@ -416,6 +424,20 @@ function goBack() {
 export function initInfoPage() {
   window.scrollTo(0, 0); // роутер не скролить сам, а сторінка відкривається з футера — тобто знизу довгої сторінки
   document.querySelector('[data-info-back]')?.addEventListener('click', goBack);
+
+  // «Автори»: клік (або Enter/Пробіл) по картці з фото відкриває вікно з фото
+  document.querySelectorAll('[data-credits-photo]').forEach(card => {
+    const open = () => openPhotoModal({
+      src: card.dataset.creditsPhoto,
+      alt: card.dataset.creditsAlt || '',
+      caption: card.dataset.creditsCaption || '',
+    }, card);
+    card.addEventListener('click', e => { if (!e.target.closest('a')) open(); });
+    card.addEventListener('keydown', e => {
+      if (e.target !== card) return;
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
 
   // Плавний перехід при кліку по пунктах навігації
   const navItems = document.querySelectorAll('[data-rules-nav]');

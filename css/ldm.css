@@ -107,3 +107,10 @@ html.ldm .cr-overlay,
 html.ldm .cr-overlay.is-fading-out,
 html.ldm .cr-overlay.is-fading-out .cr-stage,
 html.ldm .cr-overlay.is-fading-out .cr-backdrop { transition: none !important; }
+
+/* ----- 4. Вікно з фото (Автори): без анімації появи ----- */
+html.ldm .photo-modal,
+html.ldm .photo-modal__box,
+html.ldm .credits-card--photo {
+  transition: none !important;
+}
