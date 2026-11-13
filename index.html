@@ -25,10 +25,20 @@
       } catch (e) { /* localStorage недоступний (приватний режим тощо) — лишаємося на дефолтній href вище */ }
     })();
   </script>
+  <script>
+    // Режим LDM («полегшений») застосовується СИНХРОННО, до першого рендеру, щоб важкі ефекти не блимали.
+    // Єдине джерело правди — js/services/display-settings.js (тут дублюється лише ключ і клас).
+    (function () {
+      try {
+        if (localStorage.getItem('bunker-ldm') === '1') document.documentElement.classList.add('ldm');
+      } catch (e) { /* localStorage недоступний — LDM лишається вимкнений */ }
+    })();
+  </script>
   <link rel="stylesheet" href="css/header.css"> <!-- Додали новий файл -->
   <link rel="stylesheet" href="css/footer.css"> <!-- Футер і кнопка «Нагору» (після header.css) -->
   <link rel="stylesheet" href="css/info.css"> <!-- Сторінки «ЧаПи» і «Що нового» (після footer.css) -->
   <link rel="stylesheet" href="css/admin-panel.css"> <!-- Адмін-панель на клавішу ~ -->
+  <link rel="stylesheet" href="css/ldm.css"> <!-- Режим LDM (html.ldm): завжди ОСТАННІМ, щоб перекривати інші стилі -->
 </head>
 <body>
   

@@ -1,0 +1,109 @@
+/* ===== РЕЖИМ LDM («полегшений») =====
+   Вмикається вручну (Профіль → Теми/Вигляд): js/services/display-settings.js ставить клас .ldm на <html>.
+   За замовчуванням режим ВИМКНЕНИЙ, автовизначення немає.
+
+   Підключається ПІСЛЯ всіх інших стилів (index.html), тому перемагає без зайвої специфічності; усе з !important,
+   бо тема (theme-*.css) підвантажується окремим <link> і може стояти в каскаді де завгодно.
+
+   Що вимикається:
+     1) backdrop-filter (розмиття фону) — найважчий ефект для слабких GPU;
+     2) нескінченні декоративні анімації (пульсація, мерехтіння, обертання підказок);
+     3) важкі «кінематографічні» ефекти: двері шлюзу й бункера, кубик, рулетка.
+   Що лишається: усі кольори й форми теми, звуки та логіка (таймінги в JS не змінюються — міняється лише картинка).
+
+   УВАГА: не вимикайте тут анімації «загалом» (animation: none для *): частина станів видима саме завдяки анімації
+   (цифра кубика, смужка прогресу рулетки в LDM). Для таких елементів нижче є явні правила. */
+
+/* ----- 1. Розмиття фону ----- */
+html.ldm *,
+html.ldm *::before,
+html.ldm *::after,
+html.ldm ::backdrop {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ----- 2. Нескінченні декоративні анімації ----- */
+html.ldm .site-footer__version,
+html.ldm .bunker-airlock__dot,
+html.ldm .bunker-vault-hud__dot,
+html.ldm .cataclysm-timer__icon,
+html.ldm .reconnect-card__dot,
+html.ldm .orientation-prompt__phone,
+html.ldm .orientation-prompt__arrows {
+  animation: none !important;
+}
+
+/* Червона димка катаклізму: лишається як статична віньєтка, без пульсації */
+html.ldm .cataclysm-hazard-vignette,
+html.ldm .cataclysm-hazard-vignette.is-active {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ----- 3a. Двері шлюзу (bunker-airlock) ----- */
+html.ldm .bunker-airlock,
+html.ldm .bunker-airlock__card,
+html.ldm .bunker-airlock__leaf,
+html.ldm .bunker-airlock__wheel,
+html.ldm .bunker-airlock__core,
+html.ldm .bunker-airlock__dot {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ----- 3b. Броньовані двері переходу в бункер (bunker-transition) ----- */
+html.ldm .bunker-door-leaf--left,
+html.ldm .bunker-door-leaf--right {
+  transform: translate3d(0, 0, 0);
+}
+
+/* ----- 3c. Кубик ----- */
+html.ldm .dice-overlay.is-rolling,
+html.ldm .dice-overlay.is-rolling .dice,
+html.ldm .dice-overlay.is-revealed .dice-stage {
+  animation: none !important;
+}
+html.ldm .dice-overlay.is-rolling {
+  background: rgba(0, 0, 0, .72); /* без «наїзду» тла: одразу кінцевий колір */
+}
+/* Цифра за замовчуванням прихована (dice.css), а видимою її робить анімація «pop» — без неї показуємо явно */
+html.ldm .dice-overlay.is-revealed .dice span {
+  animation: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+}
+html.ldm .confetti-container { display: none !important; }
+
+/* ----- 3d. Рулетка (оверлей): той самий набір, що й для prefers-reduced-motion.
+        М'яка поява переможця в LDM (.rr--light .rr-item.is-winner) і смужка прогресу НЕ чіпаються: це і є вигляд LDM ----- */
+html.ldm .cr-backdrop,
+html.ldm .cr-panel { animation: none !important; }
+html.ldm .rr-item,
+html.ldm .rr-track { transition: none !important; }
+html.ldm .cr-stage,
+html.ldm .cr-hero,
+html.ldm .cr-hero-tile,
+html.ldm .cr-bloom,
+html.ldm .cr-rays,
+html.ldm .cr-ring,
+html.ldm .cr-flash,
+html.ldm .cr-spark,
+html.ldm .cr-spark > i,
+html.ldm .cr-kicker,
+html.ldm .cr-vignette,
+html.ldm .cr-pulse,
+html.ldm .cr-pulse::after,
+html.ldm .rr-marker::before { animation: none !important; }
+html.ldm .cr-reel { transition: none !important; transform: none !important; }
+html.ldm .cr-hero-tile::after { display: none !important; }
+html.ldm .cr-ring,
+html.ldm .cr-flash,
+html.ldm .cr-sparks { display: none !important; }
+html.ldm .cr-title-word { opacity: 1 !important; transform: none !important; animation: none !important; }
+html.ldm .cr-title::after { transform: none !important; animation: none !important; }
+html.ldm .cr-overlay,
+html.ldm .cr-overlay.is-fading-out,
+html.ldm .cr-overlay.is-fading-out .cr-stage,
+html.ldm .cr-overlay.is-fading-out .cr-backdrop { transition: none !important; }

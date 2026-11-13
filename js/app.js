@@ -6,6 +6,7 @@ import { renderProfile, initProfile, cleanupProfile, selectProfileTab } from './
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
 import { applyStoredTheme } from './utils/common/theme-manager.js';
+import { initDisplaySettings } from './services/display-settings.js';
 import { syncGameTab } from './utils/game/last-session.js';
 import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/auth/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
@@ -21,6 +22,7 @@ import { consumeScrollTopRequest, scrollToTopNow } from './utils/common/scroll-t
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
 applyStoredTheme();
+initDisplaySettings(); // режим LDM (вручну; за замовчуванням вимкнений) — клас .ldm на <html>
 soundManager.init();
 initRangeSliders(document);
 initSiteFooter();

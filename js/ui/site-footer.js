@@ -6,6 +6,7 @@
 import { FOOTER_CONFIG, FOOTER_COLUMNS, FOOTER_LEGAL } from '../config/footer-config.js';
 import { FOOTER_QUOTES, FALLBACK_QUOTE } from '../config/footer-quotes.js';
 import { getCurrentTheme, onThemeChange } from '../utils/common/theme-manager.js';
+import { isLdmEnabled } from '../services/display-settings.js';
 import { esc } from '../utils/common/escape-html.js';
 import { maskIcon } from '../utils/common/icon-mask.js';
 import { FOOTER_ICONS } from '../constants/icons.js';
@@ -124,7 +125,7 @@ function initSamePageScroll(footerEl) {
     const current = (window.location.hash || '').split('?')[0];
     if (target !== current) return;
     e.preventDefault();
-    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = isLdmEnabled() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   });
 }
@@ -167,7 +168,7 @@ function initBackToTop() {
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(schedule).observe(document.body);
 
   btn.addEventListener('click', () => {
-    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = isLdmEnabled() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   });
 

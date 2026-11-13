@@ -893,3 +893,6 @@
   background: var(--hazard);
   box-shadow: 0 0 8px color-mix(in srgb, var(--hazard) 60%, transparent);
 }
+
+/* Секція «Ефекти та анімації» (LDM) під вибором теми */
+.profile-ldm-header { margin-top: 24px; }

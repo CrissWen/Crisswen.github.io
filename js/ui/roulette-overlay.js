@@ -1,4 +1,5 @@
 import { createRouletteReel, resolveReelMode } from './roulette-reel.js';
+import { isLdmEnabled } from '../services/display-settings.js';
 import { configureSfx, playHeartbeat, unlockAudio } from '../utils/common/sfx.js';
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 
@@ -17,7 +18,7 @@ import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 //     ariaLabel: 'Рулетка', texts: { kicker: 'Визначається…', tease: 'Невже…', done: 'Готово' }, title: 'Результат',
 //     timeline: { startAt, unlockAt }, now: () => Date.now(),     // startAt/unlockAt — у тому ж годиннику, що й now()
 //     reel: { pool, fillers, result, seed, stopIndex, durationMs, easingPower, fillerZone, suspense, scatter },
-//     mode: 'auto', sounds: { enabled, volume, tickUrl, revealUrl }, preload: ['icons/a.svg'], onFinish
+//     mode: 'full', sounds: { enabled, volume, tickUrl, revealUrl }, preload: ['icons/a.svg'], onFinish
 //   });
 
 const OVERLAY_CLASS = 'cr-overlay';
@@ -66,7 +67,8 @@ function runCallback(callback, arg) {
 }
 
 const rand = (min, max) => min + Math.random() * (max - min);
-const prefersReducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+// Без ефектів: системне «зменшити анімацію» або ручний LDM (Профіль → Вигляд)
+const prefersReducedMotion = () => isLdmEnabled() || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // ===== Блокування інтерфейсу =====
 // inert на всіх прямих дітях body, крім оверлея: сторінка не реагує на клік і Tab, а скрінрідер її не читає.
@@ -306,7 +308,7 @@ export function primeRouletteAudio() {
 // onFinish викликається один раз, коли інтерфейс розблоковано (або спрацювала аварійна страховка).
 //   timeline — { startAt, unlockAt } у годиннику now(): початок кручення й кінець паузи після зупинки (стрічка зупиняється в startAt + reel.durationMs)
 //   reel     — параметри createRouletteReel (pool, fillers, result, seed, stopIndex, durationMs, easingPower, fillerZone, suspense, scatter)
-//   mode     — 'auto' | 'full' | 'light' (див. resolveReelMode); sounds — { enabled, volume }
+//   mode     — 'full' | 'light' (див. resolveReelMode; 'auto' = 'full'); sounds — { enabled, volume }
 export async function playRouletteOverlay({
   ariaLabel = 'Рулетка',
   texts = {},
@@ -314,7 +316,7 @@ export async function playRouletteOverlay({
   timeline,
   now = Date.now,
   reel: reelOptions,
-  mode: modePreference = 'auto',
+  mode: modePreference = 'full',
   sounds = {},
   preload = [],
   onFinish = null
@@ -456,9 +458,8 @@ export async function playRouletteOverlay({
   }
 
   // ----- Режим (LDM) -----
-  // На визначення режиму є вся пауза перед стартом, мінус запас; після старту рулетка вже не змінює режим
-  const leadMs = timeline.startAt - now();
-  const mode = await resolveReelMode({ preference: modePreference, probeMs: Math.min(600, Math.max(0, leadMs - 300)) });
+  // Режим визначається один раз перед стартом (LDM вмикає лише гравець); після старту рулетка його не змінює
+  const mode = await resolveReelMode({ preference: modePreference });
   if (myToken !== tokenCounter || current !== state) return true;
 
   if (mode === 'light') overlay.classList.add('is-light'); // LDM: без розмиття фону — це найважчий ефект
