@@ -67,7 +67,7 @@ export function renderProfile() {
       </div>
       <nav class="profile-tabs" role="tablist" aria-label="Розділи профілю">
         <button type="button" role="tab" class="profile-tab" id="profile-tab-profile" data-tab="profile" aria-controls="profile-panel-profile">Профіль</button>
-        <button type="button" role="tab" class="profile-tab" id="profile-tab-themes" data-tab="themes" aria-controls="profile-panel-themes">Вигляд</button>
+        <button type="button" role="tab" class="profile-tab" id="profile-tab-themes" data-tab="themes" aria-controls="profile-panel-themes">Теми</button>
         <button type="button" role="tab" class="profile-tab" id="profile-tab-audio" data-tab="audio" aria-controls="profile-panel-audio">Звук</button>
         <button type="button" role="tab" class="profile-tab" id="profile-tab-history" data-tab="history" aria-controls="profile-panel-history">Історія ігор</button>
       </nav>

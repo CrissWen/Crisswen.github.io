@@ -151,12 +151,12 @@ test('ldm.css: усі правила під html.ldm, цифру кубика і
   assert.match(css, /\.dice-overlay\.is-revealed \.dice span[\s\S]*?opacity:\s*1/, 'цифра кубика має показуватися без анімації');
 });
 
-test('профіль: тумблер LDM є, і він під вкладкою «Вигляд»', () => {
+test('профіль: тумблер LDM є, і він під вкладкою «Теми»', () => {
   const src = read('js/pages/profile.js');
   assert.ok(src.includes('id="profile-ldm-toggle"'));
   assert.ok(src.includes('setLdmEnabled(ldmToggle.checked)'));
   assert.ok(src.includes('unsubscribeProfileLdm'), 'підписку на LDM треба знімати в cleanupProfile');
-  assert.match(src, /data-tab="themes"[^>]*>Вигляд</);
+  assert.match(src, /data-tab="themes"[^>]*>Теми</);
 });
 
 test('усі ефекти, що мали гілку для «зменшити анімацію», враховують і LDM', () => {
