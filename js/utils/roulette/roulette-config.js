@@ -22,7 +22,7 @@ export function normalizeRouletteConfig(raw) {
     maxFillers: Math.round(num(src.maxFillers, 24, 0, 60)),
     // true/false або об'єкт { holdMs, snapMs, approachMs, decoyReach, powerBoost, swapChance } для тонкого налаштування (див. createTravelCurve)
     suspense: src.suspense && typeof src.suspense === 'object' ? src.suspense : src.suspense !== false,
-    mode: ['auto', 'full', 'light'].includes(src.mode) ? src.mode : 'auto',
+    mode: ['auto', 'full', 'light'].includes(src.mode) ? src.mode : 'full', // 'auto' лишається допустимим (старі конфіги) і означає 'full'
     sounds: {
       enabled: sounds.enabled !== false,
       volume: num(sounds.volume, 0.5, 0, 1),

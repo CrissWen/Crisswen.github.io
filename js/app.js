@@ -6,6 +6,7 @@ import { renderProfile, initProfile, cleanupProfile, selectProfileTab } from './
 import { renderPacks, initPacks, cleanupPacks } from './pages/packs.js';
 import { renderPackEditor, initPackEditor, cleanupPackEditor } from './pack-editor/editor.js';
 import { applyStoredTheme } from './utils/common/theme-manager.js';
+import { initDisplaySettings } from './services/display-settings.js';
 import { syncGameTab } from './utils/game/last-session.js';
 import { showUserAvatar, setAvatarEl, applyAvatarLetterPadding } from './utils/auth/avatar.js';
 import { subscribeToUserAvatar, unsubscribeUserAvatar, onAvatarChange } from './services/avatar-service.js';
@@ -14,15 +15,18 @@ import { initRangeSliders, setRangeSliderValue } from './ui/range-slider.js';
 import { soundManager } from './services/sound-manager.js';
 import { firstChar } from './utils/auth/initial.js';
 import { initSiteFooter } from './ui/site-footer.js';
+import { initAdminPanel } from './ui/admin-panel.js';
 import { renderRules, renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, initInfoPage } from './pages/info.js';
 import { consumeScrollTopRequest, scrollToTopNow } from './utils/common/scroll-top.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
 applyStoredTheme();
+initDisplaySettings(); // режим LDM (вручну; за замовчуванням вимкнений) — клас .ldm на <html>
 soundManager.init();
 initRangeSliders(document);
 initSiteFooter();
+initAdminPanel(); // модальна адмін-панель на клавішу ~ (лише для адмінів; реєстр інструментів: js/config/admin-tools-config.js)
 
 const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");

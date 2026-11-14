@@ -1,7 +1,7 @@
 import { supabase } from '../../services/supabase.js';
 import { showCustomConfirm } from '../overlays/confirm-dialog.js';
 import { showGlobalToast } from '../overlays/global-toast.js';
-import { addLog } from '../../utils/game/log-writer.js';
+import { getGameConfigSync } from '../../config/config-manager.js';
 import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
 
 // ===== Замок характеристики: гравець відкриває/ховає свою картку від інших =====
@@ -83,7 +83,7 @@ export function revertRevealChanges(playerState, changes) {
 }
 
 // Обробник кліку по .char-lock (викликається з handleGlobalClick у game.js)
-export async function handleCharLockClick(lockBtn, ctx) {
+export async function handleCharLockClick(lockBtn, ctx, confirmFn = showCustomConfirm) {
   if (isUpdatingLock) return;
 
   const item = lockBtn.closest('.char-item');
@@ -101,7 +101,7 @@ export async function handleCharLockClick(lockBtn, ctx) {
   lockBtn.classList.add('is-confirming');
   let confirmed = false;
   try {
-    confirmed = await showCustomConfirm(confirmMsg, lockBtn);
+    confirmed = await confirmFn(confirmMsg, lockBtn);
   } finally {
     lockBtn.classList.remove('is-confirming');
   }
@@ -117,13 +117,17 @@ export async function handleCharLockClick(lockBtn, ctx) {
 
     if (!toggleCharacteristicReveal(state[userId], dbKey, item.dataset.idx)) return;
     const changes = buildRevealChanges(state[userId], dbKey, item.dataset.idx);
+    const who = state[userId]?.name || ctx.getUserName() || 'Гравець';
+    const logText = `Гравець ${who} ${isOpen ? 'сховав' : 'відкрив'} характеристику ${label}`;
 
     soundManager.play(SOUND_IDS.LOCK_TOGGLE); // клацання замка — лише коли перемикання реально відбулося
     ctx.refreshBoard(); // оптимістично: картка відкривається одразу
 
     const { error } = await supabase.rpc('set_my_reveals', {
       p_room: ctx.getRoomCode(),
-      p_changes: changes
+      p_changes: changes,
+      p_log_text: logText,
+      p_max_logs: getGameConfigSync().maxLogEntries
     });
 
     if (error) {
@@ -135,11 +139,6 @@ export async function handleCharLockClick(lockBtn, ctx) {
       showGlobalToast('Не вдалося змінити видимість характеристики');
       return;
     }
-
-    // Запис у «Лог подій». Помилка логування не має ламати саме перемикання картки.
-    const who = state[userId]?.name || ctx.getUserName() || 'Гравець';
-    addLog(ctx.getRoomCode(), `Гравець ${who} ${isOpen ? 'сховав' : 'відкрив'} характеристику ${label}`)
-      .catch(err => console.error('Не вдалося записати подію в лог:', err));
   } catch (err) {
     console.error('Помилка оновлення:', err);
   } finally {

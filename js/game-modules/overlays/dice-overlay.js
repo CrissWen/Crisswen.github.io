@@ -3,6 +3,7 @@
 // тому всі клієнти кімнати (ведучий, гравці, глядачі) бачать анімацію одночасно.
 
 import { soundManager, SOUND_IDS } from '../../services/sound-manager.js';
+import { isLdmEnabled } from '../../services/display-settings.js';
 
 const OVERLAY_ID = 'dice-overlay';
 const DICE_TYPES = ['d20', 'd6'];
@@ -30,7 +31,7 @@ function clearConfetti() {
 // Вибух конфеті з центру екрана. Кожна частинка отримує власні CSS-змінні → усі летять по-різному.
 function shootConfetti() {
   const container = document.querySelector(`#${OVERLAY_ID} [data-confetti]`);
-  if (!container) return;
+  if (!container || isLdmEnabled()) return; // LDM: без конфеті (50–100 анімованих елементів)
   clearConfetti();
 
   const count = Math.floor(rand(CONFETTI_MIN, CONFETTI_MAX + 1));

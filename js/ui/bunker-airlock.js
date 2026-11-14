@@ -8,6 +8,7 @@
 
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 import { esc } from '../utils/auth/security.js';
+import { isLdmEnabled } from '../services/display-settings.js';
 
 let activeCleanup = null;
 let isGameStartedState = false;
@@ -190,10 +191,12 @@ export function mountBunkerAirlock({
       } catch (_) {}
     }
 
+    // Без анімації відкривання: системне «зменшити анімацію» або ручний LDM (Профіль → Вигляд)
     const prefersReducedMotion =
-      typeof window !== 'undefined' &&
+      isLdmEnabled() ||
+      (typeof window !== 'undefined' &&
       window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     if (prefersReducedMotion) {
       cleanup();

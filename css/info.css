@@ -275,6 +275,24 @@
   word-break: break-all;
 }
 .credits-card__link:hover { color: var(--text); }
+/* Картка з фото («Добровільна спілка ШІ-Агентів»): клікабельна, відкриває js/ui/photo-modal.js */
+.credits-card--photo {
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.credits-card--photo:hover { border-color: var(--hazard); transform: translateY(-2px); }
+.credits-card--photo:focus-visible { outline: 2px solid var(--hazard); outline-offset: 2px; }
+.credits-card__hint {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--hazard);
+}
+@media (prefers-reduced-motion: reduce) {
+  .credits-card--photo { transition: none; }
+  .credits-card--photo:hover { transform: none; }
+}
 .credits-card__link:focus-visible {
   outline: 2px solid var(--hazard);
   outline-offset: 2px;

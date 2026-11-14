@@ -3,6 +3,7 @@ import { exportGameReplay, readReplayFile, launchOfflineReplay } from '../servic
 import { showGlobalToast } from '../game-modules/overlays/global-toast.js';
 import { supabase } from '../services/supabase.js';
 import { THEMES, getCurrentTheme, setTheme, onThemeChange } from '../utils/common/theme-manager.js';
+import { isLdmEnabled, setLdmEnabled, onLdmChange } from '../services/display-settings.js';
 import { fetchAvatars, getCachedAvatar, hasCachedAvatar, isAvatarStale, uploadAvatar, removeAvatar, onAvatarChange } from '../services/avatar-service.js';
 import { setAvatarEl, applyAvatarLetterPadding } from '../utils/auth/avatar.js';
 import { openAvatarCropper } from '../ui/avatar-cropper-modal.js';
@@ -119,6 +120,28 @@ export function renderProfile() {
             ${themeCardsHtml}
           </div>
         </fieldset>
+
+        <!-- Режим LDM: вмикається лише вручну, за замовчуванням вимкнений (js/services/display-settings.js, css/ldm.css) -->
+        <div class="profile-tab-header profile-ldm-header">
+          <span class="profile-tab-title">Ефекти та анімації</span>
+        </div>
+        <div class="audio-option-card">
+          <label class="audio-option-label" for="profile-ldm-toggle">
+            <span class="audio-option-text">
+              <span class="audio-option-title">Полегшений режим (LDM)</span>
+              <span class="audio-option-sub">Без розмиття фону, анімацій дверей, кубика й рулетки: менше навантаження на слабкі пристрої. Лише на цьому пристрої.</span>
+            </span>
+            <input
+              type="checkbox"
+              class="audio-toggle-checkbox"
+              id="profile-ldm-toggle"
+              ${isLdmEnabled() ? 'checked' : ''}
+            >
+            <span class="audio-toggle-track" aria-hidden="true">
+              <span class="audio-toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
       </div>
 
       <div class="profile-panel" id="profile-panel-audio" role="tabpanel" aria-labelledby="profile-tab-audio" hidden>
@@ -362,6 +385,7 @@ function saveCachedStats(userId, stats) {
 let currentTabSelector = null;
 let unsubscribeProfileAudio = null;
 let unsubscribeProfileTheme = null;
+let unsubscribeProfileLdm = null;
 let unsubscribeProfileAvatar = null;
 // I-5: номер «життя» сторінки. cleanupProfile() його збільшує, і відкладені відповіді мережі зі старим номером нічого не пишуть у DOM
 let profileSession = 0;
@@ -406,6 +430,10 @@ export function cleanupProfile() {
   if (typeof unsubscribeProfileTheme === 'function') {
     unsubscribeProfileTheme();
     unsubscribeProfileTheme = null;
+  }
+  if (typeof unsubscribeProfileLdm === 'function') {
+    unsubscribeProfileLdm();
+    unsubscribeProfileLdm = null;
   }
   if (typeof unsubscribeProfileAvatar === 'function') {
     unsubscribeProfileAvatar();
@@ -773,6 +801,18 @@ export async function initProfile() {
         updateSelectedCard(newTheme);
     });
     bindAudioEvents();
+
+    // Перемикач LDM (Вигляд): пишемо одразу, без кнопки «Зберегти»; стан синхронізується з іншими вкладками
+    const ldmToggle = document.getElementById('profile-ldm-toggle');
+    if (typeof unsubscribeProfileLdm === 'function') {
+        unsubscribeProfileLdm();
+        unsubscribeProfileLdm = null;
+    }
+    if (ldmToggle) {
+        ldmToggle.checked = isLdmEnabled();
+        ldmToggle.addEventListener('change', () => setLdmEnabled(ldmToggle.checked));
+        unsubscribeProfileLdm = onLdmChange((value) => { ldmToggle.checked = value; });
+    }
 
     themeRadios.forEach(radio => {
         radio.addEventListener('change', () => {
