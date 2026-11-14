@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { installFakeSupabaseEnv } from '../helpers/fake-supabase.mjs';
 
 const fake = installFakeSupabaseEnv({ selectDelayMs: 5, updateDelayMs: 5 });
-const { toggleCharacteristicReveal, buildRevealChanges, revertRevealChanges } = await import(
+const { toggleCharacteristicReveal, buildRevealChanges, revertRevealChanges, handleCharLockClick } = await import(
   '../../js/game-modules/controllers/char-lock.js'
 );
 const { withRoomAction, undoLastAction, snapshot } = await import('../../js/utils/host/room-store.js');
@@ -139,5 +139,126 @@ test('set_my_reveals atomically updates player reveal and appends log in single 
   assert.equal(updated.bunker_state.logs.length, 1);
   assert.match(updated.bunker_state.logs[0].text, /відкрив характеристику Риса/);
 });
+
+test('set_my_reveals with empty bunker_state updates reveal without failing or adding logs', async () => {
+  fake.__seedRoom({
+    room_code: 'ATOMIC_EMPTY',
+    status: 'lobby',
+    version: 1,
+    bunker_state: {},
+    players_state: {
+      'user-1': { name: 'Юзер', traits: [{ value: 'Спокійний', is_revealed: false }] }
+    }
+  });
+
+  const { error } = await fake.rpc('set_my_reveals', {
+    __userId: 'user-1',
+    p_room: 'ATOMIC_EMPTY',
+    p_changes: [{ path: ['traits', '0'], value: true }],
+    p_log_text: 'Гравець Юзер відкрив характеристику Риса',
+    p_max_logs: 100
+  });
+
+  assert.equal(error, null);
+  const updated = fake.__getRoomRaw('ATOMIC_EMPTY');
+  assert.equal(updated.version, 2);
+  assert.equal(updated.players_state['user-1'].traits[0].is_revealed, true);
+  assert.deepEqual(updated.bunker_state, {});
+});
+
+test('handleCharLockClick triggers single set_my_reveals RPC with both changes and logText (single version bump)', async () => {
+  fake.__setActiveUser('user-1');
+  const roomData = {
+    room_code: 'LOCK_CLICK_01',
+    status: 'in_progress',
+    version: 1,
+    bunker_state: { capacity: 2, logs: [] },
+    players_state: {
+      'user-1': {
+        name: 'Олексій',
+        gender: { value: 'Чоловік', is_revealed: false },
+        age: { value: 30, is_revealed: false },
+        childfree: { value: false, is_revealed: false }
+      }
+    }
+  };
+  fake.__seedRoom(roomData);
+
+  const localState = structuredClone(roomData);
+  let refreshCount = 0;
+  const ctx = {
+    getRoomCode: () => 'LOCK_CLICK_01',
+    getUserId: () => 'user-1',
+    getUserName: () => 'Олексій',
+    getRoomState: () => localState,
+    refreshBoard: () => { refreshCount++; }
+  };
+
+  const charItem = {
+    dataset: { dbkey: 'gender' },
+    classList: { contains: () => false },
+    querySelector: (sel) => (sel === '.char-label' ? { textContent: 'Стать і вік' } : null)
+  };
+  const lockBtn = {
+    classList: { add: () => {}, remove: () => {} },
+    closest: (sel) => (sel === '.char-item' ? charItem : null)
+  };
+
+  await handleCharLockClick(lockBtn, ctx, async () => true);
+
+  const updated = fake.__getRoomRaw('LOCK_CLICK_01');
+  assert.equal(updated.version, 2, 'Room version must increment exactly once (no separate append_log update)');
+  assert.equal(updated.players_state['user-1'].gender.is_revealed, true);
+  assert.equal(updated.players_state['user-1'].age.is_revealed, true);
+  assert.equal(updated.players_state['user-1'].childfree.is_revealed, true);
+  assert.equal(updated.bunker_state.logs.length, 1);
+  assert.equal(updated.bunker_state.logs[0].text, 'Гравець Олексій відкрив характеристику Стать і вік');
+  assert.equal(refreshCount, 1);
+});
+
+test('handleCharLockClick rolls back local reveal flags and appends no log when room is closed', async () => {
+  fake.__setActiveUser('user-1');
+  const roomData = {
+    room_code: 'LOCK_CLOSED_01',
+    status: 'closed',
+    version: 1,
+    bunker_state: { capacity: 2, logs: [] },
+    players_state: {
+      'user-1': {
+        name: 'Олексій',
+        traits: [{ value: 'Спокійний', is_revealed: false }]
+      }
+    }
+  };
+  fake.__seedRoom(roomData);
+
+  const localState = structuredClone(roomData);
+  let refreshCount = 0;
+  const ctx = {
+    getRoomCode: () => 'LOCK_CLOSED_01',
+    getUserId: () => 'user-1',
+    getUserName: () => 'Олексій',
+    getRoomState: () => localState,
+    refreshBoard: () => { refreshCount++; }
+  };
+
+  const charItem = {
+    dataset: { dbkey: 'traits', idx: '0' },
+    classList: { contains: () => false },
+    querySelector: (sel) => (sel === '.char-label' ? { textContent: 'Риса' } : null)
+  };
+  const lockBtn = {
+    classList: { add: () => {}, remove: () => {} },
+    closest: (sel) => (sel === '.char-item' ? charItem : null)
+  };
+
+  await handleCharLockClick(lockBtn, ctx, async () => true);
+
+  assert.equal(localState.players_state['user-1'].traits[0].is_revealed, false, 'Local flag must revert on RPC error');
+  assert.equal(fake.__getRoomRaw('LOCK_CLOSED_01').bunker_state.logs.length, 0, 'No log entry must be written on RPC error');
+  assert.equal(refreshCount, 2, 'Optimistic refresh + rollback refresh');
+});
+
+
 
 
