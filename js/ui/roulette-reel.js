@@ -1,4 +1,5 @@
 import { buildRibbon, createTravelCurve, landingOffsetFromSeed } from '../utils/roulette/roulette-ribbon.js';
+import { isLdmEnabled } from '../services/display-settings.js';
 
 // ===== Універсальна рулетка-стрічка («крутка кейса») =====
 // Не знає про катаклізми: приймає елементи, результат і час старту, малює горизонтальну стрічку, що розганяється,
@@ -19,98 +20,18 @@ import { buildRibbon, createTravelCurve, landingOffsetFromSeed } from '../utils/
 //   reel.start({ startAt: serverMs, now: getGlobalTime });   // startAt — у тому ж годиннику, що й now()
 //   reel.destroy();
 
-const MODE_OVERRIDE_KEY = 'bunker-roulette-mode';       // localStorage: 'full' | 'light' — ручне перевизначення для перевірки/налагодження
-const MODE_CACHE_KEY = 'bunker-roulette-auto-mode';     // sessionStorage: результат автовизначення на час сесії вкладки
 const FALLBACK_STEP_PX = 110;                           // крок стрічки, якщо виміряти не вдалося (елемент прихований)
 const LATE_JOIN_MS = 250;                               // старт, що вже минув довше, вважається «запізнілим»: без ефектів початку
 const SETTLE_MS = 450;                                  // м'яке вирівнювання результату по центру після зупинки
 
 // ===== Визначення режиму (LDM) =====
 
-function safeStorage(kind) {
-  try {
-    return window[kind];
-  } catch {
-    return null;
-  }
-}
-
-const readStorage = (kind, key) => {
-  try {
-    return safeStorage(kind)?.getItem(key) ?? null;
-  } catch {
-    return null;
-  }
-};
-
-const writeStorage = (kind, key, value) => {
-  try {
-    safeStorage(kind)?.setItem(key, value);
-  } catch { /* сховище недоступне — автовизначення просто повториться */ }
-};
-
-const prefersReducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-function median(values) {
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)];
-}
-
-// Міряє частоту кадрів (кадр/с) за maxMs. Повертає null, якщо виміряти не вдалося (вкладка у фоні, замало кадрів)
-function measureFrameRate(maxMs) {
-  return new Promise(resolve => {
-    const deltas = [];
-    const startedAt = performance.now();
-    let last = 0;
-    let rafId = 0;
-    let timer = 0;
-
-    function finish() {
-      clearTimeout(timer);
-      cancelAnimationFrame(rafId);
-      const settled = deltas.slice(3); // перші кадри після рендеру сторінки завжди повільні й нічого не кажуть про пристрій
-      resolve(settled.length >= 5 ? 1000 / median(settled) : null);
-    }
-    function step(timestamp) {
-      if (last) deltas.push(timestamp - last);
-      last = timestamp;
-      if (timestamp - startedAt >= maxMs || deltas.length >= 40) return finish();
-      rafId = requestAnimationFrame(step);
-    }
-
-    timer = setTimeout(finish, maxMs + 250); // у фоновій вкладці rAF не викликається, тож без цього проміс завис би
-    rafId = requestAnimationFrame(step);
-  });
-}
-
-// Який режим вмикати на цьому пристрої. preference: 'auto' | 'full' | 'light' (з конфігу).
-// У 'auto' одразу light для «зменшити анімацію» й режиму економії трафіку; для інших пристроїв міряється реальна частота кадрів
-// (probeMs — скільки часу є на вимір; 0 — міряти ніколи, тоді вирішують лише апаратні підказки). Вердикт кешується на сесію.
-// Ручне перевизначення: localStorage.setItem('bunker-roulette-mode', 'light' | 'full').
-export async function resolveReelMode({ preference = 'auto', probeMs = 0 } = {}) {
-  const override = readStorage('localStorage', MODE_OVERRIDE_KEY);
-  const forced = override === 'full' || override === 'light' ? override : preference;
-  if (forced === 'full' || forced === 'light') return forced;
-
-  if (prefersReducedMotion()) return 'light';
-  if (navigator.connection?.saveData) return 'light';
-
-  const cached = readStorage('sessionStorage', MODE_CACHE_KEY);
-  if (cached === 'full' || cached === 'light') return cached;
-
-  const memory = Number(navigator.deviceMemory);
-  const cores = Number(navigator.hardwareConcurrency);
-  const weakHardware = (memory > 0 && memory <= 2) || (cores > 0 && cores <= 2);
-
-  if (probeMs <= 0) return weakHardware ? 'light' : 'full';
-
-  const fps = await measureFrameRate(probeMs);
-  if (fps === null) return weakHardware ? 'light' : 'full';
-
-  // На «підозрілому» залізі вимоги до плавності вищі: слабкий пристрій, що ледве тягне 30 кадр/с, з важкою стрічкою ще й просяде
-  const mode = fps < (weakHardware ? 45 : 24) ? 'light' : 'full';
-  writeStorage('sessionStorage', MODE_CACHE_KEY, mode);
-  return mode;
+// Який режим вмикати. preference — 'auto' | 'full' | 'light' (cataclysmRoulette.mode з конфігу гри).
+// Автовизначення немає: 'light' лише коли гравець сам увімкнув LDM (Профіль → Вигляд) або конфіг гри примусово каже 'light'.
+// 'auto' і 'full' означають повний режим. Асинхронна для сумісності з викликачами (раніше тут міряли FPS).
+export async function resolveReelMode({ preference = 'full' } = {}) {
+  if (isLdmEnabled()) return 'light';
+  return preference === 'light' ? 'light' : 'full';
 }
 
 // ===== Компонент =====

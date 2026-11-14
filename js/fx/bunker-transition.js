@@ -5,6 +5,7 @@
 
 import { soundManager, SOUND_IDS } from '../services/sound-manager.js';
 import { esc } from '../utils/auth/security.js';
+import { isLdmEnabled } from '../services/display-settings.js';
 
 let activeTransition = null;
 
@@ -399,13 +400,15 @@ export async function playBunkerDoorTransition({
     cancel,
   };
 
+  // Спокійний сценарій: системне «зменшити анімацію» або ручний LDM (Профіль → Вигляд)
   const prefersReducedMotion =
-    typeof window !== 'undefined' &&
+    isLdmEnabled() ||
+    (typeof window !== 'undefined' &&
     window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   // ===========================================================================
-  // СЦЕНАРІЙ A: СПОКІЙНИЙ ПЕРЕХІД (PREFERS-REDUCED-MOTION)
+  // СЦЕНАРІЙ A: СПОКІЙНИЙ ПЕРЕХІД (PREFERS-REDUCED-MOTION / LDM)
   // ===========================================================================
   if (prefersReducedMotion) {
     await Promise.all([

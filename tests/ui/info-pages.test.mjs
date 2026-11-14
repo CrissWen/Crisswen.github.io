@@ -333,7 +333,7 @@ test('футер: пункт «Автори» веде на #/credits, стар�
 test('renderCredits: усі автори на сторінці, текст екранується, посилання лише https і в новій вкладці', () => {
   const html = renderCredits();
   assert.ok(html.includes('Автори'));
-  assert.equal((html.match(/class="credits-card"/g) || []).length, CREDITS.length);
+  assert.equal((html.match(/class="credits-card(?: credits-card--photo)?"/g) || []).length, CREDITS.length);
   assert.ok(html.includes('data-info-back'));
 
   CREDITS.push(
@@ -348,4 +348,20 @@ test('renderCredits: усі автори на сторінці, текст ек�
   } finally {
     CREDITS.splice(-2);
   }
+});
+
+test('автори: картка з фото клікабельна, а шлях до фото безпечний', async () => {
+  const { isSafePhotoPath } = await import('../../js/ui/photo-modal.js');
+  assert.ok(isSafePhotoPath('img/dev-team.jpg'));
+  for (const bad of ['', null, 'https://evil.example/a.jpg', '//evil.example/a.jpg', '/etc/a.jpg', '../a.jpg', 'img/../a.jpg', 'img/a.svg', 'javascript:alert(1).jpg']) {
+    assert.ok(!isSafePhotoPath(bad), `небезпечний шлях пройшов: ${bad}`);
+  }
+  const withPhoto = CREDITS.filter(p => p.photo);
+  assert.ok(withPhoto.length > 0, 'жодного автора з фото');
+  for (const p of withPhoto) assert.ok(isSafePhotoPath(p.photo), `небезпечне фото: ${p.id}`);
+  const html = renderCredits();
+  for (const p of withPhoto) {
+    assert.ok(html.includes(`data-credits-id="${p.id}"`) && html.includes(`data-credits-photo="${p.photo}"`), `картка ${p.id} не клікабельна`);
+  }
+  assert.equal((html.match(/data-credits-photo=/g) || []).length, withPhoto.length, 'клікабельні лише картки з фото');
 });
