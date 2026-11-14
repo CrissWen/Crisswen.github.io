@@ -112,3 +112,32 @@ test('CAS: withRoomAction автоматично повторює спробу �
   assert.equal(fake.__getRoomRaw('CAS01').bunker_state.capacity, 3);
 });
 
+test('set_my_reveals atomically updates player reveal and appends log in single version increment', async () => {
+  const room = {
+    room_code: 'ATOMIC01',
+    status: 'in_progress',
+    version: 1,
+    bunker_state: { capacity: 2, logs: [] },
+    players_state: {
+      'user-1': { name: 'Юзер', traits: [{ value: 'Спокійний', is_revealed: false }] }
+    }
+  };
+  fake.__seedRoom(room);
+
+  const { error } = await fake.rpc('set_my_reveals', {
+    __userId: 'user-1',
+    p_room: 'ATOMIC01',
+    p_changes: [{ path: ['traits', '0'], value: true }],
+    p_log_text: 'Гравець Юзер відкрив характеристику Риса',
+    p_max_logs: 100
+  });
+
+  assert.equal(error, null);
+  const updated = fake.__getRoomRaw('ATOMIC01');
+  assert.equal(updated.version, 2, 'Version should increment only once');
+  assert.equal(updated.players_state['user-1'].traits[0].is_revealed, true);
+  assert.equal(updated.bunker_state.logs.length, 1);
+  assert.match(updated.bunker_state.logs[0].text, /відкрив характеристику Риса/);
+});
+
+

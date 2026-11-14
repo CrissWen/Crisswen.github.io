@@ -240,6 +240,16 @@ export function createFakeSupabase({ selectDelayMs = 0, updateDelayMs = 0 } = {}
           cursor.is_revealed = Boolean(ch.value);
         }
       }
+      const logText = String(params.p_log_text ?? '').trim();
+      if (logText && r.bunker_state && Object.keys(r.bunker_state).length > 0) {
+        const max = Math.max(params.p_max_logs ?? 100, 1);
+        const now = Date.now();
+        const seq = (r.bunker_state.event_seq ?? 0) + 1;
+        r.bunker_state.event_seq = seq;
+        const entry = { id: now * 1000 + (seq % 1000), t: now, text: logText.slice(0, 300) };
+        const logs = Array.isArray(r.bunker_state.logs) ? [...r.bunker_state.logs, entry] : [entry];
+        r.bunker_state.logs = logs.slice(-max);
+      }
       r.version = (r.version ?? 0) + 1;
       return { data: null, error: null };
     }
