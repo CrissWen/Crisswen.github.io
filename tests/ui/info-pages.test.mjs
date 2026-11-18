@@ -51,7 +51,8 @@ test('Правила: в кінці гри є посилання на тест �
   const timers = RULES_SECTIONS.find(s => s.id === 'timers');
   assert.ok(timers, 'немає пункту «Таймери й слово»');
   for (const sec of ['60 секунд', '30 секунд', '15 секунд']) {
-    assert.ok(timers.items.some(i => i.startsWith(sec)), `немає таймера ${sec}`);
+    // Пункти пишуться в markdown (**жирний**, ==виділення==), тож перед порівнянням знімаємо розмітку
+    assert.ok(timers.items.some(i => i.replace(/[*=]/g, '').startsWith(sec)), `немає таймера ${sec}`);
   }
 });
 

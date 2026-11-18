@@ -1,6 +1,7 @@
 import { esc } from '../../utils/common/escape-html.js';
 import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
-import { TITLE_MAX, DESC_MAX, STAGE_FIELDS, RANGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
+import { TITLE_MAX, DESC_MAX } from '../constants.js';
+import { STAGE_FIELDS, RANGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from './shared.js';
 
 const TEXTAREA_PLACEHOLDER = 'Введіть характеристики стовпчиком. Кожна нова характеристика — з нового рядка (клавіша Enter)';
 

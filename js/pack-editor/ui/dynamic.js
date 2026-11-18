@@ -1,5 +1,5 @@
 import { esc } from '../../utils/common/escape-html.js';
-import { $ } from './helpers.js';
+import { $ } from './shared.js';
 import { state } from '../state.js';
 
 // Червона зірочка для обов'язкових полів схеми (той самий вигляд, що й біля "Назва")
