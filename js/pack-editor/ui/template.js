@@ -1,7 +1,7 @@
 import { esc } from '../../utils/common/escape-html.js';
-import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
+import { CATACLYSM_LIMITS } from '../payload.js';
 import { TITLE_MAX, DESC_MAX } from '../constants.js';
-import { STAGE_FIELDS, RANGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER, TEXTAREA_PLACEHOLDER } from './constants.js';
+import { STAGE_FIELDS, RANGE_FIELDS, TEXTAREA_PLACEHOLDER } from './constants.js';
 
 const STAGE_DEL_BTN_HTML = `
   <button type="button" class="pe-stage-del" tabindex="-1" title="Видалити стадію" aria-label="Видалити стадію">
