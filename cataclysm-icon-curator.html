@@ -1118,7 +1118,7 @@
           </div>
           <button type="button" id="btn-export-catalog-js" class="pk-btn" style="min-height: 38px;">
             <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-            Копіювати код catastrophe-icons.js
+            Копіювати код для catastrophe-icons-data.js
           </button>
         </div>
       </div>
@@ -2662,7 +2662,7 @@
         renderMultiReviewerMatrix();
       });
 
-      // Копіювання коду catastrophe-icons.js
+      // Копіювання записів для CATASTROPHE_ICONS (js/constants/catastrophe-icons-data.js)
       document.getElementById('btn-export-catalog-js').addEventListener('click', () => {
         const snippet = iconsCatalog.map(i => {
           return `  ${i.id}: Object.freeze({\n    id: '${i.id}',\n    label: '${i.label}',\n    category: '${i.category}',\n    frame: '${i.frame || 'circle'}',\n    path: '${i.path}',\n    tags: Object.freeze(${JSON.stringify(i.tags)}),\n  }),`;
