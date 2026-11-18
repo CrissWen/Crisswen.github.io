@@ -2,7 +2,8 @@ import { esc } from '../../utils/common/escape-html.js';
 import { oneLine } from '../parser.js';
 import { cataMatches } from '../search.js';
 import { highlightHtml } from './search.js';
-import { $, CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
+import { $ } from './shared.js';
+import { CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './constants.js';
 import { state } from '../state.js';
 
 // ----- Катаклізми: форма і список -----

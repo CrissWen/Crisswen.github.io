@@ -1,7 +1,7 @@
 import { esc } from '../../utils/common/escape-html.js';
 import { oneLine } from '../parser.js';
 import { normalizeSearch } from '../search.js';
-import { $ } from './helpers.js';
+import { $ } from './shared.js';
 import { state } from '../state.js';
 
 // ----- Пошук: рендер -----

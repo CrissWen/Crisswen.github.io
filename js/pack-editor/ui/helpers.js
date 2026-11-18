@@ -3,7 +3,8 @@ import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from '..
 import { TITLE_MAX, DESC_MAX, CATACLYSM_LIMITS } from '../constants.js';
 import { STAGE_KEYS, OBJECT_STAGE_KEYS, parseStageEntry } from '../payload.js';
 import { parseLines, formatStageEntry } from '../parser.js';
-import { CATACLYSM_LIST_PLACEHOLDER, STAGE_FIELDS, RANGE_FIELDS, CATA_FIELDS, CATA_NUMERIC, $ } from './shared.js';
+import { $ } from './shared.js';
+import { CATACLYSM_LIST_PLACEHOLDER, TEXTAREA_PLACEHOLDER, PROFESSION_PLACEHOLDER, MULTILINE_NAME_CATEGORIES } from './constants.js';
 import { renderDynamicFormFields } from './dynamic.js';
 import { stageRowHtml } from './template.js';
 import { state } from '../state.js';
@@ -13,10 +14,9 @@ import Sortable from '../../vendor/sortable.esm.js';
 // Усі функції отримують дані аргументами й нічого не знають про стан сторінки.
 
 export { TITLE_MAX, DESC_MAX };
-export { CATACLYSM_LIST_PLACEHOLDER, STAGE_FIELDS, RANGE_FIELDS, CATA_FIELDS, CATA_NUMERIC, $ } from './shared.js';
+export { CATACLYSM_LIST_PLACEHOLDER, STAGE_FIELDS, RANGE_FIELDS, CATA_FIELDS, CATA_NUMERIC } from './constants.js';
+export { $ } from './shared.js';
 
-const TEXTAREA_PLACEHOLDER = 'Введіть характеристики стовпчиком. Кожна нова характеристика — з нового рядка (клавіша Enter)';
-const PROFESSION_PLACEHOLDER = 'Введіть професії стовпчиком (через Enter). Щоб додати професійну можливість, напишіть її через тире з пробілами. Наприклад: Лікар-хірург - Може вилікувати одну хворобу';
 
 
 export function placeholderFor(category) {
@@ -219,8 +219,6 @@ export function showCategory({ category, text, viewMode = "visual" }) {
 
   $("pe-cards").scrollTop = 0;
 }
-
-const MULTILINE_NAME_CATEGORIES = ['special_ability', 'backpack', 'large_inventory'];
 
 export function updateDynamicNameField(category) {
   const container = $('pe-dyn-name-wrap');
