@@ -3,7 +3,7 @@ import { oneLine } from '../parser.js';
 import { getStagePrompt } from '../prompts/stage-prompts.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import * as ui from '../ui/ui.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import { copyPromptToClipboard, handleStageKeydown } from './shared.js';
 

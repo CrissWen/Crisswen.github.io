@@ -1,6 +1,6 @@
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import { setMobileCardView } from '../controllers/mobile-nav.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 
 // Чіпи категорій і жовті попередження «мало карток».

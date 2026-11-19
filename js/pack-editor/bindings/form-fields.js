@@ -1,7 +1,7 @@
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { setMobileCardView } from '../controllers/mobile-nav.js';
 import * as ui from '../ui/ui.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import {
   getDynamicCards, dynDraftPending, startDynEdit, cataDraftPending, startCataEdit,

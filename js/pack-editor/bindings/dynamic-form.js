@@ -1,7 +1,7 @@
 import { parseLines } from '../parser.js';
 import { parseStageEntry } from '../payload.js';
 import * as ui from '../ui/ui.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import { handleDynClick, updateDynFormState, updateComboDropdown, submitDyn } from '../controllers/controllers.js';
 import { handleStageKeydown } from './shared.js';

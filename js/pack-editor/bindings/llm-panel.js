@@ -2,7 +2,7 @@ import { reconcileCards } from '../parser.js';
 import { getPromptForCategory } from '../categories.js';
 import { cataFieldStrings } from '../payload.js';
 import * as ui from '../ui/ui.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import {
   syncCataText, syncCataclysmsFromLlmText, syncCataclysmsToLlmText,

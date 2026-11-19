@@ -3,7 +3,7 @@ import { cardToLine } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import * as ui from '../ui/ui.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import {
   cataDraftPending, resetCataForm, dynDraftPending, resetDynForm, syncCataText,

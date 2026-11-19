@@ -1,6 +1,6 @@
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { setMobileCardView } from '../controllers/mobile-nav.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import { cataDraftPending, resetCataForm, dynDraftPending, resetDynForm } from '../controllers/controllers.js';
 

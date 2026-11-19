@@ -1,5 +1,5 @@
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
-import { $ } from '../ui/helpers.js';
+import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import { renderSearch } from '../controllers/controllers.js';
 
