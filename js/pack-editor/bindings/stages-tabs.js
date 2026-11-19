@@ -132,7 +132,7 @@ export function bindStagesTabs(ctx) {
 
         if (name) {
           const confirmed = await showPackConfirm(`Чи точно хочете видалити стадію "${oneLine(name)}"?`, delBtn, { confirmLabel: 'Видалити' });
-          if (!confirmed) return;
+          if (!confirmed || signal?.aborted) return;
         }
 
         row.remove();

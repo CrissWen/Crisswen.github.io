@@ -205,6 +205,7 @@ export function startCataEdit(index) {
 export async function deleteCata(btn) {
   const item = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
   if (!item || state.isConfirming) return;
+  const sessionId = state.sessionId;
 
   state.isConfirming = true;
   let confirmed = false;
@@ -213,7 +214,7 @@ export async function deleteCata(btn) {
   } finally {
     state.isConfirming = false;
   }
-  if (!confirmed) return;
+  if (!confirmed || state.sessionId !== sessionId) return;
 
   // Після await індекс міг змінитися (наприклад, "Очистити все"), тому шукаємо запис за посиланням
   const index = state.form.cataclysms.indexOf(item);

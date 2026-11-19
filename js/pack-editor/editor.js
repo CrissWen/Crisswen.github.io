@@ -257,8 +257,9 @@ setDynamicOrchestrator(({ scrollToEnd = false } = {}) => {
 });
 
 // ----- Ініціалізація -----
-async function loadPackIntoForm(id) {
+async function loadPackIntoForm(id, isStale = () => false) {
   const pack = await getPack(id);
+  if (isStale()) return false;
   // Для адміна getPack повертає повний об'єкт базового пака (isDefault: true, isAdmin: true) — його пускаємо.
   // Для звичайного користувача — лише заглушка { isDefault: true } (без isAdmin), її блокуємо.
   const blockedDefault = Boolean(pack?.isDefault && !pack.isAdmin);
@@ -357,35 +358,48 @@ function resetEditorState() {
   state.searchAll = false;
 }
 
-// Завантажує дані редактора; false — користувача вже перенаправлено (немає прав, ліміт, помилка)
-async function loadEditorData() {
+// Завантажує дані редактора; false — користувача вже перенаправлено (немає прав, ліміт, помилка, застаріла сесія)
+async function loadEditorData({ sessionId, signal, packId }) {
+  const isStale = () => state.sessionId !== sessionId || signal.aborted;
   try {
     // Базовий пак редагує лише адмін: перевіряємо ще до завантаження даних (статус кешується в packs-store.js; дублює перевірку в getPack)
-    if (state.packId === DEFAULT_PACK_ID && !(await checkIsAdmin())) {
-      showGlobalToast('Дефолтний пак не можна редагувати');
-      goToList();
-      return false;
+    if (packId === DEFAULT_PACK_ID) {
+      const isAdmin = await checkIsAdmin();
+      if (isStale()) return false;
+      if (!isAdmin) {
+        showGlobalToast('Дефолтний пак не можна редагувати');
+        goToList();
+        return false;
+      }
     }
 
     // Новий пак при вичерпаному ліміті не відкриваємо (збереження теж перевіряє ліміт). Збій самого підрахунку редактор не блокує.
-    if (!state.packId && await countPersonalPacks().then(n => n >= MAX_PERSONAL_PACKS, () => false)) {
-      showGlobalToast(PACK_LIMIT_MESSAGE);
-      goToList();
-      return false;
+    if (!packId) {
+      const overLimit = await countPersonalPacks().then(n => n >= MAX_PERSONAL_PACKS, () => false);
+      if (isStale()) return false;
+      if (overLimit) {
+        showGlobalToast(PACK_LIMIT_MESSAGE);
+        goToList();
+        return false;
+      }
     }
 
     // Конфіг дефолтного пака потрібен в обох режимах: без нього не зібрати повний config (age_range, height_range...)
-    state.defaultConfig = await getDefaultPackConfig();
+    const defaultConfig = await getDefaultPackConfig();
+    if (isStale()) return false;
+    state.defaultConfig = defaultConfig;
     state.baseStages = stagesTextFromConfig(state.defaultConfig);
     state.baseRanges = rangesFromConfig(state.defaultConfig, RANGE_DEFAULTS);
 
-    if (state.packId) {
-      if (!(await loadPackIntoForm(state.packId))) return false;
+    if (packId) {
+      const loaded = await loadPackIntoForm(packId, isStale);
+      if (isStale() || !loaded) return false;
     } else {
       state.form = blankForm();
       state.initialForm = cloneForm(state.form);
     }
   } catch (err) {
+    if (isStale()) return false;
     console.error('Не вдалося завантажити дані редактора:', err);
     showGlobalToast(err.message || 'Не вдалося завантажити дані');
     goToList();
@@ -404,6 +418,7 @@ export async function initPackEditor() {
 
   resetEditorState();
   const sessionId = state.sessionId;
+  const packId = state.packId;
 
   window.addEventListener('beforeunload', onBeforeUnload, { signal });
 
@@ -421,7 +436,7 @@ export async function initPackEditor() {
   bindWidgets(ctx);
   bindEditorKeys(ctx);
 
-  if (!(await loadEditorData())) return;
+  if (!(await loadEditorData({ sessionId, signal, packId }))) return;
 
   // Користувач міг устигнути піти зі сторінки (або перевідкрити редактор), поки вантажились дані
   if (state.sessionId !== sessionId || signal.aborted || !ui.isEditorMounted()) return;
@@ -430,7 +445,7 @@ export async function initPackEditor() {
   syncFieldsFromForm();
   ui.updateSortBtnUi(state.cardsSortDir);
   initMobileNav();
-  if (!state.packId) ui.focusTitle();
+  if (!packId) ui.focusTitle();
 
   // Автосейв чернеток, Undo/Redo, гарячі клавіші, банер відновлення. Після завантаження даних: базова лінія історії = початковий стан
   await initAutosave({ syncFieldsFromForm, exitDeleteMode: ctx.deleteMode.exit });

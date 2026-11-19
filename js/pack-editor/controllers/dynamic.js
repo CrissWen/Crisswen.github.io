@@ -589,6 +589,7 @@ export function submitDyn() {
 
 export async function deleteDyn(btn) {
   if (state.dynEditIndex < 0 || state.isConfirming) return;
+  const sessionId = state.sessionId;
   const cards = getDynamicCards();
   const item = cards[state.dynEditIndex];
 
@@ -599,7 +600,7 @@ export async function deleteDyn(btn) {
   } finally {
     state.isConfirming = false;
   }
-  if (!confirmed) return;
+  if (!confirmed || state.sessionId !== sessionId) return;
 
   if (item?.id) {
     state.markCardDeleted(item.id);
