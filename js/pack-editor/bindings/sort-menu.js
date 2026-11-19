@@ -1,36 +1,8 @@
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { $ } from '../ui/shared.js';
+import { updateSortBtnUi } from '../ui/ui.js';
 import { state } from '../state.js';
 import { renderSearch } from '../controllers/controllers.js';
-
-// Підпис і стан кнопки сортування за state.cardsSortDir
-export function updateSortBtnUi() {
-  const sortBtn = $('pe-sort-btn');
-  const sortMenu = $('pe-sort-menu');
-  if (!sortBtn || !sortMenu) return;
-
-  const dir = state.cardsSortDir || 'none';
-  const isSorted = dir !== 'none';
-
-  sortBtn.classList.toggle('is-active', isSorted);
-  if (dir === 'asc') {
-    sortBtn.title = 'Сортувати в порядку Від "А" до "Я"';
-    sortBtn.setAttribute('aria-label', 'Сортувати в порядку Від "А" до "Я"');
-  } else if (dir === 'desc') {
-    sortBtn.title = 'Сортувати в порядку Від "Я" до "А"';
-    sortBtn.setAttribute('aria-label', 'Сортувати в порядку Від "Я" до "А"');
-  } else {
-    sortBtn.title = 'Сортування списку';
-    sortBtn.setAttribute('aria-label', 'Сортування списку');
-  }
-
-  sortMenu.querySelectorAll('.pe-sort-menu__item').forEach(item => {
-    const active = item.dataset.sortDir === dir;
-    item.classList.toggle('is-active', active);
-    const check = item.querySelector('.pe-sort-menu__check');
-    if (check) check.textContent = active ? '✓' : '';
-  });
-}
 
 // Кнопка та меню сортування карток
 export function bindSortMenu(ctx) {
@@ -40,7 +12,7 @@ export function bindSortMenu(ctx) {
 
   function applyCardSort(dir = 'none') {
     state.cardsSortDir = dir;
-    updateSortBtnUi();
+    updateSortBtnUi(state.cardsSortDir);
     ctx.renderList();
     renderSearch();
     if (dir === 'asc') showGlobalToast('Сортувати в порядку Від "А" до "Я"');

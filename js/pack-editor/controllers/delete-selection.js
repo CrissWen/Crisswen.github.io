@@ -1,4 +1,7 @@
 import { state } from '../state.js';
+import { cardToLine } from '../parser.js';
+import { syncCataText } from './cataclysm.js';
+import { getDynamicCards } from './dynamic.js';
 
 // ===== Режим масового видалення: вибір карток =====
 // Спільна логіка для кліків по списку карток і по результатах пошуку (раніше була продубльована в обох місцях).
@@ -62,4 +65,62 @@ export function toggleSelectVisible(visibleIndices) {
 
 export function areAllSelected(visibleIndices) {
   return visibleIndices.length > 0 && visibleIndices.every(i => state.selectedDeleteIndices.has(i));
+}
+
+// Масове видалення обраних карток із категорії (повертає кількість видалених записів)
+export function executeBulkDeletion({ toDelete, category } = {}) {
+  const targetCategory = category ?? state.activeCategory;
+  const indices = toDelete instanceof Set ? toDelete : new Set(toDelete || []);
+  let deletedCount = 0;
+
+  if (targetCategory === 'cataclysm') {
+    const prev = state.form.cataclysms || [];
+    for (let i = 0; i < prev.length; i++) {
+      if (indices.has(i)) {
+        deletedCount++;
+        if (prev[i]?.id) state.markCardDeleted(prev[i].id);
+      }
+    }
+    state.form.cataclysms = prev.filter((_, i) => !indices.has(i));
+    syncCataText();
+  } else {
+    const cards = targetCategory === state.activeCategory
+      ? getDynamicCards()
+      : (state.cardData[targetCategory] || []);
+    const deletedNames = new Set();
+    const remainingCards = [];
+
+    for (let i = 0; i < cards.length; i++) {
+      if (indices.has(i)) {
+        deletedCount++;
+        if (cards[i]?.id) state.markCardDeleted(cards[i].id);
+        if (targetCategory === 'gender') deletedNames.add(cards[i].value);
+      } else {
+        remainingCards.push(cards[i]);
+      }
+    }
+
+    if (!state.cardData) state.cardData = {};
+    state.cardData[targetCategory] = remainingCards;
+
+    // Якщо стать, очищаємо протилежну стать, якщо вона посилалася на видалену картку
+    if (targetCategory === 'gender' && deletedNames.size > 0) {
+      for (const c of remainingCards) {
+        if (c.meta?.opposite && deletedNames.has(c.meta.opposite)) {
+          delete c.meta.opposite;
+        }
+      }
+    }
+
+    if (!state.form.texts) state.form.texts = {};
+    state.form.texts[targetCategory] = remainingCards
+      .map(c => cardToLine(targetCategory, c.value, c.meta))
+      .join('\n');
+  }
+
+  // Індекси зсунулись: мітка «нова» більше не вказує на ту саму картку
+  state.newCataIndex = -1;
+  state.newDynIndex = -1;
+
+  return deletedCount;
 }

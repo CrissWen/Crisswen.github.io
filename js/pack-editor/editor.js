@@ -28,7 +28,7 @@ import { bindDynamicForm } from './bindings/dynamic-form.js';
 import { bindLlmPanel } from './bindings/llm-panel.js';
 import { bindChips } from './bindings/chips.js';
 import { bindMobileFab } from './bindings/mobile-fab.js';
-import { bindSortMenu, updateSortBtnUi } from './bindings/sort-menu.js';
+import { bindSortMenu } from './bindings/sort-menu.js';
 import { bindStagesTabs } from './bindings/stages-tabs.js';
 import { bindWidgets } from './bindings/widgets.js';
 import { bindEditorKeys } from './bindings/editor-keys.js';
@@ -420,7 +420,7 @@ export async function initPackEditor() {
   ui.markEditorLoaded();
 
   syncFieldsFromForm();
-  updateSortBtnUi();
+  ui.updateSortBtnUi(state.cardsSortDir);
   initMobileNav();
   if (!state.packId) ui.focusTitle();
 

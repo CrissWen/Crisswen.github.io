@@ -277,3 +277,32 @@ export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 
   }
 }
 
+// Підпис і стан кнопки сортування за напрямком dir ('none' | 'asc' | 'desc')
+export function updateSortBtnUi(dir = 'none') {
+  const sortBtn = $('pe-sort-btn');
+  const sortMenu = $('pe-sort-menu');
+  if (!sortBtn || !sortMenu) return;
+
+  const normalizedDir = dir || 'none';
+  const isSorted = normalizedDir !== 'none';
+
+  sortBtn.classList.toggle('is-active', isSorted);
+  if (normalizedDir === 'asc') {
+    sortBtn.title = 'Сортувати в порядку Від "А" до "Я"';
+    sortBtn.setAttribute('aria-label', 'Сортувати в порядку Від "А" до "Я"');
+  } else if (normalizedDir === 'desc') {
+    sortBtn.title = 'Сортувати в порядку Від "Я" до "А"';
+    sortBtn.setAttribute('aria-label', 'Сортувати в порядку Від "Я" до "А"');
+  } else {
+    sortBtn.title = 'Сортування списку';
+    sortBtn.setAttribute('aria-label', 'Сортування списку');
+  }
+
+  sortMenu.querySelectorAll('.pe-sort-menu__item').forEach(item => {
+    const active = item.dataset.sortDir === normalizedDir;
+    item.classList.toggle('is-active', active);
+    const check = item.querySelector('.pe-sort-menu__check');
+    if (check) check.textContent = active ? '✓' : '';
+  });
+}
+

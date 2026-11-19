@@ -1,13 +1,12 @@
 import { ALL_PACK_CATEGORIES } from '../categories.js';
-import { cardToLine } from '../parser.js';
 import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
 import * as ui from '../ui/ui.js';
 import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import {
-  cataDraftPending, resetCataForm, dynDraftPending, resetDynForm, syncCataText,
-  getDynamicCards, renderSearch, visibleListIndices, applyDeleteClick,
+  cataDraftPending, resetCataForm, dynDraftPending, resetDynForm,
+  executeBulkDeletion, renderSearch, visibleListIndices, applyDeleteClick,
   toggleSelectVisible, areAllSelected
 } from '../controllers/controllers.js';
 
@@ -106,48 +105,16 @@ export function createDeleteMode(ctx) {
     }
     if (!confirmed || signal?.aborted) return;
 
-    const toDelete = state.selectedDeleteIndices;
-
-    if (state.activeCategory === 'cataclysm') {
-      for (let i = 0; i < state.form.cataclysms.length; i++) {
-        if (toDelete.has(i) && state.form.cataclysms[i]?.id) {
-          state.markCardDeleted(state.form.cataclysms[i].id);
-        }
-      }
-      state.form.cataclysms = state.form.cataclysms.filter((_, i) => !toDelete.has(i));
-      syncCataText();
-    } else {
-      const cards = getDynamicCards();
-      for (let i = 0; i < cards.length; i++) {
-        if (toDelete.has(i) && cards[i]?.id) {
-          state.markCardDeleted(cards[i].id);
-        }
-      }
-      const remainingCards = cards.filter((_, i) => !toDelete.has(i));
-      state.cardData[state.activeCategory] = remainingCards;
-
-      // Якщо стать, очищаємо протилежну стать, якщо вона посилалася на видалену картку
-      if (state.activeCategory === 'gender') {
-        const deletedNames = new Set(cards.filter((_, i) => toDelete.has(i)).map(c => c.value));
-        for (const c of remainingCards) {
-          if (c.meta?.opposite && deletedNames.has(c.meta.opposite)) {
-            delete c.meta.opposite;
-          }
-        }
-      }
-
-      state.form.texts[state.activeCategory] = remainingCards.map(c => cardToLine(state.activeCategory, c.value, c.meta)).join('\n');
-    }
-
-    // Індекси зсунулись: мітка «нова» більше не вказує на ту саму картку
-    state.newCataIndex = -1;
-    state.newDynIndex = -1;
+    const deletedCount = executeBulkDeletion({
+      toDelete: state.selectedDeleteIndices,
+      category: state.activeCategory
+    });
 
     exit();
     ctx.updateCardsMeta();
     ctx.renderSummary();
     ctx.updateButtons();
-    showGlobalToast(`Видалено записів: ${count}`);
+    showGlobalToast(`Видалено записів: ${deletedCount}`);
   }
 
   return { enter, exit, toggleSelectAll, applyClick, executeBulk, updateUi, visibleIndices };
