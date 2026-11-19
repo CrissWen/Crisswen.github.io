@@ -30,7 +30,14 @@ export const cataFilterActive = () => state.activeCategory === 'cataclysm' && !s
 // Перемальовує панель результатів, лічильник і кнопку "×" за станом
 export function renderSearch() {
   const tokens = searchTokens();
-  const view = { query: state.searchQuery, tokens, searchAll: state.searchAll };
+  const view = {
+    query: state.searchQuery,
+    tokens,
+    searchAll: state.searchAll,
+    activeCategory: state.activeCategory,
+    isDeleteMode: state.isDeleteMode,
+    selectedDeleteIndices: state.selectedDeleteIndices
+  };
 
   if (!tokens.length) {
     ui.paintSearch({ ...view, mode: 'idle' });

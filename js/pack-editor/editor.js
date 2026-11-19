@@ -159,7 +159,12 @@ function selectCategory(category) {
   state.activeCategory = category;
   if (state.viewMode === 'llm' && category === 'cataclysm') syncCataclysmsToLlmText();
 
-  ui.showCategory({ category, text: state.form.texts[category] || '', viewMode: state.viewMode });
+  ui.showCategory({
+    category,
+    text: state.form.texts[category] || '',
+    viewMode: state.viewMode,
+    ageCategoriesText: state.form?.stages?.age_categories || ''
+  });
 
   resetCataForm();
   resetDynForm();
@@ -198,7 +203,10 @@ function renderList() {
       editIndex: state.dynEditIndex,
       newIndex: state.newDynIndex,
       tokens: state.searchAll && !cataFilterActive() ? searchTokens() : [],
-      category: state.activeCategory
+      category: state.activeCategory,
+      cardsSortDir: state.cardsSortDir,
+      isDeleteMode: state.isDeleteMode,
+      selectedDeleteIndices: state.selectedDeleteIndices
     });
   }
 }

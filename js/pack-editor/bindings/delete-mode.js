@@ -23,7 +23,8 @@ export function createDeleteMode(ctx) {
       isDeleteMode: state.isDeleteMode,
       selectedCount: state.selectedDeleteIndices.size,
       totalCount: visible.length,
-      allSelected: areAllSelected(visible)
+      allSelected: areAllSelected(visible),
+      activeCategory: state.activeCategory
     });
     const fab = $('pe-fab-back');
     if (fab) fab.hidden = state.isDeleteMode;

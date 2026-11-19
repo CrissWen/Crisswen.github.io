@@ -7,7 +7,6 @@ import { CATACLYSM_LIST_PLACEHOLDER, TEXTAREA_PLACEHOLDER, PROFESSION_PLACEHOLDE
 import { renderDynamicFormFields } from './dynamic.js';
 import { renderStageList, renderDynStageList } from './stage-list.js';
 import { initStageSortables } from './stage-sortable.js';
-import { state } from '../state.js';
 
 // ===== UI редактора паків: загальні хелпери DOM =====
 // Усі функції отримують дані аргументами й нічого не знають про стан сторінки.
@@ -52,7 +51,7 @@ export function setLlmCopyVisible(on) {
 }
 
 // Показує категорію: перемикає textarea / списки / форми залежно від наявності схеми та режиму
-export function showCategory({ category, text, viewMode = "visual" }) {
+export function showCategory({ category, text, viewMode = "visual", ageCategoriesText = '' }) {
   const isCata = category === "cataclysm";
   const schema = CATEGORY_SCHEMAS[category];
   const hasVisualMode = isCata || Boolean(schema);
@@ -96,10 +95,9 @@ export function showCategory({ category, text, viewMode = "visual" }) {
       $('pe-cata').hidden = true;
       $('pe-dynamic-form').hidden = false;
       updateDynamicNameField(category);
-      renderDynamicFormFields(schema);
+      renderDynamicFormFields(schema, category);
       if (category === 'gender') {
-        const rawText = state.form?.stages?.['age_categories'] || '';
-        const lines = parseLines(rawText);
+        const lines = parseLines(ageCategoriesText || '');
         const entries = lines.map(line => parseStageEntry('age_categories', line));
         renderDynStageList('gender', entries);
       }
@@ -212,12 +210,12 @@ export function focusSiblingRow(btn, dir) {
 
 // Керування виглядом панелі видалення та блокуванням форми.
 // totalCount — скільки рядків зараз видно; allSelected — чи вибрані усі видимі (без нього порівнюємо лічильники).
-export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 0, allSelected = null }) {
+export function setDeleteModeUi({ isDeleteMode, selectedCount = 0, totalCount = 0, allSelected = null, activeCategory = '' }) {
   const deleteToolbar = $('pe-delete-toolbar');
   const bulkBtn = $('pe-bulk-delete-btn');
   const deleteOverlay = $('pe-delete-overlay');
   const listWrap = $('pe-cata-list-wrap');
-  const isCata = state.activeCategory === 'cataclysm';
+  const isCata = activeCategory === 'cataclysm';
   const activeForm = isCata ? $('pe-cata') : $('pe-dynamic-form');
 
   if (listWrap) listWrap.classList.toggle('is-delete-mode', isDeleteMode);

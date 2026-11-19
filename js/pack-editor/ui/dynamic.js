@@ -1,7 +1,6 @@
 import { esc } from '../../utils/common/escape-html.js';
 import { initCustomSelects } from '../../ui/custom-select.js';
 import { $ } from './shared.js';
-import { state } from '../state.js';
 
 // Червона зірочка для обов'язкових полів схеми (той самий вигляд, що й біля "Назва")
 const reqMark = f => (f.required ? ` <span class="pe-required" title="Обов'язкове поле">*</span>` : '');
@@ -80,7 +79,7 @@ function renderSingleField(f, schema, isInsideRow = false) {
   }
 }
 
-export function renderDynamicFormFields(schema) {
+export function renderDynamicFormFields(schema, activeCategory = '') {
   const container = $('pe-dyn-fields');
   if (!schema || !schema.fields) {
     container.innerHTML = '';
@@ -91,7 +90,7 @@ export function renderDynamicFormFields(schema) {
 
   container.innerHTML = schema.fields.map(f => {
     if (f.key === 'stages') {
-      if (['profession', 'hobby', 'health'].includes(state.activeCategory)) {
+      if (['profession', 'hobby', 'health'].includes(activeCategory)) {
         return `
           <div class="pe-field pe-dyn-field-checkbox">
             <label class="pe-check" for="pe-dyn-custom-stages-toggle">
@@ -101,10 +100,10 @@ export function renderDynamicFormFields(schema) {
             </label>
           </div>
           <div id="pe-dyn-stages-wrap" class="pe-dyn-stages-wrap" hidden>
-            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="${state.activeCategory}"></div>
+            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="${activeCategory}"></div>
             <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
           </div>`;
-      } else if (state.activeCategory === 'gender') {
+      } else if (activeCategory === 'gender') {
         return `
           <div id="pe-dyn-gender-stages-wrap" class="pe-dyn-stages-wrap" hidden>
             <label class="pe-label">Власні вікові стадії (категорії)</label>

@@ -4,7 +4,6 @@ import { cataMatches } from '../search.js';
 import { highlightHtml } from './search.js';
 import { $ } from './shared.js';
 import { CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './constants.js';
-import { state } from '../state.js';
 
 // ----- Катаклізми: форма і список -----
 export function readCataRaw() {
@@ -58,8 +57,18 @@ export const scrollCataListToEnd = () => $('pe-cata-list').lastElementChild?.scr
 
 // Список доданих катаклізмів — справжні рядки (кнопки .added-item-row), а не текст у textarea: підсвічування при наведенні,
 // "протискання" й виділення обраного рядка робить CSS (packs.css), без вимірювань геометрії та JS-анімацій.
-// view: { cataclysms, editIndex, newIndex, tokens }; tokens — слова пошуку, якщо список зараз фільтрується (інакше порожній масив).
-export function renderCataList({ cataclysms, editIndex, newIndex, tokens, category = 'cataclysm' }) {
+// view: { cataclysms, editIndex, newIndex, tokens, category, cardsSortDir, isDeleteMode, selectedDeleteIndices };
+// tokens — слова пошуку, якщо список зараз фільтрується (інакше порожній масив).
+export function renderCataList({
+  cataclysms,
+  editIndex,
+  newIndex,
+  tokens,
+  category = 'cataclysm',
+  cardsSortDir = 'none',
+  isDeleteMode = false,
+  selectedDeleteIndices = null
+}) {
   const list = $('pe-cata-list');
   // Перемальовка замінює кнопки, тож клавіатурний фокус треба повернути на рядок з тим самим індексом
   const focusedIndex = document.activeElement?.closest?.('[data-cata-index]')?.dataset.cataIndex;
@@ -79,9 +88,9 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   }
 
   // Візуальне сортування (не змінює вихідні дані пака)
-  if (state.cardsSortDir && state.cardsSortDir !== 'none') {
+  if (cardsSortDir && cardsSortDir !== 'none') {
     const collator = new Intl.Collator('uk', { numeric: true, sensitivity: 'base' });
-    const isDesc = state.cardsSortDir === 'desc';
+    const isDesc = cardsSortDir === 'desc';
     rows.sort((a, b) => {
       const res = collator.compare(a.c.name || '', b.c.name || '') || (a.i - b.i);
       return isDesc ? -res : res;
@@ -89,13 +98,13 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   }
 
   list.innerHTML = rows.map(({ c, i }) => {
-    const isMarkedDelete = state.isDeleteMode && state.selectedDeleteIndices.has(i);
-    const selected = !state.isDeleteMode && i === editIndex;
-    const isNew = !state.isDeleteMode && i === newIndex;
+    const isMarkedDelete = isDeleteMode && Boolean(selectedDeleteIndices?.has(i));
+    const selected = !isDeleteMode && i === editIndex;
+    const isNew = !isDeleteMode && i === newIndex;
     const descHtml = (category !== 'cataclysm' && c.description) ? `<span style="opacity:0.7"> - ${highlightHtml(oneLine(c.description), tokens)}</span>` : '';
     
     let rowClasses = 'added-item-row';
-    if (state.isDeleteMode) {
+    if (isDeleteMode) {
       rowClasses += ' is-delete-mode';
       if (isMarkedDelete) rowClasses += ' is-marked-delete';
     } else {
@@ -103,18 +112,18 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
       if (isNew) rowClasses += ' is-new';
     }
 
-    const checkHtml = state.isDeleteMode
+    const checkHtml = isDeleteMode
       ? `<span class="added-item-row__check" aria-hidden="true">${isMarkedDelete ? '✓' : ''}</span>`
       : '';
 
-    const hintHtml = state.isDeleteMode
+    const hintHtml = isDeleteMode
       ? (isMarkedDelete
           ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
           : `<span class="added-item-row__hint added-item-row__hint--pick">обрати</span>`)
       : `<span class="added-item-row__hint">${selected ? 'редагується' : 'редагувати'}</span>`;
 
     return `
-      <button type="button" class="${rowClasses}" data-cata-index="${i}" aria-pressed="${state.isDeleteMode ? isMarkedDelete : selected}">
+      <button type="button" class="${rowClasses}" data-cata-index="${i}" aria-pressed="${isDeleteMode ? isMarkedDelete : selected}">
         ${checkHtml}
         <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}${descHtml}</span>
         ${hintHtml}

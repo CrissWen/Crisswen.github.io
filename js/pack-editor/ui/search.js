@@ -2,7 +2,6 @@ import { esc } from '../../utils/common/escape-html.js';
 import { oneLine } from '../parser.js';
 import { normalizeSearch } from '../search.js';
 import { $ } from './shared.js';
-import { state } from '../state.js';
 
 // ----- Пошук: рендер -----
 // Екранований HTML з підсвіченими збігами (<mark>). Якщо нормалізація змінила довжину рядка, позиції б зсунулись — тоді без підсвітки.
@@ -47,21 +46,21 @@ function snippetHtml(text, tokens) {
   return `<small class="pe-result__snippet">${from > 0 ? '…' : ''}${highlightHtml(part, tokens)}${from + 90 < src.length ? '…' : ''}</small>`;
 }
 
-function resultRowHtml(r, tokens, searchAll) {
-  const isCurrentCat = r.category === state.activeCategory;
-  const isMarkedDelete = state.isDeleteMode && isCurrentCat && state.selectedDeleteIndices.has(r.type === 'cata' ? r.index : r.cardIndex);
+function resultRowHtml(r, tokens, searchAll, { activeCategory = '', isDeleteMode = false, selectedDeleteIndices = null } = {}) {
+  const isCurrentCat = r.category === activeCategory;
+  const isMarkedDelete = isDeleteMode && isCurrentCat && Boolean(selectedDeleteIndices?.has(r.type === 'cata' ? r.index : r.cardIndex));
 
   let rowClasses = 'added-item-row pe-result';
-  if (state.isDeleteMode && isCurrentCat) {
+  if (isDeleteMode && isCurrentCat) {
     rowClasses += ' is-delete-mode';
     if (isMarkedDelete) rowClasses += ' is-marked-delete';
   }
 
-  const checkHtml = state.isDeleteMode && isCurrentCat
+  const checkHtml = isDeleteMode && isCurrentCat
     ? `<span class="added-item-row__check" aria-hidden="true">${isMarkedDelete ? '✓' : ''}</span>`
     : '';
 
-  const deleteHintHtml = state.isDeleteMode && isCurrentCat
+  const deleteHintHtml = isDeleteMode && isCurrentCat
     ? (isMarkedDelete
         ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
         : `<span class="added-item-row__hint added-item-row__hint--pick">обрати</span>`)
@@ -85,7 +84,7 @@ function resultRowHtml(r, tokens, searchAll) {
 }
 
 // Перемальовує панель результатів, лічильник і кнопку "×".
-// view: { query, tokens, searchAll, mode } і залежно від mode:
+// view: { query, tokens, searchAll, mode, activeCategory, isDeleteMode, selectedDeleteIndices } і залежно від mode:
 //   'idle'        — запиту немає: панель прихована;
 //   'cata-filter' — фільтрується сам список катаклізмів (cataCount — скільки збігів), окрема панель не потрібна;
 //   'results'     — список знайдених рядків (results, total з collectSearchResults).
@@ -109,7 +108,12 @@ export function paintSearch(view) {
     return;
   }
 
-  const { results, total, tokens, query, searchAll } = view;
+  const { results, total, tokens, query, searchAll, activeCategory, isDeleteMode, selectedDeleteIndices } = view;
+  const deleteState = {
+    activeCategory,
+    isDeleteMode: Boolean(isDeleteMode),
+    selectedDeleteIndices
+  };
   panel.hidden = false;
   if (!total) {
     count.textContent = 'Нічого не знайдено';
@@ -117,7 +121,7 @@ export function paintSearch(view) {
     return;
   }
   count.textContent = total > results.length ? `Знайдено: ${total} (показано ${results.length})` : `Знайдено: ${total}`;
-  panel.innerHTML = results.map(r => resultRowHtml(r, tokens, searchAll)).join('');
+  panel.innerHTML = results.map(r => resultRowHtml(r, tokens, searchAll, deleteState)).join('');
 }
 
 // Початкові значення елементів пошуку (на старті сторінки)

@@ -247,3 +247,308 @@ test('ui/helpers.js exports updateSortBtnUi(dir) pure of state.cardsSortDir and 
     state.cardsSortDir = prevSortDir;
   }
 });
+
+const UI_DIR = path.join(PACK_EDITOR_DIR, 'ui');
+const uiFiles = fs.readdirSync(UI_DIR)
+  .filter((name) => name.endsWith('.js'))
+  .sort();
+
+for (const fileName of uiFiles) {
+  test(`ui/${fileName} does not import state.js`, () => {
+    const src = fs.readFileSync(path.join(UI_DIR, fileName), 'utf8');
+    const importsState = /from\s+['"][^'"]*state\.js['"]|import\s*\(\s*['"][^'"]*state\.js['"]\s*\)/.test(src);
+    assert.equal(
+      importsState,
+      false,
+      `js/pack-editor/ui/${fileName} must be pure DOM/rendering and must not import state.js`
+    );
+  });
+}
+
+function makeClassList(initial = []) {
+  const classes = new Set(initial);
+  return {
+    add(...names) { names.forEach(n => classes.add(n)); },
+    remove(...names) { names.forEach(n => classes.delete(n)); },
+    toggle(name, force) {
+      if (force === undefined) {
+        if (classes.has(name)) { classes.delete(name); return false; }
+        classes.add(name); return true;
+      }
+      if (force) classes.add(name);
+      else classes.delete(name);
+      return Boolean(force);
+    },
+    contains(name) { return classes.has(name); }
+  };
+}
+
+test('ui/dynamic.js renderDynamicFormFields(schema, activeCategory) uses activeCategory param and ignores state.activeCategory', async () => {
+  const [{ state }, { CATEGORY_SCHEMAS }, { renderDynamicFormFields }] = await Promise.all([
+    import('../../js/pack-editor/state.js'),
+    import('../../js/pack-editor/categories.js'),
+    import('../../js/pack-editor/ui/dynamic.js')
+  ]);
+
+  const container = { innerHTML: '', querySelectorAll: () => [] };
+  const prevDocument = globalThis.document;
+  const prevActiveCategory = state.activeCategory;
+  try {
+    globalThis.document = {
+      readyState: 'complete',
+      getElementById(id) { return id === 'pe-dyn-fields' ? container : null; },
+      querySelectorAll: () => []
+    };
+
+    state.activeCategory = 'gender';
+    renderDynamicFormFields(CATEGORY_SCHEMAS.profession, 'profession');
+    assert.match(container.innerHTML, /data-dyn-stage-list="profession"/);
+    assert.doesNotMatch(container.innerHTML, /pe-dyn-gender-stages-wrap/);
+
+    state.activeCategory = 'profession';
+    renderDynamicFormFields(CATEGORY_SCHEMAS.gender, 'gender');
+    assert.match(container.innerHTML, /pe-dyn-gender-stages-wrap/);
+    assert.doesNotMatch(container.innerHTML, /data-dyn-stage-list="profession"/);
+  } finally {
+    globalThis.document = prevDocument;
+    state.activeCategory = prevActiveCategory;
+  }
+});
+
+test('ui/helpers.js showCategory uses category and ageCategoriesText params and ignores state', async () => {
+  const [{ state }, { showCategory }] = await Promise.all([
+    import('../../js/pack-editor/state.js'),
+    import('../../js/pack-editor/ui/helpers.js')
+  ]);
+
+  const dynFields = { innerHTML: '', querySelectorAll: () => [] };
+  const genderStageContainer = {
+    innerHTML: '',
+    querySelectorAll: (sel) => (sel === '.pe-stage-row'
+      ? [{
+          classList: makeClassList(),
+          querySelector: (s) => (s === '.pe-stage-name' ? { value: '' } : null)
+        }]
+      : [])
+  };
+  const llmToggleWrap = { classList: makeClassList() };
+  const formCol = { hidden: false };
+  const elements = {
+    'pe-cat-breadcrumb': { textContent: '' },
+    'pe-cat-title': { textContent: '' },
+    'pe-dyn-category-label': { textContent: '' },
+    'pe-cards': { value: '', placeholder: '', hidden: false, scrollTop: 10 },
+    'pe-llm-mode': { disabled: false, checked: false, closest: () => llmToggleWrap },
+    'pe-llm-slot': { classList: makeClassList() },
+    'pe-cata-list-wrap': { hidden: false },
+    'pe-cata-list': { hidden: false },
+    'pe-cata': { hidden: false, closest: () => formCol },
+    'pe-dynamic-form': { hidden: true },
+    'pe-dyn-name-wrap': { innerHTML: '' },
+    'pe-dyn-name': null,
+    'pe-dyn-fields': dynFields,
+    'pe-bulk-delete-btn': { hidden: false },
+    'pe-sort-wrap': { hidden: false }
+  };
+
+  const prevDocument = globalThis.document;
+  const prevActiveCategory = state.activeCategory;
+  const prevStages = state.form.stages;
+  try {
+    globalThis.document = {
+      readyState: 'complete',
+      getElementById(id) { return elements[id] ?? null; },
+      querySelector(sel) { return sel === '[data-dyn-stage-list="gender"]' ? genderStageContainer : null; },
+      querySelectorAll: () => []
+    };
+
+    state.activeCategory = 'profession';
+    state.form.stages = { age_categories: 'Старість (від 60)' };
+
+    showCategory({
+      category: 'gender',
+      text: 'Чоловіча',
+      viewMode: 'visual',
+      ageCategoriesText: 'Юність (до 25)'
+    });
+
+    assert.match(dynFields.innerHTML, /pe-dyn-gender-stages-wrap/);
+    assert.match(genderStageContainer.innerHTML, /Юність/);
+    assert.doesNotMatch(genderStageContainer.innerHTML, /Старість/);
+  } finally {
+    globalThis.document = prevDocument;
+    state.activeCategory = prevActiveCategory;
+    state.form.stages = prevStages;
+  }
+});
+
+test('ui/helpers.js setDeleteModeUi uses activeCategory param and ignores state.activeCategory', async () => {
+  const [{ state }, { setDeleteModeUi }] = await Promise.all([
+    import('../../js/pack-editor/state.js'),
+    import('../../js/pack-editor/ui/helpers.js')
+  ]);
+
+  function makeForm() {
+    const el = {
+      classList: makeClassList(),
+      children: [],
+      appendChild(child) {
+        child.parentElement = el;
+        el.children.push(child);
+      }
+    };
+    return el;
+  }
+
+  const cataForm = makeForm();
+  const dynForm = makeForm();
+  const deleteOverlay = { hidden: true, parentElement: null };
+  const submitBtn = { disabled: false, querySelector: () => null, textContent: '' };
+  const bulkBtn = { classList: makeClassList(), title: '', setAttribute() {} };
+  const elements = {
+    'pe-delete-toolbar': { hidden: true },
+    'pe-bulk-delete-btn': bulkBtn,
+    'pe-delete-overlay': deleteOverlay,
+    'pe-cata-list-wrap': { classList: makeClassList() },
+    'pe-cata': cataForm,
+    'pe-dynamic-form': dynForm,
+    'pe-fab-back': { hidden: false },
+    'pe-sort-btn': { disabled: false, setAttribute() {} },
+    'pe-sort-menu': { hidden: false },
+    'pe-delete-count': { textContent: '' },
+    'pe-delete-submit-btn': submitBtn,
+    'pe-delete-select-all-btn': { textContent: '' }
+  };
+
+  const prevDocument = globalThis.document;
+  const prevActiveCategory = state.activeCategory;
+  try {
+    globalThis.document = {
+      getElementById(id) { return elements[id] ?? null; },
+      querySelector: () => null
+    };
+
+    state.activeCategory = 'cataclysm';
+    setDeleteModeUi({
+      isDeleteMode: true,
+      selectedCount: 1,
+      totalCount: 2,
+      activeCategory: 'profession'
+    });
+
+    assert.equal(deleteOverlay.parentElement, dynForm);
+    assert.equal(dynForm.classList.contains('is-delete-disabled'), true);
+    assert.equal(cataForm.classList.contains('is-delete-disabled'), false);
+
+    state.activeCategory = 'profession';
+    setDeleteModeUi({
+      isDeleteMode: true,
+      selectedCount: 1,
+      totalCount: 2,
+      activeCategory: 'cataclysm'
+    });
+
+    assert.equal(deleteOverlay.parentElement, cataForm);
+    assert.equal(cataForm.classList.contains('is-delete-disabled'), true);
+  } finally {
+    globalThis.document = prevDocument;
+    state.activeCategory = prevActiveCategory;
+  }
+});
+
+test('ui/cataclysm.js renderCataList uses cardsSortDir, isDeleteMode, selectedDeleteIndices params and ignores state', async () => {
+  const [{ state }, { renderCataList }] = await Promise.all([
+    import('../../js/pack-editor/state.js'),
+    import('../../js/pack-editor/ui/cataclysm.js')
+  ]);
+
+  const listEl = { innerHTML: '', querySelector: () => null };
+  const prevDocument = globalThis.document;
+  const prevSortDir = state.cardsSortDir;
+  const prevDeleteMode = state.isDeleteMode;
+  const prevSelected = state.selectedDeleteIndices;
+  try {
+    globalThis.document = {
+      activeElement: null,
+      getElementById(id) { return id === 'pe-cata-list' ? listEl : null; }
+    };
+
+    state.cardsSortDir = 'asc';
+    state.isDeleteMode = false;
+    state.selectedDeleteIndices = new Set([0]);
+
+    renderCataList({
+      cataclysms: [{ name: 'Альфа' }, { name: 'Ялта' }],
+      editIndex: 0,
+      newIndex: -1,
+      tokens: [],
+      category: 'cataclysm',
+      cardsSortDir: 'desc',
+      isDeleteMode: true,
+      selectedDeleteIndices: new Set([1])
+    });
+
+    const yaltaPos = listEl.innerHTML.indexOf('Ялта');
+    const alphaPos = listEl.innerHTML.indexOf('Альфа');
+    assert.ok(yaltaPos !== -1 && alphaPos !== -1 && yaltaPos < alphaPos, 'must sort desc using param');
+    assert.match(listEl.innerHTML, /class="added-item-row is-delete-mode is-marked-delete" data-cata-index="1" aria-pressed="true"/);
+    assert.match(listEl.innerHTML, /class="added-item-row is-delete-mode" data-cata-index="0" aria-pressed="false"/);
+  } finally {
+    globalThis.document = prevDocument;
+    state.cardsSortDir = prevSortDir;
+    state.isDeleteMode = prevDeleteMode;
+    state.selectedDeleteIndices = prevSelected;
+  }
+});
+
+test('ui/search.js paintSearch uses activeCategory, isDeleteMode, selectedDeleteIndices from view and ignores state', async () => {
+  const [{ state }, { paintSearch }] = await Promise.all([
+    import('../../js/pack-editor/state.js'),
+    import('../../js/pack-editor/ui/search.js')
+  ]);
+
+  const panelEl = { hidden: true, innerHTML: '' };
+  const countEl = { textContent: '' };
+  const clearEl = { hidden: true };
+  const prevDocument = globalThis.document;
+  const prevActiveCategory = state.activeCategory;
+  const prevDeleteMode = state.isDeleteMode;
+  const prevSelected = state.selectedDeleteIndices;
+  try {
+    globalThis.document = {
+      getElementById(id) {
+        if (id === 'pe-search-results') return panelEl;
+        if (id === 'pe-search-count') return countEl;
+        if (id === 'pe-search-clear') return clearEl;
+        return null;
+      }
+    };
+
+    state.activeCategory = 'hobby';
+    state.isDeleteMode = false;
+    state.selectedDeleteIndices = new Set();
+
+    paintSearch({
+      query: 'test',
+      tokens: ['test'],
+      searchAll: true,
+      mode: 'results',
+      total: 2,
+      results: [
+        { type: 'text', category: 'profession', label: 'Професія', line: 0, cardIndex: 0, text: 'testA' },
+        { type: 'text', category: 'hobby', label: 'Хобі', line: 0, cardIndex: 0, text: 'testB' }
+      ],
+      activeCategory: 'profession',
+      isDeleteMode: true,
+      selectedDeleteIndices: new Set([0])
+    });
+
+    assert.match(panelEl.innerHTML, /class="added-item-row pe-result is-delete-mode is-marked-delete" data-res-cat="profession"[^>]*aria-pressed="true"/);
+    assert.match(panelEl.innerHTML, /class="added-item-row pe-result" data-res-cat="hobby"[^>]*aria-pressed="false"/);
+  } finally {
+    globalThis.document = prevDocument;
+    state.activeCategory = prevActiveCategory;
+    state.isDeleteMode = prevDeleteMode;
+    state.selectedDeleteIndices = prevSelected;
+  }
+});

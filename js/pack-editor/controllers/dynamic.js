@@ -495,7 +495,8 @@ export function applyDynChange({ scrollToEnd = false } = {}) {
   ui.showCategory({
     category: state.activeCategory,
     text: state.form.texts[state.activeCategory] || '',
-    viewMode: state.viewMode
+    viewMode: state.viewMode,
+    ageCategoriesText: state.form?.stages?.age_categories || ''
   });
   if (onDynamicChange) onDynamicChange({ scrollToEnd });
 }

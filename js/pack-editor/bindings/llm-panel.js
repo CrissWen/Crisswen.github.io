@@ -70,7 +70,12 @@ export function bindLlmPanel(ctx) {
       }
     }
 
-    ui.showCategory({ category: state.activeCategory, text: state.form.texts[state.activeCategory] || '', viewMode: state.viewMode });
+    ui.showCategory({
+      category: state.activeCategory,
+      text: state.form.texts[state.activeCategory] || '',
+      viewMode: state.viewMode,
+      ageCategoriesText: state.form?.stages?.age_categories || ''
+    });
 
     if (state.viewMode === 'visual') {
       if (state.activeCategory === 'cataclysm') {

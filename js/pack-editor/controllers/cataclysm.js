@@ -121,7 +121,10 @@ export function renderCataList(tokens = []) {
     cataclysms: state.form.cataclysms,
     editIndex: state.cataEditIndex,
     newIndex: state.newCataIndex,
-    tokens
+    tokens,
+    cardsSortDir: state.cardsSortDir,
+    isDeleteMode: state.isDeleteMode,
+    selectedDeleteIndices: state.selectedDeleteIndices
   });
 }
 
