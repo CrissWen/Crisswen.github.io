@@ -395,6 +395,7 @@ export async function initPackEditor() {
   ctx.signal = signal;
 
   resetEditorState();
+  const sessionId = state.sessionId;
 
   window.addEventListener('beforeunload', onBeforeUnload, { signal });
 
@@ -407,15 +408,15 @@ export async function initPackEditor() {
   bindMobileFab(ctx);
   bindSortMenu(ctx);
   bindStagesTabs(ctx);
-  initSearch();
-  initTips();
+  initSearch(signal);
+  initTips(signal);
   bindWidgets(ctx);
   bindEditorKeys(ctx);
 
   if (!(await loadEditorData())) return;
 
-  // Користувач міг устигнути піти зі сторінки, поки вантажились дані — тоді DOM уже інший
-  if (!ui.isEditorMounted()) return;
+  // Користувач міг устигнути піти зі сторінки (або перевідкрити редактор), поки вантажились дані
+  if (state.sessionId !== sessionId || signal.aborted || !ui.isEditorMounted()) return;
   ui.markEditorLoaded();
 
   syncFieldsFromForm();
@@ -434,7 +435,6 @@ export function cleanupPackEditor() {
   cleanupMobileNav();
   sessionAbortController?.abort(); // знімає всі слухачі, зареєстровані через signal (window, document і елементи редактора)
   sessionAbortController = null;
-  window.removeEventListener('beforeunload', onBeforeUnload);
   ui.destroyStageSortables();
   state.isSaving = false;
   state.isConfirming = false;

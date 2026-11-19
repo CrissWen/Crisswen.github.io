@@ -1,7 +1,7 @@
 // ===== Підказки редактора паків: будь-який елемент із data-tip показує текст при наведенні / фокусі =====
 // Один спільний <div class="pe-tip"> з position:fixed: на відміну від CSS-підказки всередині елемента, її не обрізають
 // контейнери з overflow (бокова панель категорій). Звичайний title не підходить: з'являється із затримкою і не стилізується.
-// initTips() можна викликати скільки завгодно разів — слухачі вішаються один раз на весь документ.
+// initTips(signal) можна викликати при кожному відкритті сторінки — усі слухачі знімаються через AbortSignal.
 
 const GAP = 8;   // відстань між елементом і підказкою
 const EDGE = 8;  // мінімальний відступ підказки від країв екрана
@@ -9,7 +9,6 @@ const EDGE = 8;  // мінімальний відступ підказки ві�
 let tipEl = null;
 let target = null;
 let rafId = 0;
-let bound = false;
 let hideTimer = null;
 
 function cancelHide() {
@@ -108,17 +107,14 @@ function hide() {
 
 const tipOf = node => node?.closest?.('[data-tip]') || null;
 
-export function initTips() {
-  if (bound) return;
-  bound = true;
-
+export function initTips(signal) {
   document.addEventListener('mouseover', e => {
     const el = tipOf(e.target);
     if (el) {
       cancelHide();
       if (el !== target) show(el);
     }
-  });
+  }, { signal });
   document.addEventListener('mouseout', e => {
     const el = tipOf(e.target);
     if (!el) return;
@@ -129,7 +125,7 @@ export function initTips() {
     } else {
       hide();
     }
-  });
+  }, { signal });
 
   // З клавіатури: фокус на кнопці, яка містить іконку (рядок категорії), показує підказку цієї іконки.
   // Лише :focus-visible — інакше клік мишею по рядку теж відкривав би підказку
@@ -138,14 +134,19 @@ export function initTips() {
     if (!node?.matches?.(':focus-visible')) return;
     const el = tipOf(node) || node.querySelector?.('[data-tip]');
     if (el) show(el);
-  });
-  document.addEventListener('focusout', hide);
+  }, { signal });
+  document.addEventListener('focusout', hide, { signal });
 
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
-  document.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); }, { signal });
+  document.addEventListener('scroll', hide, { capture: true, signal });
+  window.addEventListener('resize', hide, { signal });
   // Дотик: tap по іконці показує підказку, tap деінде ховає
   document.addEventListener('pointerdown', e => {
     if (!tipOf(e.target) && !tipEl?.contains(e.target)) hide();
-  });
+  }, { signal });
+
+  signal?.addEventListener('abort', () => {
+    cancelHide();
+    hide();
+  }, { once: true });
 }

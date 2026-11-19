@@ -176,30 +176,30 @@ export function onSearchListKeydown(e) {
   if (!moved && e.key === 'ArrowUp') ui.focusSearchInput();
 }
 
-export function initSearch() {
+export function initSearch(signal) {
   ui.initSearchControls({ query: state.searchQuery, all: state.searchAll });
   const searchInput = $('pe-search');
-  searchInput.addEventListener('input', e => setSearchQuery(e.target.value));
-  searchInput.addEventListener('keydown', onSearchKeydown);
-  $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }));
+  searchInput.addEventListener('input', e => setSearchQuery(e.target.value), { signal });
+  searchInput.addEventListener('keydown', onSearchKeydown, { signal });
+  $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }), { signal });
 
   let searchHadFocus = false;
   document.querySelector('.pe-search__inside')?.addEventListener('mousedown', e => {
     searchHadFocus = document.activeElement === searchInput;
     if (!searchHadFocus) return;
     e.preventDefault();
-    window.addEventListener('mouseup', () => setTimeout(() => { searchHadFocus = false; }), { once: true });
-  });
+    window.addEventListener('mouseup', () => setTimeout(() => { searchHadFocus = false; }), { once: true, signal });
+  }, { signal });
 
   $('pe-search-all').addEventListener('change', e => {
     state.searchAll = e.target.checked;
     orchestrator.renderList();
     renderSearch();
     if (searchHadFocus) searchInput.focus({ preventScroll: true });
-  });
+  }, { signal });
   const results = $('pe-search-results');
-  results.addEventListener('click', onSearchResultClick);
-  results.addEventListener('keydown', onSearchListKeydown);
-  $('pe-cata-list').addEventListener('keydown', onSearchListKeydown);
+  results.addEventListener('click', onSearchResultClick, { signal });
+  results.addEventListener('keydown', onSearchListKeydown, { signal });
+  $('pe-cata-list').addEventListener('keydown', onSearchListKeydown, { signal });
 }
 
