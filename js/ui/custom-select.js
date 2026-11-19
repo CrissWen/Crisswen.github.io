@@ -142,13 +142,16 @@ export function initCustomSelect(selectEl, options = {}) {
   const retargetedLabels = [];
   if (selectEl.id && typeof document !== 'undefined') {
     const candidateBtnId = selectEl.id + '-btn';
-    if (!document.getElementById(candidateBtnId)) {
+    const idExists = typeof document.getElementById === 'function' && document.getElementById(candidateBtnId);
+    if (!idExists) {
       btn.id = candidateBtnId;
-      const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(selectEl.id) : selectEl.id;
-      document.querySelectorAll(`label[for="${escapedId}"]`).forEach(lbl => {
-        retargetedLabels.push({ lbl, origFor: selectEl.id });
-        lbl.setAttribute('for', candidateBtnId);
-      });
+      if (typeof document.querySelectorAll === 'function') {
+        const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(selectEl.id) : selectEl.id;
+        document.querySelectorAll(`label[for="${escapedId}"]`).forEach(lbl => {
+          retargetedLabels.push({ lbl, origFor: selectEl.id });
+          lbl.setAttribute('for', candidateBtnId);
+        });
+      }
     }
   }
 
