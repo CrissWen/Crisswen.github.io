@@ -2,6 +2,7 @@ import { state } from '../state.js';
 import { setMobileCardView } from './mobile-nav.js';
 import { CATEGORY_SCHEMAS } from '../categories.js';
 import { esc } from '../../utils/common/escape-html.js';
+import { syncCustomSelect } from '../../ui/custom-select.js';
 import {
   parseLines, oneLine, parseCards, cardToLine,
   hasExplanationField, joinNameExplanation, splitNameExplanation
@@ -33,24 +34,7 @@ export function getDynamicCards() {
   return state.cardData[state.activeCategory];
 }
 
-export function syncCustomSelect(selectEl) {
-  if (!selectEl) return;
-  const wrap = selectEl.closest('.pe-select-custom');
-  if (!wrap) return;
-  const val = selectEl.value;
-  const selectedOption = selectEl.querySelector(`option[value="${val}"]`) || selectEl.options[0];
-  const label = wrap.querySelector('.pe-select-custom__label');
-  if (label && selectedOption) {
-    label.textContent = selectedOption.textContent;
-  }
-  wrap.querySelectorAll('.pe-select-custom__item').forEach(it => {
-    const isSel = it.dataset.value === val;
-    it.classList.toggle('is-selected', isSel);
-    it.setAttribute('aria-selected', String(isSel));
-    const check = it.querySelector('.pe-select-custom__check');
-    if (check) check.textContent = isSel ? '✓' : '';
-  });
-}
+export { syncCustomSelect };
 
 // ===== Кодеки полів за типом (читання / запис / скидання / порівняння) =====
 const FIELD_CODECS = {

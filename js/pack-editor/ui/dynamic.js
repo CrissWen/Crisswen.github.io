@@ -1,4 +1,5 @@
 import { esc } from '../../utils/common/escape-html.js';
+import { initCustomSelects } from '../../ui/custom-select.js';
 import { $ } from './shared.js';
 import { state } from '../state.js';
 
@@ -57,28 +58,12 @@ function renderSingleField(f, schema, isInsideRow = false) {
       </div>`;
   } else if (f.type === 'select') {
     const defaultVal = f.default || '';
-    const selectedOpt = f.options.find(o => o.value === defaultVal) || f.options[0] || { label: '', value: '' };
     return `
       <div class="pe-field"${hiddenStyle}>
         <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
-        <div class="pe-select-custom" data-select-key="${f.key}">
-          <button type="button" class="pe-select-custom__btn" id="pe-dyn-${f.key}-btn" aria-haspopup="listbox" aria-expanded="false">
-            <span class="pe-select-custom__label">${esc(selectedOpt.label)}</span>
-            <svg class="pe-select-custom__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </button>
-          <div class="pe-select-custom__dropdown" id="pe-dyn-${f.key}-dropdown" role="listbox" hidden>
-            ${f.options.map(opt => `
-              <div class="pe-select-custom__item${opt.value === defaultVal ? ' is-selected' : ''}" role="option" data-value="${esc(opt.value)}" aria-selected="${opt.value === defaultVal}">
-                <span class="pe-select-custom__check">${opt.value === defaultVal ? '✓' : ''}</span>
-                <span class="pe-select-custom__text">${esc(opt.label)}</span>
-              </div>`).join('')}
-          </div>
-          <select id="pe-dyn-${f.key}" class="pe-hidden-select" data-dyn-key="${f.key}" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
-            ${f.options.map(opt => `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('')}
-          </select>
-        </div>
+        <select id="pe-dyn-${f.key}" class="pe-select-custom" data-dyn-key="${f.key}">
+          ${f.options.map(opt => `<option value="${esc(opt.value)}"${opt.value === defaultVal ? ' selected' : ''}>${esc(opt.label)}</option>`).join('')}
+        </select>
       </div>`;
   } else if (f.type === 'textarea' || f.key === 'explanation' || f.key === 'ability' || f.key === 'description') {
     return `
@@ -143,4 +128,6 @@ export function renderDynamicFormFields(schema) {
 
     return renderSingleField(f, schema);
   }).join('');
+
+  initCustomSelects(container);
 }
