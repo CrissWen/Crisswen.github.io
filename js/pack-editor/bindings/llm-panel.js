@@ -11,11 +11,20 @@ import {
 } from '../controllers/controllers.js';
 import { copyPromptToClipboard } from './shared.js';
 
-function debounce(func, wait) {
+function debounce(func, wait, signal) {
   let timeout;
+  if (signal && !signal.aborted) {
+    signal.addEventListener('abort', () => {
+      clearTimeout(timeout);
+      timeout = null;
+    }, { once: true });
+  }
   return function executedFunction(...args) {
+    if (signal?.aborted) return;
     const later = () => {
       clearTimeout(timeout);
+      timeout = null;
+      if (signal?.aborted) return;
       func(...args);
     };
     clearTimeout(timeout);
@@ -35,7 +44,7 @@ export function bindLlmPanel(ctx) {
     ctx.updateCardsMeta();
     ctx.renderSummary();
     ctx.updateButtons();
-  }, 200);
+  }, 200, signal);
 
   $('pe-llm-mode')?.addEventListener('change', e => {
     if (state.isDeleteMode) ctx.deleteMode.exit();

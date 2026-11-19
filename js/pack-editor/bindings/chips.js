@@ -51,7 +51,7 @@ export function bindChips(ctx) {
       } finally {
         state.isConfirming = false;
       }
-      if (!confirmed) return;
+      if (!confirmed || signal?.aborted) return;
     }
     if (state.isDeleteMode) ctx.deleteMode.exit();
     ctx.selectCategory(chip.dataset.chip);

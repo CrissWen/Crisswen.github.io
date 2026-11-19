@@ -88,6 +88,7 @@ export function createDeleteMode(ctx) {
   }
 
   async function executeBulk(anchorBtn) {
+    const signal = ctx.signal;
     const count = state.selectedDeleteIndices.size;
     if (count === 0 || state.isConfirming) return;
 
@@ -103,7 +104,7 @@ export function createDeleteMode(ctx) {
     } finally {
       state.isConfirming = false;
     }
-    if (!confirmed) return;
+    if (!confirmed || signal?.aborted) return;
 
     const toDelete = state.selectedDeleteIndices;
 
