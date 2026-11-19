@@ -25,9 +25,9 @@ export function bindWidgets(ctx) {
     }
   }, { signal });
 
-  // У Chrome скрол мишею над/у сфокусованому input[type="number"] миттєво крутить значення на кожну wheel-подію
+  // У Chrome скрол мишею у сфокусованому input[type="number"] миттєво крутить значення на кожну wheel-подію
   root?.addEventListener('wheel', e => {
-    if (e.target?.tagName === 'INPUT' && e.target.type === 'number') {
+    if (e.target?.tagName === 'INPUT' && e.target.type === 'number' && document.activeElement === e.target) {
       e.preventDefault();
     }
   }, { signal, passive: false });

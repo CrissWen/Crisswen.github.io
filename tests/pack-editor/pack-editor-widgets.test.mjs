@@ -20,12 +20,15 @@ function createMockRoot() {
   return root;
 }
 
-test('bindWidgets prevents wheel stepping on input[type="number"] and preserves stepper clicks', async () => {
+test('bindWidgets prevents wheel stepping on focused input[type="number"] and preserves stepper clicks', async () => {
   const mockRoot = createMockRoot();
+  const focusedNumberInput = { tagName: 'INPUT', type: 'number' };
+  const unfocusedNumberInput = { tagName: 'INPUT', type: 'number' };
   globalThis.document = {
     getElementById: (id) => (id === 'pe-root' ? mockRoot : null),
     querySelectorAll: () => [],
-    createElement: () => ({ style: {}, setAttribute() {} })
+    createElement: () => ({ style: {}, setAttribute() {} }),
+    activeElement: focusedNumberInput
   };
   globalThis.Event = class FakeEvent {
     constructor(type, opts = {}) {
@@ -38,15 +41,27 @@ test('bindWidgets prevents wheel stepping on input[type="number"] and preserves 
   const controller = new AbortController();
   bindWidgets({ signal: controller.signal });
 
-  // 1. Wheel on input[type="number"] should call preventDefault()
-  let preventedNumber = false;
-  mockRoot.dispatch('wheel', {
-    target: { tagName: 'INPUT', type: 'number' },
-    preventDefault() { preventedNumber = true; }
-  });
-  assert.equal(preventedNumber, true, 'wheel on number input must be prevented');
+  const wheelEntry = mockRoot.getListeners('wheel')[0];
+  assert.equal(wheelEntry?.opts?.passive, false, 'wheel listener must be passive: false');
+  assert.equal(wheelEntry?.opts?.signal, controller.signal, 'wheel listener must use AbortSignal');
 
-  // 2. Wheel on non-number element must NOT call preventDefault()
+  // 1. Wheel on focused input[type="number"] should call preventDefault()
+  let preventedFocused = false;
+  mockRoot.dispatch('wheel', {
+    target: focusedNumberInput,
+    preventDefault() { preventedFocused = true; }
+  });
+  assert.equal(preventedFocused, true, 'wheel on focused number input must be prevented');
+
+  // 2. Wheel on unfocused input[type="number"] must NOT block page scroll
+  let preventedUnfocused = false;
+  mockRoot.dispatch('wheel', {
+    target: unfocusedNumberInput,
+    preventDefault() { preventedUnfocused = true; }
+  });
+  assert.equal(preventedUnfocused, false, 'wheel on unfocused number input must allow scroll');
+
+  // 3. Wheel on non-number element must NOT call preventDefault()
   let preventedDiv = false;
   mockRoot.dispatch('wheel', {
     target: { tagName: 'DIV' },

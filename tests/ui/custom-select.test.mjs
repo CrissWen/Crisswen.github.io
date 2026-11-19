@@ -80,6 +80,11 @@ function setupDom() {
       if (name === 'class') return this.className || null;
       return this.attributes.has(name) ? this.attributes.get(name) : null;
     }
+    get control() {
+      if (this.tagName !== 'LABEL') return null;
+      const f = this.getAttribute('for');
+      return f ? (byId.get(f) || null) : null;
+    }
     removeAttribute(name) {
       this.attributes.delete(name);
       if (name === 'id') this.id = '';
@@ -118,9 +123,11 @@ function setupDom() {
     getBoundingClientRect() { return { top: 100, bottom: 140 }; }
     closest(selector) {
       const cls = selector.startsWith('.') ? selector.slice(1) : null;
+      const tag = !cls ? selector.toUpperCase() : null;
       let cur = this;
       while (cur) {
         if (cls && cur.classList?.contains(cls)) return cur;
+        if (tag && cur.tagName === tag) return cur;
         cur = cur.parentNode;
       }
       return null;
@@ -180,6 +187,9 @@ function setupDom() {
     addEventListener: (type, fn) => {
       if (!docListeners.has(type)) docListeners.set(type, []);
       docListeners.get(type).push(fn);
+    },
+    dispatchEvent: (evt) => {
+      for (const fn of docListeners.get(evt.type) || []) fn(evt);
     }
   };
 
@@ -238,6 +248,21 @@ test('initCustomSelect retargets label[for] to button id and closes .pe-combo__d
   btn.dispatchEvent({ type: 'click' });
   assert.equal(comboDrop.hidden, true);
   assert.equal(comboToggle.classList.contains('is-open'), false);
+
+  // Clicking <label for="...-btn"> while dropdown is open must toggle it CLOSED (not close+reopen)
+  const drop = wrap.querySelector('.pe-select-custom__dropdown');
+  assert.equal(drop.hidden, false);
+  doc.dispatchEvent({ type: 'click', target: label });
+  btn.dispatchEvent({ type: 'click' });
+  assert.equal(drop.hidden, true, 'label click while open should close dropdown');
+
+  // Programmatic value & disabled sync (FIELD_CODECS.select / toggleField contract)
+  selectEl.value = 'no_age';
+  assert.equal(wrap.querySelector('.pe-select-custom__label').textContent, 'No age');
+  selectEl.disabled = true;
+  selectEl.value = '';
+  assert.equal(btn.disabled, true);
+  assert.equal(wrap.querySelector('.pe-select-custom__label').textContent, 'Default');
 
   selectEl._customSelect.destroy();
   assert.equal(label.getAttribute('for'), 'pe-dyn-custom_age_mode');

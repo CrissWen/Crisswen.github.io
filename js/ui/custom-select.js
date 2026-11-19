@@ -21,8 +21,10 @@ function ensureGlobalListeners() {
   globalListenersAttached = true;
 
   document.addEventListener('click', (e) => {
+    const labelForSelect = e.target.closest?.('label')?.control?.closest?.('.pe-select-custom');
+    if (labelForSelect) return;
     // If click was outside any .pe-select-custom, close all open dropdowns
-    if (!e.target.closest('.pe-select-custom')) {
+    if (!e.target.closest?.('.pe-select-custom')) {
       closeAllCustomSelects();
     }
   });
