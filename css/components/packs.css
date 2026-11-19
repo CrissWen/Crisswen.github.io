@@ -1648,32 +1648,43 @@ body.is-stage-dragging * {
   align-items: center;
   width: 100%;
 }
+.pe-combo:has(.pe-combo__toggle.is-open),
+.pe-combo:has(.pe-combo__dropdown:not([hidden])) {
+  z-index: 130;
+}
 .pe-combo__input {
-  padding-right: 36px;
+  height: 38px;
+  padding: 0 34px 0 12px;
+  font-family: inherit;
+  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.pe-combo__input:focus,
+.pe-combo:has(.pe-combo__toggle.is-open) .pe-combo__input {
+  border-color: var(--hazard);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hazard) 22%, transparent);
+}
 .pe-combo__toggle {
   position: absolute;
-  right: 4px;
-  top: 4px;
-  bottom: 4px;
-  width: 28px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 34px;
   background: transparent;
   border: none;
   color: var(--text-mute);
   cursor: pointer;
   padding: 0;
-  border-radius: var(--radius-xs, 4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color .15s ease, background-color .15s ease;
+  transition: color .15s ease;
 }
+.pe-combo:hover .pe-combo__toggle,
 .pe-combo__toggle:hover {
   color: var(--hazard);
-  background: color-mix(in srgb, var(--hazard) 14%, transparent);
 }
 .pe-combo__arrow {
   transition: transform .2s ease, color .15s ease;
