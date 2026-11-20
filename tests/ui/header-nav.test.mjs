@@ -1,4 +1,6 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 import { initHeaderNav, closeHeaderNav } from '../../js/ui/header-nav.js';
 
@@ -125,4 +127,14 @@ test('initHeaderNav returns safe no-op controller when required elements are mis
   ctrl.toggle();
   closeHeaderNav();
   ctrl.destroy();
+});
+
+test('css/header.css defines portrait dropdown, landscape scroll, hover gating, and hidden link preservation', () => {
+  const css = fs.readFileSync(path.resolve('css/header.css'), 'utf8');
+  assert.match(css, /@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)/);
+  assert.match(css, /orientation:\s*portrait/);
+  assert.match(css, /orientation:\s*landscape/);
+  assert.match(css, /touch-action:\s*manipulation/);
+  assert.match(css, /touch-action:\s*pan-x/);
+  assert.match(css, /\.header-nav-link\[hidden\][^}]*display:\s*none/s);
 });
