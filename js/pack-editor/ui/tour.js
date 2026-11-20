@@ -1,4 +1,5 @@
-import { TOUR_STORAGE_KEY } from '../tour-steps.js';
+import { PACK_EDITOR_TOUR_STEPS, TOUR_STORAGE_KEY } from '../tour-steps.js';
+import { esc } from '../../utils/common/escape-html.js';
 
 const ARROW_INSET = 16;
 const OPPOSITE_SIDE = { bottom: 'top', top: 'bottom', right: 'left', left: 'right' };
@@ -98,5 +99,234 @@ export function computeTourLayout({
     spotlight,
     card: { top, left, side },
     arrow: { side: arrowSide, offset: arrowOffset }
+  };
+}
+
+
+function resolveActiveSteps(steps) {
+  return (steps || []).filter(step => {
+    const el = document.querySelector(step.target);
+    return Boolean(el);
+  });
+}
+
+/**
+ * Запускає інтерактивний онбординг-тур (прожектор + блокувач екрана + картка зі стрілкою).
+ */
+export function startPackEditorTour({
+  signal,
+  force = false,
+  steps = PACK_EDITOR_TOUR_STEPS,
+  storage = globalThis.localStorage,
+  onMobileViewChange = null
+} = {}) {
+  if (signal?.aborted) return null;
+  if (!shouldStartTour(storage, { force })) return null;
+
+  // Закриваємо попередній активний тур, якщо він ще відкритий
+  document.querySelector('.pe-tour-overlay')?.remove();
+  document.querySelector('.pe-tour-spotlight')?.remove();
+  document.querySelector('.pe-tour-card')?.remove();
+
+  const tourAbort = new AbortController();
+  let activeSteps = resolveActiveSteps(steps);
+  if (!activeSteps.length) return null;
+
+  let index = 0;
+  let rafId = 0;
+  let closed = false;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'pe-tour-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+
+  const spotlight = document.createElement('div');
+  spotlight.className = 'pe-tour-spotlight';
+  spotlight.setAttribute('aria-hidden', 'true');
+
+  const card = document.createElement('div');
+  card.className = 'pe-tour-card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  card.setAttribute('aria-labelledby', 'pe-tour-title');
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(spotlight);
+  document.body.appendChild(card);
+
+  function close(markDone = true) {
+    if (closed) return;
+    closed = true;
+    window.cancelAnimationFrame(rafId);
+    tourAbort.abort();
+    overlay.remove();
+    spotlight.remove();
+    card.remove();
+    if (markDone) markTourCompleted(storage);
+  }
+
+  function updatePosition() {
+    if (closed) return;
+    const step = activeSteps[index];
+    if (!step) return;
+    const targetEl = document.querySelector(step.target);
+    if (!targetEl) return;
+
+    const targetRect = targetEl.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const cardSize = {
+      width: cardRect.width || 320,
+      height: cardRect.height || 180
+    };
+    const viewport = {
+      width: window.innerWidth || 1280,
+      height: window.innerHeight || 800
+    };
+
+    const layout = computeTourLayout({
+      targetRect,
+      cardSize,
+      viewport,
+      placement: step.placement || 'bottom'
+    });
+
+    spotlight.style.top = `${layout.spotlight.top}px`;
+    spotlight.style.left = `${layout.spotlight.left}px`;
+    spotlight.style.width = `${layout.spotlight.width}px`;
+    spotlight.style.height = `${layout.spotlight.height}px`;
+
+    card.style.top = `${layout.card.top}px`;
+    card.style.left = `${layout.card.left}px`;
+    card.dataset.side = layout.card.side;
+
+    const arrow = card.querySelector('.pe-tour-arrow');
+    if (arrow) {
+      arrow.dataset.arrowSide = layout.arrow.side;
+      if (layout.arrow.side === 'top' || layout.arrow.side === 'bottom') {
+        arrow.style.left = `${layout.arrow.offset}px`;
+        arrow.style.top = '';
+      } else {
+        arrow.style.top = `${layout.arrow.offset}px`;
+        arrow.style.left = '';
+      }
+    }
+  }
+
+  function trackSmoothScroll(frames = 28) {
+    window.cancelAnimationFrame(rafId);
+    let left = frames;
+    const tick = () => {
+      if (closed) return;
+      updatePosition();
+      left -= 1;
+      if (left > 0) rafId = window.requestAnimationFrame(tick);
+    };
+    rafId = window.requestAnimationFrame(tick);
+  }
+
+  function renderStep() {
+    if (closed) return;
+    const step = activeSteps[index];
+    if (!step) {
+      close(true);
+      return;
+    }
+
+    if (step.mobileView && typeof onMobileViewChange === 'function') {
+      onMobileViewChange(step.mobileView);
+    }
+
+    const targetEl = document.querySelector(step.target);
+    if (!targetEl) {
+      close(true);
+      return;
+    }
+
+    const isFirst = index === 0;
+    const isLast = index === activeSteps.length - 1;
+
+    card.innerHTML = `
+      <span class="pe-tour-arrow" aria-hidden="true"></span>
+      <div class="pe-tour-card__head">
+        <span class="pe-tour-card__step">${index + 1} / ${activeSteps.length}</span>
+        <h3 id="pe-tour-title" class="pe-tour-card__title">${esc(step.title)}</h3>
+      </div>
+      <p class="pe-tour-card__body">${esc(step.text)}</p>
+      <div class="pe-tour-card__actions">
+        <button type="button" class="pk-btn pk-btn--ghost pe-tour-btn-skip" data-tour-action="skip">Пропустити гайд</button>
+        <div class="pe-tour-card__nav">
+          <button type="button" class="pk-btn pk-btn--ghost" data-tour-action="prev"${isFirst ? ' disabled' : ''}>Назад</button>
+          <button type="button" class="pk-btn pk-btn--primary" data-tour-action="next">${isLast ? 'Готово' : 'Далі'}</button>
+        </div>
+      </div>
+    `;
+
+    const rect = targetEl.getBoundingClientRect();
+    const docHeight = document.documentElement?.scrollHeight || 0;
+    const viewportHeight = window.innerHeight || 800;
+    const maxScrollY = Math.max(0, docHeight - viewportHeight);
+    const targetScrollY = computeCenterScrollY({
+      targetRect: rect,
+      viewportHeight,
+      scrollY: window.scrollY || 0,
+      maxScrollY
+    });
+
+    window.scrollTo?.({ top: targetScrollY, behavior: 'smooth' });
+    updatePosition();
+    trackSmoothScroll();
+    card.querySelector('[data-tour-action="next"]')?.focus?.({ preventScroll: true });
+  }
+
+  function next() {
+    if (closed) return;
+    if (index >= activeSteps.length - 1) {
+      close(true);
+      return;
+    }
+    index += 1;
+    renderStep();
+  }
+
+  function prev() {
+    if (closed || index <= 0) return;
+    index -= 1;
+    renderStep();
+  }
+
+  card.addEventListener('click', e => {
+    const btn = e.target?.closest?.('[data-tour-action]');
+    if (!btn || btn.disabled) return;
+    const action = btn.dataset.tourAction;
+    if (action === 'next') next();
+    else if (action === 'prev') prev();
+    else if (action === 'skip') close(true);
+  }, { signal: tourAbort.signal });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close(true);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      next();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prev();
+    }
+  }, { signal: tourAbort.signal });
+
+  window.addEventListener('scroll', updatePosition, { passive: true, signal: tourAbort.signal });
+  window.addEventListener('resize', updatePosition, { signal: tourAbort.signal });
+
+  signal?.addEventListener('abort', () => close(false), { once: true });
+
+  renderStep();
+
+  return {
+    close,
+    next,
+    prev,
+    getStepIndex: () => index
   };
 }

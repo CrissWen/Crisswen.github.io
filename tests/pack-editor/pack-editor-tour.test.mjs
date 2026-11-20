@@ -8,8 +8,10 @@ import {
   shouldStartTour,
   markTourCompleted,
   computeCenterScrollY,
-  computeTourLayout
+  computeTourLayout,
+  startPackEditorTour
 } from '../../js/pack-editor/ui/tour.js';
+import { packEditorTemplate } from '../../js/pack-editor/ui/template.js';
 
 function createMemoryStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -109,4 +111,239 @@ test('computeTourLayout розраховує прожектор, перевер�
   });
   assert.equal(flippedToLeft.card.side, 'left');
   assert.equal(flippedToLeft.arrow.side, 'right');
+});
+
+
+function createMockDom(targets = {}) {
+  const listeners = new Map();
+  const makeClassList = el => {
+    const set = new Set();
+    return {
+      add: (...cls) => cls.forEach(c => set.add(c)),
+      remove: (...cls) => cls.forEach(c => set.delete(c)),
+      contains: c => set.has(c),
+      toggle: (c, force) => {
+        if (force === undefined) set.has(c) ? set.delete(c) : set.add(c);
+        else if (force) set.add(c);
+        else set.delete(c);
+      },
+      toArray: () => [...set]
+    };
+  };
+
+  function createEl(tag) {
+    const elListeners = new Map();
+    const el = {
+      tagName: tag.toUpperCase(),
+      id: '',
+      className: '',
+      style: {},
+      dataset: {},
+      attributes: {},
+      children: [],
+      parentNode: null,
+      disabled: false,
+      hidden: false,
+      textContent: '',
+      _innerHTML: '',
+      classList: null,
+      setAttribute(k, v) { this.attributes[k] = String(v); },
+      getAttribute(k) { return this.attributes[k] ?? null; },
+      appendChild(child) {
+        child.parentNode = this;
+        this.children.push(child);
+        return child;
+      },
+      remove() {
+        if (!this.parentNode) return;
+        this.parentNode.children = this.parentNode.children.filter(c => c !== this);
+        this.parentNode = null;
+      },
+      addEventListener(type, fn, opts) {
+        if (!elListeners.has(type)) elListeners.set(type, []);
+        elListeners.get(type).push(fn);
+        if (opts?.signal) {
+          opts.signal.addEventListener('abort', () => {
+            elListeners.set(type, (elListeners.get(type) || []).filter(f => f !== fn));
+          }, { once: true });
+        }
+      },
+      dispatchEvent(evt) {
+        for (const fn of [...(elListeners.get(evt.type) || [])]) fn(evt);
+      },
+      focus() { mockDocument.activeElement = this; },
+      getBoundingClientRect() {
+        return { top: 0, left: 0, width: 320, height: 180, right: 320, bottom: 180 };
+      },
+      querySelector(sel) {
+        if (sel.startsWith('[data-tour-action="')) {
+          const action = sel.slice('[data-tour-action="'.length, -2);
+          return this._actionButtons?.[action] || null;
+        }
+        if (sel === '#pe-tour-title') return this._titleEl || null;
+        if (sel === '.pe-tour-card__body') return this._bodyEl || null;
+        if (sel === '.pe-tour-card__step') return this._stepEl || null;
+        if (sel === '.pe-tour-arrow') return this._arrowEl || null;
+        return null;
+      },
+      set innerHTML(html) {
+        this._innerHTML = html;
+      },
+      get innerHTML() {
+        return this._innerHTML;
+      }
+    };
+    el.classList = makeClassList(el);
+    return el;
+  }
+
+  const body = createEl('body');
+  const scrollCalls = [];
+
+  const mockDocument = {
+    body,
+    activeElement: null,
+    documentElement: { scrollHeight: 3000, clientHeight: 800 },
+    createElement: createEl,
+    querySelector(sel) {
+      if (targets[sel]) return targets[sel];
+      if (sel === '.pe-tour-overlay') return body.children.find(c => c.className.includes('pe-tour-overlay')) || null;
+      if (sel === '.pe-tour-spotlight') return body.children.find(c => c.className.includes('pe-tour-spotlight')) || null;
+      if (sel === '.pe-tour-card') return body.children.find(c => c.className.includes('pe-tour-card')) || null;
+      return null;
+    },
+    addEventListener(type, fn, opts) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(fn);
+      if (opts?.signal) {
+        opts.signal.addEventListener('abort', () => {
+          listeners.set(type, (listeners.get(type) || []).filter(f => f !== fn));
+        }, { once: true });
+      }
+    },
+    dispatchEvent(evt) {
+      for (const fn of [...(listeners.get(evt.type) || [])]) fn(evt);
+    }
+  };
+
+  const mockWindow = {
+    innerWidth: 1280,
+    innerHeight: 800,
+    scrollY: 0,
+    scrollTo(opts) {
+      scrollCalls.push(opts);
+      if (typeof opts?.top === 'number') this.scrollY = opts.top;
+    },
+    addEventListener(type, fn, opts) {
+      mockDocument.addEventListener(`win:${type}`, fn, opts);
+    },
+    requestAnimationFrame: () => 1,
+    cancelAnimationFrame: () => {}
+  };
+
+  return { mockDocument, mockWindow, scrollCalls, body };
+}
+
+test('packEditorTemplate рендерить кнопку повторного запуску гайду #pe-tour-start-btn у шапці', () => {
+  const html = packEditorTemplate({ isEdit: false, isDefaultEdit: false });
+  assert.ok(html.includes('id="pe-tour-start-btn"'));
+});
+
+test('startPackEditorTour монтує блокувач, прожектор, діалог зі стрілкою, центрує елемент і підтримує Пропустити/Назад/Далі', () => {
+  const storage = createMemoryStorage();
+  const target1 = {
+    isConnected: true,
+    getBoundingClientRect: () => ({ top: 900, left: 100, width: 300, height: 80, right: 400, bottom: 980 })
+  };
+  const target2 = {
+    isConnected: true,
+    getBoundingClientRect: () => ({ top: 200, left: 120, width: 280, height: 60, right: 400, bottom: 260 })
+  };
+  const { mockDocument, mockWindow, scrollCalls } = createMockDom({
+    '#step-one': target1,
+    '#step-two': target2
+  });
+
+  const prevDoc = globalThis.document;
+  const prevWin = globalThis.window;
+  globalThis.document = mockDocument;
+  globalThis.window = mockWindow;
+
+  try {
+    const controller = new AbortController();
+    const steps = [
+      { id: 'one', target: '#step-one', title: 'Крок 1', text: 'Опис 1', placement: 'bottom' },
+      { id: 'missing', target: '#not-in-dom', title: 'Пропуск', text: 'Немає в DOM', placement: 'bottom' },
+      { id: 'two', target: '#step-two', title: 'Крок 2', text: 'Опис 2', placement: 'top' }
+    ];
+
+    const tour = startPackEditorTour({ signal: controller.signal, steps, storage });
+    assert.ok(tour);
+
+    const overlay = mockDocument.querySelector('.pe-tour-overlay');
+    const spotlight = mockDocument.querySelector('.pe-tour-spotlight');
+    const card = mockDocument.querySelector('.pe-tour-card');
+    assert.ok(overlay);
+    assert.ok(spotlight);
+    assert.ok(card);
+    assert.equal(card.getAttribute('role'), 'dialog');
+    assert.equal(card.getAttribute('aria-labelledby'), 'pe-tour-title');
+    assert.ok(card.innerHTML.includes('Пропустити гайд'));
+    assert.ok(scrollCalls.length >= 1);
+    // target1 center = 940, viewport center = 400 -> scroll top = 540
+    assert.equal(scrollCalls[0].top, 540);
+
+    // Step 0 -> Step 1 (skips missing #not-in-dom)
+    tour.next();
+    assert.equal(tour.getStepIndex(), 1);
+    assert.ok(card.innerHTML.includes('Готово'));
+
+    // Back -> Step 0
+    tour.prev();
+    assert.equal(tour.getStepIndex(), 0);
+
+    // Finish -> marks completed and removes DOM
+    tour.next();
+    tour.next();
+    assert.equal(storage.getItem(TOUR_STORAGE_KEY), '1');
+    assert.equal(mockDocument.querySelector('.pe-tour-overlay'), null);
+    assert.equal(mockDocument.querySelector('.pe-tour-spotlight'), null);
+    assert.equal(mockDocument.querySelector('.pe-tour-card'), null);
+  } finally {
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+  }
+});
+
+test('abort signal прибирає DOM туру і НЕ позначає незавершений гайд як пройдений', () => {
+  const storage = createMemoryStorage();
+  const target1 = {
+    isConnected: true,
+    getBoundingClientRect: () => ({ top: 150, left: 100, width: 250, height: 60, right: 350, bottom: 210 })
+  };
+  const { mockDocument, mockWindow } = createMockDom({ '#step-one': target1 });
+
+  const prevDoc = globalThis.document;
+  const prevWin = globalThis.window;
+  globalThis.document = mockDocument;
+  globalThis.window = mockWindow;
+
+  try {
+    const controller = new AbortController();
+    startPackEditorTour({
+      signal: controller.signal,
+      steps: [{ id: 'one', target: '#step-one', title: 'Крок 1', text: 'Опис 1', placement: 'bottom' }],
+      storage
+    });
+    assert.ok(mockDocument.querySelector('.pe-tour-card'));
+
+    controller.abort();
+    assert.equal(mockDocument.querySelector('.pe-tour-overlay'), null);
+    assert.equal(mockDocument.querySelector('.pe-tour-spotlight'), null);
+    assert.equal(mockDocument.querySelector('.pe-tour-card'), null);
+    assert.equal(storage.getItem(TOUR_STORAGE_KEY), null);
+  } finally {
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+  }
 });

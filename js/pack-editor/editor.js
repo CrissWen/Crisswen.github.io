@@ -11,7 +11,7 @@ import { findShortByCounts } from '../utils/game/pack-fallback.js';
 import { getGameConfigSync } from '../config/config-manager.js';
 import { initTips } from './ui/tooltip.js';
 import * as ui from './ui/ui.js';
-import { initMobileNav, cleanupMobileNav } from './controllers/mobile-nav.js';
+import { initMobileNav, cleanupMobileNav, setMobileCardView } from './controllers/mobile-nav.js';
 import { $ } from './ui/helpers.js';
 import { initAutosave, destroyAutosave, onEditorChanged, getDraftContext } from './autosave-bridge.js';
 import {
@@ -453,6 +453,22 @@ export async function initPackEditor() {
 
   // Автосейв чернеток, Undo/Redo, гарячі клавіші, банер відновлення. Після завантаження даних: базова лінія історії = початковий стан
   await initAutosave({ syncFieldsFromForm, exitDeleteMode: ctx.deleteMode.exit });
+  if (state.sessionId !== sessionId || signal.aborted || !ui.isEditorMounted()) return;
+
+  const launchTour = (force = false) => ui.startPackEditorTour({
+    signal,
+    force,
+    onMobileViewChange: setMobileCardView
+  });
+
+  $('pe-tour-start-btn')?.addEventListener('click', () => launchTour(true), { signal });
+
+  const draftModal = $('pe-draft-modal');
+  if (draftModal?.open) {
+    draftModal.addEventListener('close', () => launchTour(false), { once: true, signal });
+  } else {
+    launchTour(false);
+  }
 }
 
 export function cleanupPackEditor() {

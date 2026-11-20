@@ -2876,3 +2876,89 @@ dialog.pe-draft-modal::backdrop {
     padding: 0 4px;
   }
 }
+
+
+/* ----- Онбординг-тур редактора паків ----- */
+.pe-tour-trigger-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:999px;
+  border:1px solid var(--metal-lt);background:var(--surface-2, rgba(255,255,255,.04));
+  color:var(--text-mute);font-family:var(--head);font-weight:700;font-size:14px;
+  cursor:pointer;transition:border-color .18s ease,color .18s ease,background-color .18s ease;
+}
+.pe-tour-trigger-btn:hover,
+.pe-tour-trigger-btn:focus-visible{
+  color:var(--hazard);border-color:var(--hazard);
+  background:color-mix(in srgb, var(--hazard) 12%, transparent);
+  outline:none;
+}
+
+.pe-tour-overlay{
+  position:fixed;inset:0;z-index:1200;
+  background:transparent;pointer-events:auto;
+}
+
+.pe-tour-spotlight{
+  position:fixed;z-index:1201;pointer-events:none;
+  border-radius:var(--radius, 10px);
+  border:2px solid var(--hazard);
+  box-shadow:0 0 0 9999px rgba(7, 9, 13, 0.74), 0 0 24px color-mix(in srgb, var(--hazard) 30%, transparent);
+  transition:top .26s ease, left .26s ease, width .26s ease, height .26s ease;
+}
+
+.pe-tour-card{
+  position:fixed;z-index:1202;
+  width:min(360px, calc(100vw - 24px));
+  padding:16px 18px;
+  border-radius:var(--radius, 12px);
+  border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
+  background:var(--panel, #141922);
+  color:var(--text);
+  box-shadow:0 18px 42px rgba(0,0,0,.55);
+  transition:top .24s ease, left .24s ease;
+}
+
+.pe-tour-arrow{
+  position:absolute;width:12px;height:12px;
+  background:var(--panel, #141922);
+  border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
+  transform:translate(-50%, -50%) rotate(45deg);
+  pointer-events:none;
+}
+.pe-tour-arrow[data-arrow-side="top"]{
+  top:0;border-right:none;border-bottom:none;
+}
+.pe-tour-arrow[data-arrow-side="bottom"]{
+  bottom:-12px;border-left:none;border-top:none;
+}
+.pe-tour-arrow[data-arrow-side="left"]{
+  left:0;border-top:none;border-right:none;
+}
+.pe-tour-arrow[data-arrow-side="right"]{
+  right:-12px;border-bottom:none;border-left:none;
+}
+
+.pe-tour-card__head{
+  display:flex;align-items:center;gap:10px;margin-bottom:8px;
+}
+.pe-tour-card__step{
+  flex:0 0 auto;padding:2px 8px;border-radius:999px;
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+  background:color-mix(in srgb, var(--hazard) 16%, transparent);
+  color:var(--hazard);border:1px solid color-mix(in srgb, var(--hazard) 35%, transparent);
+}
+.pe-tour-card__title{
+  margin:0;font-family:var(--head);font-size:15px;font-weight:700;color:var(--text);
+}
+.pe-tour-card__body{
+  margin:0 0 14px;font-size:13.5px;line-height:1.5;color:var(--text-mute);
+}
+.pe-tour-card__actions{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.pe-tour-card__nav{
+  display:flex;align-items:center;gap:8px;margin-left:auto;
+}
+.pe-tour-btn-skip{
+  padding-inline:8px;font-size:12.5px;color:var(--text-mute);
+}
