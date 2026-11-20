@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   TOUR_STORAGE_KEY,
   PACK_EDITOR_TOUR_STEPS
@@ -12,6 +13,7 @@ import {
   startPackEditorTour
 } from '../../js/pack-editor/ui/tour.js';
 import { packEditorTemplate } from '../../js/pack-editor/ui/template.js';
+import { ICON_QUESTION } from '../../js/constants/icons.js';
 
 function createMemoryStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -266,9 +268,13 @@ function createMockDom(targets = {}) {
   return { mockDocument, mockWindow, scrollCalls, body };
 }
 
-test('packEditorTemplate рендерить кнопку повторного запуску гайду #pe-tour-start-btn у шапці', () => {
+test('packEditorTemplate рендерить кнопку повторного запуску гайду #pe-tour-start-btn з SVG-іконкою з реєстру icons', () => {
+  assert.equal(ICON_QUESTION, './icons/question.svg');
+  assert.equal(fs.existsSync('icons/question.svg'), true);
   const html = packEditorTemplate({ isEdit: false, isDefaultEdit: false });
   assert.ok(html.includes('id="pe-tour-start-btn"'));
+  assert.ok(html.includes('./icons/question.svg'));
+  assert.ok(html.includes('ui-icon'));
 });
 
 test('startPackEditorTour монтує блокувач, прожектор, діалог зі стрілкою, центрує елемент і підтримує Пропустити/Назад/Далі', async () => {
