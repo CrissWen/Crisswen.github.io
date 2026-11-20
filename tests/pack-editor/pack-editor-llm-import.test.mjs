@@ -43,7 +43,8 @@ test('cleanTxtLine та importCardsContent (.txt) прибирають markdown-
     '```txt',
     '1. Хірург - робить складні операції',
     '2) Інженер - лагодить генератор [Стажер: 12, Майстер]',
-    '- Хірург - дублікат за назвою',
+    '- Хірург - робить складні операції',
+    '3. Хірург - оперує в польових умовах',
     'Поламаний рядок {rep: true',
     'Чужий ключ {pop: 5000, stay: 12}',
     '```'
@@ -57,14 +58,15 @@ test('cleanTxtLine та importCardsContent (.txt) прибирають markdown-
   });
 
   assert.equal(res.error, undefined);
-  assert.equal(res.addedCount, 2);
+  assert.equal(res.addedCount, 3);
   assert.equal(res.skippedCount, 3);
   assert.equal(
     res.nextText,
     [
       'Водій - водить авто',
       'Хірург - робить складні операції',
-      'Інженер - лагодить генератор [Стажер: 12, Майстер]'
+      'Інженер - лагодить генератор [Стажер: 12, Майстер]',
+      'Хірург - оперує в польових умовах'
     ].join('\n')
   );
 });
@@ -181,7 +183,7 @@ test('processDroppedLlmFiles обробляє dropped File-обʼєкти, до�
   const okRes = await processDroppedLlmFiles(
     [
       makeFile('part1.txt', '1. Лікар - лікує людей\n2. Пожежник - гасить вогонь'),
-      makeFile('part2.json', JSON.stringify(['Біолог - вивчає віруси', 'Лікар - дублікат']), 'application/json')
+      makeFile('part2.json', JSON.stringify(['Біолог - вивчає віруси', 'Лікар - лікує людей']), 'application/json')
     ],
     { mode: 'cards', targetKey: 'profession', existingText: 'Водій - керує транспортом' }
   );

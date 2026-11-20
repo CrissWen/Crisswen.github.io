@@ -2,6 +2,7 @@ import {
   parseLines,
   parseCardLine,
   cardToLine,
+  canonicalCardDedupKey,
   formatStageEntry,
   OBJECT_STAGE_KEYS,
   STAGE_SUPPORTING_CATEGORIES
@@ -151,7 +152,7 @@ function objectToCardLine(category, obj) {
   return cardToLine(category, value, mergedMeta);
 }
 
-function validateAndNormalizeCardLine(category, entry, seenNames) {
+function validateAndNormalizeCardLine(category, entry, seenKeys) {
   const line = typeof entry === 'string'
     ? cleanTxtLine(entry)
     : objectToCardLine(category, entry);
@@ -161,10 +162,9 @@ function validateAndNormalizeCardLine(category, entry, seenNames) {
   const cleanName = String(value ?? '').trim();
   if (!cleanName) return null;
 
-  const nameKey = cleanName.toLowerCase();
-  if (seenNames.has(nameKey)) return null;
-
   if (category === 'cataclysm') {
+    const nameKey = cleanName.toLowerCase();
+    if (seenKeys.has(nameKey)) return null;
     const check = validateCataclysmInput({
       name: cleanName,
       desc: String(meta.description ?? ''),
@@ -173,7 +173,7 @@ function validateAndNormalizeCardLine(category, entry, seenNames) {
       pop: meta.population !== undefined ? String(meta.population) : ''
     });
     if (check.error || !check.item) return null;
-    seenNames.add(nameKey);
+    seenKeys.add(nameKey);
     return cardToLine('cataclysm', check.item.name, {
       description: check.item.description,
       timer_minutes: check.item.timer_minutes,
@@ -199,7 +199,9 @@ function validateAndNormalizeCardLine(category, entry, seenNames) {
     if (!Array.isArray(meta.stages) || meta.stages.length === 0) return null;
   }
 
-  seenNames.add(nameKey);
+  const dedupKey = canonicalCardDedupKey(category, cleanName, meta);
+  if (seenKeys.has(dedupKey)) return null;
+  seenKeys.add(dedupKey);
   return cardToLine(category, cleanName, meta);
 }
 
@@ -210,9 +212,16 @@ export function importCardsContent({ content, kind = 'txt', category, existingTe
   }
 
   const existingLines = parseLines(existingText);
-  const seenNames = new Set(
+  const seenKeys = new Set(
     existingLines
-      .map(l => String(parseCardLine(category, l).value ?? '').trim().toLowerCase())
+      .map(l => {
+        const { value, meta } = parseCardLine(category, l);
+        const cleanName = String(value ?? '').trim();
+        if (!cleanName) return '';
+        return category === 'cataclysm'
+          ? cleanName.toLowerCase()
+          : canonicalCardDedupKey(category, cleanName, meta);
+      })
       .filter(Boolean)
   );
 
@@ -220,7 +229,7 @@ export function importCardsContent({ content, kind = 'txt', category, existingTe
   let skippedCount = 0;
 
   for (const entry of extracted.entries) {
-    const normalized = validateAndNormalizeCardLine(category, entry, seenNames);
+    const normalized = validateAndNormalizeCardLine(category, entry, seenKeys);
     if (normalized) {
       addedLines.push(normalized);
     } else {

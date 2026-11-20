@@ -1,7 +1,7 @@
 import { ALL_PACK_CATEGORIES } from './categories.js';
 import {
   parseCards, parseLines, oneLine,
-  OBJECT_STAGE_KEYS, parseStageEntry, formatStageEntry
+  OBJECT_STAGE_KEYS, parseStageEntry, formatStageEntry, deduplicateStageLines
 } from './parser.js';
 import {
   TITLE_MAX, DESC_MAX, CARD_VALUE_MAX, CARD_META_TEXT_MAX,
@@ -203,7 +203,7 @@ export function rangesFromConfig(config, fallback) {
 export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = {}, ranges }) {
   const stageLists = {};
   for (const key of STAGE_KEYS) {
-    const lines = parseLines(stages[key]);
+    const lines = parseLines(deduplicateStageLines(key, stages[key]));
     if (lines.length) {
       stageLists[key] = lines.map(line => parseStageEntry(key, line));
     }
