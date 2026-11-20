@@ -1,4 +1,4 @@
-import { reconcileCards } from '../parser.js';
+import { reconcileCards, cardToLine } from '../parser.js';
 import { getPromptForCategory } from '../categories.js';
 import { cataFieldStrings } from '../payload.js';
 import { processDroppedLlmFiles } from '../llm-file-import.js';
@@ -69,6 +69,9 @@ export function bindLlmPanel(ctx) {
           state.extraMeta,
           state.deletionSink
         );
+        state.form.texts[state.activeCategory] = state.cardData[state.activeCategory]
+          .map(c => cardToLine(state.activeCategory, c.value, c.meta))
+          .join('\n');
       }
     }
 

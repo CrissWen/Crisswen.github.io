@@ -4,7 +4,7 @@ import { CATEGORY_SCHEMAS } from '../categories.js';
 import { esc } from '../../utils/common/escape-html.js';
 import { syncCustomSelect } from '../../ui/custom-select.js';
 import {
-  parseLines, oneLine, parseCards, cardToLine,
+  parseLines, oneLine, parseCards, cardToLine, canonicalCardDedupKey,
   hasExplanationField, joinNameExplanation, splitNameExplanation
 } from '../parser.js';
 import { OBJECT_STAGE_KEYS, validateStageEntries, parseStageEntry } from '../payload.js';
@@ -515,6 +515,11 @@ function validateRequiredFields(category, data) {
   return missing;
 }
 
+export function findFullDuplicateIndex(category, value, meta, cards = [], excludeIndex = -1) {
+  const targetKey = canonicalCardDedupKey(category, value, meta);
+  return cards.findIndex((c, idx) => idx !== excludeIndex && c && canonicalCardDedupKey(category, c.value, c.meta) === targetKey);
+}
+
 export function submitDyn() {
   const category = state.activeCategory;
   const data = readDynRaw();
@@ -563,6 +568,14 @@ export function submitDyn() {
     if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) {
       delete meta[k];
     }
+  }
+
+  const dupIdx = findFullDuplicateIndex(category, storedValue, meta, cards, state.dynEditIndex);
+  if (dupIdx >= 0) {
+    const nameEl = $('pe-dyn-name');
+    nameEl?.classList.add('is-invalid');
+    showFormError('Така картка вже є в цій категорії', nameEl);
+    return;
   }
 
   if (isEdit) {

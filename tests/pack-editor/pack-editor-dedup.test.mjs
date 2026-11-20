@@ -7,6 +7,7 @@ import {
   reconcileCards
 } from '../../js/pack-editor/parser.js';
 import { buildPackConfig } from '../../js/pack-editor/payload.js';
+import { findFullDuplicateIndex } from '../../js/pack-editor/controllers/dynamic.js';
 
 test('canonicalCardDedupKey ігнорує регістр, зайві пробіли та порядок ключів у meta', () => {
   const k1 = canonicalCardDedupKey('gender', 'Чоловік', { can_reproduce: true, opposite: 'Жінка' });
@@ -62,4 +63,24 @@ test('deduplicateStageLines та buildPackConfig прибирають повні
   assert.equal(cfg.age_categories.length, 1);
   assert.equal(cfg.default_stages.profession.length, 1);
   assert.equal(cfg.default_stages.health.length, 1);
+});
+
+
+test('findFullDuplicateIndex виявляє повний дублікат у динамічній категорії та ігнорує власний індекс при редагуванні', () => {
+  const cards = [
+    { id: '1', value: 'Лікар', meta: { ability: 'Лікує людей' } },
+    { id: '2', value: 'Інженер', meta: { ability: 'Лагодить бункер' } }
+  ];
+
+  // Повний дублікат (інший регістр) -> індекс 0
+  assert.equal(findFullDuplicateIndex('profession', 'лікар', { ability: 'лікує людей' }, cards, -1), 0);
+
+  // Та сама назва, але інша здібність -> НЕ дублікат (-1)
+  assert.equal(findFullDuplicateIndex('profession', 'Лікар', { ability: 'Хірург' }, cards, -1), -1);
+
+  // Редагування тієї ж самої картки (excludeIndex = 0) -> НЕ дублікат (-1)
+  assert.equal(findFullDuplicateIndex('profession', 'Лікар', { ability: 'Лікує людей' }, cards, 0), -1);
+
+  // Зміна картки #1 на повний дублікат картки #0 -> індекс 0
+  assert.equal(findFullDuplicateIndex('profession', 'Лікар', { ability: 'Лікує людей' }, cards, 1), 0);
 });

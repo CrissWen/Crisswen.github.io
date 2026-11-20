@@ -29,7 +29,13 @@ export function syncCataclysmsFromLlmText({ markDeleted = true } = {}) {
     state.form.texts.cataclysm = $('pe-cards').value;
   }
   if (state.form.texts.cataclysm === llmTextBaseline) return;
-  const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
+  const seenCataNames = new Set();
+  const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm').filter(p => {
+    const key = p.value.trim().toLowerCase();
+    if (!key || seenCataNames.has(key)) return false;
+    seenCataNames.add(key);
+    return true;
+  });
   const existingByName = new Map();
   for (let i = 0; i < state.form.cataclysms.length; i++) {
     const c = state.form.cataclysms[i];

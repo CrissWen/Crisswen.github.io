@@ -1,5 +1,5 @@
 import { STAGE_KEYS } from '../payload.js';
-import { oneLine } from '../parser.js';
+import { oneLine, deduplicateStageLines } from '../parser.js';
 import { getStagePrompt } from '../prompts/stage-prompts.js';
 import { processDroppedLlmFiles } from '../llm-file-import.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
@@ -46,7 +46,11 @@ export function bindStagesTabs(ctx) {
         state.form.stages[key] = text;
         if (ta) ta.value = text;
       } else {
-        if (ta) state.form.stages[key] = ta.value;
+        if (ta) {
+          const cleaned = deduplicateStageLines(key, ta.value);
+          ta.value = cleaned;
+          state.form.stages[key] = cleaned;
+        }
         ui.renderStageList(key, state.form.stages[key] || '');
       }
     });

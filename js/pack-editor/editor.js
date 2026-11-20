@@ -1,5 +1,5 @@
 import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from './categories.js';
-import { parseLines, hasExplanationField, splitNameExplanation, reconcileCards } from './parser.js';
+import { parseLines, hasExplanationField, splitNameExplanation, reconcileCards, cardToLine } from './parser.js';
 import { stagesTextFromConfig, rangesFromConfig, RANGE_DEFAULTS, cataclysmToRow, canonicalCardSnapshot } from './payload.js';
 import {
   getPack, getDefaultPackConfig, checkIsAdmin, DEFAULT_PACK_ID,
@@ -155,6 +155,9 @@ function selectCategory(category) {
       state.extraMeta,
       state.deletionSink
     );
+    state.form.texts[state.activeCategory] = state.cardData[state.activeCategory]
+      .map(c => cardToLine(state.activeCategory, c.value, c.meta))
+      .join('\n');
   }
   state.activeCategory = category;
   if (state.viewMode === 'llm' && category === 'cataclysm') syncCataclysmsToLlmText();
