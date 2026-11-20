@@ -453,29 +453,34 @@ test('startPackEditorTour виконує демо-превʼю LLM, додає �
     ];
 
     const controller = new AbortController();
-    const tour = startPackEditorTour({ signal: controller.signal, steps, storage, demoDelayMs: 25 });
+    const tour = startPackEditorTour({ signal: controller.signal, steps, storage });
     assert.ok(tour);
 
     // Demo card injected in empty list
     assert.ok(cataList.innerHTML.includes('pe-tour-demo-row'));
     assert.equal(cardsTa.value, 'Чоловік');
 
-    // Step 0 (enable-llm) enables LLM after short delay
-    await wait(50);
+    // Step 0 (enable-llm): LLM is OFF initially; turns ON only after clicking "Далі"
+    assert.equal(llmCheckbox.checked, false);
+    tour.next();
+    assert.equal(tour.getStepIndex(), 0);
     assert.equal(llmCheckbox.checked, true);
     assert.equal(llmSlot.classList.contains('is-active'), true);
 
-    // Step 1 (preview-list-llm): starts visual then switches to LLM textarea
+    // Second "Далі" advances to Step 1 (preview-list-llm): starts visual, switches to LLM on "Далі"
     tour.next();
     await wait(200);
+    assert.equal(tour.getStepIndex(), 1);
     assert.equal(llmCheckbox.checked, false);
-    await wait(50);
+    tour.next();
+    assert.equal(tour.getStepIndex(), 1);
     assert.equal(llmCheckbox.checked, true);
     assert.equal(cardsTa.hidden, false);
 
-    // Step 2 (visual-form): restores visual mode so formCol is visible
+    // Next "Далі" advances to Step 2 (visual-form): restores visual mode so formCol is visible
     tour.next();
     await wait(200);
+    assert.equal(tour.getStepIndex(), 2);
     assert.equal(llmCheckbox.checked, false);
     assert.equal(formCol.hidden, false);
 

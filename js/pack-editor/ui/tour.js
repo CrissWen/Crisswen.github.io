@@ -203,8 +203,7 @@ export function startPackEditorTour({
   force = false,
   steps = PACK_EDITOR_TOUR_STEPS,
   storage = globalThis.localStorage,
-  onMobileViewChange = null,
-  demoDelayMs = 450
+  onMobileViewChange = null
 } = {}) {
   if (signal?.aborted) return null;
   if (!shouldStartTour(storage, { force })) return null;
@@ -225,11 +224,11 @@ export function startPackEditorTour({
   let index = 0;
   let settleTimer = 0;
   let fadeTimer = 0;
-  let demoTimer = 0;
   let closeTimer = 0;
   let scrollWaitAbort = null;
   let stepToken = 0;
   let hasShownStep = false;
+  let demoApplied = false;
   let closed = false;
 
   const overlay = document.createElement('div');
@@ -253,10 +252,8 @@ export function startPackEditorTour({
   function clearScrollWait() {
     clearTimeout(settleTimer);
     clearTimeout(fadeTimer);
-    clearTimeout(demoTimer);
     settleTimer = 0;
     fadeTimer = 0;
-    demoTimer = 0;
     scrollWaitAbort?.abort();
     scrollWaitAbort = null;
   }
@@ -333,23 +330,6 @@ export function startPackEditorTour({
     }
   }
 
-  function runStepDemo(step, token) {
-    if (!step?.demoAction) return;
-    if (step.demoAction === 'enable-llm') {
-      demoTimer = setTimeout(() => {
-        if (closed || token !== stepToken) return;
-        demo.setPreviewMode(true);
-        updatePosition();
-      }, demoDelayMs);
-    } else if (step.demoAction === 'preview-list-llm') {
-      demoTimer = setTimeout(() => {
-        if (closed || token !== stepToken) return;
-        demo.setPreviewMode(true);
-        updatePosition();
-      }, demoDelayMs * 2);
-    }
-  }
-
   function revealStep(token) {
     if (closed || token !== stepToken) return;
     clearScrollWait();
@@ -358,7 +338,6 @@ export function startPackEditorTour({
     spotlight.classList.add('is-visible');
     card.classList.add('is-visible');
     card.querySelector('[data-tour-action="next"]')?.focus?.({ preventScroll: true });
-    runStepDemo(activeSteps[index], token);
   }
 
   function waitForScrollAndReveal(targetScrollY, token) {
@@ -455,6 +434,7 @@ export function startPackEditorTour({
   function renderStep() {
     if (closed) return;
     stepToken++;
+    demoApplied = false;
     const token = stepToken;
     clearScrollWait();
 
@@ -469,6 +449,13 @@ export function startPackEditorTour({
 
   function next() {
     if (closed) return;
+    const step = activeSteps[index];
+    if (!demoApplied && (step?.demoAction === 'enable-llm' || step?.demoAction === 'preview-list-llm')) {
+      demoApplied = true;
+      demo.setPreviewMode(true);
+      updatePosition();
+      return;
+    }
     if (index >= activeSteps.length - 1) {
       close(true, false, { scrollToTop: true });
       return;
@@ -478,7 +465,14 @@ export function startPackEditorTour({
   }
 
   function prev() {
-    if (closed || index <= 0) return;
+    if (closed) return;
+    if (demoApplied) {
+      demoApplied = false;
+      demo.setPreviewMode(false);
+      updatePosition();
+      return;
+    }
+    if (index <= 0) return;
     index -= 1;
     renderStep();
   }
