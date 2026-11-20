@@ -5,7 +5,7 @@ import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
 import {
   getDynamicCards, dynDraftPending, startDynEdit, cataDraftPending, startCataEdit,
-  handleCataClick, handleCataInput, submitCata, handleActionsClick
+  handleCataClick, handleCataInput, handleCataChange, submitCata, handleActionsClick
 } from '../controllers/controllers.js';
 
 // Основні поля пака (назва, опис), список карток, форма катаклізму і панель дій (збереження/очищення/вихід)
@@ -58,6 +58,7 @@ export function bindFormFields(ctx) {
   $('pe-cata-list').addEventListener('click', onCataListClick, { signal });
   $('pe-cata').addEventListener('click', handleCataClick, { signal });
   $('pe-cata').addEventListener('input', handleCataInput, { signal });
+  $('pe-cata').addEventListener('change', handleCataChange, { signal });
   $('pe-cata').addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || (e.target.id === 'pe-cata-name' && !e.shiftKey))) {
       e.preventDefault();

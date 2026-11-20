@@ -254,4 +254,12 @@ export function handleCataInput(e) {
   if (!document.querySelector('#pe-cata .is-invalid')) ui.showCataError('');
 }
 
+export function handleCataChange(e) {
+  if (e.target.id !== 'pe-cata-timer-toggle') return;
+  ui.setCataTimerEnabled(e.target.checked, { focus: e.target.checked });
+  if (ui.isCataErrorVisible() && !document.querySelector('#pe-cata .is-invalid')) {
+    ui.showCataError('');
+  }
+}
+
 

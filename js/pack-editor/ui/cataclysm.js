@@ -8,7 +8,30 @@ import { CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './constan
 // ----- Катаклізми: форма і список -----
 export function readCataRaw() {
   const get = key => $(CATA_FIELDS[key]).value.trim();
-  return { name: get('name'), desc: get('desc'), timer: get('timer'), stay: get('stay'), pop: get('pop') };
+  const timerEnabled = Boolean($('pe-cata-timer-toggle')?.checked);
+  return {
+    name: get('name'),
+    desc: get('desc'),
+    timerEnabled,
+    timer: timerEnabled ? get('timer') : '',
+    stay: get('stay'),
+    pop: get('pop')
+  };
+}
+
+export function setCataTimerEnabled(enabled, { focus = false } = {}) {
+  const toggle = $('pe-cata-timer-toggle');
+  const wrap = $('pe-cata-timer-wrap');
+  const input = $(CATA_FIELDS.timer);
+  const on = Boolean(enabled);
+  if (toggle) toggle.checked = on;
+  if (wrap) wrap.hidden = !on;
+  if (!on && input) {
+    input.value = '';
+    input.classList.remove('is-invalid');
+  } else if (on && focus && input) {
+    input.focus();
+  }
 }
 
 export const isCataErrorVisible = () => !$('pe-cata-error').hidden;
@@ -42,14 +65,19 @@ export function paintCataMode(item) {
   document.querySelector('[data-cata-action="delete"]').hidden = !item;
 }
 
-// Таймер лишається порожнім, щоб було видно підказку в полі; порожнє = 0 (без таймера)
+// Таймер за замовчуванням вимкнений (без таймера) і його поле приховане
 export function clearCataFields() {
   Object.values(CATA_FIELDS).forEach(id => { $(id).value = ''; });
+  setCataTimerEnabled(false);
 }
 
-// values — { name, desc, timer, stay, pop } рядками
+// values — { name, desc, timerEnabled, timer, stay, pop }
 export function fillCataFields(values) {
-  for (const key of Object.keys(CATA_FIELDS)) $(CATA_FIELDS[key]).value = values[key];
+  for (const key of Object.keys(CATA_FIELDS)) $(CATA_FIELDS[key]).value = values[key] ?? '';
+  const enabled = values.timerEnabled !== undefined
+    ? Boolean(values.timerEnabled)
+    : Boolean(values.timer && values.timer !== '0');
+  setCataTimerEnabled(enabled);
 }
 
 export const scrollCataFormIntoView = () => $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'start' });

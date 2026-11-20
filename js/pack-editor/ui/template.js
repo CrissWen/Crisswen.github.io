@@ -412,9 +412,16 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   <textarea id="pe-cata-desc" class="pe-input pe-desc" rows="3" maxlength="${CATACLYSM_LIMITS.descMax}" placeholder="Напр.: Штучний інтелект захопив керування мережами..."></textarea>
                 </div>
                 <div class="pe-cata__grid">
-                  <div class="pe-field">
-                    <label class="pe-label" for="pe-cata-timer">Таймер (хв)</label>
-                    <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30">
+                  <div class="pe-field pe-cata__timer-field">
+                    <label class="pe-check" for="pe-cata-timer-toggle">
+                      <input id="pe-cata-timer-toggle" class="pe-check__input" type="checkbox">
+                      <span class="pe-check__box" aria-hidden="true"></span>
+                      <span class="pe-check__text">Увімкнути таймер</span>
+                    </label>
+                    <div id="pe-cata-timer-wrap" class="pe-cata__timer-input" hidden>
+                      <label class="pe-label" for="pe-cata-timer">Таймер (хв) <span class="pe-required" title="Обов'язкове поле">*</span></label>
+                      <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30">
+                    </div>
                   </div>
                   <div class="pe-field">
                     <label class="pe-label" for="pe-cata-stay">Час знаходження (міс.) <span class="pe-required" title="Обов'язкове поле">*</span></label>

@@ -1091,7 +1091,11 @@ body.is-stage-dragging * {
   margin:0;font-family:var(--head);font-weight:600;font-size:15px;letter-spacing:.05em;
   text-transform:uppercase;color:var(--text);overflow-wrap:anywhere;
 }
-.pe-cata__grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+.pe-cata__grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start;}
+.pe-cata__timer-field{display:flex;flex-direction:column;gap:8px;}
+.pe-cata__timer-field .pe-check{min-height:24px;}
+.pe-cata__timer-input{display:flex;flex-direction:column;gap:6px;}
+.pe-cata__timer-input[hidden]{display:none;}
 .pe-cata .pe-label{font-weight:600;color:var(--text);font-size:13px;}
 .pe-cata .pe-input::placeholder{font-size:13px;}
 .pe-cata__actions{display:flex;flex-wrap:wrap;gap:10px;padding-top:4px;}
