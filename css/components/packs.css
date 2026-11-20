@@ -2903,8 +2903,10 @@ dialog.pe-draft-modal::backdrop {
   border-radius:var(--radius, 10px);
   border:2px solid var(--hazard);
   box-shadow:0 0 0 9999px rgba(7, 9, 13, 0.74), 0 0 24px color-mix(in srgb, var(--hazard) 30%, transparent);
-  transition:top .26s ease, left .26s ease, width .26s ease, height .26s ease;
+  opacity:0;
+  transition:opacity .22s ease;
 }
+.pe-tour-spotlight.is-visible{opacity:1;}
 
 .pe-tour-card{
   position:fixed;z-index:1202;
@@ -2915,7 +2917,13 @@ dialog.pe-draft-modal::backdrop {
   background:var(--panel, #141922);
   color:var(--text);
   box-shadow:0 18px 42px rgba(0,0,0,.55);
-  transition:top .24s ease, left .24s ease;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity .22s ease, transform .22s ease;
+}
+.pe-tour-card.is-visible{
+  opacity:1;
+  transform:translateY(0);
 }
 
 .pe-tour-arrow{

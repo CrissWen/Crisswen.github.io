@@ -152,7 +152,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
   // is-loading знімається, коли завантажено конфіг дефолтного пака (і сам пак у режимі редагування)
   return `
     <section id="pe-root" class="pack-editor layout-large-centered is-loading">
-      <div class="block">
+      <div class="block" id="pe-meta-block">
         <div class="block-head pe-head">
           <h2>${isEdit ? 'Редагування пака' : 'Створення пака'}</h2>
           <button type="button" id="pe-tour-start-btn" class="pe-tour-trigger-btn" title="Підказки по редактору" aria-label="Підказки по редактору">?</button>
@@ -205,7 +205,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         </div>
       </div>
 
-      <div class="block">
+      <div class="block" id="pe-ranges-block">
         <div class="block-head"><h2>Глобальні налаштування генерації</h2></div>
         <div class="block-body pe-body">
           <p class="pe-hint">
@@ -471,7 +471,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         </button>
       </div>
 
-      <div class="block">
+      <div class="block" id="pe-stages-block">
         <div class="block-head pe-stages-head">
           <h2>Стадії</h2>
           <label class="pe-check" title="Режим LLM (робота з чистим текстом)">

@@ -22,9 +22,9 @@ function createMemoryStorage(initial = {}) {
   };
 }
 
-test('PACK_EDITOR_TOUR_STEPS містить 7 валідних кроків з унікальними id', () => {
+test('PACK_EDITOR_TOUR_STEPS містить 8 валідних кроків по цілих блоках з унікальними id', () => {
   assert.equal(TOUR_STORAGE_KEY, 'tb_pe_tour_v1');
-  assert.equal(PACK_EDITOR_TOUR_STEPS.length, 7);
+  assert.equal(PACK_EDITOR_TOUR_STEPS.length, 8);
 
   const ids = new Set();
   const allowedPlacements = new Set(['top', 'bottom', 'left', 'right']);
@@ -111,6 +111,16 @@ test('computeTourLayout розраховує прожектор, перевер�
   });
   assert.equal(flippedToLeft.card.side, 'left');
   assert.equal(flippedToLeft.arrow.side, 'right');
+
+  // Tall block exceeding viewport height: spotlight keeps full true size without clamping, while card stays in viewport
+  const tallBlock = computeTourLayout({
+    targetRect: { top: -150, left: 80, width: 500, height: 1100, right: 580, bottom: 950 },
+    cardSize: { width: 320, height: 180 },
+    viewport: { width: 1280, height: 800 },
+    placement: 'top'
+  });
+  assert.deepEqual(tallBlock.spotlight, { top: -156, left: 74, width: 512, height: 1112 });
+  assert.ok(tallBlock.card.top >= 12 && tallBlock.card.top + 180 <= 800 - 12);
 });
 
 
@@ -292,6 +302,8 @@ test('startPackEditorTour монтує блокувач, прожектор, д�
     assert.ok(scrollCalls.length >= 1);
     // target1 center = 940, viewport center = 400 -> scroll top = 540
     assert.equal(scrollCalls[0].top, 540);
+    assert.equal(spotlight.classList.contains('is-visible'), true);
+    assert.equal(card.classList.contains('is-visible'), true);
 
     // Step 0 -> Step 1 (skips missing #not-in-dom)
     tour.next();

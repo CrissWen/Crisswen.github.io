@@ -67,13 +67,11 @@ export function computeTourLayout({
   edge = 12
 }) {
   const spotlight = {
-    top: Math.max(4, Math.round(targetRect.top - pad)),
-    left: Math.max(4, Math.round(targetRect.left - pad)),
+    top: Math.round(targetRect.top - pad),
+    left: Math.round(targetRect.left - pad),
     width: Math.round(targetRect.width + pad * 2),
     height: Math.round(targetRect.height + pad * 2)
   };
-  spotlight.width = Math.min(spotlight.width, Math.max(24, viewport.width - spotlight.left - 4));
-  spotlight.height = Math.min(spotlight.height, Math.max(24, viewport.height - spotlight.top - 4));
 
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
@@ -133,7 +131,9 @@ export function startPackEditorTour({
   if (!activeSteps.length) return null;
 
   let index = 0;
-  let rafId = 0;
+  let settleTimer = 0;
+  let scrollWaitAbort = null;
+  let stepToken = 0;
   let closed = false;
 
   const overlay = document.createElement('div');
@@ -154,10 +154,18 @@ export function startPackEditorTour({
   document.body.appendChild(spotlight);
   document.body.appendChild(card);
 
+  function clearScrollWait() {
+    clearTimeout(settleTimer);
+    settleTimer = 0;
+    scrollWaitAbort?.abort();
+    scrollWaitAbort = null;
+  }
+
   function close(markDone = true) {
     if (closed) return;
     closed = true;
-    window.cancelAnimationFrame(rafId);
+    stepToken++;
+    clearScrollWait();
     tourAbort.abort();
     overlay.remove();
     spotlight.remove();
@@ -212,20 +220,58 @@ export function startPackEditorTour({
     }
   }
 
-  function trackSmoothScroll(frames = 28) {
-    window.cancelAnimationFrame(rafId);
-    let left = frames;
-    const tick = () => {
-      if (closed) return;
-      updatePosition();
-      left -= 1;
-      if (left > 0) rafId = window.requestAnimationFrame(tick);
+  function revealStep(token) {
+    if (closed || token !== stepToken) return;
+    clearScrollWait();
+    updatePosition();
+    spotlight.classList.add('is-visible');
+    card.classList.add('is-visible');
+    card.querySelector('[data-tour-action="next"]')?.focus?.({ preventScroll: true });
+  }
+
+  function waitForScrollAndReveal(targetScrollY, token) {
+    clearScrollWait();
+    const startY = window.scrollY || 0;
+    if (Math.abs(targetScrollY - startY) < 2) {
+      revealStep(token);
+      return;
+    }
+
+    window.scrollTo?.({ top: targetScrollY, behavior: 'smooth' });
+
+    // Якщо середовище прокрутило синхронно (наприклад, без плавного скролу або в тестах)
+    if (Math.abs(targetScrollY - (window.scrollY || 0)) < 2) {
+      revealStep(token);
+      return;
+    }
+
+    scrollWaitAbort = new AbortController();
+    const waitSignal = scrollWaitAbort.signal;
+
+    const finish = () => revealStep(token);
+    window.addEventListener('scrollend', finish, { once: true, signal: waitSignal });
+
+    let debounceTimer = 0;
+    const onScrollTick = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (Math.abs(targetScrollY - (window.scrollY || 0)) < 3) finish();
+      }, 110);
     };
-    rafId = window.requestAnimationFrame(tick);
+    window.addEventListener('scroll', onScrollTick, { passive: true, signal: waitSignal });
+    waitSignal.addEventListener('abort', () => clearTimeout(debounceTimer), { once: true });
+
+    settleTimer = setTimeout(finish, 550);
   }
 
   function renderStep() {
     if (closed) return;
+    stepToken++;
+    const token = stepToken;
+    clearScrollWait();
+    spotlight.classList.remove('is-visible');
+    card.classList.remove('is-visible');
+
     const step = activeSteps[index];
     if (!step) {
       close(true);
@@ -272,10 +318,7 @@ export function startPackEditorTour({
       maxScrollY
     });
 
-    window.scrollTo?.({ top: targetScrollY, behavior: 'smooth' });
-    updatePosition();
-    trackSmoothScroll();
-    card.querySelector('[data-tour-action="next"]')?.focus?.({ preventScroll: true });
+    waitForScrollAndReveal(targetScrollY, token);
   }
 
   function next() {
