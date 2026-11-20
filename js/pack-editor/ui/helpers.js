@@ -119,6 +119,8 @@ export function showCategory({ category, text, viewMode = "visual", ageCategorie
   if (sortWrap) sortWrap.hidden = !isVisual;
   const dropHint = $('pe-llm-drop-hint');
   if (dropHint) dropHint.hidden = isVisual;
+  const llmToolbar = $('pe-llm-toolbar');
+  if (llmToolbar) llmToolbar.hidden = isVisual;
 
   $("pe-cards").scrollTop = 0;
 }

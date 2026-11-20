@@ -118,26 +118,8 @@ export function bindLlmPanel(ctx) {
   }, { signal });
 
   const cardsTa = $('pe-cards');
-  cardsTa?.addEventListener('dragover', e => {
-    if (cardsTa.hidden) return;
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-    cardsTa.classList.add('is-dragover');
-  }, { signal });
-
-  cardsTa?.addEventListener('dragleave', e => {
-    if (!cardsTa.contains(e.relatedTarget)) {
-      cardsTa.classList.remove('is-dragover');
-    }
-  }, { signal });
-
-  cardsTa?.addEventListener('drop', async e => {
-    if (cardsTa.hidden) return;
-    e.preventDefault();
-    cardsTa.classList.remove('is-dragover');
-    const files = e.dataTransfer?.files;
-    if (!files?.length) return;
-
+  async function applyImportedFiles(files) {
+    if (!files?.length || !cardsTa || cardsTa.hidden) return;
     const sessionId = state.sessionId;
     const category = state.activeCategory;
     const res = await processDroppedLlmFiles(files, {
@@ -159,5 +141,40 @@ export function bindLlmPanel(ctx) {
       ctx.updateButtons();
     }
     if (res.message) showGlobalToast(res.message);
+  }
+
+  cardsTa?.addEventListener('dragover', e => {
+    if (cardsTa.hidden) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    cardsTa.classList.add('is-dragover');
+  }, { signal });
+
+  cardsTa?.addEventListener('dragleave', e => {
+    if (!cardsTa.contains(e.relatedTarget)) {
+      cardsTa.classList.remove('is-dragover');
+    }
+  }, { signal });
+
+  cardsTa?.addEventListener('drop', async e => {
+    if (cardsTa.hidden) return;
+    e.preventDefault();
+    cardsTa.classList.remove('is-dragover');
+    await applyImportedFiles(e.dataTransfer?.files);
+  }, { signal });
+
+  const fileInput = $('pe-llm-file-input');
+  $('pe-llm-upload-btn')?.addEventListener('click', () => {
+    fileInput?.click();
+  }, { signal });
+
+  fileInput?.addEventListener('change', async () => {
+    const files = fileInput.files;
+    if (!files?.length) return;
+    try {
+      await applyImportedFiles(files);
+    } finally {
+      fileInput.value = '';
+    }
   }, { signal });
 }

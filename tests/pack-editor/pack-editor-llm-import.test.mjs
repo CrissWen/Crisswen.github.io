@@ -156,8 +156,11 @@ test('importStagesContent валідує стадії з числовим лім
 });
 
 
-test('packEditorTemplate та PACK_EDITOR_TOUR_STEPS містять підказки про перетягування .txt або .json файлів у поле Режиму LLM', () => {
+test('packEditorTemplate та PACK_EDITOR_TOUR_STEPS містять тулбар завантаження і підказки про .txt / .json у Режимі LLM', () => {
   const html = packEditorTemplate({ isEdit: false, isDefaultEdit: false });
+  assert.ok(html.includes('id="pe-llm-toolbar"'));
+  assert.ok(html.includes('id="pe-llm-upload-btn"'));
+  assert.ok(html.includes('id="pe-llm-file-input"'));
   assert.ok(html.includes('id="pe-llm-drop-hint"'));
   assert.ok(html.includes('.txt'));
   assert.ok(html.includes('.json'));

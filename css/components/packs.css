@@ -2988,3 +2988,18 @@ dialog.pe-draft-modal::backdrop {
   outline-offset:-4px;
   background:color-mix(in srgb, var(--hazard) 7%, var(--surface-2, rgba(255,255,255,.03)));
 }
+.pe-llm-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:6px 10px;
+  border:1px solid color-mix(in srgb, var(--metal-lt) 45%, transparent);
+  border-radius:var(--radius-sm, 8px);
+  background:var(--surface-2, rgba(255,255,255,.03));
+}
+.pe-llm-toolbar[hidden]{display:none;}
+.pe-llm-toolbar__title{
+  font-size:12.5px;color:var(--text-mute);font-weight:500;
+}
+.pe-llm-upload-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px;font-size:12.5px;min-height:28px;
+}
