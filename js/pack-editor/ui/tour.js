@@ -191,7 +191,9 @@ function createDemoController() {
 function resolveActiveSteps(steps) {
   return (steps || []).filter(step => {
     const el = document.querySelector(step.target);
-    return Boolean(el);
+    if (el) return true;
+    if (step.demoAction === 'visual-form' && document.querySelector('.pe-char-form-col')) return true;
+    return false;
   });
 }
 

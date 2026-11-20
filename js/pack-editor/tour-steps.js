@@ -61,7 +61,7 @@ export const PACK_EDITOR_TOUR_STEPS = [
   },
   {
     id: 'cards-form',
-    target: '.pe-char-form-col',
+    target: '.pe-char-form-col .pe-side-form:not([hidden])',
     title: 'Форма додавання картки',
     text: 'У цій формі створюються та редагуються картки поточної категорії — заповніть поля й натисніть «Додати».',
     placement: 'left',
