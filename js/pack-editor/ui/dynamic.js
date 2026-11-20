@@ -2,25 +2,38 @@ import { esc } from '../../utils/common/escape-html.js';
 import { initCustomSelects } from '../../ui/custom-select.js';
 import { $ } from './shared.js';
 
-// Червона зірочка для обов'язкових полів схеми (той самий вигляд, що й біля "Назва")
+// Червона зірочка для обов'язкових полів схеми
 const reqMark = f => (f.required ? ` <span class="pe-required" title="Обов'язкове поле">*</span>` : '');
+const REQ_STAR = `<span class="pe-required" title="Обов'язкове поле">*</span>`;
 
-function renderSingleField(f, schema, isInsideRow = false) {
-  const isConditional = !isInsideRow && ['custom_age', 'age_min', 'age_max', 'height_min', 'height_max', 'exact_height'].includes(f.key);
-  const hiddenStyle = isConditional ? ' style="display: none;"' : '';
+const PRIMARY_FIELD_RENDERERS = {
+  text: ({ label, placeholder }) => `
+      <label class="pe-label" for="pe-dyn-name">${esc(label)} ${REQ_STAR}</label>
+      <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="${esc(placeholder)}">`,
+  textarea: ({ label, placeholder }) => `
+      <label class="pe-label" for="pe-dyn-name">${esc(label)} ${REQ_STAR}</label>
+      <textarea id="pe-dyn-name" class="pe-input pe-desc pe-input--name" rows="3" placeholder="${esc(placeholder)}"></textarea>`
+};
 
-  if (f.type === 'checkbox') {
-    const isChecked = f.default ? ' checked' : '';
-    return `
+export function renderPrimaryField(primary = { type: 'text', label: 'Назва', placeholder: 'Введіть назву' }) {
+  const renderer = PRIMARY_FIELD_RENDERERS[primary.type] || PRIMARY_FIELD_RENDERERS.text;
+  return renderer(primary);
+}
+
+const CONDITIONAL_KEYS = new Set(['custom_age', 'age_min', 'age_max', 'height_min', 'height_max', 'exact_height']);
+const MULTILINE_TEXT_KEYS = new Set(['explanation', 'ability', 'description']);
+
+const FIELD_RENDERERS = {
+  checkbox: (f, hiddenStyle) => `
       <div class="pe-field pe-dyn-field-checkbox"${hiddenStyle}>
         <label class="pe-check" for="pe-dyn-${f.key}">
-          <input id="pe-dyn-${f.key}" class="pe-check__input" type="checkbox" data-dyn-key="${f.key}"${isChecked}>
+          <input id="pe-dyn-${f.key}" class="pe-check__input" type="checkbox" data-dyn-key="${f.key}"${f.default ? ' checked' : ''}>
           <span class="pe-check__box" aria-hidden="true"></span>
           <span class="pe-check__text">${esc(f.label)}</span>
         </label>
-      </div>`;
-  } else if (f.type === 'number') {
-    return `
+      </div>`,
+
+  number: (f, hiddenStyle) => `
       <div class="pe-field"${hiddenStyle}>
         <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
         <div class="pe-stepper">
@@ -36,15 +49,15 @@ function renderSingleField(f, schema, isInsideRow = false) {
           </div>
           <button type="button" class="pe-stepper__btn pe-stepper__btn--plus" data-step="up" tabindex="-1" aria-label="Збільшити">+</button>
         </div>
-      </div>`;
-  } else if (f.type === 'list') {
-    return `
+      </div>`,
+
+  list: (f, hiddenStyle) => `
       <div class="pe-field"${hiddenStyle}>
         <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
         <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc" rows="3" data-dyn-key="${f.key}" placeholder="По одній стадії на рядок"></textarea>
-      </div>`;
-  } else if (f.type === 'datalist') {
-    return `
+      </div>`,
+
+  datalist: (f, hiddenStyle) => `
       <div class="pe-field"${hiddenStyle}>
         <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}</label>
         <div class="pe-combo">
@@ -54,8 +67,9 @@ function renderSingleField(f, schema, isInsideRow = false) {
           </button>
           <div id="pe-dyn-${f.key}-list" class="pe-combo__dropdown" hidden></div>
         </div>
-      </div>`;
-  } else if (f.type === 'select') {
+      </div>`,
+
+  select: (f, hiddenStyle) => {
     const defaultVal = f.default || '';
     return `
       <div class="pe-field"${hiddenStyle}>
@@ -64,34 +78,22 @@ function renderSingleField(f, schema, isInsideRow = false) {
           ${f.options.map(opt => `<option value="${esc(opt.value)}"${opt.value === defaultVal ? ' selected' : ''}>${esc(opt.label)}</option>`).join('')}
         </select>
       </div>`;
-  } else if (f.type === 'textarea' || f.key === 'explanation' || f.key === 'ability' || f.key === 'description') {
-    return `
+  },
+
+  textarea: (f, hiddenStyle) => `
       <div class="pe-field"${hiddenStyle}>
         <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
         <textarea id="pe-dyn-${f.key}" class="pe-input pe-desc pe-input--name" rows="2" data-dyn-key="${f.key}" placeholder="Введіть ${esc(f.label).toLowerCase()}"></textarea>
-      </div>`;
-  } else {
-    return `
+      </div>`,
+
+  text: (f, hiddenStyle) => `
       <div class="pe-field"${hiddenStyle}>
         <label class="pe-label" for="pe-dyn-${f.key}">${esc(f.label)}${reqMark(f)}</label>
         <input id="pe-dyn-${f.key}" class="pe-input" type="text" data-dyn-key="${f.key}" autocomplete="off" placeholder="Введіть ${esc(f.label).toLowerCase()}">
-      </div>`;
-  }
-}
+      </div>`
+};
 
-export function renderDynamicFormFields(schema, activeCategory = '') {
-  const container = $('pe-dyn-fields');
-  if (!schema || !schema.fields) {
-    container.innerHTML = '';
-    return;
-  }
-  
-  const renderedRows = new Set();
-
-  container.innerHTML = schema.fields.map(f => {
-    if (f.key === 'stages') {
-      if (['profession', 'hobby', 'health'].includes(activeCategory)) {
-        return `
+const renderToggleableStagesBlock = category => `
           <div class="pe-field pe-dyn-field-checkbox">
             <label class="pe-check" for="pe-dyn-custom-stages-toggle">
               <input id="pe-dyn-custom-stages-toggle" class="pe-check__input" type="checkbox" data-dyn-custom-stages>
@@ -100,32 +102,56 @@ export function renderDynamicFormFields(schema, activeCategory = '') {
             </label>
           </div>
           <div id="pe-dyn-stages-wrap" class="pe-dyn-stages-wrap" hidden>
-            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="${activeCategory}"></div>
+            <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="${category}"></div>
             <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
           </div>`;
-      } else if (activeCategory === 'gender') {
-        return `
+
+const STAGE_FIELD_RENDERERS = {
+  profession: () => renderToggleableStagesBlock('profession'),
+  hobby:      () => renderToggleableStagesBlock('hobby'),
+  health:     () => renderToggleableStagesBlock('health'),
+  gender:     () => `
           <div id="pe-dyn-gender-stages-wrap" class="pe-dyn-stages-wrap" hidden>
             <label class="pe-label">Власні вікові стадії (категорії)</label>
             <div class="pe-stage-list pe-stage-list--dyn pe-input" data-dyn-stage-list="gender"></div>
             <p class="pe-stage-note">Порожній рядок унизу призначений для додавання нового запису</p>
-          </div>`;
-      }
+          </div>`
+};
+
+function renderSingleField(f, isInsideRow = false) {
+  const isConditional = !isInsideRow && CONDITIONAL_KEYS.has(f.key);
+  const hiddenStyle = isConditional ? ' style="display: none;"' : '';
+  const typeKey = MULTILINE_TEXT_KEYS.has(f.key) ? 'textarea' : (FIELD_RENDERERS[f.type] ? f.type : 'text');
+  return FIELD_RENDERERS[typeKey](f, hiddenStyle);
+}
+
+export function renderDynamicFormFields(schema, activeCategory = '') {
+  const container = $('pe-dyn-fields');
+  if (!schema || !schema.fields) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const renderedRows = new Set();
+
+  container.innerHTML = schema.fields.map(f => {
+    if (f.key === 'stages' && STAGE_FIELD_RENDERERS[activeCategory]) {
+      return STAGE_FIELD_RENDERERS[activeCategory]();
     }
 
     if (f.row) {
       if (renderedRows.has(f.row)) return '';
       renderedRows.add(f.row);
       const rowFields = schema.fields.filter(rf => rf.row === f.row);
-      const isConditional = rowFields.some(rf => ['custom_age', 'age_min', 'age_max', 'height_min', 'height_max', 'exact_height'].includes(rf.key));
+      const isConditional = rowFields.some(rf => CONDITIONAL_KEYS.has(rf.key));
       const hiddenStyle = isConditional ? ' style="display: none;"' : '';
       return `
         <div class="pe-field-row" id="pe-dyn-${f.row}-row"${hiddenStyle}>
-          ${rowFields.map(rf => renderSingleField(rf, schema, true)).join('')}
+          ${rowFields.map(rf => renderSingleField(rf, true)).join('')}
         </div>`;
     }
 
-    return renderSingleField(f, schema);
+    return renderSingleField(f);
   }).join('');
 
   initCustomSelects(container);

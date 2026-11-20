@@ -1,10 +1,10 @@
-import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS, POOL_TYPE_BY_CATEGORY } from '../categories.js';
+import { ALL_PACK_CATEGORIES, CATEGORY_SCHEMAS } from '../categories.js';
 import { TITLE_MAX, DESC_MAX } from '../constants.js';
 import { STAGE_KEYS, parseStageEntry } from '../payload.js';
 import { parseLines } from '../parser.js';
 import { $ } from './shared.js';
-import { CATACLYSM_LIST_PLACEHOLDER, TEXTAREA_PLACEHOLDER, PROFESSION_PLACEHOLDER, MULTILINE_NAME_CATEGORIES } from './constants.js';
-import { renderDynamicFormFields } from './dynamic.js';
+import { CATACLYSM_LIST_PLACEHOLDER, TEXTAREA_PLACEHOLDER, PROFESSION_PLACEHOLDER } from './constants.js';
+import { renderDynamicFormFields, renderPrimaryField } from './dynamic.js';
 import { renderStageList, renderDynStageList } from './stage-list.js';
 import { initStageSortables } from './stage-sortable.js';
 
@@ -126,21 +126,9 @@ export function updateDynamicNameField(category) {
   if (!container) return;
   const currentEl = $('pe-dyn-name');
   const currentValue = currentEl ? currentEl.value : '';
-  const isMultiline = POOL_TYPE_BY_CATEGORY[category] === 'bunker' || MULTILINE_NAME_CATEGORIES.includes(category);
-  
-  if (isMultiline) {
-    if (currentEl && currentEl.tagName.toLowerCase() === 'textarea') return;
-    container.innerHTML = `
-      <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
-      <textarea id="pe-dyn-name" class="pe-input pe-desc pe-input--name" rows="3" placeholder="Введіть назву"></textarea>
-    `;
-  } else {
-    if (currentEl && currentEl.tagName.toLowerCase() === 'input') return;
-    container.innerHTML = `
-      <label class="pe-label" for="pe-dyn-name">Назва <span class="pe-required" title="Обов'язкове поле">*</span></label>
-      <input id="pe-dyn-name" class="pe-input" type="text" autocomplete="off" placeholder="Введіть назву">
-    `;
-  }
+  const primary = CATEGORY_SCHEMAS[category]?.primary;
+
+  container.innerHTML = renderPrimaryField(primary);
   const newEl = $('pe-dyn-name');
   if (newEl && currentValue) newEl.value = currentValue;
 }

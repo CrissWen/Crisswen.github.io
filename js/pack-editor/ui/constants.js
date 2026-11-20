@@ -21,5 +21,3 @@ export const CATA_NUMERIC = ['timer', 'stay', 'pop'];
 
 export const TEXTAREA_PLACEHOLDER = 'Введіть характеристики стовпчиком. Кожна нова характеристика — з нового рядка (клавіша Enter)';
 export const PROFESSION_PLACEHOLDER = 'Введіть професії стовпчиком (через Enter). Щоб додати професійну можливість, напишіть її через тире з пробілами. Наприклад: Лікар-хірург - Може вилікувати одну хворобу';
-
-export const MULTILINE_NAME_CATEGORIES = ['special_ability', 'backpack', 'large_inventory'];

@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { CATEGORY_SCHEMAS } from '../../js/pack-editor/categories.js';
 
 test('CATEGORY_SCHEMAS defines Variant B primary descriptors and preserves fields for all 17 categories', () => {
@@ -42,5 +44,68 @@ test('CATEGORY_SCHEMAS defines Variant B primary descriptors and preserves field
       CATEGORY_SCHEMAS[stagedCat].fields.some(f => f.key === 'stages'),
       `${stagedCat} must retain stages field`
     );
+  }
+});
+
+test('updateDynamicNameField updates label and placeholder across consecutive textarea categories and preserves value', async () => {
+  const { updateDynamicNameField } = await import('../../js/pack-editor/ui/helpers.js');
+
+  const wrap = { innerHTML: '' };
+  let currentNameEl = { tagName: 'INPUT', value: 'Збережений текст' };
+  const prevDoc = globalThis.document;
+  globalThis.document = {
+    getElementById(id) {
+      if (id === 'pe-dyn-name-wrap') return wrap;
+      if (id === 'pe-dyn-name') return currentNameEl;
+      return null;
+    }
+  };
+
+  try {
+    updateDynamicNameField('profession');
+    assert.match(wrap.innerHTML, /<input[^>]*id="pe-dyn-name"/);
+    assert.match(wrap.innerHTML, />Назва\s*</);
+
+    currentNameEl = { tagName: 'TEXTAREA', value: 'Тест' };
+    updateDynamicNameField('history');
+    assert.match(wrap.innerHTML, /<textarea[^>]*id="pe-dyn-name"/);
+    assert.match(wrap.innerHTML, />Опис\s*</);
+    assert.equal(currentNameEl.value, 'Тест');
+
+    updateDynamicNameField('location');
+    assert.match(wrap.innerHTML, />Місце\s*</);
+
+    updateDynamicNameField('food_supply');
+    assert.match(wrap.innerHTML, />Примітка\s*</);
+  } finally {
+    globalThis.document = prevDoc;
+  }
+});
+
+test('ui/dynamic.js uses Strategy Maps without if/else field-type ladders and constants.js drops MULTILINE_NAME_CATEGORIES', async () => {
+  const dynamicSrc = fs.readFileSync(path.resolve('js/pack-editor/ui/dynamic.js'), 'utf8');
+  const constantsSrc = fs.readFileSync(path.resolve('js/pack-editor/ui/constants.js'), 'utf8');
+
+  assert.doesNotMatch(dynamicSrc, /if\s*\(\s*f\.type\s*===/);
+  assert.doesNotMatch(constantsSrc, /MULTILINE_NAME_CATEGORIES/);
+
+  const { renderDynamicFormFields } = await import('../../js/pack-editor/ui/dynamic.js');
+  const container = {
+    innerHTML: '',
+    querySelectorAll: () => []
+  };
+  const prevDoc = globalThis.document;
+  globalThis.document = {
+    readyState: 'complete',
+    getElementById: (id) => (id === 'pe-dyn-fields' ? container : null),
+    querySelectorAll: () => []
+  };
+
+  try {
+    renderDynamicFormFields(CATEGORY_SCHEMAS.profession, 'profession');
+    assert.match(container.innerHTML, /<textarea[^>]*id="pe-dyn-ability"/);
+    assert.match(container.innerHTML, /data-dyn-stage-list="profession"/);
+  } finally {
+    globalThis.document = prevDoc;
   }
 });
