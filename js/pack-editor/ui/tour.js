@@ -148,12 +148,21 @@ function createDemoController() {
   if (cataList && !hasRealRows && !(cardsTa?.value || '').trim()) {
     cataList.innerHTML = `
       <button type="button" class="added-item-row pe-tour-demo-row" tabindex="-1">
-        <span class="added-item-row__name">Чоловік <span style="opacity:0.7">(Демо-приклад)</span></span>
+        <span class="added-item-row__name">Кіборг <span style="opacity:0.7">(Демо-приклад)</span></span>
+        <span class="added-item-row__hint">редагувати</span>
+      </button>
+      <button type="button" class="added-item-row pe-tour-demo-row" tabindex="-1">
+        <span class="added-item-row__name">Жінка <span style="opacity:0.7">(Демо-приклад)</span></span>
         <span class="added-item-row__hint">редагувати</span>
       </button>
     `;
-    if (cardsTa) cardsTa.value = 'Чоловік';
-    if (linesCount) linesCount.textContent = 'Рядків: 1';
+    if (cardsTa) {
+      cardsTa.value = [
+        'Кіборг {репродукція: ні, вік: без віку}',
+        'Жінка {репродукція: так, протилежна_стать: Чоловік}'
+      ].join('\n');
+    }
+    if (linesCount) linesCount.textContent = 'Рядків: 2';
   }
 
   function setPreviewMode(isLlm) {

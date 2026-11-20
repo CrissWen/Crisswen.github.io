@@ -456,9 +456,10 @@ test('startPackEditorTour виконує демо-превʼю LLM, додає �
     const tour = startPackEditorTour({ signal: controller.signal, steps, storage });
     assert.ok(tour);
 
-    // Demo card injected in empty list
+    // Demo card injected in empty list with meta properties for LLM preview
     assert.ok(cataList.innerHTML.includes('pe-tour-demo-row'));
-    assert.equal(cardsTa.value, 'Чоловік');
+    assert.ok(cardsTa.value.includes('{'));
+    assert.ok(cardsTa.value.includes('репродукція:'));
 
     // Step 0 (enable-llm): LLM is OFF initially; turns ON only after clicking "Далі"
     assert.equal(llmCheckbox.checked, false);
