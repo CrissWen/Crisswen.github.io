@@ -766,8 +766,7 @@ body.is-stage-dragging * {
 .pe-toolbar{--pe-control-h:44px;display:flex;flex-direction:column;gap:8px;}
 .pe-toolbar__row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;}
 .pe-toolbar__category{flex:1 1 180px;min-width:0;}
-/* container-type: ширина самого поля (а не екрана) вирішує, який підпис у чекбокса всередині пошуку («В усіх» / «В усіх категоріях»), див. .pe-search__box нижче */
-.pe-toolbar__search{flex:2 1 200px;min-width:0;container:pe-search / inline-size;}
+.pe-toolbar__search{flex:2 1 200px;min-width:0;}
 /* Однакова висота селекта, пошуку, чекбоксів і слота: рядок рівний, а підпис «Категорія» не зсуває поля */
 .pe-toolbar .pe-input{box-sizing:border-box;min-height:var(--pe-control-h);}
 /* Права частина рядка. Її розмір не залежить від стану чекбоксів: слот під кнопку має фіксовану ширину завжди,

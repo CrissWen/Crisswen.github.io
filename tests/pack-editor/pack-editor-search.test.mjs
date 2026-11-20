@@ -324,13 +324,43 @@ test('controllers/search.js activates on customOnly, hides overlay on normal res
     assert.equal(dynEdited, true);
     assert.equal(els['pe-search-results'].hidden, true, 'clicking result in normal mode must hide overlay');
 
-    els['pe-search-results'].hidden = false;
-    state.isDeleteMode = true;
-    onSearchResultClick({ target: { closest: (sel) => (sel === '.pe-result' ? row : null) }, shiftKey: false });
-    assert.equal(els['pe-search-results'].hidden, false, 'clicking result in delete mode must keep overlay open');
-
     const controller = new AbortController();
     initSearch(controller.signal);
+
+    els['pe-search-results'].hidden = false;
+    state.isDeleteMode = true;
+    // Simulate real DOM: detached clicked button inside #pe-search-results bubbles to document after panel.innerHTML replaces it
+    let propagationStopped = false;
+    const detachedTarget = {
+      closest: (sel) => (sel === '.pe-result' ? row : null)
+    };
+    const clickEvt = {
+      target: detachedTarget,
+      shiftKey: false,
+      stopPropagation() { propagationStopped = true; }
+    };
+    onSearchResultClick(clickEvt);
+    if (!propagationStopped) {
+      // Simulate bubbling to document when target was detached by panel.innerHTML = ...
+      const detachedAfterRerender = { closest: () => null };
+      for (const l of docListeners) {
+        if (l.type === 'click') l.fn({ target: detachedAfterRerender });
+      }
+    }
+    assert.equal(els['pe-search-results'].hidden, false, 'clicking result in delete mode must keep overlay open even after document bubble');
+
+    // Dismissed overlay must stay hidden across unrelated renderSearch() calls, and re-open on focusin / setSearchQuery
+    state.isDeleteMode = false;
+    state.searchQuery = 'Лікар';
+    state.searchOverlayDismissed = true;
+    renderSearch();
+    assert.equal(els['pe-search-results'].hidden, true, 'dismissed overlay must stay hidden on unrelated renderSearch()');
+
+    // focusin on #pe-search re-opens overlay
+    const focusHandler = els['pe-search'].listeners.find(l => l.type === 'focusin')?.fn;
+    assert.ok(focusHandler, 'pe-search must register focusin handler');
+    focusHandler();
+    assert.equal(els['pe-search-results'].hidden, false, 'focusin on #pe-search must re-open dismissed overlay');
     assert.ok(
       els['pe-search-settings-btn'].listeners.some(l => l.type === 'click' && l.opts?.signal === controller.signal),
       'settings button must bind with { signal }'

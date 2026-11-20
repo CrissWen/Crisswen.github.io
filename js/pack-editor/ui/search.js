@@ -126,13 +126,13 @@ export function paintSearch(view) {
     return;
   }
 
-  const { results, total, tokens, query, searchAll, activeCategory, isDeleteMode, selectedDeleteIndices } = view;
+  const { results, total, tokens, query, searchAll, activeCategory, isDeleteMode, selectedDeleteIndices, dismissed = false } = view;
   const deleteState = {
     activeCategory,
     isDeleteMode: Boolean(isDeleteMode),
     selectedDeleteIndices
   };
-  panel.hidden = false;
+  panel.hidden = Boolean(dismissed);
   if (!total) {
     count.textContent = 'Нічого не знайдено';
     const trimmed = String(query || '').trim();

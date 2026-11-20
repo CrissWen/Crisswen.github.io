@@ -509,15 +509,25 @@ test('initSearch: passes { signal } to all addEventListener calls including dyna
   const peSearch = createMockElement('pe-search');
   const peSearchClear = createMockElement('pe-search-clear');
   const peSearchAll = createMockElement('pe-search-all');
+  const peSearchNamesOnly = createMockElement('pe-search-names-only');
+  const peSearchWholeWord = createMockElement('pe-search-whole-word');
+  const peSearchCustomOnly = createMockElement('pe-search-custom-only');
+  const peSearchSettingsBtn = createMockElement('pe-search-settings-btn');
+  const peSearchSettingsMenu = createMockElement('pe-search-settings-menu');
   const peSearchResults = createMockElement('pe-search-results');
   const peCataList = createMockElement('pe-cata-list');
   const searchInside = createMockElement('pe-search-inside');
 
-  const { winTarget } = setupMockDom(
+  const { docTarget, winTarget } = setupMockDom(
     {
       'pe-search': peSearch,
       'pe-search-clear': peSearchClear,
       'pe-search-all': peSearchAll,
+      'pe-search-names-only': peSearchNamesOnly,
+      'pe-search-whole-word': peSearchWholeWord,
+      'pe-search-custom-only': peSearchCustomOnly,
+      'pe-search-settings-btn': peSearchSettingsBtn,
+      'pe-search-settings-menu': peSearchSettingsMenu,
       'pe-search-results': peSearchResults,
       'pe-cata-list': peCataList
     },
@@ -530,9 +540,17 @@ test('initSearch: passes { signal } to all addEventListener calls including dyna
   const expected = [
     [peSearch, 'input', 'pe-search input'],
     [peSearch, 'keydown', 'pe-search keydown'],
+    [peSearch, 'focusin', 'pe-search focusin'],
+    [peSearch, 'click', 'pe-search click'],
     [peSearchClear, 'click', 'pe-search-clear click'],
     [searchInside, 'mousedown', '.pe-search__inside mousedown'],
+    [peSearchSettingsBtn, 'click', 'pe-search-settings-btn click'],
+    [peSearchSettingsMenu, 'keydown', 'pe-search-settings-menu keydown'],
     [peSearchAll, 'change', 'pe-search-all change'],
+    [peSearchNamesOnly, 'change', 'pe-search-names-only change'],
+    [peSearchWholeWord, 'change', 'pe-search-whole-word change'],
+    [peSearchCustomOnly, 'change', 'pe-search-custom-only change'],
+    [docTarget, 'click', 'document click'],
     [peSearchResults, 'click', 'pe-search-results click'],
     [peSearchResults, 'keydown', 'pe-search-results keydown'],
     [peCataList, 'keydown', 'pe-cata-list keydown']

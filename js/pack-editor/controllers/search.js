@@ -38,6 +38,7 @@ export function renderSearch() {
     namesOnly: state.searchNamesOnly,
     wholeWord: state.searchWholeWord,
     customOnly: state.searchCustomOnly,
+    dismissed: Boolean(state.searchOverlayDismissed),
     activeCategory: state.activeCategory,
     isDeleteMode: state.isDeleteMode,
     selectedDeleteIndices: state.selectedDeleteIndices
@@ -64,6 +65,7 @@ export function renderSearch() {
 
 export function setSearchQuery(value, { focus = false } = {}) {
   state.searchQuery = value;
+  state.searchOverlayDismissed = false;
   ui.setSearchInput(value);
   orchestrator.renderList();
   renderSearch();
@@ -125,6 +127,13 @@ export function onSearchResultClick(e) {
   if (!row) return;
 
   if (state.isDeleteMode) {
+    e.stopPropagation?.();
+    state.searchOverlayDismissed = false;
+    const settingsMenu = $('pe-search-settings-menu');
+    if (settingsMenu && !settingsMenu.hidden) {
+      settingsMenu.hidden = true;
+      $('pe-search-settings-btn')?.setAttribute('aria-expanded', 'false');
+    }
     const cat = row.dataset.resCat;
 
     if (cat !== state.activeCategory) {
@@ -144,6 +153,7 @@ export function onSearchResultClick(e) {
   if (row.dataset.resCata !== undefined) openCataResult(Number(row.dataset.resCata));
   else openTextResult(row.dataset.resCat, Number(row.dataset.resLine), Number(row.dataset.resCard ?? row.dataset.resLine));
 
+  state.searchOverlayDismissed = true;
   const panel = $('pe-search-results');
   if (panel) panel.hidden = true;
 }
@@ -216,11 +226,17 @@ export function initSearch(signal) {
   searchInput.addEventListener('keydown', onSearchKeydown, { signal });
   searchInput.addEventListener('focusin', () => {
     const panel = $('pe-search-results');
-    if (isSearchActive() && panel?.hidden) renderSearch();
+    if (isSearchActive() && (panel?.hidden || state.searchOverlayDismissed)) {
+      state.searchOverlayDismissed = false;
+      renderSearch();
+    }
   }, { signal });
   searchInput.addEventListener('click', () => {
     const panel = $('pe-search-results');
-    if (isSearchActive() && panel?.hidden) renderSearch();
+    if (isSearchActive() && (panel?.hidden || state.searchOverlayDismissed)) {
+      state.searchOverlayDismissed = false;
+      renderSearch();
+    }
   }, { signal });
 
   $('pe-search-clear').addEventListener('click', () => {
@@ -265,6 +281,7 @@ export function initSearch(signal) {
   for (const [id, stateKey] of flagBindings) {
     $(id)?.addEventListener('change', e => {
       state[stateKey] = e.target.checked;
+      state.searchOverlayDismissed = false;
       orchestrator.renderList();
       renderSearch();
       if (searchHadFocus) searchInput.focus({ preventScroll: true });
@@ -276,6 +293,7 @@ export function initSearch(signal) {
       closeSettingsMenu();
     }
     if (!e.target?.closest?.('.pe-toolbar__search') && !e.target?.closest?.('#pe-search-results')) {
+      state.searchOverlayDismissed = true;
       const panel = $('pe-search-results');
       if (panel && !panel.hidden) panel.hidden = true;
     }

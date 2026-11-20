@@ -189,7 +189,7 @@ function syncFieldsFromForm() {
 
 function renderList() {
   if (state.activeCategory === 'cataclysm') {
-    renderCataList(cataFilterActive() ? searchTokens() : []);
+    renderCataList([]);
   } else if (CATEGORY_SCHEMAS[state.activeCategory] && state.viewMode === 'visual') {
     const cards = getDynamicCards();
     ui.renderCataList({
@@ -202,7 +202,7 @@ function renderList() {
       }),
       editIndex: state.dynEditIndex,
       newIndex: state.newDynIndex,
-      tokens: state.searchAll && !cataFilterActive() ? searchTokens() : [],
+      tokens: [],
       category: state.activeCategory,
       cardsSortDir: state.cardsSortDir,
       isDeleteMode: state.isDeleteMode,
@@ -359,6 +359,7 @@ function resetEditorState() {
   state.searchNamesOnly = false;
   state.searchWholeWord = false;
   state.searchCustomOnly = false;
+  state.searchOverlayDismissed = false;
 }
 
 // Завантажує дані редактора; false — користувача вже перенаправлено (немає прав, ліміт, помилка, застаріла сесія)
