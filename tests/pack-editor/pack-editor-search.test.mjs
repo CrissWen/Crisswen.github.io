@@ -222,3 +222,139 @@ test('paintSearch renders detail snippet for text results and updates settings b
     globalThis.document = prevDoc;
   }
 });
+
+test('controllers/search.js activates on customOnly, hides overlay on normal result click, and binds all listeners with signal', async () => {
+  const { state } = await import('../../js/pack-editor/state.js');
+  const {
+    renderSearch,
+    onSearchResultClick,
+    initSearch,
+    setSearchOrchestrator,
+    cataFilterActive
+  } = await import('../../js/pack-editor/controllers/search.js');
+
+  const makeEl = (id) => {
+    const listeners = [];
+    return {
+      id,
+      value: '',
+      checked: false,
+      hidden: true,
+      textContent: '',
+      innerHTML: '',
+      attributes: new Map(),
+      classList: { toggle() {} },
+      setAttribute(k, v) { this.attributes.set(k, String(v)); },
+      getAttribute(k) { return this.attributes.get(k) ?? null; },
+      addEventListener(type, fn, opts) { listeners.push({ type, fn, opts }); },
+      focus() {},
+      closest() { return null; },
+      listeners
+    };
+  };
+
+  const els = {
+    'pe-search': makeEl('pe-search'),
+    'pe-search-clear': makeEl('pe-search-clear'),
+    'pe-search-all': makeEl('pe-search-all'),
+    'pe-search-names-only': makeEl('pe-search-names-only'),
+    'pe-search-whole-word': makeEl('pe-search-whole-word'),
+    'pe-search-custom-only': makeEl('pe-search-custom-only'),
+    'pe-search-settings-btn': makeEl('pe-search-settings-btn'),
+    'pe-search-settings-menu': makeEl('pe-search-settings-menu'),
+    'pe-search-settings-badge': makeEl('pe-search-settings-badge'),
+    'pe-search-results': makeEl('pe-search-results'),
+    'pe-search-count': makeEl('pe-search-count'),
+    'pe-cata-list': makeEl('pe-cata-list')
+  };
+  const docListeners = [];
+  const prevDoc = globalThis.document;
+  const prevWin = globalThis.window;
+
+  globalThis.document = {
+    getElementById: (id) => els[id] || null,
+    querySelector: () => null,
+    addEventListener: (type, fn, opts) => docListeners.push({ type, fn, opts }),
+    activeElement: null
+  };
+  globalThis.window = {
+    addEventListener() {},
+    matchMedia: () => ({ matches: false })
+  };
+
+  const prevState = {
+    activeCategory: state.activeCategory,
+    viewMode: state.viewMode,
+    searchQuery: state.searchQuery,
+    searchAll: state.searchAll,
+    searchNamesOnly: state.searchNamesOnly,
+    searchWholeWord: state.searchWholeWord,
+    searchCustomOnly: state.searchCustomOnly,
+    isDeleteMode: state.isDeleteMode,
+    texts: state.form.texts,
+    cataclysms: state.form.cataclysms
+  };
+
+  try {
+    state.activeCategory = 'cataclysm';
+    state.viewMode = 'visual';
+    state.searchQuery = 'Потоп';
+    state.searchAll = false;
+    assert.equal(cataFilterActive(), false, 'Option 1B must keep cataFilterActive() false');
+
+    state.activeCategory = 'profession';
+    state.searchQuery = '';
+    state.searchCustomOnly = true;
+    state.form.texts = { profession: 'Пекар\nЛікар - Лікує хвороби' };
+    renderSearch();
+    assert.equal(els['pe-search-results'].hidden, false, 'customOnly with empty query must show results overlay');
+    assert.match(els['pe-search-results'].innerHTML, /Лікар/);
+    assert.doesNotMatch(els['pe-search-results'].innerHTML, /Пекар/);
+
+    let dynEdited = false;
+    setSearchOrchestrator({
+      getDynamicCards: () => [{ id: '1', value: 'Пекар', meta: {} }, { id: '2', value: 'Лікар', meta: { ability: 'Лікує хвороби' } }],
+      dynDraftPending: () => false,
+      startDynEdit: () => { dynEdited = true; }
+    });
+
+    state.isDeleteMode = false;
+    const row = { dataset: { resCat: 'profession', resLine: '1', resCard: '1' } };
+    onSearchResultClick({ target: { closest: (sel) => (sel === '.pe-result' ? row : null) } });
+    assert.equal(dynEdited, true);
+    assert.equal(els['pe-search-results'].hidden, true, 'clicking result in normal mode must hide overlay');
+
+    els['pe-search-results'].hidden = false;
+    state.isDeleteMode = true;
+    onSearchResultClick({ target: { closest: (sel) => (sel === '.pe-result' ? row : null) }, shiftKey: false });
+    assert.equal(els['pe-search-results'].hidden, false, 'clicking result in delete mode must keep overlay open');
+
+    const controller = new AbortController();
+    initSearch(controller.signal);
+    assert.ok(
+      els['pe-search-settings-btn'].listeners.some(l => l.type === 'click' && l.opts?.signal === controller.signal),
+      'settings button must bind with { signal }'
+    );
+    assert.ok(
+      els['pe-search-custom-only'].listeners.some(l => l.type === 'change' && l.opts?.signal === controller.signal),
+      'customOnly checkbox must bind with { signal }'
+    );
+    assert.ok(
+      docListeners.some(l => l.type === 'click' && l.opts?.signal === controller.signal),
+      'document outside-click must bind with { signal }'
+    );
+  } finally {
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+    state.activeCategory = prevState.activeCategory;
+    state.viewMode = prevState.viewMode;
+    state.searchQuery = prevState.searchQuery;
+    state.searchAll = prevState.searchAll;
+    state.searchNamesOnly = prevState.searchNamesOnly;
+    state.searchWholeWord = prevState.searchWholeWord;
+    state.searchCustomOnly = prevState.searchCustomOnly;
+    state.isDeleteMode = prevState.isDeleteMode;
+    state.form.texts = prevState.texts;
+    state.form.cataclysms = prevState.cataclysms;
+  }
+});
