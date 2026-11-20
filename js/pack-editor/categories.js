@@ -51,74 +51,73 @@ import { getPromptForCategory } from './prompts/index.js';
 
 export { getPromptForCategory };
 
+// Фабрики схем категорій: усувають дублювання та задають точний короткий підпис головного поля (#pe-dyn-name)
+const STAGES_FIELD = { key: 'stages', type: 'list', label: 'Власні стадії (по одній на рядок)' };
+
+const nameSchema = (fields = [], placeholder = 'Введіть назву') => ({
+  primary: { type: 'text', label: 'Назва', placeholder },
+  fields
+});
+
+const stagedNameSchema = (extraFields = [], placeholder = 'Введіть назву') =>
+  nameSchema([...extraFields, STAGES_FIELD], placeholder);
+
+const itemSchema = (placeholder = 'Введіть предмет або перелік') => ({
+  primary: { type: 'textarea', label: 'Предмет', placeholder },
+  fields: []
+});
+
+const descSchema = (placeholder = 'Введіть опис', label = 'Опис') => ({
+  primary: { type: 'textarea', label, placeholder },
+  fields: []
+});
+
 // Схеми для динамічних форм (розширений редактор та режим LLM)
 export const CATEGORY_SCHEMAS = {
-  gender: {
-    fields: [
-      { key: 'can_reproduce', type: 'checkbox', label: 'Здатен до репродукції', default: true },
-      { key: 'opposite', type: 'datalist', label: 'Протилежна стать (для обміну)' },
-      { key: 'custom_age_mode', type: 'select', label: 'Індивідуальний режим віку', options: [
-        { value: '', label: 'За замовчуванням' },
-        { value: 'range_and_stages', label: 'Власний діапазон та стадії' },
-        { value: 'no_age', label: 'Без віку' }
-      ] },
-      { key: 'custom_age', type: 'text', label: 'Текст замість віку (напр. "Без віку")' },
-      { key: 'age_min', type: 'number', label: 'Мін. вік (роки)', min: 1, max: 120, placeholder: '18', row: 'age' },
-      { key: 'age_max', type: 'number', label: 'Макс. вік (роки)', min: 1, max: 120, placeholder: '60', row: 'age' },
-      { key: 'stages', type: 'list', label: 'Власні вікові стадії' }
-    ]
-  },
-  profession: {
-    fields: [
-      { key: 'ability', type: 'text', label: 'Вміння', required: true },
-      { key: 'stages', type: 'list', label: 'Власні стадії (по одній на рядок)' }
-    ]
-  },
-  health: {
-    fields: [
-      { key: 'stages', type: 'list', label: 'Власні стадії (по одній на рядок)' }
-    ]
-  },
-  hobby: {
-    fields: [
-      { key: 'stages', type: 'list', label: 'Власні стадії (по одній на рядок)' }
-    ]
-  },
-  special_ability: {
-    fields: [
-      // ТИМЧАСОВО приховано з форми «Нова картка»: функціонал зарезервовано для майбутніх оновлень логіки.
-      // Щоб повернути поле — розкоментуйте рядок нижче (і блок захисту action_type у submitDyn, index.js).
-      // { key: 'action_type', type: 'text', label: 'Системна дія (action_type)' }
-    ]
-  },
-  body_type: {
-    fields: [
-      { key: 'has_no_height', type: 'checkbox', label: 'Без зросту' },
-      { key: 'custom_height_mode', type: 'select', label: 'Індивідуальний режим зросту', options: [
-        { value: '', label: 'За замовчуванням (з глобального конфігу)' },
-        { value: 'range', label: 'Власний діапазон' },
-        { value: 'exact', label: 'Точне значення' }
-      ] },
-      { key: 'height_min', type: 'number', label: 'Мін. зріст (см)', min: 50, max: 300, placeholder: '150', row: 'height' },
-      { key: 'height_max', type: 'number', label: 'Макс. зріст (см)', min: 50, max: 300, placeholder: '210', row: 'height' },
-      { key: 'exact_height', type: 'number', label: 'Точний зріст (см)', min: 50, max: 300, placeholder: '170' }
-    ]
-  },
+  gender: nameSchema([
+    { key: 'can_reproduce', type: 'checkbox', label: 'Здатен до репродукції', default: true },
+    { key: 'opposite', type: 'datalist', label: 'Протилежна стать (для обміну)' },
+    { key: 'custom_age_mode', type: 'select', label: 'Індивідуальний режим віку', options: [
+      { value: '', label: 'За замовчуванням' },
+      { value: 'range_and_stages', label: 'Власний діапазон та стадії' },
+      { value: 'no_age', label: 'Без віку' }
+    ] },
+    { key: 'custom_age', type: 'text', label: 'Текст замість віку (напр. "Без віку")' },
+    { key: 'age_min', type: 'number', label: 'Мін. вік (роки)', min: 1, max: 120, placeholder: '18', row: 'age' },
+    { key: 'age_max', type: 'number', label: 'Макс. вік (роки)', min: 1, max: 120, placeholder: '60', row: 'age' },
+    { key: 'stages', type: 'list', label: 'Власні вікові стадії' }
+  ]),
+  profession: stagedNameSchema([
+    { key: 'ability', type: 'text', label: 'Вміння', required: true }
+  ]),
+  health: stagedNameSchema(),
+  hobby: stagedNameSchema(),
+  // ТИМЧАСОВО приховано action_type з форми «Нова картка»: функціонал зарезервовано для майбутніх оновлень логіки.
+  special_ability: descSchema('Опишіть особливу можливість'),
+  body_type: nameSchema([
+    { key: 'has_no_height', type: 'checkbox', label: 'Без зросту' },
+    { key: 'custom_height_mode', type: 'select', label: 'Індивідуальний режим зросту', options: [
+      { value: '', label: 'За замовчуванням (з глобального конфігу)' },
+      { value: 'range', label: 'Власний діапазон' },
+      { value: 'exact', label: 'Точне значення' }
+    ] },
+    { key: 'height_min', type: 'number', label: 'Мін. зріст (см)', min: 50, max: 300, placeholder: '150', row: 'height' },
+    { key: 'height_max', type: 'number', label: 'Макс. зріст (см)', min: 50, max: 300, placeholder: '210', row: 'height' },
+    { key: 'exact_height', type: 'number', label: 'Точний зріст (см)', min: 50, max: 300, placeholder: '170' }
+  ]),
   // Фобія: у формі два поля ("Назва" + "Пояснення", обов'язкове), у БД — один рядок "Назва - Пояснення" (зклеює submitDyn через joinNameExplanation)
-  phobia: {
-    fields: [
-      { key: 'explanation', type: 'text', label: 'Пояснення', required: true }
-    ]
-  },
-  trait: { fields: [] },
-  large_inventory: { fields: [] },
-  backpack: { fields: [] },
-  extra_info: { fields: [] },
-  history: { fields: [] },
-  rooms_description: { fields: [] },
-  location: { fields: [] },
-  problems: { fields: [] },
-  items: { fields: [] },
-  food_supply: { fields: [] }
+  phobia: nameSchema([
+    { key: 'explanation', type: 'text', label: 'Пояснення', required: true }
+  ]),
+  trait:             nameSchema(),
+  large_inventory:   itemSchema('Опишіть великий інвентар'),
+  backpack:          itemSchema('Опишіть вміст рюкзака'),
+  extra_info:        descSchema('Введіть факт або відомість', 'Факт'),
+  history:           descSchema('Опишіть, як і де був побудований бункер'),
+  rooms_description: descSchema('Опишіть кімнати та приміщення бункера'),
+  location:          descSchema('Вкажіть місце розташування бункера', 'Місце'),
+  problems:          descSchema('Опишіть проблему або несправність бункера'),
+  items:             itemSchema('Вкажіть предмети в бункері'),
+  food_supply:       descSchema('Вкажіть стан або обсяг запасів', 'Примітка')
 };
 
