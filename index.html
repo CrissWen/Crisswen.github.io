@@ -49,7 +49,17 @@
         <img src="icons/favicon.png" alt="Лого" class="header-logo-icon">
         БУНКЕР
       </a>
-      <nav class="header-nav">
+      <button
+        type="button"
+        class="header-nav-toggle"
+        id="header-nav-toggle"
+        aria-expanded="false"
+        aria-controls="header-nav"
+        aria-label="Меню навігації"
+      >
+        <span class="header-nav-toggle__bars" aria-hidden="true"></span>
+      </button>
+      <nav class="header-nav" id="header-nav">
         <a href="#/rules" class="header-nav-link" data-nav-path="#/rules">Правила</a>
         <a href="#/packs" class="header-nav-link" data-nav-path="#/packs">Паки</a>
         <!-- «Гра»: прихована, поки немає активної сесії; href і видимість виставляє js/utils/last-session.js -->
