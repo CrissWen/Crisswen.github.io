@@ -109,3 +109,41 @@ test('ui/dynamic.js uses Strategy Maps without if/else field-type ladders and co
     globalThis.document = prevDoc;
   }
 });
+
+test('submitDyn uses schema.primary.label in required-field validation error', async () => {
+  const { state } = await import('../../js/pack-editor/state.js');
+  const { submitDyn } = await import('../../js/pack-editor/controllers/dynamic.js');
+
+  const nameEl = {
+    value: '   ',
+    classList: { add() {}, remove() {} },
+    focus() {}
+  };
+  const errEl = { textContent: '', hidden: true };
+
+  const prevDoc = globalThis.document;
+  const prevCat = state.activeCategory;
+  globalThis.document = {
+    getElementById(id) {
+      if (id === 'pe-dyn-name') return nameEl;
+      if (id === 'pe-dyn-error') return errEl;
+      return null;
+    },
+    querySelector: () => null,
+    querySelectorAll: () => []
+  };
+
+  try {
+    state.activeCategory = 'location';
+    submitDyn();
+    assert.equal(errEl.hidden, false);
+    assert.equal(errEl.textContent, "Поле «Місце» обов'язкове");
+
+    state.activeCategory = 'food_supply';
+    submitDyn();
+    assert.equal(errEl.textContent, "Поле «Примітка» обов'язкове");
+  } finally {
+    globalThis.document = prevDoc;
+    state.activeCategory = prevCat;
+  }
+});

@@ -504,7 +504,8 @@ export function applyDynChange({ scrollToEnd = false } = {}) {
 function validateRequiredFields(category, data) {
   const missing = [];
   if (String(data.value ?? '').trim() === '') {
-    missing.push({ el: $('pe-dyn-name'), label: 'Назва' });
+    const primaryLabel = CATEGORY_SCHEMAS[category]?.primary?.label || 'Назва';
+    missing.push({ el: $('pe-dyn-name'), label: primaryLabel });
   }
   for (const f of CATEGORY_SCHEMAS[category]?.fields || []) {
     if (f.required && String(data[f.key] ?? '').trim() === '') {
