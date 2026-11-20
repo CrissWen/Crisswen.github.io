@@ -138,3 +138,8 @@ test('css/header.css defines portrait dropdown, landscape scroll, hover gating, 
   assert.match(css, /touch-action:\s*pan-x/);
   assert.match(css, /\.header-nav-link\[hidden\][^}]*display:\s*none/s);
 });
+
+test('css/themes/theme-cryo.css overrides portrait dropdown background so Cryo stays opaque', () => {
+  const cryoCss = fs.readFileSync(path.resolve('css/themes/theme-cryo.css'), 'utf8');
+  assert.match(cryoCss, /body\s+\.main-header\.is-nav-open\s+\.header-nav\s*\{[^}]*background(?:-color)?:/s);
+});
