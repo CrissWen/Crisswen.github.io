@@ -77,6 +77,17 @@ test('computeCenterScrollY центрує елемент у viewport і обме
     maxScrollY: 2000
   });
   assert.equal(clampedBottom, 2000);
+
+  // With topInset (global header 64px): usable center = 64 + (800 - 64)/2 = 432
+  // target center = 850 + 200 = 1050 -> scrollY = 1050 - 432 = 618
+  const withHeader = computeCenterScrollY({
+    targetRect: { top: 800, height: 100 },
+    viewportHeight: 800,
+    scrollY: 200,
+    maxScrollY: 2000,
+    topInset: 64
+  });
+  assert.equal(withHeader, 618);
 });
 
 test('computeTourLayout розраховує прожектор, перевертає картку при нестачі місця і наводить стрілку на центр елемента', () => {
@@ -112,15 +123,16 @@ test('computeTourLayout розраховує прожектор, перевер�
   assert.equal(flippedToLeft.card.side, 'left');
   assert.equal(flippedToLeft.arrow.side, 'right');
 
-  // Tall block exceeding viewport height: spotlight keeps full true size without clamping, while card stays in viewport
+  // Tall block exceeding viewport height: spotlight keeps full true size without clamping, while card stays in viewport below topInset
   const tallBlock = computeTourLayout({
     targetRect: { top: -150, left: 80, width: 500, height: 1100, right: 580, bottom: 950 },
     cardSize: { width: 320, height: 180 },
     viewport: { width: 1280, height: 800 },
-    placement: 'top'
+    placement: 'top',
+    topInset: 64
   });
   assert.deepEqual(tallBlock.spotlight, { top: -156, left: 74, width: 512, height: 1112 });
-  assert.ok(tallBlock.card.top >= 12 && tallBlock.card.top + 180 <= 800 - 12);
+  assert.ok(tallBlock.card.top >= 64 + 12 && tallBlock.card.top + 180 <= 800 - 12);
 });
 
 
@@ -259,7 +271,8 @@ test('packEditorTemplate рендерить кнопку повторного з
   assert.ok(html.includes('id="pe-tour-start-btn"'));
 });
 
-test('startPackEditorTour монтує блокувач, прожектор, діалог зі стрілкою, центрує елемент і підтримує Пропустити/Назад/Далі', () => {
+test('startPackEditorTour монтує блокувач, прожектор, діалог зі стрілкою, центрує елемент і підтримує Пропустити/Назад/Далі', async () => {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
   const storage = createMemoryStorage();
   const target1 = {
     isConnected: true,
@@ -305,19 +318,23 @@ test('startPackEditorTour монтує блокувач, прожектор, д�
     assert.equal(spotlight.classList.contains('is-visible'), true);
     assert.equal(card.classList.contains('is-visible'), true);
 
-    // Step 0 -> Step 1 (skips missing #not-in-dom)
+    // Step 0 -> Step 1 (skips missing #not-in-dom, fades out ~180ms before applying)
     tour.next();
     assert.equal(tour.getStepIndex(), 1);
+    await wait(210);
     assert.ok(card.innerHTML.includes('Готово'));
 
     // Back -> Step 0
     tour.prev();
     assert.equal(tour.getStepIndex(), 0);
+    await wait(210);
 
-    // Finish -> marks completed and removes DOM
+    // Finish -> marks completed and fades out (~220ms) before removing DOM
     tour.next();
+    await wait(210);
     tour.next();
     assert.equal(storage.getItem(TOUR_STORAGE_KEY), '1');
+    await wait(250);
     assert.equal(mockDocument.querySelector('.pe-tour-overlay'), null);
     assert.equal(mockDocument.querySelector('.pe-tour-spotlight'), null);
     assert.equal(mockDocument.querySelector('.pe-tour-card'), null);
