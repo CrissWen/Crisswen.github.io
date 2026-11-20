@@ -24,9 +24,9 @@ function createMemoryStorage(initial = {}) {
   };
 }
 
-test('PACK_EDITOR_TOUR_STEPS містить 8 валідних кроків по цілих блоках з унікальними id', () => {
+test('PACK_EDITOR_TOUR_STEPS містить 10 валідних кроків по цілих блоках з окремими save-status, llm, cards-list та cards-form', () => {
   assert.equal(TOUR_STORAGE_KEY, 'tb_pe_tour_v1');
-  assert.equal(PACK_EDITOR_TOUR_STEPS.length, 8);
+  assert.equal(PACK_EDITOR_TOUR_STEPS.length, 10);
 
   const ids = new Set();
   const allowedPlacements = new Set(['top', 'bottom', 'left', 'right']);
@@ -39,6 +39,11 @@ test('PACK_EDITOR_TOUR_STEPS містить 8 валідних кроків по
     assert.ok(step.text && typeof step.text === 'string');
     assert.ok(allowedPlacements.has(step.placement), `invalid placement: ${step.placement}`);
   }
+
+  assert.ok(ids.has('save-status'));
+  assert.ok(ids.has('llm'));
+  assert.ok(ids.has('cards-list'));
+  assert.ok(ids.has('cards-form'));
 });
 
 test('shouldStartTour та markTourCompleted коректно керують першим входом і force-запуском', () => {
@@ -377,6 +382,120 @@ test('abort signal прибирає DOM туру і НЕ позначає нез
     assert.equal(mockDocument.querySelector('.pe-tour-spotlight'), null);
     assert.equal(mockDocument.querySelector('.pe-tour-card'), null);
     assert.equal(storage.getItem(TOUR_STORAGE_KEY), null);
+  } finally {
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+  }
+});
+
+
+test('startPackEditorTour виконує демо-превʼю LLM, додає тимчасову картку з очищенням і скролить нагору лише після "Готово"', async () => {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const storage = createMemoryStorage();
+
+  const makeMockNode = (rect = { top: 200, left: 100, width: 300, height: 80, right: 400, bottom: 280 }) => {
+    const set = new Set();
+    return {
+      isConnected: true,
+      hidden: false,
+      checked: false,
+      disabled: false,
+      value: '',
+      textContent: '',
+      _innerHTML: '<p class="pe-cata-list__empty">Порожньо</p>',
+      set innerHTML(v) { this._innerHTML = v; },
+      get innerHTML() { return this._innerHTML; },
+      classList: {
+        add: (...c) => c.forEach(x => set.add(x)),
+        remove: (...c) => c.forEach(x => set.delete(x)),
+        contains: c => set.has(c),
+        toggle: (c, f) => (f ? set.add(c) : set.delete(c))
+      },
+      querySelector: () => null,
+      getBoundingClientRect: () => rect
+    };
+  };
+
+  const llmCheckbox = makeMockNode();
+  const llmSlot = makeMockNode();
+  const cardsTa = makeMockNode();
+  cardsTa.hidden = true;
+  const listWrap = makeMockNode();
+  const cataList = makeMockNode();
+  const formCol = makeMockNode();
+  const linesCount = makeMockNode();
+  linesCount.textContent = 'Рядків: 0';
+  const llmGroup = makeMockNode({ top: 300, left: 100, width: 220, height: 40, right: 320, bottom: 340 });
+  const listCol = makeMockNode({ top: 400, left: 100, width: 320, height: 300, right: 420, bottom: 700 });
+
+  const { mockDocument, mockWindow, scrollCalls } = createMockDom({
+    '#pe-llm-mode': llmCheckbox,
+    '#pe-llm-slot': llmSlot,
+    '#pe-cards': cardsTa,
+    '#pe-cata-list-wrap': listWrap,
+    '#pe-cata-list': cataList,
+    '.pe-char-form-col': formCol,
+    '#pe-lines-count': linesCount,
+    '.pe-toolbar__llm-group': llmGroup,
+    '.pe-char-list-col': listCol
+  });
+
+  const prevDoc = globalThis.document;
+  const prevWin = globalThis.window;
+  globalThis.document = mockDocument;
+  globalThis.window = mockWindow;
+
+  try {
+    const steps = [
+      { id: 'llm', target: '.pe-toolbar__llm-group', title: 'LLM', text: 'LLM', placement: 'bottom', demoAction: 'enable-llm' },
+      { id: 'cards-list', target: '.pe-char-list-col', title: 'Список', text: 'Список', placement: 'right', demoAction: 'preview-list-llm' },
+      { id: 'cards-form', target: '.pe-char-form-col', title: 'Форма', text: 'Форма', placement: 'left', demoAction: 'visual-form' }
+    ];
+
+    const controller = new AbortController();
+    const tour = startPackEditorTour({ signal: controller.signal, steps, storage, demoDelayMs: 25 });
+    assert.ok(tour);
+
+    // Demo card injected in empty list
+    assert.ok(cataList.innerHTML.includes('pe-tour-demo-row'));
+    assert.equal(cardsTa.value, 'Чоловік');
+
+    // Step 0 (enable-llm) enables LLM after short delay
+    await wait(50);
+    assert.equal(llmCheckbox.checked, true);
+    assert.equal(llmSlot.classList.contains('is-active'), true);
+
+    // Step 1 (preview-list-llm): starts visual then switches to LLM textarea
+    tour.next();
+    await wait(200);
+    assert.equal(llmCheckbox.checked, false);
+    await wait(50);
+    assert.equal(llmCheckbox.checked, true);
+    assert.equal(cardsTa.hidden, false);
+
+    // Step 2 (visual-form): restores visual mode so formCol is visible
+    tour.next();
+    await wait(200);
+    assert.equal(llmCheckbox.checked, false);
+    assert.equal(formCol.hidden, false);
+
+    // Finish ("Готово"): cleans up demo card, restores state, and scrolls to top: 0
+    scrollCalls.length = 0;
+    tour.next();
+    await wait(240);
+    assert.equal(cataList.innerHTML.includes('pe-tour-demo-row'), false);
+    assert.equal(cardsTa.value, '');
+    assert.equal(linesCount.textContent, 'Рядків: 0');
+    assert.ok(scrollCalls.some(c => c.top === 0));
+
+    // Skip ("Пропустити гайд"): does NOT scroll to top: 0
+    const tour2 = startPackEditorTour({ signal: controller.signal, force: true, steps, storage, demoDelayMs: 25 });
+    mockWindow.scrollY = 600;
+    scrollCalls.length = 0;
+    tour2.close(true);
+    await wait(240);
+    assert.equal(scrollCalls.some(c => c.top === 0), false);
+    assert.equal(cataList.innerHTML.includes('pe-tour-demo-row'), false);
   } finally {
     globalThis.document = prevDoc;
     globalThis.window = prevWin;

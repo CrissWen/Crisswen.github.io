@@ -117,6 +117,77 @@ function getViewportMetrics() {
   return { width, height, topInset };
 }
 
+function createDemoController() {
+  const llmCheckbox = document.querySelector('#pe-llm-mode');
+  const llmSlot = document.querySelector('#pe-llm-slot');
+  const cardsTa = document.querySelector('#pe-cards');
+  const listWrap = document.querySelector('#pe-cata-list-wrap');
+  const cataList = document.querySelector('#pe-cata-list');
+  const formCol = document.querySelector('.pe-char-form-col');
+  const linesCount = document.querySelector('#pe-lines-count');
+  const sortWrap = document.querySelector('#pe-sort-wrap');
+  const bulkBtn = document.querySelector('#pe-bulk-delete-btn');
+
+  const snapshot = {
+    llmChecked: Boolean(llmCheckbox?.checked),
+    llmSlotActive: Boolean(llmSlot?.classList?.contains('is-active')),
+    cardsValue: cardsTa?.value ?? '',
+    cardsHidden: Boolean(cardsTa?.hidden),
+    listWrapHidden: Boolean(listWrap?.hidden),
+    cataListHidden: Boolean(cataList?.hidden),
+    cataListHtml: cataList?.innerHTML ?? '',
+    formColHidden: Boolean(formCol?.hidden),
+    linesCountText: linesCount?.textContent ?? '',
+    sortWrapHidden: Boolean(sortWrap?.hidden),
+    bulkBtnHidden: Boolean(bulkBtn?.hidden)
+  };
+
+  // Додаємо тимчасову демо-картку лише якщо список зараз порожній (щоб не чіпати реальні картки користувача)
+  const hasRealRows = Boolean(cataList?.querySelector?.('.added-item-row'))
+    || Boolean(cataList?.innerHTML?.includes('added-item-row'));
+  if (cataList && !hasRealRows && !(cardsTa?.value || '').trim()) {
+    cataList.innerHTML = `
+      <button type="button" class="added-item-row pe-tour-demo-row" tabindex="-1">
+        <span class="added-item-row__name">Чоловік <span style="opacity:0.7">(Демо-приклад)</span></span>
+        <span class="added-item-row__hint">редагувати</span>
+      </button>
+    `;
+    if (cardsTa) cardsTa.value = 'Чоловік';
+    if (linesCount) linesCount.textContent = 'Рядків: 1';
+  }
+
+  function setPreviewMode(isLlm) {
+    if (llmCheckbox) llmCheckbox.checked = isLlm;
+    llmSlot?.classList?.toggle('is-active', isLlm);
+    if (cardsTa) cardsTa.hidden = !isLlm;
+    if (listWrap) listWrap.hidden = isLlm;
+    if (cataList) cataList.hidden = isLlm;
+    if (formCol) formCol.hidden = isLlm;
+    if (sortWrap) sortWrap.hidden = isLlm;
+    if (bulkBtn) bulkBtn.hidden = isLlm;
+  }
+
+  function restore() {
+    if (llmCheckbox) llmCheckbox.checked = snapshot.llmChecked;
+    llmSlot?.classList?.toggle('is-active', snapshot.llmSlotActive);
+    if (cardsTa) {
+      cardsTa.value = snapshot.cardsValue;
+      cardsTa.hidden = snapshot.cardsHidden;
+    }
+    if (listWrap) listWrap.hidden = snapshot.listWrapHidden;
+    if (cataList) {
+      cataList.innerHTML = snapshot.cataListHtml;
+      cataList.hidden = snapshot.cataListHidden;
+    }
+    if (formCol) formCol.hidden = snapshot.formColHidden;
+    if (linesCount) linesCount.textContent = snapshot.linesCountText;
+    if (sortWrap) sortWrap.hidden = snapshot.sortWrapHidden;
+    if (bulkBtn) bulkBtn.hidden = snapshot.bulkBtnHidden;
+  }
+
+  return { setPreviewMode, restore };
+}
+
 function resolveActiveSteps(steps) {
   return (steps || []).filter(step => {
     const el = document.querySelector(step.target);
@@ -132,7 +203,8 @@ export function startPackEditorTour({
   force = false,
   steps = PACK_EDITOR_TOUR_STEPS,
   storage = globalThis.localStorage,
-  onMobileViewChange = null
+  onMobileViewChange = null,
+  demoDelayMs = 450
 } = {}) {
   if (signal?.aborted) return null;
   if (!shouldStartTour(storage, { force })) return null;
@@ -143,12 +215,17 @@ export function startPackEditorTour({
   document.querySelector('.pe-tour-card')?.remove();
 
   const tourAbort = new AbortController();
+  const demo = createDemoController();
   let activeSteps = resolveActiveSteps(steps);
-  if (!activeSteps.length) return null;
+  if (!activeSteps.length) {
+    demo.restore();
+    return null;
+  }
 
   let index = 0;
   let settleTimer = 0;
   let fadeTimer = 0;
+  let demoTimer = 0;
   let closeTimer = 0;
   let scrollWaitAbort = null;
   let stepToken = 0;
@@ -176,8 +253,10 @@ export function startPackEditorTour({
   function clearScrollWait() {
     clearTimeout(settleTimer);
     clearTimeout(fadeTimer);
+    clearTimeout(demoTimer);
     settleTimer = 0;
     fadeTimer = 0;
+    demoTimer = 0;
     scrollWaitAbort?.abort();
     scrollWaitAbort = null;
   }
@@ -191,12 +270,14 @@ export function startPackEditorTour({
     card.remove();
   }
 
-  function close(markDone = true, immediate = false) {
+  function close(markDone = true, immediate = false, { scrollToTop = false } = {}) {
     if (closed) return;
     closed = true;
     stepToken++;
     clearScrollWait();
+    demo.restore();
     if (markDone) markTourCompleted(storage);
+    if (scrollToTop) window.scrollTo?.({ top: 0, behavior: 'smooth' });
     if (immediate) {
       destroyDom();
       return;
@@ -252,6 +333,23 @@ export function startPackEditorTour({
     }
   }
 
+  function runStepDemo(step, token) {
+    if (!step?.demoAction) return;
+    if (step.demoAction === 'enable-llm') {
+      demoTimer = setTimeout(() => {
+        if (closed || token !== stepToken) return;
+        demo.setPreviewMode(true);
+        updatePosition();
+      }, demoDelayMs);
+    } else if (step.demoAction === 'preview-list-llm') {
+      demoTimer = setTimeout(() => {
+        if (closed || token !== stepToken) return;
+        demo.setPreviewMode(true);
+        updatePosition();
+      }, demoDelayMs * 2);
+    }
+  }
+
   function revealStep(token) {
     if (closed || token !== stepToken) return;
     clearScrollWait();
@@ -260,6 +358,7 @@ export function startPackEditorTour({
     spotlight.classList.add('is-visible');
     card.classList.add('is-visible');
     card.querySelector('[data-tour-action="next"]')?.focus?.({ preventScroll: true });
+    runStepDemo(activeSteps[index], token);
   }
 
   function waitForScrollAndReveal(targetScrollY, token) {
@@ -307,6 +406,10 @@ export function startPackEditorTour({
 
     if (step.mobileView && typeof onMobileViewChange === 'function') {
       onMobileViewChange(step.mobileView);
+    }
+
+    if (step.demoAction === 'enable-llm' || step.demoAction === 'preview-list-llm' || step.demoAction === 'visual-form') {
+      demo.setPreviewMode(false);
     }
 
     const targetEl = document.querySelector(step.target);
@@ -367,7 +470,7 @@ export function startPackEditorTour({
   function next() {
     if (closed) return;
     if (index >= activeSteps.length - 1) {
-      close(true);
+      close(true, false, { scrollToTop: true });
       return;
     }
     index += 1;

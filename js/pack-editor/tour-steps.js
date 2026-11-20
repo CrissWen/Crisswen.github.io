@@ -34,27 +34,47 @@ export const PACK_EDITOR_TOUR_STEPS = [
     mobileView: 'cards'
   },
   {
-    id: 'llm',
-    target: '.pe-toolbar__opts',
-    title: 'Режим LLM та статус збереження',
-    text: 'Тут відображається статус автозбереження і перемикач «Режим LLM». Увімкніть його, щоб редагувати картки суцільним текстом або скопіювати готовий ШІ-промпт.',
+    id: 'save-status',
+    target: '#pe-save-status',
+    title: 'Статус збереження',
+    text: 'Індикатор показує стан автозбереження локальної чернетки, щоб ви не втратили незбережені зміни під час редагування.',
     placement: 'bottom',
     mobileView: 'cards'
   },
   {
-    id: 'cards',
-    target: '.pe-char-columns',
-    title: 'Список карток і форма додавання',
-    text: 'Ліворуч відображаються всі додані картки категорії (їх можна сортувати, редагувати кліком або масово видаляти), а праворуч — форма для створення нової картки.',
-    placement: 'top',
-    mobileView: 'cards'
+    id: 'llm',
+    target: '.pe-toolbar__llm-group',
+    title: 'Режим LLM та ШІ-промпт',
+    text: 'Перемикач «Режим LLM» відкриває кнопку копіювання готового ШІ-промпту для генерації карток і переводить редагування в суцільний текст.',
+    placement: 'bottom',
+    mobileView: 'cards',
+    demoAction: 'enable-llm'
+  },
+  {
+    id: 'cards-list',
+    target: '.pe-char-list-col',
+    title: 'Список карток',
+    text: 'Тут відображаються додані картки: у візуальному режимі їх можна сортувати, редагувати кліком і масово видаляти, а в Режимі LLM — редагувати суцільним текстом.',
+    placement: 'right',
+    mobileView: 'cards',
+    demoAction: 'preview-list-llm'
+  },
+  {
+    id: 'cards-form',
+    target: '.pe-char-form-col',
+    title: 'Форма додавання картки',
+    text: 'У цій формі створюються та редагуються картки поточної категорії — заповніть поля й натисніть «Додати».',
+    placement: 'left',
+    mobileView: 'cards',
+    demoAction: 'visual-form'
   },
   {
     id: 'stages',
     target: '#pe-stages-block',
     title: 'Стадії',
     text: 'У цьому блоці налаштовуються спільні стадії для всього пака (стаж, рівень хобі, ступінь хвороби), а також є окремий перемикач режиму LLM.',
-    placement: 'top'
+    placement: 'top',
+    demoAction: 'visual-form'
   },
   {
     id: 'actions',
