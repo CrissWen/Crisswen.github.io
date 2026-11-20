@@ -356,6 +356,9 @@ function resetEditorState() {
 
   state.searchQuery = '';
   state.searchAll = false;
+  state.searchNamesOnly = false;
+  state.searchWholeWord = false;
+  state.searchCustomOnly = false;
 }
 
 // Завантажує дані редактора; false — користувача вже перенаправлено (немає прав, ліміт, помилка, застаріла сесія)

@@ -1511,36 +1511,54 @@ body.is-stage-dragging * {
 /* Наведення на «×» / чекбокс не знімає hover-рамку поля: вони сусіди інпута, а не нащадки, тому без цього :hover у інпута
    зникав би, щойно курсор заходить на чекбокс (рамка миготіла). Колір той самий, що в .pe-input:hover. */
 .pe-search__box:hover .pe-search__input:not(:focus):not(.is-invalid):not(:disabled){border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
-/* --pe-inside-w — ширина, зарезервована справа під «×» і чекбокс (з запасом): текст запиту ніколи не забегає під них.
-   Тримати в синхроні з розмірами .pe-search__inside / .pe-check--inline нижче. */
-.pe-search__box{--pe-inside-w:120px;}
+/* --pe-inside-w — ширина, зарезервована справа під «×» і кнопку налаштувань пошуку. */
+.pe-search__box{--pe-inside-w:76px;}
 .pe-search__box .pe-search__input{padding-left:38px;padding-right:var(--pe-inside-w);}
-/* Права частина поля: кнопка очищення + чекбокс, по вертикалі по центру. Сама група кліків не ловить
-   (pointer-events:none), тому весь інпут лишається клікабельним для вводу; клікаються лише її діти. */
+/* Права частина поля: кнопка очищення + кнопка параметрів пошуку. */
 .pe-search__inside{
   position:absolute;top:0;right:8px;bottom:0;
   display:flex;align-items:center;gap:4px;
   pointer-events:none;
 }
 .pe-search__inside > *{pointer-events:auto;}
-/* Чекбокс всередині поля: той самий .pe-check, але без висоти рядка тулбара і з тонким розділювачем зліва */
-.pe-check--inline{
-  min-height:0;padding:6px 2px 6px 10px;margin-left:2px;
-  border-left:1px solid var(--metal-lt);
-  font-size:13px;
-  -webkit-tap-highlight-color:transparent; /* без системного спалаху по тапу на мобільних */
-  outline:none;
+.pe-search-settings{position:relative;display:inline-flex;align-items:center;}
+.pe-search__settings-btn{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;padding:0;
+  background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);
+  color:var(--text-mute);cursor:pointer;
+  transition:color .2s ease, background-color .2s ease, border-color .2s ease;
 }
-/* Кільце фокусу малюється лише при навігації з клавіатури (:focus-visible у .pe-check__input:focus-visible + .pe-check__box вище);
-   від кліку мишею/тапу ніякої обводки немає. Саме кільце свідомо НЕ вимикаємо: це єдиний індикатор фокусу для користувачів клавіатури. */
-.pe-check--inline .pe-check__input:focus:not(:focus-visible) + .pe-check__box{box-shadow:none;}
-/* Підпис: у вузькому полі — «В усіх». Для браузерів без container queries лишається безпечний короткий варіант. */
-.pe-check--inline .pe-check__full{display:none;}
-@container pe-search (min-width:380px){
-  .pe-search__box{--pe-inside-w:200px;}
-  .pe-check--inline .pe-check__full{display:inline;}
-  .pe-check--inline .pe-check__short{display:none;}
+.pe-search__settings-btn:hover,
+.pe-search__settings-btn[aria-expanded="true"]{
+  color:var(--text);
+  background:color-mix(in srgb, var(--text) 8%, transparent);
 }
+.pe-search__settings-btn.is-active{
+  color:var(--hazard);
+  border-color:color-mix(in srgb, var(--hazard) 55%, transparent);
+  background:color-mix(in srgb, var(--hazard) 12%, transparent);
+}
+.pe-search__settings-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.pe-search__settings-badge{
+  position:absolute;top:-4px;right:-4px;
+  min-width:14px;height:14px;padding:0 3px;
+  border-radius:999px;
+  background:var(--hazard);color:var(--bg);
+  font-family:var(--mono);font-size:10px;font-weight:700;line-height:14px;text-align:center;
+}
+.pe-search__settings-badge[hidden]{display:none;}
+.pe-search-settings__menu{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:145;
+  min-width:250px;padding:8px 10px;
+  display:flex;flex-direction:column;gap:6px;
+  background:linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  box-shadow:0 12px 28px rgba(0,0,0,.65);
+}
+.pe-search-settings__menu[hidden]{display:none;}
+.pe-search-settings__item{min-height:28px;padding:2px 4px;font-size:13px;white-space:nowrap;}
 /* Кнопка очищення — усередині поля (позиція задається групою .pe-search__inside) */
 .pe-search__clear{
   display:inline-flex;align-items:center;justify-content:center;
@@ -1556,6 +1574,16 @@ body.is-stage-dragging * {
 .pe-search__meta{
   display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-height:20px;
   font-size:13px;color:var(--text-mute);
+}
+.pe-toolbar{position:relative;}
+.pe-search-results{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:135;
+  padding:6px;
+  background:linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  box-shadow:0 12px 28px rgba(0,0,0,.65);
+  max-height:min(340px, 55vh);
+  overflow-y:auto;
 }
 .pe-search-results[hidden]{display:none;}
 

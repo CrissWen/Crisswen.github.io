@@ -243,11 +243,40 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   <input id="pe-search" class="pe-input pe-search__input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Пошук...">
                   <div class="pe-search__inside">
                     <button type="button" id="pe-search-clear" class="pe-search__clear" aria-label="Очистити пошук" title="Очистити (Esc)" hidden>×</button>
-                    <label class="pe-check pe-check--inline" title="Шукати в усіх категоріях">
-                      <input type="checkbox" id="pe-search-all" class="pe-check__input" aria-label="В усіх категоріях">
-                      <span class="pe-check__box" aria-hidden="true"></span>
-                      <span class="pe-check__text" aria-hidden="true"><span class="pe-check__full">В усіх категоріях</span><span class="pe-check__short">В усіх</span></span>
-                    </label>
+                    <div class="pe-search-settings" id="pe-search-settings-wrap">
+                      <button type="button" id="pe-search-settings-btn" class="pe-search__settings-btn" aria-expanded="false" aria-controls="pe-search-settings-menu" aria-label="Параметри пошуку" title="Параметри пошуку">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                          <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                          <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                          <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                          <line x1="17" y1="16" x2="23" y2="16"/>
+                        </svg>
+                        <span id="pe-search-settings-badge" class="pe-search__settings-badge" hidden>0</span>
+                      </button>
+                      <div id="pe-search-settings-menu" class="pe-search-settings__menu" role="group" aria-label="Параметри пошуку" hidden>
+                        <label class="pe-check pe-search-settings__item" title="Шукати в усіх категоріях пака">
+                          <input type="checkbox" id="pe-search-all" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">В усіх категоріях</span>
+                        </label>
+                        <label class="pe-check pe-search-settings__item" title="Ігнорувати описи, пояснення фобій та здібності професій">
+                          <input type="checkbox" id="pe-search-names-only" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">Тільки в назвах</span>
+                        </label>
+                        <label class="pe-check pe-search-settings__item" title="Шукати лише повні слова, а не частини слів">
+                          <input type="checkbox" id="pe-search-whole-word" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">Точний збіг слова</span>
+                        </label>
+                        <label class="pe-check pe-search-settings__item" title="Показати лише картки з власними налаштуваннями (здібність, стадії, вік, зріст, пояснення)">
+                          <input type="checkbox" id="pe-search-custom-only" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">З особливими властивостями</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

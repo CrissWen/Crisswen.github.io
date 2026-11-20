@@ -37,8 +37,13 @@ export function highlightHtml(text, tokens) {
 // Уривок опису катаклізму навколо першого збігу (порожній рядок, якщо в описі збігів немає)
 function snippetHtml(text, tokens) {
   const src = oneLine(text);
+  if (!src) return '';
+  if (!tokens || !tokens.length) {
+    const part = src.slice(0, 90);
+    return `<small class="pe-result__snippet">${esc(part)}${src.length > 90 ? '…' : ''}</small>`;
+  }
   const normalized = normalizeSearch(src);
-  if (!src || normalized.length !== src.length) return '';
+  if (normalized.length !== src.length) return '';
   const hits = tokens.map(t => normalized.indexOf(t)).filter(i => i >= 0);
   if (!hits.length) return '';
   const from = Math.max(0, Math.min(...hits) - 30);
@@ -75,24 +80,37 @@ function resultRowHtml(r, tokens, searchAll, { activeCategory = '', isDeleteMode
       </button>`;
   }
   const where = `${searchAll ? `${esc(r.label)} · ` : ''}рядок ${r.line + 1}`;
+  const detailHtml = r.detail ? snippetHtml(r.detail, tokens) : '';
   return `
     <button type="button" class="${rowClasses}" data-res-cat="${esc(r.category)}" data-res-line="${r.line}" data-res-card="${r.cardIndex}" aria-pressed="${isMarkedDelete}">
       ${checkHtml}
-      <span class="added-item-row__name">${highlightHtml(r.text, tokens)}</span>
+      <span class="added-item-row__name">${highlightHtml(r.text, tokens)}${detailHtml}</span>
       ${deleteHintHtml || `<span class="pe-result__meta">${where}</span>`}
     </button>`;
 }
 
+function updateSearchSettingsUi({ searchAll = false, namesOnly = false, wholeWord = false, customOnly = false } = {}) {
+  const activeCount = [searchAll, namesOnly, wholeWord, customOnly].filter(Boolean).length;
+  const badge = $('pe-search-settings-badge');
+  const btn = $('pe-search-settings-btn');
+  if (badge) {
+    badge.textContent = activeCount > 0 ? String(activeCount) : '';
+    badge.hidden = activeCount === 0;
+  }
+  btn?.classList.toggle('is-active', activeCount > 0);
+}
+
 // Перемальовує панель результатів, лічильник і кнопку "×".
-// view: { query, tokens, searchAll, mode, activeCategory, isDeleteMode, selectedDeleteIndices } і залежно від mode:
-//   'idle'        — запиту немає: панель прихована;
-//   'cata-filter' — фільтрується сам список катаклізмів (cataCount — скільки збігів), окрема панель не потрібна;
+// view: { query, tokens, searchAll, namesOnly, wholeWord, customOnly, mode, activeCategory, isDeleteMode, selectedDeleteIndices } і залежно від mode:
+//   'idle'        — запиту немає і customOnly вимкнено: панель прихована;
+//   'cata-filter' — не використовується в режимі оверлею (залишено для сумісності);
 //   'results'     — список знайдених рядків (results, total з collectSearchResults).
 export function paintSearch(view) {
   const panel = $('pe-search-results');
   if (!panel) return;
   const count = $('pe-search-count');
-  $('pe-search-clear').hidden = !view.query;
+  $('pe-search-clear').hidden = !view.query && !view.customOnly;
+  updateSearchSettingsUi(view);
 
   if (view.mode === 'idle') {
     panel.hidden = true;
@@ -117,7 +135,11 @@ export function paintSearch(view) {
   panel.hidden = false;
   if (!total) {
     count.textContent = 'Нічого не знайдено';
-    panel.innerHTML = `<p class="pe-cata-list__empty">Нічого не знайдено за запитом "${esc(query.trim())}"${searchAll ? '' : '. Спробуйте увімкнути "В усіх категоріях"'}</p>`;
+    const trimmed = String(query || '').trim();
+    const msg = trimmed
+      ? `Нічого не знайдено за запитом "${esc(trimmed)}"${searchAll ? '' : '. Спробуйте увімкнути "В усіх категоріях"'}`
+      : `Карток з особливими властивостями не знайдено${searchAll ? '' : '. Спробуйте увімкнути "В усіх категоріях"'}`;
+    panel.innerHTML = `<p class="pe-cata-list__empty">${msg}</p>`;
     return;
   }
   count.textContent = total > results.length ? `Знайдено: ${total} (показано ${results.length})` : `Знайдено: ${total}`;
@@ -125,9 +147,16 @@ export function paintSearch(view) {
 }
 
 // Початкові значення елементів пошуку (на старті сторінки)
-export function initSearchControls({ query, all }) {
+export function initSearchControls({ query, all, namesOnly = false, wholeWord = false, customOnly = false }) {
   $('pe-search').value = query;
   $('pe-search-all').checked = all;
+  const namesEl = $('pe-search-names-only');
+  if (namesEl) namesEl.checked = namesOnly;
+  const wholeEl = $('pe-search-whole-word');
+  if (wholeEl) wholeEl.checked = wholeWord;
+  const customEl = $('pe-search-custom-only');
+  if (customEl) customEl.checked = customOnly;
+  updateSearchSettingsUi({ searchAll: all, namesOnly, wholeWord, customOnly });
 }
 
 export function setSearchInput(value) {

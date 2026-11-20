@@ -143,3 +143,82 @@ test('customOnly filters cards with custom properties even with empty tokens', (
     ['Лікар', 'Водій', 'Особливий метеорит']
   );
 });
+
+test('packEditorTemplate renders search settings button, group menu, and 4 filter checkboxes', async () => {
+  const { packEditorTemplate } = await import('../../js/pack-editor/ui/template.js');
+  const html = packEditorTemplate({ isEdit: false, isDefaultEdit: false });
+
+  assert.match(html, /id="pe-search-settings-btn"/);
+  assert.match(html, /aria-controls="pe-search-settings-menu"/);
+  assert.match(html, /id="pe-search-settings-menu"[^>]*role="group"/);
+  assert.doesNotMatch(html, /id="pe-search-settings-btn"[^>]*aria-haspopup=/);
+  assert.doesNotMatch(html, /id="pe-search-settings-menu"[^>]*role="menu"/);
+
+  for (const id of ['pe-search-all', 'pe-search-names-only', 'pe-search-whole-word', 'pe-search-custom-only']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+});
+
+test('paintSearch renders detail snippet for text results and updates settings badge', async () => {
+  const { paintSearch } = await import('../../js/pack-editor/ui/search.js');
+
+  const panelEl = { hidden: true, innerHTML: '' };
+  const countEl = { textContent: '' };
+  const clearEl = { hidden: true };
+  const badgeEl = { hidden: true, textContent: '' };
+  const btnEl = {
+    classList: {
+      active: false,
+      toggle(cls, force) { if (cls === 'is-active') this.active = Boolean(force); }
+    }
+  };
+
+  const prevDoc = globalThis.document;
+  globalThis.document = {
+    getElementById(id) {
+      if (id === 'pe-search-results') return panelEl;
+      if (id === 'pe-search-count') return countEl;
+      if (id === 'pe-search-clear') return clearEl;
+      if (id === 'pe-search-settings-badge') return badgeEl;
+      if (id === 'pe-search-settings-btn') return btnEl;
+      return null;
+    }
+  };
+
+  try {
+    paintSearch({
+      mode: 'results',
+      query: '',
+      tokens: [],
+      searchAll: true,
+      namesOnly: false,
+      wholeWord: true,
+      customOnly: true,
+      activeCategory: 'profession',
+      isDeleteMode: false,
+      selectedDeleteIndices: new Set(),
+      total: 1,
+      results: [
+        {
+          type: 'text',
+          category: 'profession',
+          label: 'Професія',
+          line: 0,
+          cardIndex: 0,
+          text: 'Лікар',
+          detail: 'Лікує хвороби'
+        }
+      ]
+    });
+
+    assert.equal(panelEl.hidden, false);
+    assert.equal(clearEl.hidden, false, 'clear button must be visible when customOnly is active even if query is empty');
+    assert.equal(badgeEl.hidden, false);
+    assert.equal(badgeEl.textContent, '3');
+    assert.equal(btnEl.classList.active, true);
+    assert.match(panelEl.innerHTML, /pe-result__snippet/);
+    assert.match(panelEl.innerHTML, /Лікує хвороби/);
+  } finally {
+    globalThis.document = prevDoc;
+  }
+});
