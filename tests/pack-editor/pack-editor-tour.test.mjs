@@ -418,6 +418,12 @@ test('startPackEditorTour виконує демо-превʼю LLM, додає �
 
   const llmCheckbox = makeMockNode();
   const llmSlot = makeMockNode();
+  const llmWrap = makeMockNode();
+  llmWrap.hidden = true;
+  const llmToolbar = makeMockNode();
+  llmToolbar.hidden = true;
+  const dropHint = makeMockNode();
+  dropHint.hidden = true;
   const cardsTa = makeMockNode();
   cardsTa.hidden = true;
   const listWrap = makeMockNode();
@@ -431,6 +437,9 @@ test('startPackEditorTour виконує демо-превʼю LLM, додає �
   const { mockDocument, mockWindow, scrollCalls } = createMockDom({
     '#pe-llm-mode': llmCheckbox,
     '#pe-llm-slot': llmSlot,
+    '#pe-llm-wrap': llmWrap,
+    '#pe-llm-toolbar': llmToolbar,
+    '#pe-llm-drop-hint': dropHint,
     '#pe-cards': cardsTa,
     '#pe-cata-list-wrap': listWrap,
     '#pe-cata-list': cataList,
@@ -476,6 +485,9 @@ test('startPackEditorTour виконує демо-превʼю LLM, додає �
     tour.next();
     assert.equal(tour.getStepIndex(), 1);
     assert.equal(llmCheckbox.checked, true);
+    assert.equal(llmWrap.hidden, false);
+    assert.equal(llmToolbar.hidden, false);
+    assert.equal(dropHint.hidden, false);
     assert.equal(cardsTa.hidden, false);
 
     // Next "Далі" advances to Step 2 (visual-form): restores visual mode so formCol is visible
@@ -491,6 +503,9 @@ test('startPackEditorTour виконує демо-превʼю LLM, додає �
     await wait(240);
     assert.equal(cataList.innerHTML.includes('pe-tour-demo-row'), false);
     assert.equal(cardsTa.value, '');
+    assert.equal(llmWrap.hidden, true);
+    assert.equal(llmToolbar.hidden, true);
+    assert.equal(dropHint.hidden, true);
     assert.equal(linesCount.textContent, 'Рядків: 0');
     assert.ok(scrollCalls.some(c => c.top === 0));
 

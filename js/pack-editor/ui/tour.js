@@ -120,6 +120,9 @@ function getViewportMetrics() {
 function createDemoController() {
   const llmCheckbox = document.querySelector('#pe-llm-mode');
   const llmSlot = document.querySelector('#pe-llm-slot');
+  const llmWrap = document.querySelector('#pe-llm-wrap');
+  const llmToolbar = document.querySelector('#pe-llm-toolbar');
+  const dropHint = document.querySelector('#pe-llm-drop-hint');
   const cardsTa = document.querySelector('#pe-cards');
   const listWrap = document.querySelector('#pe-cata-list-wrap');
   const cataList = document.querySelector('#pe-cata-list');
@@ -131,6 +134,9 @@ function createDemoController() {
   const snapshot = {
     llmChecked: Boolean(llmCheckbox?.checked),
     llmSlotActive: Boolean(llmSlot?.classList?.contains('is-active')),
+    llmWrapHidden: Boolean(llmWrap?.hidden),
+    llmToolbarHidden: Boolean(llmToolbar?.hidden),
+    dropHintHidden: Boolean(dropHint?.hidden),
     cardsValue: cardsTa?.value ?? '',
     cardsHidden: Boolean(cardsTa?.hidden),
     listWrapHidden: Boolean(listWrap?.hidden),
@@ -168,6 +174,9 @@ function createDemoController() {
   function setPreviewMode(isLlm) {
     if (llmCheckbox) llmCheckbox.checked = isLlm;
     llmSlot?.classList?.toggle('is-active', isLlm);
+    if (llmWrap) llmWrap.hidden = !isLlm;
+    if (llmToolbar) llmToolbar.hidden = !isLlm;
+    if (dropHint) dropHint.hidden = !isLlm;
     if (cardsTa) cardsTa.hidden = !isLlm;
     if (listWrap) listWrap.hidden = isLlm;
     if (cataList) cataList.hidden = isLlm;
@@ -179,6 +188,9 @@ function createDemoController() {
   function restore() {
     if (llmCheckbox) llmCheckbox.checked = snapshot.llmChecked;
     llmSlot?.classList?.toggle('is-active', snapshot.llmSlotActive);
+    if (llmWrap) llmWrap.hidden = snapshot.llmWrapHidden;
+    if (llmToolbar) llmToolbar.hidden = snapshot.llmToolbarHidden;
+    if (dropHint) dropHint.hidden = snapshot.dropHintHidden;
     if (cardsTa) {
       cardsTa.value = snapshot.cardsValue;
       cardsTa.hidden = snapshot.cardsHidden;
