@@ -50,8 +50,16 @@ test('CATEGORY_SCHEMAS defines Variant B primary descriptors and preserves field
 test('updateDynamicNameField updates label and placeholder across consecutive textarea categories and preserves value', async () => {
   const { updateDynamicNameField } = await import('../../js/pack-editor/ui/helpers.js');
 
-  const wrap = { innerHTML: '' };
-  let currentNameEl = { tagName: 'INPUT', value: 'Збережений текст' };
+  let currentNameEl = { value: 'Збережений текст' };
+  const wrap = {
+    _html: '',
+    get innerHTML() { return this._html; },
+    set innerHTML(val) {
+      this._html = val;
+      // Simulate real DOM: replacing innerHTML creates a fresh empty #pe-dyn-name node
+      currentNameEl = { value: '' };
+    }
+  };
   const prevDoc = globalThis.document;
   globalThis.document = {
     getElementById(id) {
@@ -65,18 +73,23 @@ test('updateDynamicNameField updates label and placeholder across consecutive te
     updateDynamicNameField('profession');
     assert.match(wrap.innerHTML, /<input[^>]*id="pe-dyn-name"/);
     assert.match(wrap.innerHTML, />Назва\s*</);
+    assert.match(wrap.innerHTML, /placeholder="Введіть назву"/);
+    assert.equal(currentNameEl.value, 'Збережений текст');
 
-    currentNameEl = { tagName: 'TEXTAREA', value: 'Тест' };
-    updateDynamicNameField('history');
-    assert.match(wrap.innerHTML, /<textarea[^>]*id="pe-dyn-name"/);
-    assert.match(wrap.innerHTML, />Опис\s*</);
-    assert.equal(currentNameEl.value, 'Тест');
-
-    updateDynamicNameField('location');
-    assert.match(wrap.innerHTML, />Місце\s*</);
-
-    updateDynamicNameField('food_supply');
-    assert.match(wrap.innerHTML, />Примітка\s*</);
+    for (const [cat, label, placeholder] of [
+      ['history',     'Опис',     'Опишіть, як і де був побудований бункер'],
+      ['location',    'Місце',    'Вкажіть місце розташування бункера'],
+      ['items',       'Предмет',  'Вкажіть предмети в бункері'],
+      ['extra_info',  'Факт',     'Введіть факт або відомість'],
+      ['food_supply', 'Примітка', 'Вкажіть стан або обсяг запасів']
+    ]) {
+      const prevVal = currentNameEl.value;
+      updateDynamicNameField(cat);
+      assert.match(wrap.innerHTML, /<textarea[^>]*id="pe-dyn-name"/, `${cat} must render textarea`);
+      assert.match(wrap.innerHTML, new RegExp(`>${label}\\s*<`), `${cat} label`);
+      assert.match(wrap.innerHTML, new RegExp(`placeholder="${placeholder}"`), `${cat} placeholder`);
+      assert.equal(currentNameEl.value, prevVal, `${cat} must preserve value across re-render`);
+    }
   } finally {
     globalThis.document = prevDoc;
   }

@@ -3,8 +3,9 @@ import { initCustomSelects } from '../../ui/custom-select.js';
 import { $ } from './shared.js';
 
 // Червона зірочка для обов'язкових полів схеми
-const reqMark = f => (f.required ? ` <span class="pe-required" title="Обов'язкове поле">*</span>` : '');
 const REQ_STAR = `<span class="pe-required" title="Обов'язкове поле">*</span>`;
+const reqMark = f => (f.required ? ` ${REQ_STAR}` : '');
+const DEFAULT_PRIMARY = { type: 'text', label: 'Назва', placeholder: 'Введіть назву' };
 
 const PRIMARY_FIELD_RENDERERS = {
   text: ({ label, placeholder }) => `
@@ -15,9 +16,10 @@ const PRIMARY_FIELD_RENDERERS = {
       <textarea id="pe-dyn-name" class="pe-input pe-desc pe-input--name" rows="3" placeholder="${esc(placeholder)}"></textarea>`
 };
 
-export function renderPrimaryField(primary = { type: 'text', label: 'Назва', placeholder: 'Введіть назву' }) {
-  const renderer = PRIMARY_FIELD_RENDERERS[primary.type] || PRIMARY_FIELD_RENDERERS.text;
-  return renderer(primary);
+export function renderPrimaryField(primary) {
+  const p = primary || DEFAULT_PRIMARY;
+  const renderer = PRIMARY_FIELD_RENDERERS[p.type] || PRIMARY_FIELD_RENDERERS.text;
+  return renderer(p);
 }
 
 const CONDITIONAL_KEYS = new Set(['custom_age', 'age_min', 'age_max', 'height_min', 'height_max', 'exact_height']);
