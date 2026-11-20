@@ -274,6 +274,11 @@ export function setStagesViewMode(mode) {
     }
     if (list) list.hidden = isLlm;
     if (ta) ta.hidden = !isLlm;
-    if (note) note.hidden = isLlm;
+    if (note) {
+      note.hidden = false;
+      note.textContent = isLlm
+        ? 'Можна перетягнути .txt або .json файл у поле'
+        : 'Порожній рядок унизу призначений для додавання нового запису';
+    }
   });
 }

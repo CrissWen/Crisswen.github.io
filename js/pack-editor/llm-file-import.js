@@ -343,3 +343,82 @@ export function importStagesContent({ content, kind = 'txt', stageKey, existingT
     skippedCount
   };
 }
+
+
+export async function processDroppedLlmFiles(
+  files,
+  { mode = 'cards', targetKey, existingText = '' } = {}
+) {
+  const fileList = Array.from(files || []);
+  if (!fileList.length) {
+    return { ok: false, nextText: existingText, addedCount: 0, skippedCount: 0, message: '' };
+  }
+
+  let currentText = existingText;
+  let totalAdded = 0;
+  let totalSkipped = 0;
+  let lastError = '';
+
+  for (const file of fileList) {
+    const metaCheck = validateImportFileMeta(file);
+    if (!metaCheck.ok) {
+      lastError = metaCheck.error;
+      continue;
+    }
+
+    let rawContent = '';
+    try {
+      rawContent = await file.text();
+    } catch {
+      lastError = 'Не вдалося прочитати файл';
+      continue;
+    }
+
+    const res = mode === 'stages'
+      ? importStagesContent({
+          content: rawContent,
+          kind: metaCheck.kind,
+          stageKey: targetKey,
+          existingText: currentText
+        })
+      : importCardsContent({
+          content: rawContent,
+          kind: metaCheck.kind,
+          category: targetKey,
+          existingText: currentText
+        });
+
+    if (res.error) {
+      lastError = res.error;
+      totalSkipped += res.skippedCount;
+      continue;
+    }
+
+    currentText = res.nextText;
+    totalAdded += res.addedCount;
+    totalSkipped += res.skippedCount;
+  }
+
+  if (totalAdded === 0) {
+    return {
+      ok: false,
+      nextText: existingText,
+      addedCount: 0,
+      skippedCount: totalSkipped,
+      message: lastError || 'У файлі не знайдено нових валідних записів'
+    };
+  }
+
+  const noun = mode === 'stages' ? 'стадій' : 'карток';
+  const message = totalSkipped > 0
+    ? `Додано ${totalAdded} ${noun} із файлу (пропущено ${totalSkipped} невалідних або дублікатів)`
+    : `Додано ${totalAdded} ${noun} із файлу`;
+
+  return {
+    ok: true,
+    nextText: currentText,
+    addedCount: totalAdded,
+    skippedCount: totalSkipped,
+    message
+  };
+}

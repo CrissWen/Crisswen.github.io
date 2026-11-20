@@ -1,7 +1,9 @@
 import { STAGE_KEYS } from '../payload.js';
 import { oneLine } from '../parser.js';
 import { getStagePrompt } from '../prompts/stage-prompts.js';
+import { processDroppedLlmFiles } from '../llm-file-import.js';
 import { showPackConfirm } from '../../game-modules/overlays/pack-confirm.js';
+import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
 import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
@@ -147,5 +149,44 @@ export function bindStagesTabs(ctx) {
     if (!field) return;
     state.form.ranges[field.dataset.range] = field.value;
     ctx.updateButtons();
+  }, { signal });
+
+  $('pe-stages').addEventListener('dragover', e => {
+    const ta = e.target.closest?.('[data-stage-ta]');
+    if (!ta || ta.hidden) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    ta.classList.add('is-dragover');
+  }, { signal });
+
+  $('pe-stages').addEventListener('dragleave', e => {
+    const ta = e.target.closest?.('[data-stage-ta]');
+    if (!ta) return;
+    if (!ta.contains(e.relatedTarget)) ta.classList.remove('is-dragover');
+  }, { signal });
+
+  $('pe-stages').addEventListener('drop', async e => {
+    const ta = e.target.closest?.('[data-stage-ta]');
+    if (!ta || ta.hidden) return;
+    e.preventDefault();
+    ta.classList.remove('is-dragover');
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+
+    const sessionId = state.sessionId;
+    const stageKey = ta.dataset.stageTa;
+    const res = await processDroppedLlmFiles(files, {
+      mode: 'stages',
+      targetKey: stageKey,
+      existingText: ta.value
+    });
+    if (signal?.aborted || state.sessionId !== sessionId) return;
+
+    if (res.ok) {
+      ta.value = res.nextText;
+      state.form.stages[stageKey] = res.nextText;
+      ctx.updateButtons();
+    }
+    if (res.message) showGlobalToast(res.message);
   }, { signal });
 }

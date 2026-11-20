@@ -5,8 +5,11 @@ import {
   validateImportFileMeta,
   cleanTxtLine,
   importCardsContent,
-  importStagesContent
+  importStagesContent,
+  processDroppedLlmFiles
 } from '../../js/pack-editor/llm-file-import.js';
+import { packEditorTemplate } from '../../js/pack-editor/ui/template.js';
+import { PACK_EDITOR_TOUR_STEPS } from '../../js/pack-editor/tour-steps.js';
 
 test('validateImportFileMeta приймає лише .txt та .json у межах 1 МБ', () => {
   assert.deepEqual(validateImportFileMeta({ name: 'cards.txt', type: 'text/plain', size: 120 }), {
@@ -150,4 +153,48 @@ test('importStagesContent валідує стадії з числовим лім
   assert.equal(res.addedCount, 3);
   assert.equal(res.skippedCount, 2);
   assert.equal(res.nextText, ['Учень: 5', 'Новачок: 11', 'Стажер: 35', 'Експерт'].join('\n'));
+});
+
+
+test('packEditorTemplate та PACK_EDITOR_TOUR_STEPS містять підказки про перетягування .txt або .json файлів у поле Режиму LLM', () => {
+  const html = packEditorTemplate({ isEdit: false, isDefaultEdit: false });
+  assert.ok(html.includes('id="pe-llm-drop-hint"'));
+  assert.ok(html.includes('.txt'));
+  assert.ok(html.includes('.json'));
+
+  const listStep = PACK_EDITOR_TOUR_STEPS.find(s => s.id === 'cards-list');
+  assert.ok(listStep);
+  assert.ok(listStep.text.includes('.txt') && listStep.text.includes('.json'));
+});
+
+test('processDroppedLlmFiles обробляє dropped File-обʼєкти, додає записи і формує повідомлення для тосту', async () => {
+  const makeFile = (name, text, type = 'text/plain') => ({
+    name,
+    type,
+    size: Buffer.byteLength(text, 'utf8'),
+    text: async () => text
+  });
+
+  const okRes = await processDroppedLlmFiles(
+    [
+      makeFile('part1.txt', '1. Лікар - лікує людей\n2. Пожежник - гасить вогонь'),
+      makeFile('part2.json', JSON.stringify(['Біолог - вивчає віруси', 'Лікар - дублікат']), 'application/json')
+    ],
+    { mode: 'cards', targetKey: 'profession', existingText: 'Водій - керує транспортом' }
+  );
+
+  assert.equal(okRes.ok, true);
+  assert.equal(okRes.addedCount, 3);
+  assert.equal(okRes.skippedCount, 1);
+  assert.ok(okRes.message.includes('3'));
+  assert.ok(okRes.message.includes('1'));
+  assert.equal(okRes.nextText.split('\n').length, 4);
+
+  const badExtRes = await processDroppedLlmFiles(
+    [makeFile('photo.png', 'binary', 'image/png')],
+    { mode: 'cards', targetKey: 'profession', existingText: 'Водій' }
+  );
+  assert.equal(badExtRes.ok, false);
+  assert.equal(badExtRes.nextText, 'Водій');
+  assert.ok(badExtRes.message.includes('.txt'));
 });

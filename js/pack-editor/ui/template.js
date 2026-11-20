@@ -367,6 +367,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   </div>
                 </div>
                 <div class="pe-list-meta">
+                  <span id="pe-llm-drop-hint" class="pe-llm-drop-hint" hidden>Можна перетягнути .txt або .json файл у поле</span>
                   <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
                 </div>
               </div>

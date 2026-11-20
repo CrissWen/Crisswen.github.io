@@ -1,6 +1,8 @@
 import { reconcileCards } from '../parser.js';
 import { getPromptForCategory } from '../categories.js';
 import { cataFieldStrings } from '../payload.js';
+import { processDroppedLlmFiles } from '../llm-file-import.js';
+import { showGlobalToast } from '../../game-modules/overlays/global-toast.js';
 import * as ui from '../ui/ui.js';
 import { $ } from '../ui/shared.js';
 import { state } from '../state.js';
@@ -113,5 +115,49 @@ export function bindLlmPanel(ctx) {
     state.form.texts[state.activeCategory] = e.target.value;
     ctx.updateCardsMeta();
     debouncedCardUpdates();
+  }, { signal });
+
+  const cardsTa = $('pe-cards');
+  cardsTa?.addEventListener('dragover', e => {
+    if (cardsTa.hidden) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    cardsTa.classList.add('is-dragover');
+  }, { signal });
+
+  cardsTa?.addEventListener('dragleave', e => {
+    if (!cardsTa.contains(e.relatedTarget)) {
+      cardsTa.classList.remove('is-dragover');
+    }
+  }, { signal });
+
+  cardsTa?.addEventListener('drop', async e => {
+    if (cardsTa.hidden) return;
+    e.preventDefault();
+    cardsTa.classList.remove('is-dragover');
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+
+    const sessionId = state.sessionId;
+    const category = state.activeCategory;
+    const res = await processDroppedLlmFiles(files, {
+      mode: 'cards',
+      targetKey: category,
+      existingText: cardsTa.value
+    });
+    if (signal?.aborted || state.sessionId !== sessionId || state.activeCategory !== category) return;
+
+    if (res.ok) {
+      cardsTa.value = res.nextText;
+      state.form.texts[category] = res.nextText;
+      if (category === 'cataclysm' && state.viewMode === 'llm') {
+        syncCataclysmsFromLlmText();
+      }
+      renderSearch();
+      ctx.updateCardsMeta();
+      ctx.renderSummary();
+      ctx.updateButtons();
+    }
+    if (res.message) showGlobalToast(res.message);
   }, { signal });
 }
