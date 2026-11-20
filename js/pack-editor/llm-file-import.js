@@ -131,6 +131,10 @@ function objectToCardLine(category, obj) {
   for (const [k, v] of Object.entries(obj)) {
     if (['id', 'value', 'name', 'title', 'meta', 'stages', 'category', 'pool_type'].includes(k)) continue;
     if (v === undefined) continue;
+    if (v !== null && typeof v === 'object') {
+      baseMeta[k] = v;
+      continue;
+    }
     extraProps.push(`${k}: ${typeof v === 'string' ? `"${v.replace(/"/g, '\\"')}"` : v}`);
   }
 

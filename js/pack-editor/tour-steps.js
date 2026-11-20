@@ -31,7 +31,7 @@ export const PACK_EDITOR_TOUR_STEPS = [
     title: 'Пошук та фільтри',
     text: 'Це пошук: тут ви можете знайти потрібну картку за назвою чи описом, а через кнопку налаштувань — шукати по всіх категоріях або за особливими властивостями.',
     placement: 'bottom',
-    mobileView: 'cards'
+    mobileView: 'list'
   },
   {
     id: 'save-status',
@@ -39,7 +39,7 @@ export const PACK_EDITOR_TOUR_STEPS = [
     title: 'Статус збереження',
     text: 'Індикатор показує стан автозбереження локальної чернетки, щоб ви не втратили незбережені зміни під час редагування.',
     placement: 'bottom',
-    mobileView: 'cards'
+    mobileView: 'list'
   },
   {
     id: 'llm',
@@ -47,7 +47,7 @@ export const PACK_EDITOR_TOUR_STEPS = [
     title: 'Режим LLM та ШІ-промпт',
     text: 'Перемикач «Режим LLM» відкриває кнопку копіювання готового ШІ-промпту для генерації карток і переводить редагування в суцільний текст.',
     placement: 'bottom',
-    mobileView: 'cards',
+    mobileView: 'list',
     demoAction: 'enable-llm'
   },
   {
@@ -56,7 +56,7 @@ export const PACK_EDITOR_TOUR_STEPS = [
     title: 'Список карток',
     text: 'Тут відображаються додані картки: у візуальному режимі їх можна сортувати, редагувати кліком і масово видаляти, а в Режимі LLM — редагувати текстом або перетягнути сюди готовий .txt чи .json файл.',
     placement: 'right',
-    mobileView: 'cards',
+    mobileView: 'list',
     demoAction: 'preview-list-llm'
   },
   {
@@ -65,7 +65,7 @@ export const PACK_EDITOR_TOUR_STEPS = [
     title: 'Форма додавання картки',
     text: 'У цій формі створюються та редагуються картки поточної категорії — заповніть поля й натисніть «Додати».',
     placement: 'left',
-    mobileView: 'cards',
+    mobileView: 'form',
     demoAction: 'visual-form'
   },
   {

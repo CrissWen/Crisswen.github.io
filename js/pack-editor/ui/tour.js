@@ -169,6 +169,11 @@ function createDemoController() {
       ].join('\n');
     }
     if (linesCount) linesCount.textContent = 'Рядків: 2';
+  } else if (hasRealRows && cardsTa && !cardsTa.value.trim()) {
+    const names = [...(cataList?.querySelectorAll?.('.added-item-row__name') || [])]
+      .map(el => el.textContent?.trim())
+      .filter(Boolean);
+    if (names.length) cardsTa.value = names.join('\n');
   }
 
   function setPreviewMode(isLlm) {

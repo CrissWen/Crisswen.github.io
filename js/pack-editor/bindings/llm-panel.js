@@ -127,7 +127,7 @@ export function bindLlmPanel(ctx) {
       targetKey: category,
       existingText: cardsTa.value
     });
-    if (signal?.aborted || state.sessionId !== sessionId || state.activeCategory !== category) return;
+    if (signal?.aborted || state.sessionId !== sessionId || state.activeCategory !== category || state.viewMode !== 'llm' || cardsTa.hidden) return;
 
     if (res.ok) {
       cardsTa.value = res.nextText;
