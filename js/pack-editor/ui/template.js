@@ -309,15 +309,16 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
           <div class="pe-char-columns">
             <div class="pe-char-list-col">
               <div class="pe-field">
-                <div class="pe-llm-toolbar" id="pe-llm-toolbar" role="toolbar" aria-label="Панель інструментів режиму LLM" hidden>
-                  <span class="pe-llm-toolbar__title">Імпорт карток (.txt / .json)</span>
-                  <button type="button" id="pe-llm-upload-btn" class="pk-btn pk-btn--ghost pe-llm-upload-btn" title="Завантажити .txt або .json файл" aria-label="Завантажити .txt або .json файл">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span>Завантажити файл</span>
-                  </button>
-                  <input type="file" id="pe-llm-file-input" accept=".txt,.json,text/plain,application/json" multiple hidden>
+                <div class="pe-llm-wrap" id="pe-llm-wrap" hidden>
+                  <div class="pe-cata-list-header pe-llm-toolbar" id="pe-llm-toolbar" role="toolbar" aria-label="Панель інструментів режиму LLM" hidden>
+                    <button type="button" id="pe-llm-upload-btn" class="pe-llm-upload-btn" title="Завантажити .txt або .json файл" aria-label="Завантажити .txt або .json файл">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      <span>Завантажити файл</span>
+                    </button>
+                    <input type="file" id="pe-llm-file-input" accept=".txt,.json,text/plain,application/json" multiple hidden>
+                  </div>
+                  <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
                 </div>
-                <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
                 <div class="pe-cata-list-wrap" id="pe-cata-list-wrap" hidden>
                   <div class="pe-cata-list-header" id="pe-cata-list-header" role="toolbar" aria-label="Панель інструментів списку карток">
                     <div class="pe-history-btns pe-listbox-history" role="group" aria-label="Історія змін" title="Історія дій (Ctrl+Z / Ctrl+Y)">
