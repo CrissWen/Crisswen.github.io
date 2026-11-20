@@ -2881,7 +2881,7 @@ dialog.pe-draft-modal::backdrop {
 /* ----- Онбординг-тур редактора паків ----- */
 .pe-tour-trigger-btn{
   display:inline-flex;align-items:center;justify-content:center;
-  width:28px;height:28px;border-radius:999px;
+  width:28px;height:28px;padding:0;line-height:1;flex-shrink:0;border-radius:999px;
   border:1px solid var(--metal-lt);background:var(--surface-2, rgba(255,255,255,.04));
   color:var(--text-mute);font-family:var(--head);font-weight:700;font-size:14px;
   cursor:pointer;transition:border-color .18s ease,color .18s ease,background-color .18s ease;

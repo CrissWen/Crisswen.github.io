@@ -157,7 +157,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
       <div class="block" id="pe-meta-block">
         <div class="block-head pe-head">
           <h2>${isEdit ? 'Редагування пака' : 'Створення пака'}</h2>
-          <button type="button" id="pe-tour-start-btn" class="pe-tour-trigger-btn" title="Підказки по редактору" aria-label="Підказки по редактору">${maskIcon(ICON_QUESTION, { size: 15 })}</button>
+          <button type="button" id="pe-tour-start-btn" class="pe-tour-trigger-btn" title="Підказки по редактору" aria-label="Підказки по редактору">${maskIcon(ICON_QUESTION, { size: 18 })}</button>
         </div>
         <dialog id="pe-draft-modal" class="pe-draft-modal" closedby="any" aria-labelledby="pe-draft-modal-title">
           <div class="pe-draft-modal__card">
