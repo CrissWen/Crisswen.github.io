@@ -12,6 +12,7 @@ test('deploy-pages.yml runs node --test, builds dist via scripts/build-release.m
   const wfPath = join(REPO_ROOT, '.github', 'workflows', 'deploy-pages.yml');
   assert.equal(existsSync(wfPath), true, '.github/workflows/deploy-pages.yml must exist');
   const yml = readFileSync(wfPath, 'utf8');
+  assert.match(yml, /node-version:\s*['"]?(?:2[2-9]|[3-9]\d)['"]?/, 'CI must use Node.js 22+ for node --test glob support');
   assert.match(yml, /node --test "tests\/\*\*\/\*\.test\.mjs"/);
   assert.match(yml, /node scripts\/build-release\.mjs --out dist/);
   assert.match(yml, /actions\/upload-pages-artifact@v3/);
@@ -33,4 +34,10 @@ test('buildRelease succeeds against the real TrueBunker repository and hashes al
     assert.match(html, /href="css\/styles\.css\?v=[0-9a-f]{8}"/, `${page} missing hashed styles.css`);
     assert.match(html, new RegExp(`'css/themes/theme-' \\+ t \\+ '\\.css\\?v=${result.themesHash}'`), `${page} missing hashed inline theme URL`);
   }
+
+  const themeManagerJs = readFileSync(join(outDir, 'js', 'utils', 'common', 'theme-manager.js'), 'utf8');
+  assert.match(themeManagerJs, new RegExp('`css/themes/theme-\\$\\{themeName\\}\\.css\\?v=' + result.themesHash + '`'));
+
+  const appJs = readFileSync(join(outDir, 'js', 'app.js'), 'utf8');
+  assert.match(appJs, /from '\.\/services\/version-check\.js\?v=[0-9a-f]{8}'/);
 });

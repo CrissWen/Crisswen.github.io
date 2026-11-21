@@ -119,3 +119,50 @@ test('buildRelease propagates Merkle hash changes from a leaf module up to index
   assert.notEqual(first.assetHashes.get('css/styles.css'), second.assetHashes.get('css/styles.css'));
   assert.equal(first.themesHash, second.themesHash, 'unchanged themes keep identical hash');
 });
+
+test('buildRelease hashes side-effect imports after export statements, dynamic imports, inline module scripts, and rejects unsafe outDir', (t) => {
+  const rootDir = makeFixtureRepo();
+  const outDir = join(rootDir, 'dist');
+  t.after(() => rmSync(rootDir, { recursive: true, force: true }));
+
+  writeFileSync(join(rootDir, 'js', 'side-effect.js'), "console.log('side');\n");
+  writeFileSync(join(rootDir, 'js', 'lazy.js'), "export const lazy = 1;\n");
+  writeFileSync(
+    join(rootDir, 'js', 'app.js'),
+    [
+      '// comment mentioning import { x } from \'./lazy.js\'',
+      'export const SOME_CONST = 42;',
+      "import './side-effect.js';",
+      "import { loadLocal } from './config/config-manager.js';",
+      "import { themeHref } from './utils/common/theme-manager.js';",
+      "export async function boot() { const m = await import('./lazy.js'); return [loadLocal, themeHref, m]; }"
+    ].join('\n')
+  );
+  writeFileSync(
+    join(rootDir, 'audio-lab.html'),
+    '<!DOCTYPE html><html><head></head><body><script type="module">import { boot } from \'./js/app.js\'; boot();</script></body></html>'
+  );
+
+  assert.throws(
+    () => buildRelease({ rootDir, outDir: rootDir }),
+    /outDir/i,
+    'must refuse to wipe rootDir when outDir === rootDir'
+  );
+
+  const res = buildRelease({ rootDir, outDir });
+  const appOut = readFileSync(join(outDir, 'js', 'app.js'), 'utf8');
+  assert.match(appOut, /^\/\/ comment mentioning import \{ x \} from '\.\/lazy\.js'$/m, 'comments must not be rewritten');
+  assert.match(appOut, /^import '\.\/side-effect\.js\?v=[0-9a-f]{8}';$/m, 'side-effect import after export const must be hashed');
+  assert.match(appOut, /import\('\.\/lazy\.js\?v=[0-9a-f]{8}'\)/, 'existing dynamic import must be hashed');
+
+  const audioLabHtml = readFileSync(join(outDir, 'audio-lab.html'), 'utf8');
+  assert.match(audioLabHtml, /import \{ boot \} from '\.\/js\/app\.js\?v=[0-9a-f]{8}'/);
+
+  // Theme edit updates themesHash and propagates to theme-manager.js and app.js
+  const outDir2 = join(rootDir, 'dist2');
+  writeFileSync(join(rootDir, 'css', 'themes', 'theme-stalker.css'), ':root { --bg: #222; }\n');
+  const res2 = buildRelease({ rootDir, outDir: outDir2 });
+  assert.notEqual(res.themesHash, res2.themesHash);
+  assert.notEqual(res.assetHashes.get('js/utils/common/theme-manager.js'), res2.assetHashes.get('js/utils/common/theme-manager.js'));
+  assert.notEqual(res.assetHashes.get('js/app.js'), res2.assetHashes.get('js/app.js'));
+});

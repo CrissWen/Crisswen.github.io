@@ -78,6 +78,17 @@ export function buildRelease({
   outDir = resolve(rootDir, 'dist'),
   now = new Date()
 } = {}) {
+  const absRoot = resolve(rootDir);
+  const absOut = resolve(outDir);
+  const relOutToRoot = toPosixPath(relative(absOut, absRoot));
+  if (
+    !relOutToRoot ||
+    relOutToRoot === '.' ||
+    (!relOutToRoot.startsWith('..') && !/^(?:\/|[a-zA-Z]:)/.test(relOutToRoot))
+  ) {
+    throw new Error(`Unsafe outDir "${outDir}": outDir must not equal or contain rootDir`);
+  }
+
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
@@ -161,33 +172,41 @@ export function buildRelease({
   const jsState = new Map();
 
   function rewriteJsImportsInSource(sourceText, fromRelPath) {
-    // Static import/export ... from '...'
-    let updated = sourceText.replace(
-      /(\b(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?)(['"])(\.\.?\/[^'"]+)\2/g,
-      (fullMatch, prefix, quote, spec) => {
+    // Process outside comments so comment examples mentioning import/export are untouched
+    return sourceText.replace(
+      /(\/\*[\s\S]*?\*\/|\/\/[^\r\n]*)|((?:^|[;\r\n])[ \t]*(?:import|export)\b[^;={}()]*?(?:\{[^};]*\}[^;={}()]*?)?\s+from\s*(['"])(\.\.?\/[^'"]+)\3)|((?:^|[;\r\n])[ \t]*import\s*(['"])(\.\.?\/[^'"]+)\6)|(\bimport\s*\(\s*(['"])(\.\.?\/[^'"]+)\9\s*\))/gm,
+      (
+        fullMatch,
+        comment,
+        fromStmt,
+        fromQuote,
+        fromSpec,
+        sideStmt,
+        sideQuote,
+        sideSpec,
+        dynStmt,
+        dynQuote,
+        dynSpec
+      ) => {
+        if (comment) return fullMatch;
+        const spec = fromSpec || sideSpec || dynSpec;
+        const quote = fromQuote || sideQuote || dynQuote;
+        if (!spec) return fullMatch;
         const targetRel = resolveRelativeAsset(fromRelPath, spec);
         if (EXCLUDED_REL_PATHS.has(targetRel) || !existsSync(join(outDir, targetRel))) {
           return fullMatch;
         }
         const targetHash = processJsFile(targetRel);
-        return `${prefix}${quote}${appendVersionQuery(spec, targetHash)}${quote}`;
+        const hashedSpec = appendVersionQuery(spec, targetHash);
+        const idx = fullMatch.lastIndexOf(`${quote}${spec}${quote}`);
+        if (idx === -1) return fullMatch;
+        return (
+          fullMatch.slice(0, idx) +
+          `${quote}${hashedSpec}${quote}` +
+          fullMatch.slice(idx + quote.length * 2 + spec.length)
+        );
       }
     );
-
-    // Dynamic import('...')
-    updated = updated.replace(
-      /(\bimport\s*\(\s*)(['"])(\.\.?\/[^'"]+)\2(\s*\))/g,
-      (fullMatch, open, quote, spec, close) => {
-        const targetRel = resolveRelativeAsset(fromRelPath, spec);
-        if (EXCLUDED_REL_PATHS.has(targetRel) || !existsSync(join(outDir, targetRel))) {
-          return fullMatch;
-        }
-        const targetHash = processJsFile(targetRel);
-        return `${open}${quote}${appendVersionQuery(spec, targetHash)}${quote}${close}`;
-      }
-    );
-
-    return updated;
   }
 
   function processJsFile(relJs) {

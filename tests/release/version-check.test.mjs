@@ -158,3 +158,48 @@ test('initVersionCheck ignores network errors and throttles visibilitychange che
   assert.equal(h.getFetchCalls(), 2, 'throttled within minIntervalMs');
   ctl.destroy();
 });
+
+test('initVersionCheck handles 404/invalid JSON, hides banner on entering #/game, and re-prompts after dismiss only on a newer buildId', async () => {
+  const h = createHarness({
+    buildId: '1111aaaa',
+    hash: '#/lobby',
+    fetchPayloads: [
+      null, // 404 response
+      { buildId: '2222bbbb' },
+      { buildId: '2222bbbb' },
+      { buildId: '3333cccc' }
+    ]
+  });
+  const ctl = initVersionCheck({ doc: h.doc, win: h.win, fetchImpl: h.fetchImpl, minIntervalMs: 0 });
+
+  // 404 -> no banner
+  assert.equal(await ctl.checkNow(), false);
+  assert.equal(h.doc.querySelector('#update-banner'), null);
+
+  // New build 2222bbbb -> banner shown
+  assert.equal(await ctl.checkNow(), true);
+  assert.ok(h.doc.querySelector('#update-banner'));
+
+  // Navigating into #/game removes the active banner
+  h.win.location.hash = '#/game?room=1234';
+  h.win.dispatch('hashchange');
+  assert.equal(h.doc.querySelector('#update-banner'), null, 'banner hidden upon entering #/game');
+
+  // Navigating back to #/lobby restores banner, then user clicks dismiss («Пізніше»)
+  h.win.location.hash = '#/lobby';
+  h.win.dispatch('hashchange');
+  const banner = h.doc.querySelector('#update-banner');
+  assert.ok(banner);
+  banner.querySelector('[data-update-dismiss]').click();
+  assert.equal(h.doc.querySelector('#update-banner'), null, 'dismiss removes banner');
+
+  // Re-checking same build 2222bbbb stays dismissed
+  await ctl.checkNow();
+  assert.equal(h.doc.querySelector('#update-banner'), null);
+
+  // visibilitychange with minIntervalMs: 0 fetches 3333cccc and re-shows banner
+  h.doc.dispatch('visibilitychange');
+  await new Promise((r) => setTimeout(r, 10));
+  assert.ok(h.doc.querySelector('#update-banner'), 'newer buildId after dismiss re-shows banner');
+  ctl.destroy();
+});
