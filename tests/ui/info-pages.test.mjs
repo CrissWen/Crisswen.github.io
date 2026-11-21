@@ -166,6 +166,25 @@ test('renderChangelog: усі версії на сторінці, позначк
   assert.ok(html.includes(`${d}.${m}.${y}`));
 });
 
+test('renderChangelog: бокова панель-зміст веде на кожну версію, якорі збігаються з id блоків', () => {
+  const html = renderChangelog();
+  assert.ok(html.includes('class="rules-sidebar"'), 'немає бокової панелі');
+  assert.equal((html.match(/data-nav-target="changelog-v/g) || []).length, CHANGELOG.length);
+  for (const entry of CHANGELOG) {
+    const id = `changelog-v${entry.version.replace(/\./g, '-')}`;
+    assert.ok(html.includes(`id="${id}"`), `немає блоку ${id}`);
+    assert.ok(html.includes(`href="#${id}" data-nav-target="${id}"`), `немає пункту змісту для ${id}`);
+  }
+  assert.ok(html.includes('class="rules-layout"'));
+});
+
+test('renderRules: пункти змісту мають data-nav-target на id розділів', () => {
+  const html = renderRules();
+  for (const s of RULES_SECTIONS) {
+    assert.ok(html.includes(`data-nav-target="legal-rules-${s.id}"`), `немає пункту змісту для ${s.id}`);
+  }
+});
+
 test('renderChangelog: типи змін показані іконками з доступною назвою, а не текстовими мітками', () => {
   const entry = CHANGELOG[0];
   const added = [
