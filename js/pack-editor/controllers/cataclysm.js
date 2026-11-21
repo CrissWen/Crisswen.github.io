@@ -29,7 +29,13 @@ export function syncCataclysmsFromLlmText({ markDeleted = true } = {}) {
     state.form.texts.cataclysm = $('pe-cards').value;
   }
   if (state.form.texts.cataclysm === llmTextBaseline) return;
-  const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm');
+  const seenCataNames = new Set();
+  const parsed = parseCards(state.form.texts.cataclysm, 'cataclysm').filter(p => {
+    const key = p.value.trim().toLowerCase();
+    if (!key || seenCataNames.has(key)) return false;
+    seenCataNames.add(key);
+    return true;
+  });
   const existingByName = new Map();
   for (let i = 0; i < state.form.cataclysms.length; i++) {
     const c = state.form.cataclysms[i];
@@ -121,7 +127,10 @@ export function renderCataList(tokens = []) {
     cataclysms: state.form.cataclysms,
     editIndex: state.cataEditIndex,
     newIndex: state.newCataIndex,
-    tokens
+    tokens,
+    cardsSortDir: state.cardsSortDir,
+    isDeleteMode: state.isDeleteMode,
+    selectedDeleteIndices: state.selectedDeleteIndices
   });
 }
 
@@ -202,6 +211,7 @@ export function startCataEdit(index) {
 export async function deleteCata(btn) {
   const item = state.cataEditIndex >= 0 ? state.form.cataclysms[state.cataEditIndex] : null;
   if (!item || state.isConfirming) return;
+  const sessionId = state.sessionId;
 
   state.isConfirming = true;
   let confirmed = false;
@@ -210,7 +220,7 @@ export async function deleteCata(btn) {
   } finally {
     state.isConfirming = false;
   }
-  if (!confirmed) return;
+  if (!confirmed || state.sessionId !== sessionId) return;
 
   // Після await індекс міг змінитися (наприклад, "Очистити все"), тому шукаємо запис за посиланням
   const index = state.form.cataclysms.indexOf(item);
@@ -248,6 +258,14 @@ export function handleCataInput(e) {
   // Прибираємо рамку лише з поля, що редагується; помилку ховаємо, коли не лишилося підсвічених.
   e.target.classList.remove('is-invalid');
   if (!document.querySelector('#pe-cata .is-invalid')) ui.showCataError('');
+}
+
+export function handleCataChange(e) {
+  if (e.target.id !== 'pe-cata-timer-toggle') return;
+  ui.setCataTimerEnabled(e.target.checked, { focus: e.target.checked });
+  if (ui.isCataErrorVisible() && !document.querySelector('#pe-cata .is-invalid')) {
+    ui.showCataError('');
+  }
 }
 
 

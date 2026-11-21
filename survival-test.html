@@ -36,6 +36,17 @@
         <img src="icons/favicon.png" alt="Лого" class="header-logo-icon">
         БУНКЕР
       </a>
+      <button
+        type="button"
+        class="header-nav-toggle"
+        id="header-nav-toggle"
+        aria-expanded="false"
+        aria-controls="header-nav"
+        aria-label="Меню навігації"
+        style="display: none;"
+      >
+        <span class="header-nav-toggle__bars" aria-hidden="true"></span>
+      </button>
       <!-- Навігація як в index.html: показується, коли є сесія. «Гра» видима, лише поки є активна кімната (js/pages/survival-test-header.js) -->
       <nav class="header-nav" id="header-nav" style="display: none;">
         <a href="index.html#/rules" class="header-nav-link" data-nav-path="#/rules">Правила</a>

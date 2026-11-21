@@ -386,7 +386,8 @@ export async function handleSave(btn) {
         ui.showCategory({
           category: packValidation.category,
           text: state.form.texts[packValidation.category] || '',
-          viewMode: state.viewMode
+          viewMode: state.viewMode,
+          ageCategoriesText: state.form?.stages?.age_categories || ''
         });
       }
     }

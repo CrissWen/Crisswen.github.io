@@ -240,16 +240,59 @@ export function parseCardLine(category, line) {
   return { value, meta };
 }
 
+function canonicalizeDedupMeta(val) {
+  if (Array.isArray(val)) return val.map(canonicalizeDedupMeta);
+  if (val && typeof val === 'object') {
+    const out = {};
+    for (const k of Object.keys(val).sort()) {
+      const v = val[k];
+      if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) continue;
+      out[k] = canonicalizeDedupMeta(v);
+    }
+    return out;
+  }
+  return typeof val === 'string' ? oneLine(val).toLowerCase() : val;
+}
+
+export function canonicalCardDedupKey(category, value, meta = {}) {
+  return JSON.stringify([
+    String(category ?? ''),
+    oneLine(value).toLowerCase(),
+    canonicalizeDedupMeta(meta || {})
+  ]);
+}
+
+export function deduplicateStageLines(stageKey, text) {
+  const seen = new Set();
+  const out = [];
+  for (const line of parseLines(text)) {
+    const normalized = formatStageEntry(parseStageEntry(stageKey, line));
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(normalized);
+  }
+  return out.join('\n');
+}
+
 // Текст однієї категорії (по картці на рядок) → [{ value, meta }].
 // extraMeta — { [category]: { [value]: meta } } з getPack: поля meta, яких редактор не показує (custom_age статі, stages хвороби...),
 // повертаються до картки за ключем category + value. Те, що автор ввів у рядку, має пріоритет;
-// якщо картку перейменували, її додаткова meta не підтягується.
+// якщо картку перейменували, її додаткова meta не підтягується. Повні дублікати автоматично відсіюються.
 export function parseCards(text, category, extraMeta = {}) {
-  return parseLines(text).map(line => {
+  const seen = new Set();
+  const cards = [];
+  for (const line of parseLines(text)) {
     const { value, meta } = parseCardLine(category, line);
     const extra = extraMeta?.[category]?.[value];
-    return { value, meta: extra ? { ...extra, ...meta } : meta };
-  });
+    const mergedMeta = extra ? { ...extra, ...meta } : meta;
+    const dedupKey = canonicalCardDedupKey(category, value, mergedMeta);
+    if (seen.has(dedupKey)) continue;
+    seen.add(dedupKey);
+    cards.push({ value, meta: mergedMeta });
+  }
+  return cards;
 }
 
 // АРХІТЕКТУРНЕ ЗАСТЕРЕЖЕННЯ: алгоритм узгодження за назвою/позицією оптимізовано під структуру картки { value, meta }.
@@ -267,11 +310,7 @@ export function reconcileCards(text, existingCards = [], category, extraMeta = {
 
   const matchedOldIndices = new Set();
   const matchedOldIds = new Set();
-  const parsedLines = parseLines(text).map(line => {
-    const { value, meta } = parseCardLine(category, line);
-    const extra = extraMeta?.[category]?.[value];
-    return { value, meta: extra ? { ...extra, ...meta } : meta };
-  });
+  const parsedLines = parseCards(text, category, extraMeta);
 
   // Pass 1: Точний збіг за назвою (value)
   const result = new Array(parsedLines.length).fill(null);

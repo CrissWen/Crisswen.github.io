@@ -1,8 +1,9 @@
 import { esc } from '../../utils/common/escape-html.js';
-import { CATACLYSM_LIMITS, STAGE_KEYS } from '../payload.js';
-import { TITLE_MAX, DESC_MAX, STAGE_FIELDS, RANGE_FIELDS, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
-
-const TEXTAREA_PLACEHOLDER = 'Введіть характеристики стовпчиком. Кожна нова характеристика — з нового рядка (клавіша Enter)';
+import { maskIcon } from '../../utils/common/icon-mask.js';
+import { ICON_QUESTION } from '../../constants/icons.js';
+import { CATACLYSM_LIMITS } from '../payload.js';
+import { TITLE_MAX, DESC_MAX } from '../constants.js';
+import { STAGE_FIELDS, RANGE_FIELDS, TEXTAREA_PLACEHOLDER } from './constants.js';
 
 const STAGE_DEL_BTN_HTML = `
   <button type="button" class="pe-stage-del" tabindex="-1" title="Видалити стадію" aria-label="Видалити стадію">
@@ -153,9 +154,10 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
   // is-loading знімається, коли завантажено конфіг дефолтного пака (і сам пак у режимі редагування)
   return `
     <section id="pe-root" class="pack-editor layout-large-centered is-loading">
-      <div class="block">
+      <div class="block" id="pe-meta-block">
         <div class="block-head pe-head">
           <h2>${isEdit ? 'Редагування пака' : 'Створення пака'}</h2>
+          <button type="button" id="pe-tour-start-btn" class="pe-tour-trigger-btn" title="Підказки по редактору" aria-label="Підказки по редактору">${maskIcon(ICON_QUESTION, { size: 18 })}</button>
         </div>
         <dialog id="pe-draft-modal" class="pe-draft-modal" closedby="any" aria-labelledby="pe-draft-modal-title">
           <div class="pe-draft-modal__card">
@@ -205,7 +207,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         </div>
       </div>
 
-      <div class="block">
+      <div class="block" id="pe-ranges-block">
         <div class="block-head"><h2>Глобальні налаштування генерації</h2></div>
         <div class="block-body pe-body">
           <p class="pe-hint">
@@ -244,11 +246,40 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   <input id="pe-search" class="pe-input pe-search__input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Пошук...">
                   <div class="pe-search__inside">
                     <button type="button" id="pe-search-clear" class="pe-search__clear" aria-label="Очистити пошук" title="Очистити (Esc)" hidden>×</button>
-                    <label class="pe-check pe-check--inline" title="Шукати в усіх категоріях">
-                      <input type="checkbox" id="pe-search-all" class="pe-check__input" aria-label="В усіх категоріях">
-                      <span class="pe-check__box" aria-hidden="true"></span>
-                      <span class="pe-check__text" aria-hidden="true"><span class="pe-check__full">В усіх категоріях</span><span class="pe-check__short">В усіх</span></span>
-                    </label>
+                    <div class="pe-search-settings" id="pe-search-settings-wrap">
+                      <button type="button" id="pe-search-settings-btn" class="pe-search__settings-btn" aria-expanded="false" aria-controls="pe-search-settings-menu" aria-label="Параметри пошуку" title="Параметри пошуку">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                          <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                          <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                          <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                          <line x1="17" y1="16" x2="23" y2="16"/>
+                        </svg>
+                        <span id="pe-search-settings-badge" class="pe-search__settings-badge" hidden>0</span>
+                      </button>
+                      <div id="pe-search-settings-menu" class="pe-search-settings__menu" role="group" aria-label="Параметри пошуку" hidden>
+                        <label class="pe-check pe-search-settings__item" title="Шукати в усіх категоріях пака">
+                          <input type="checkbox" id="pe-search-all" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">В усіх категоріях</span>
+                        </label>
+                        <label class="pe-check pe-search-settings__item" title="Ігнорувати описи, пояснення фобій та здібності професій">
+                          <input type="checkbox" id="pe-search-names-only" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">Тільки в назвах</span>
+                        </label>
+                        <label class="pe-check pe-search-settings__item" title="Шукати лише повні слова, а не частини слів">
+                          <input type="checkbox" id="pe-search-whole-word" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">Точний збіг слова</span>
+                        </label>
+                        <label class="pe-check pe-search-settings__item" title="Показати лише картки з власними налаштуваннями (здібність, стадії, вік, зріст, пояснення)">
+                          <input type="checkbox" id="pe-search-custom-only" class="pe-check__input">
+                          <span class="pe-check__box" aria-hidden="true"></span>
+                          <span class="pe-check__text">З особливими властивостями</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -278,7 +309,16 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
           <div class="pe-char-columns">
             <div class="pe-char-list-col">
               <div class="pe-field">
-                <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
+                <div class="pe-llm-wrap" id="pe-llm-wrap" hidden>
+                  <div class="pe-cata-list-header pe-llm-toolbar" id="pe-llm-toolbar" role="toolbar" aria-label="Панель інструментів режиму LLM" hidden>
+                    <button type="button" id="pe-llm-upload-btn" class="pe-llm-upload-btn" title="Завантажити .txt або .json файл" aria-label="Завантажити .txt або .json файл">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      <span>Завантажити файл</span>
+                    </button>
+                    <input type="file" id="pe-llm-file-input" accept=".txt,.json,text/plain,application/json" multiple hidden>
+                  </div>
+                  <textarea id="pe-cards" class="pe-input pe-cards" placeholder="${esc(TEXTAREA_PLACEHOLDER)}" spellcheck="false"></textarea>
+                </div>
                 <div class="pe-cata-list-wrap" id="pe-cata-list-wrap" hidden>
                   <div class="pe-cata-list-header" id="pe-cata-list-header" role="toolbar" aria-label="Панель інструментів списку карток">
                     <div class="pe-history-btns pe-listbox-history" role="group" aria-label="Історія змін" title="Історія дій (Ctrl+Z / Ctrl+Y)">
@@ -336,6 +376,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   </div>
                 </div>
                 <div class="pe-list-meta">
+                  <span id="pe-llm-drop-hint" class="pe-llm-drop-hint" hidden>Можна перетягнути .txt або .json файл у поле</span>
                   <span id="pe-lines-count" class="pe-counter">Рядків: 0</span>
                 </div>
               </div>
@@ -384,9 +425,16 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
                   <textarea id="pe-cata-desc" class="pe-input pe-desc" rows="3" maxlength="${CATACLYSM_LIMITS.descMax}" placeholder="Напр.: Штучний інтелект захопив керування мережами..."></textarea>
                 </div>
                 <div class="pe-cata__grid">
-                  <div class="pe-field">
-                    <label class="pe-label" for="pe-cata-timer">Таймер (хв)</label>
-                    <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30">
+                  <div class="pe-field pe-cata__timer-field">
+                    <label class="pe-check" for="pe-cata-timer-toggle">
+                      <input id="pe-cata-timer-toggle" class="pe-check__input" type="checkbox">
+                      <span class="pe-check__box" aria-hidden="true"></span>
+                      <span class="pe-check__text">Увімкнути таймер</span>
+                    </label>
+                    <div id="pe-cata-timer-wrap" class="pe-cata__timer-input" hidden>
+                      <label class="pe-label" for="pe-cata-timer">Таймер (хв) <span class="pe-required" title="Обов'язкове поле">*</span></label>
+                      <input id="pe-cata-timer" class="pe-input" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="Напр.: 30">
+                    </div>
                   </div>
                   <div class="pe-field">
                     <label class="pe-label" for="pe-cata-stay">Час знаходження (міс.) <span class="pe-required" title="Обов'язкове поле">*</span></label>
@@ -435,7 +483,7 @@ export function packEditorTemplate({ isEdit, isDefaultEdit }) {
         </button>
       </div>
 
-      <div class="block">
+      <div class="block" id="pe-stages-block">
         <div class="block-head pe-stages-head">
           <h2>Стадії</h2>
           <label class="pe-check" title="Режим LLM (робота з чистим текстом)">

@@ -51,7 +51,8 @@ test('Правила: в кінці гри є посилання на тест �
   const timers = RULES_SECTIONS.find(s => s.id === 'timers');
   assert.ok(timers, 'немає пункту «Таймери й слово»');
   for (const sec of ['60 секунд', '30 секунд', '15 секунд']) {
-    assert.ok(timers.items.some(i => i.startsWith(sec)), `немає таймера ${sec}`);
+    // Пункти пишуться в markdown (**жирний**, ==виділення==), тож перед порівнянням знімаємо розмітку
+    assert.ok(timers.items.some(i => i.replace(/[*=]/g, '').startsWith(sec)), `немає таймера ${sec}`);
   }
 });
 
@@ -163,6 +164,25 @@ test('renderChangelog: усі версії на сторінці, позначк
   assert.ok(html.includes(`v${CHANGELOG[0].version}`));
   const [y, m, d] = CHANGELOG[0].date.split('-');
   assert.ok(html.includes(`${d}.${m}.${y}`));
+});
+
+test('renderChangelog: бокова панель-зміст веде на кожну версію, якорі збігаються з id блоків', () => {
+  const html = renderChangelog();
+  assert.ok(html.includes('class="rules-sidebar"'), 'немає бокової панелі');
+  assert.equal((html.match(/data-nav-target="changelog-v/g) || []).length, CHANGELOG.length);
+  for (const entry of CHANGELOG) {
+    const id = `changelog-v${entry.version.replace(/\./g, '-')}`;
+    assert.ok(html.includes(`id="${id}"`), `немає блоку ${id}`);
+    assert.ok(html.includes(`href="#${id}" data-nav-target="${id}"`), `немає пункту змісту для ${id}`);
+  }
+  assert.ok(html.includes('class="rules-layout"'));
+});
+
+test('renderRules: пункти змісту мають data-nav-target на id розділів', () => {
+  const html = renderRules();
+  for (const s of RULES_SECTIONS) {
+    assert.ok(html.includes(`data-nav-target="legal-rules-${s.id}"`), `немає пункту змісту для ${s.id}`);
+  }
 });
 
 test('renderChangelog: типи змін показані іконками з доступною назвою, а не текстовими мітками', () => {

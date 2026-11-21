@@ -8,8 +8,10 @@ import { supabase } from '../../services/supabase.js';
 import { syncGameTab } from '../../utils/game/last-session.js';
 import { showUserAvatar, applyAvatarLetterPadding } from '../../utils/auth/avatar.js';
 import { firstChar } from '../../utils/auth/initial.js';
+import { initHeaderNav } from '../../ui/header-nav.js';
 
 const navEl = document.getElementById('header-nav');
+const toggleBtn = document.getElementById('header-nav-toggle');
 const profileLink = document.getElementById('header-profile-link');
 const nameEl = document.getElementById('header-user-name');
 const avatarEl = document.getElementById('header-user-avatar');
@@ -26,7 +28,13 @@ async function initHeader() {
     avatarEl.textContent = firstLetter;
     applyAvatarLetterPadding(avatarEl, firstLetter, 3);
     profileLink.style.display = 'flex';
+    if (toggleBtn) toggleBtn.style.display = '';
     navEl.style.display = ''; // «Паки» і «Гра»: як в index.html, лише для залогіненого
+    initHeaderNav({
+      headerEl: document.getElementById('global-header'),
+      toggleBtn,
+      navEl
+    });
     syncGameTab(session.user.id, 'index.html'); // «Гра» з'являється, лише якщо є активна кімната
     showUserAvatar(avatarEl, session.user.id, firstLetter); // фото аватарки поверх літери
   } catch (err) {

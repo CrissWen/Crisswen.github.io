@@ -13,7 +13,7 @@ export const CATACLYSM_LIMITS = {
   nameMax: 200,
   descMax: 1000,
   timerMax: 180,
-  stayMax: 1200
+  stayMax: 12000
 };
 
 export const RANGE_LIMITS = {

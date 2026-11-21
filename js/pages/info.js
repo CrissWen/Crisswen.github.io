@@ -245,6 +245,34 @@ export function renderFaq() {
 
 // Іконки типів змін лежать у /icons/changelog, шляхи — у js/constants/icons.js (CHANGELOG_ICONS).
 // Малюються через mask-image з фоном currentColor, тому підхоплюють колір теми.
+// id блоку версії (для якоря в змісті): '1.0.1' -> 'changelog-v1-0-1'
+function changelogEntryId(entry) {
+  return `changelog-v${String(entry.version).replace(/[^a-z0-9]+/gi, '-')}`;
+}
+
+// Бокова липка панель «Зміст» зі списком версій (ті самі стилі, що й у «Правил»: .rules-sidebar, .rules-nav)
+function renderChangelogSidebar() {
+  if (!CHANGELOG?.length) return '';
+  const items = CHANGELOG.map(entry => {
+    const id = changelogEntryId(entry);
+    return `
+    <a class="rules-nav__item" href="#${esc(id)}" data-nav-target="${esc(id)}">
+      <span class="rules-nav__label">v${esc(entry.version)}</span>
+      <span class="rules-nav__num rules-nav__date">${esc(formatUpdateDate(entry.date))}</span>
+    </a>`;
+  }).join('');
+
+  return `
+    <aside class="rules-sidebar" aria-label="Зміст історії змін">
+      <nav class="rules-nav">
+        <div class="rules-nav__head">
+          <span class="rules-nav__title">Версії</span>
+        </div>
+        <div class="rules-nav__list">${items}</div>
+      </nav>
+    </aside>`;
+}
+
 export function renderChangelog() {
   const entries = CHANGELOG.map((entry, index) => {
     const items = entry.items.map(item => {
@@ -257,7 +285,7 @@ export function renderChangelog() {
     }).join('');
 
     return `
-      <article class="changelog-entry${index === 0 ? ' is-latest' : ''}">
+      <article class="changelog-entry${index === 0 ? ' is-latest' : ''}" id="${esc(changelogEntryId(entry))}">
         <header class="changelog-entry__head">
           <h2 class="changelog-entry__version">v${esc(entry.version)}</h2>
           ${index === 0 ? '<span class="changelog-entry__badge">Поточна</span>' : ''}
@@ -272,7 +300,13 @@ export function renderChangelog() {
     title: 'Що нового',
     lead: 'Історія оновлень гри.',
     body: entries
-      ? `<div class="changelog">${entries}</div>`
+      ? `
+    <div class="rules-layout">
+      <div class="rules-layout__content">
+        <div class="changelog">${entries}</div>
+      </div>
+      ${renderChangelogSidebar()}
+    </div>`
       : '<p class="info-page__empty">Записів поки немає.</p>',
   });
 }
@@ -371,7 +405,7 @@ export function renderTerms() { return renderLegalPage('terms', 'privacy'); }
 function renderRulesSidebar() {
   if (!RULES_SECTIONS?.length) return '';
   const items = RULES_SECTIONS.map((sec, i) => `
-    <a class="rules-nav__item" href="#legal-rules-${esc(sec.id)}" data-rules-nav="${esc(sec.id)}">
+    <a class="rules-nav__item" href="#legal-rules-${esc(sec.id)}" data-nav-target="legal-rules-${esc(sec.id)}">
       <span class="rules-nav__num">${i + 1}.</span>
       <span class="rules-nav__label">${esc(sec.title)}</span>
     </a>`).join('');
@@ -439,13 +473,13 @@ export function initInfoPage() {
     });
   });
 
+  // Бокова панель-зміст («Правила» і «Що нового»): кожен пункт має data-nav-target з id блоку, до якого веде.
   // Плавний перехід при кліку по пунктах навігації
-  const navItems = document.querySelectorAll('[data-rules-nav]');
+  const navItems = Array.from(document.querySelectorAll('[data-nav-target]'));
   navItems.forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
-      const id = item.getAttribute('data-rules-nav');
-      const target = document.getElementById(`legal-rules-${id}`);
+      const target = document.getElementById(item.dataset.navTarget);
       if (target) {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         navItems.forEach(c => c.classList.remove('is-active'));
@@ -456,22 +490,23 @@ export function initInfoPage() {
 
   // Підсвічування активного розділу при скролі сторінки
   const navList = document.querySelector('.rules-nav__list');
-  const sections = document.querySelectorAll('.legal-section');
-  if (navList && sections.length && 'IntersectionObserver' in window) {
+  if (navList && navItems.length && 'IntersectionObserver' in window) {
+    const itemByTarget = new Map(navItems.map(item => [item.dataset.navTarget, item]));
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const sectionId = entry.target.id.replace('legal-rules-', '');
-          const activeItem = navList.querySelector(`[data-rules-nav="${sectionId}"]`);
-          if (activeItem) {
-            navList.querySelectorAll('.rules-nav__item').forEach(c => c.classList.remove('is-active'));
-            activeItem.classList.add('is-active');
-            activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-          }
+        if (!entry.isIntersecting) return;
+        const activeItem = itemByTarget.get(entry.target.id);
+        if (activeItem) {
+          navItems.forEach(c => c.classList.remove('is-active'));
+          activeItem.classList.add('is-active');
+          activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
         }
       });
     }, { rootMargin: '-15% 0px -65% 0px', threshold: 0 });
 
-    sections.forEach(sec => observer.observe(sec));
+    itemByTarget.forEach((_, id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
   }
 }

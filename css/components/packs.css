@@ -156,13 +156,16 @@
 .pe-cards::-webkit-scrollbar{width:6px;}
 .pe-cards::-webkit-scrollbar-track{background:transparent;}
 .pe-cards::-webkit-scrollbar-thumb{background:var(--metal-lt);border-radius:var(--radius-sm);}
-/* ===== Кастомний випадаючий список (.pe-select-custom) ===== */
-.pe-select-custom {
+/* ===== Кастомний випадаючий список (.pe-select-custom) та Combo Box (.pe-combo) ===== */
+.pe-select-custom,
+.pe-combo {
   position: relative;
   width: 100%;
 }
 .pe-select-custom.is-open,
-.pe-select-custom:has(.pe-select-custom__btn.is-open) {
+.pe-select-custom:has(.pe-select-custom__btn.is-open),
+.pe-combo:has(.pe-combo__toggle.is-open),
+.pe-combo:has(.pe-combo__dropdown:not([hidden])) {
   z-index: 130;
 }
 .pe-select-custom__btn {
@@ -185,10 +188,13 @@
   overflow: hidden;
   transition: border-color .2s ease, box-shadow .2s ease;
 }
-.pe-select-custom__btn:hover {
+.pe-select-custom__btn:hover,
+.pe-combo__input:hover:not(:focus):not(.is-invalid):not(:disabled) {
   border-color: color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));
 }
-.pe-select-custom__btn.is-open {
+.pe-select-custom__btn.is-open,
+.pe-combo__input:focus,
+.pe-combo:has(.pe-combo__toggle.is-open) .pe-combo__input {
   border-color: var(--hazard);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--hazard) 22%, transparent);
 }
@@ -200,21 +206,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pe-select-custom__arrow {
+.pe-select-custom__arrow,
+.pe-combo__arrow {
   flex-shrink: 0;
   color: var(--text-mute);
   transition: transform .2s ease, color .15s ease;
 }
-.pe-select-custom__btn:hover .pe-select-custom__arrow {
+.pe-select-custom__btn:hover .pe-select-custom__arrow,
+.pe-combo:hover .pe-combo__arrow,
+.pe-combo__toggle:hover .pe-combo__arrow {
   color: var(--hazard);
 }
-.pe-select-custom__btn.is-open .pe-select-custom__arrow {
+.pe-select-custom__btn.is-open .pe-select-custom__arrow,
+.pe-combo__toggle.is-open .pe-combo__arrow {
   transform: rotate(180deg);
   color: var(--hazard);
 }
 
 /* Випадаюче меню: суворо униз, без переносу слів */
-.pe-select-custom__dropdown {
+.pe-select-custom__dropdown,
+.pe-combo__dropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -231,18 +242,22 @@
   scrollbar-width: thin;
   scrollbar-color: var(--metal-lt) transparent;
 }
-.pe-select-custom__dropdown::-webkit-scrollbar {
+.pe-select-custom__dropdown::-webkit-scrollbar,
+.pe-combo__dropdown::-webkit-scrollbar {
   width: 6px;
 }
-.pe-select-custom__dropdown::-webkit-scrollbar-track {
+.pe-select-custom__dropdown::-webkit-scrollbar-track,
+.pe-combo__dropdown::-webkit-scrollbar-track {
   background: transparent;
   margin: 4px 0;
 }
-.pe-select-custom__dropdown::-webkit-scrollbar-thumb {
+.pe-select-custom__dropdown::-webkit-scrollbar-thumb,
+.pe-combo__dropdown::-webkit-scrollbar-thumb {
   background: var(--metal-lt);
   border-radius: var(--radius-sm);
 }
-.pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover {
+.pe-select-custom__dropdown::-webkit-scrollbar-thumb:hover,
+.pe-combo__dropdown::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--hazard) 60%, var(--metal-lt));
 }
 .pe-select-custom__dropdown.is-drop-up {
@@ -258,11 +273,13 @@
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.pe-select-custom__dropdown[hidden] {
+.pe-select-custom__dropdown[hidden],
+.pe-combo__dropdown[hidden] {
   display: none !important;
 }
 
-.pe-select-custom__item {
+.pe-select-custom__item,
+.pe-combo__item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -279,7 +296,8 @@
   transition: background-color .15s ease, color .15s ease;
 }
 .pe-select-custom__item:hover,
-.pe-select-custom__item.is-active {
+.pe-select-custom__item.is-active,
+.pe-combo__item:hover {
   background: color-mix(in srgb, var(--hazard) 16%, transparent);
   color: var(--hazard);
 }
@@ -288,19 +306,22 @@
   outline: 1px solid color-mix(in srgb, var(--hazard) 60%, transparent);
   outline-offset: -1px;
 }
-.pe-select-custom__item.is-selected {
+.pe-select-custom__item.is-selected,
+.pe-combo__item.is-selected {
   color: var(--hazard);
   font-weight: 600;
   background: color-mix(in srgb, var(--hazard) 10%, transparent);
 }
-.pe-select-custom__check {
+.pe-select-custom__check,
+.pe-combo__check {
   width: 14px;
   font-size: 13px;
   color: var(--hazard);
   flex-shrink: 0;
   text-align: center;
 }
-.pe-select-custom__text {
+.pe-select-custom__text,
+.pe-combo__text {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -745,8 +766,7 @@ body.is-stage-dragging * {
 .pe-toolbar{--pe-control-h:44px;display:flex;flex-direction:column;gap:8px;}
 .pe-toolbar__row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;}
 .pe-toolbar__category{flex:1 1 180px;min-width:0;}
-/* container-type: ширина самого поля (а не екрана) вирішує, який підпис у чекбокса всередині пошуку («В усіх» / «В усіх категоріях»), див. .pe-search__box нижче */
-.pe-toolbar__search{flex:2 1 200px;min-width:0;container:pe-search / inline-size;}
+.pe-toolbar__search{flex:2 1 200px;min-width:0;}
 /* Однакова висота селекта, пошуку, чекбоксів і слота: рядок рівний, а підпис «Категорія» не зсуває поля */
 .pe-toolbar .pe-input{box-sizing:border-box;min-height:var(--pe-control-h);}
 /* Права частина рядка. Її розмір не залежить від стану чекбоксів: слот під кнопку має фіксовану ширину завжди,
@@ -1071,7 +1091,11 @@ body.is-stage-dragging * {
   margin:0;font-family:var(--head);font-weight:600;font-size:15px;letter-spacing:.05em;
   text-transform:uppercase;color:var(--text);overflow-wrap:anywhere;
 }
-.pe-cata__grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+.pe-cata__grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start;}
+.pe-cata__timer-field{display:flex;flex-direction:column;gap:8px;}
+.pe-cata__timer-field .pe-check{min-height:24px;}
+.pe-cata__timer-input{display:flex;flex-direction:column;gap:6px;}
+.pe-cata__timer-input[hidden]{display:none;}
 .pe-cata .pe-label{font-weight:600;color:var(--text);font-size:13px;}
 .pe-cata .pe-input::placeholder{font-size:13px;}
 .pe-cata__actions{display:flex;flex-wrap:wrap;gap:10px;padding-top:4px;}
@@ -1490,36 +1514,54 @@ body.is-stage-dragging * {
 /* Наведення на «×» / чекбокс не знімає hover-рамку поля: вони сусіди інпута, а не нащадки, тому без цього :hover у інпута
    зникав би, щойно курсор заходить на чекбокс (рамка миготіла). Колір той самий, що в .pe-input:hover. */
 .pe-search__box:hover .pe-search__input:not(:focus):not(.is-invalid):not(:disabled){border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
-/* --pe-inside-w — ширина, зарезервована справа під «×» і чекбокс (з запасом): текст запиту ніколи не забегає під них.
-   Тримати в синхроні з розмірами .pe-search__inside / .pe-check--inline нижче. */
-.pe-search__box{--pe-inside-w:120px;}
+/* --pe-inside-w — ширина, зарезервована справа під «×» і кнопку налаштувань пошуку. */
+.pe-search__box{--pe-inside-w:76px;}
 .pe-search__box .pe-search__input{padding-left:38px;padding-right:var(--pe-inside-w);}
-/* Права частина поля: кнопка очищення + чекбокс, по вертикалі по центру. Сама група кліків не ловить
-   (pointer-events:none), тому весь інпут лишається клікабельним для вводу; клікаються лише її діти. */
+/* Права частина поля: кнопка очищення + кнопка параметрів пошуку. */
 .pe-search__inside{
   position:absolute;top:0;right:8px;bottom:0;
   display:flex;align-items:center;gap:4px;
   pointer-events:none;
 }
 .pe-search__inside > *{pointer-events:auto;}
-/* Чекбокс всередині поля: той самий .pe-check, але без висоти рядка тулбара і з тонким розділювачем зліва */
-.pe-check--inline{
-  min-height:0;padding:6px 2px 6px 10px;margin-left:2px;
-  border-left:1px solid var(--metal-lt);
-  font-size:13px;
-  -webkit-tap-highlight-color:transparent; /* без системного спалаху по тапу на мобільних */
-  outline:none;
+.pe-search-settings{position:relative;display:inline-flex;align-items:center;}
+.pe-search__settings-btn{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;padding:0;
+  background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);
+  color:var(--text-mute);cursor:pointer;
+  transition:color .2s ease, background-color .2s ease, border-color .2s ease;
 }
-/* Кільце фокусу малюється лише при навігації з клавіатури (:focus-visible у .pe-check__input:focus-visible + .pe-check__box вище);
-   від кліку мишею/тапу ніякої обводки немає. Саме кільце свідомо НЕ вимикаємо: це єдиний індикатор фокусу для користувачів клавіатури. */
-.pe-check--inline .pe-check__input:focus:not(:focus-visible) + .pe-check__box{box-shadow:none;}
-/* Підпис: у вузькому полі — «В усіх». Для браузерів без container queries лишається безпечний короткий варіант. */
-.pe-check--inline .pe-check__full{display:none;}
-@container pe-search (min-width:380px){
-  .pe-search__box{--pe-inside-w:200px;}
-  .pe-check--inline .pe-check__full{display:inline;}
-  .pe-check--inline .pe-check__short{display:none;}
+.pe-search__settings-btn:hover,
+.pe-search__settings-btn[aria-expanded="true"]{
+  color:var(--text);
+  background:color-mix(in srgb, var(--text) 8%, transparent);
 }
+.pe-search__settings-btn.is-active{
+  color:var(--hazard);
+  border-color:color-mix(in srgb, var(--hazard) 55%, transparent);
+  background:color-mix(in srgb, var(--hazard) 12%, transparent);
+}
+.pe-search__settings-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.pe-search__settings-badge{
+  position:absolute;top:-4px;right:-4px;
+  min-width:14px;height:14px;padding:0 3px;
+  border-radius:999px;
+  background:var(--hazard);color:var(--bg);
+  font-family:var(--mono);font-size:10px;font-weight:700;line-height:14px;text-align:center;
+}
+.pe-search__settings-badge[hidden]{display:none;}
+.pe-search-settings__menu{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:145;
+  min-width:250px;padding:8px 10px;
+  display:flex;flex-direction:column;gap:6px;
+  background:linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  box-shadow:0 12px 28px rgba(0,0,0,.65);
+}
+.pe-search-settings__menu[hidden]{display:none;}
+.pe-search-settings__item{min-height:28px;padding:2px 4px;font-size:13px;white-space:nowrap;}
 /* Кнопка очищення — усередині поля (позиція задається групою .pe-search__inside) */
 .pe-search__clear{
   display:inline-flex;align-items:center;justify-content:center;
@@ -1535,6 +1577,16 @@ body.is-stage-dragging * {
 .pe-search__meta{
   display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-height:20px;
   font-size:13px;color:var(--text-mute);
+}
+.pe-toolbar{position:relative;}
+.pe-search-results{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:135;
+  padding:6px;
+  background:linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+  border:1px solid var(--metal-lt);border-radius:var(--radius-sm);
+  box-shadow:0 12px 28px rgba(0,0,0,.65);
+  max-height:min(340px, 55vh);
+  overflow-y:auto;
 }
 .pe-search-results[hidden]{display:none;}
 
@@ -1641,112 +1693,34 @@ body.is-stage-dragging * {
   }
 }
 
-/* Combo Box (datalist) — синхронізовано зі стилем .pe-select-custom */
+/* Combo Box (datalist) — лише специфіка інпуту й кнопки; спільні стилі випадаючого списку з .pe-select-custom вище */
 .pe-combo {
-  position: relative;
   display: flex;
   align-items: center;
-  width: 100%;
 }
 .pe-combo__input {
-  padding-right: 36px;
+  height: 38px;
+  padding: 0 34px 0 12px;
+  font-family: inherit;
+  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .pe-combo__toggle {
   position: absolute;
-  right: 4px;
-  top: 4px;
-  bottom: 4px;
-  width: 28px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 34px;
   background: transparent;
   border: none;
   color: var(--text-mute);
   cursor: pointer;
   padding: 0;
-  border-radius: var(--radius-xs, 4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color .15s ease, background-color .15s ease;
-}
-.pe-combo__toggle:hover {
-  color: var(--hazard);
-  background: color-mix(in srgb, var(--hazard) 14%, transparent);
-}
-.pe-combo__arrow {
-  transition: transform .2s ease, color .15s ease;
-}
-.pe-combo__toggle.is-open .pe-combo__arrow {
-  transform: rotate(180deg);
-  color: var(--hazard);
-}
-.pe-combo__dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 120;
-  padding: 4px;
-  background: linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
-  border: 1px solid var(--metal-lt);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 10px 24px rgba(0,0,0,.6);
-  animation: pe-select-fade .12s ease-out;
-  max-height: 220px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--metal-lt) transparent;
-}
-.pe-combo__dropdown::-webkit-scrollbar {
-  width: 6px;
-}
-.pe-combo__dropdown::-webkit-scrollbar-track {
-  background: transparent;
-}
-.pe-combo__dropdown::-webkit-scrollbar-thumb {
-  background: var(--metal-lt);
-  border-radius: var(--radius-sm);
-}
-.pe-combo__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: var(--radius-xs, 4px);
-  border-bottom: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 13.5px;
-  cursor: pointer;
-  box-sizing: border-box;
-  white-space: nowrap;
-  user-select: none;
-  transition: background-color .15s ease, color .15s ease;
-}
-.pe-combo__item:hover {
-  background: color-mix(in srgb, var(--hazard) 16%, transparent);
-  color: var(--hazard);
-}
-.pe-combo__item.is-selected {
-  color: var(--hazard);
-  font-weight: 600;
-  background: color-mix(in srgb, var(--hazard) 10%, transparent);
-}
-.pe-combo__check {
-  width: 14px;
-  font-size: 13px;
-  color: var(--hazard);
-  flex-shrink: 0;
-  text-align: center;
-}
-.pe-combo__text {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .pe-combo__empty {
   padding: 10px 12px;
@@ -2902,3 +2876,151 @@ dialog.pe-draft-modal::backdrop {
     padding: 0 4px;
   }
 }
+
+
+/* ----- Онбординг-тур редактора паків ----- */
+.pe-tour-trigger-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;padding:0;line-height:1;flex-shrink:0;border-radius:999px;
+  border:1px solid var(--metal-lt);background:var(--surface-2, rgba(255,255,255,.04));
+  color:var(--text-mute);font-family:var(--head);font-weight:700;font-size:14px;
+  cursor:pointer;transition:border-color .18s ease,color .18s ease,background-color .18s ease;
+}
+.pe-tour-trigger-btn:hover,
+.pe-tour-trigger-btn:focus-visible{
+  color:var(--hazard);border-color:var(--hazard);
+  background:color-mix(in srgb, var(--hazard) 12%, transparent);
+  outline:none;
+}
+
+.pe-tour-overlay{
+  position:fixed;inset:0;z-index:1200;
+  background:transparent;pointer-events:auto;
+}
+
+.pe-tour-spotlight{
+  position:fixed;z-index:1201;pointer-events:none;
+  border-radius:var(--radius, 10px);
+  border:2px solid var(--hazard);
+  box-shadow:0 0 0 9999px rgba(7, 9, 13, 0.74), 0 0 24px color-mix(in srgb, var(--hazard) 30%, transparent);
+  opacity:0;
+  transition:opacity .22s ease;
+}
+.pe-tour-spotlight.is-visible{opacity:1;}
+
+.pe-tour-card{
+  position:fixed;z-index:1202;box-sizing:border-box;
+  width:min(360px, calc(100vw - 24px));
+  padding:16px 18px;
+  border-radius:var(--radius, 12px);
+  border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
+  background:var(--panel, #141922);
+  color:var(--text);
+  box-shadow:0 18px 42px rgba(0,0,0,.55);
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity .22s ease, transform .22s ease;
+}
+.pe-tour-card.is-visible{
+  opacity:1;
+  transform:translateY(0);
+}
+
+.pe-tour-arrow{
+  position:absolute;width:12px;height:12px;
+  background:var(--panel, #141922);
+  border:1px solid color-mix(in srgb, var(--hazard) 45%, var(--metal-lt));
+  transform:translate(-50%, -50%) rotate(45deg);
+  pointer-events:none;
+}
+.pe-tour-arrow[data-arrow-side="top"]{
+  top:0;border-right:none;border-bottom:none;
+}
+.pe-tour-arrow[data-arrow-side="bottom"]{
+  bottom:-12px;border-left:none;border-top:none;
+}
+.pe-tour-arrow[data-arrow-side="left"]{
+  left:0;border-top:none;border-right:none;
+}
+.pe-tour-arrow[data-arrow-side="right"]{
+  right:-12px;border-bottom:none;border-left:none;
+}
+
+.pe-tour-card__head{
+  display:flex;align-items:center;gap:10px;margin-bottom:8px;
+}
+.pe-tour-card__step{
+  flex:0 0 auto;padding:2px 8px;border-radius:999px;
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+  background:color-mix(in srgb, var(--hazard) 16%, transparent);
+  color:var(--hazard);border:1px solid color-mix(in srgb, var(--hazard) 35%, transparent);
+}
+.pe-tour-card__title{
+  margin:0;font-family:var(--head);font-size:15px;font-weight:700;color:var(--text);
+}
+.pe-tour-card__body{
+  margin:0 0 14px;font-size:13.5px;line-height:1.5;color:var(--text-mute);
+}
+.pe-tour-card__actions{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.pe-tour-card__nav{
+  display:flex;align-items:center;gap:8px;margin-left:auto;
+}
+.pe-tour-btn-skip{
+  padding-inline:8px;font-size:12.5px;color:var(--text-mute);
+}
+
+
+/* ----- Drag & Drop .txt / .json у поля Режиму LLM ----- */
+.pe-list-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.pe-list-meta .pe-counter{margin-left:auto;}
+.pe-llm-drop-hint{
+  font-size:12px;line-height:1.4;color:var(--text-mute);
+}
+.pe-llm-drop-hint[hidden]{display:none;}
+.pe-cards.is-dragover,
+.pe-stage-textarea.is-dragover{
+  border-color:var(--hazard) !important;
+  outline:2px dashed color-mix(in srgb, var(--hazard) 70%, transparent);
+  outline-offset:-4px;
+  background:color-mix(in srgb, var(--hazard) 7%, var(--surface-2, rgba(255,255,255,.03)));
+}
+.pe-llm-wrap{
+  position:relative;display:flex;flex-direction:column;
+  background:var(--panel-2);
+  border:1px solid var(--metal-lt);
+  border-radius:var(--radius-sm);
+  overflow:hidden;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.pe-llm-wrap[hidden]{display:none;}
+.pe-llm-wrap:hover{border-color:color-mix(in srgb, var(--hazard) 55%, var(--metal-lt));}
+.pe-llm-wrap:focus-within{
+  border-color:var(--accent, var(--hazard));
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent, var(--hazard)) 22%, transparent);
+}
+.pe-llm-wrap .pe-cards{
+  border:none;border-radius:0;background:transparent;box-shadow:none;
+}
+.pe-llm-wrap .pe-cards:focus{box-shadow:none;}
+.pe-llm-toolbar{
+  justify-content:flex-start;gap:6px;
+}
+.pe-llm-toolbar[hidden]{display:none;}
+.pe-llm-upload-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:28px;padding:0 8px;box-sizing:border-box;
+  color:var(--text-mute);font-size:12.5px;font-weight:500;
+  border:1px solid transparent;border-radius:var(--radius-sm);
+  background:transparent;cursor:pointer;user-select:none;
+  transition:color .18s ease, border-color .18s ease, background-color .18s ease;
+}
+.pe-llm-upload-btn svg{flex-shrink:0;color:inherit;transition:color .18s ease;}
+.pe-llm-upload-btn:hover{
+  color:var(--text);
+  background:color-mix(in srgb, var(--panel) 70%, transparent);
+}
+.pe-llm-upload-btn:hover svg{color:var(--hazard);}

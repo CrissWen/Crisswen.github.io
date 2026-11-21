@@ -175,10 +175,15 @@ select option:hover{
   background-color: var(--cryo-3);
   color: #fff;
 }
-/* Язичок згортання хедера (мобільні): header.css вантажиться після теми, тож специфічність піднято через body */
+/* Язичок згортання хедера і випадне меню (мобільні): header.css вантажиться після теми, тож специфічність піднято через body */
 body .header-collapse-tab,
 body .header-collapse-tab:hover{
   background-color: color-mix(in srgb, var(--cryo-2) 55%, var(--cryo-1));
+}
+body .main-header.is-nav-open .header-nav{
+  background-color: color-mix(in srgb, var(--cryo-2) 55%, var(--cryo-1));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 .offline-replay-banner{
   background-color: color-mix(in srgb, var(--cryo-2) 40%, var(--cryo-1));

@@ -21,8 +21,10 @@ function ensureGlobalListeners() {
   globalListenersAttached = true;
 
   document.addEventListener('click', (e) => {
+    const labelForSelect = e.target.closest?.('label')?.control?.closest?.('.pe-select-custom');
+    if (labelForSelect) return;
     // If click was outside any .pe-select-custom, close all open dropdowns
-    if (!e.target.closest('.pe-select-custom')) {
+    if (!e.target.closest?.('.pe-select-custom')) {
       closeAllCustomSelects();
     }
   });
@@ -138,6 +140,23 @@ export function initCustomSelect(selectEl, options = {}) {
   btn.setAttribute('aria-expanded', 'false');
   if (selectEl.disabled) btn.disabled = true;
 
+  // Перенаправляємо <label for="..."> на кнопку, щоб клік по назві не фокусував прихований <select aria-hidden="true">
+  const retargetedLabels = [];
+  if (selectEl.id && typeof document !== 'undefined') {
+    const candidateBtnId = selectEl.id + '-btn';
+    const idExists = typeof document.getElementById === 'function' && document.getElementById(candidateBtnId);
+    if (!idExists) {
+      btn.id = candidateBtnId;
+      if (typeof document.querySelectorAll === 'function') {
+        const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(selectEl.id) : selectEl.id;
+        document.querySelectorAll(`label[for="${escapedId}"]`).forEach(lbl => {
+          retargetedLabels.push({ lbl, origFor: selectEl.id });
+          lbl.setAttribute('for', candidateBtnId);
+        });
+      }
+    }
+  }
+
   const label = document.createElement('span');
   label.className = 'pe-select-custom__label';
 
@@ -205,6 +224,10 @@ export function initCustomSelect(selectEl, options = {}) {
   function openDropdown() {
     if (btn.disabled) return;
     closeAllCustomSelects(wrap);
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('.pe-combo__dropdown').forEach(d => { d.hidden = true; });
+      document.querySelectorAll('.pe-combo__toggle').forEach(t => { t.classList.remove('is-open'); });
+    }
 
     // Smart flip: check if space below is too small (< 220px) and space above is larger
     const rect = btn.getBoundingClientRect();
@@ -397,6 +420,7 @@ export function initCustomSelect(selectEl, options = {}) {
     observer,
     destroy() {
       observer.disconnect();
+      retargetedLabels.forEach(({ lbl, origFor }) => lbl.setAttribute('for', origFor));
       wrap.parentNode.insertBefore(selectEl, wrap);
       wrap.remove();
       selectEl.classList.remove('pe-hidden-select');

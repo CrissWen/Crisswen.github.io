@@ -16,8 +16,10 @@ import { soundManager } from './services/sound-manager.js';
 import { firstChar } from './utils/auth/initial.js';
 import { initSiteFooter } from './ui/site-footer.js';
 import { initAdminPanel } from './ui/admin-panel.js';
+import { initVersionCheck } from './services/version-check.js';
 import { renderRules, renderFaq, renderChangelog, renderCredits, renderPrivacy, renderTerms, initInfoPage } from './pages/info.js';
 import { consumeScrollTopRequest, scrollToTopNow } from './utils/common/scroll-top.js';
+import { initHeaderNav } from './ui/header-nav.js';
 
 // Підстраховує inline-скрипт у <head> index.html (той лише запобігає миготінню дефолтної теми
 // до завантаження цього модуля) — викликається один раз при старті, не всередині router().
@@ -27,11 +29,18 @@ soundManager.init();
 initRangeSliders(document);
 initSiteFooter();
 initAdminPanel(); // модальна адмін-панель на клавішу ~ (лише для адмінів; реєстр інструментів: js/config/admin-tools-config.js)
+initVersionCheck();
 
 const appContainer = document.getElementById("app");
 const globalHeader = document.getElementById("global-header");
 const headerUserName = document.getElementById("header-user-name");
 const headerUserAvatar = document.getElementById("header-user-avatar");
+
+initHeaderNav({
+  headerEl: globalHeader,
+  toggleBtn: document.getElementById('header-nav-toggle'),
+  navEl: document.getElementById('header-nav')
+});
 
 // --- Ініціалізація швидкого керування звуком у хедері ---
 (function initHeaderAudioWidget() {
@@ -181,7 +190,10 @@ async function router() {
   // Підсвітка активного пункту навігації (редактор пака — частина розділу «Паки»)
   const navPath = path === '#/pack-editor' ? '#/packs' : path;
   document.querySelectorAll('.header-nav-link').forEach(link => {
-    link.classList.toggle('is-active', link.dataset.navPath === navPath);
+    const isActive = link.dataset.navPath === navPath;
+    link.classList.toggle('is-active', isActive);
+    if (isActive) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   });
 
   // Роутинг

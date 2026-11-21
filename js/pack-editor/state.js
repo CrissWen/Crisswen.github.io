@@ -27,6 +27,10 @@ export class EditorState {
     this.newCataIndex = -1;
     this.searchQuery = '';
     this.searchAll = false;
+    this.searchNamesOnly = false;
+    this.searchWholeWord = false;
+    this.searchCustomOnly = false;
+    this.searchOverlayDismissed = false;
     this.isDeleteMode = false;
     this.selectedDeleteIndices = new Set();
     this.lastClickedDeleteIndex = null;

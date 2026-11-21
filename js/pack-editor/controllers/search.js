@@ -24,32 +24,48 @@ export function setSearchOrchestrator(handlers) {
 
 export const searchTokens = () => tokenize(state.searchQuery);
 
-// Фільтр самого списку катаклізмів діє, лише коли шукаємо в активній категорії "Катаклізм"
-export const cataFilterActive = () => state.activeCategory === 'cataclysm' && !state.searchAll && searchTokens().length > 0;
+// Режим 1Б: усі категорії (включно з катаклізмами) показують результати у спільному плаваючому оверлеї
+export const cataFilterActive = () => false;
+export const isSearchActive = () => searchTokens().length > 0 || Boolean(state.searchCustomOnly);
 
 // Перемальовує панель результатів, лічильник і кнопку "×" за станом
 export function renderSearch() {
   const tokens = searchTokens();
-  const view = { query: state.searchQuery, tokens, searchAll: state.searchAll };
+  const view = {
+    query: state.searchQuery,
+    tokens,
+    searchAll: state.searchAll,
+    namesOnly: state.searchNamesOnly,
+    wholeWord: state.searchWholeWord,
+    customOnly: state.searchCustomOnly,
+    dismissed: Boolean(state.searchOverlayDismissed),
+    activeCategory: state.activeCategory,
+    isDeleteMode: state.isDeleteMode,
+    selectedDeleteIndices: state.selectedDeleteIndices
+  };
 
-  if (!tokens.length) {
+  if (!isSearchActive()) {
     ui.paintSearch({ ...view, mode: 'idle' });
     return;
   }
 
-  // Катаклізми в активній категорії: фільтрується сам список, окрема панель не потрібна
-  if (cataFilterActive()) {
-    ui.paintSearch({ ...view, mode: 'cata-filter', cataCount: state.form.cataclysms.filter(c => cataMatches(c, tokens)).length });
-    return;
-  }
-
   const categories = state.searchAll ? ALL_PACK_CATEGORIES : ALL_PACK_CATEGORIES.filter(c => c.category === state.activeCategory);
-  const { results, total } = collectSearchResults({ categories, texts: state.form.texts, cataclysms: state.form.cataclysms, tokens });
+  const { results, total } = collectSearchResults({
+    categories,
+    texts: state.form.texts,
+    cataclysms: state.form.cataclysms,
+    tokens,
+    viewMode: state.viewMode,
+    namesOnly: state.searchNamesOnly,
+    wholeWord: state.searchWholeWord,
+    customOnly: state.searchCustomOnly
+  });
   ui.paintSearch({ ...view, mode: 'results', results, total });
 }
 
 export function setSearchQuery(value, { focus = false } = {}) {
   state.searchQuery = value;
+  state.searchOverlayDismissed = false;
   ui.setSearchInput(value);
   orchestrator.renderList();
   renderSearch();
@@ -111,6 +127,13 @@ export function onSearchResultClick(e) {
   if (!row) return;
 
   if (state.isDeleteMode) {
+    e.stopPropagation?.();
+    state.searchOverlayDismissed = false;
+    const settingsMenu = $('pe-search-settings-menu');
+    if (settingsMenu && !settingsMenu.hidden) {
+      settingsMenu.hidden = true;
+      $('pe-search-settings-btn')?.setAttribute('aria-expanded', 'false');
+    }
     const cat = row.dataset.resCat;
 
     if (cat !== state.activeCategory) {
@@ -129,6 +152,10 @@ export function onSearchResultClick(e) {
 
   if (row.dataset.resCata !== undefined) openCataResult(Number(row.dataset.resCata));
   else openTextResult(row.dataset.resCat, Number(row.dataset.resLine), Number(row.dataset.resCard ?? row.dataset.resLine));
+
+  state.searchOverlayDismissed = true;
+  const panel = $('pe-search-results');
+  if (panel) panel.hidden = true;
 }
 
 export function onSearchKeydown(e) {
@@ -176,30 +203,105 @@ export function onSearchListKeydown(e) {
   if (!moved && e.key === 'ArrowUp') ui.focusSearchInput();
 }
 
-export function initSearch() {
-  ui.initSearchControls({ query: state.searchQuery, all: state.searchAll });
+export function initSearch(signal) {
+  ui.initSearchControls({
+    query: state.searchQuery,
+    all: state.searchAll,
+    namesOnly: state.searchNamesOnly,
+    wholeWord: state.searchWholeWord,
+    customOnly: state.searchCustomOnly
+  });
   const searchInput = $('pe-search');
-  searchInput.addEventListener('input', e => setSearchQuery(e.target.value));
-  searchInput.addEventListener('keydown', onSearchKeydown);
-  $('pe-search-clear').addEventListener('click', () => setSearchQuery('', { focus: true }));
+  const settingsBtn = $('pe-search-settings-btn');
+  const settingsMenu = $('pe-search-settings-menu');
+
+  const closeSettingsMenu = () => {
+    if (settingsMenu && !settingsMenu.hidden) {
+      settingsMenu.hidden = true;
+      settingsBtn?.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  searchInput.addEventListener('input', e => setSearchQuery(e.target.value), { signal });
+  searchInput.addEventListener('keydown', onSearchKeydown, { signal });
+  searchInput.addEventListener('focusin', () => {
+    const panel = $('pe-search-results');
+    if (isSearchActive() && (panel?.hidden || state.searchOverlayDismissed)) {
+      state.searchOverlayDismissed = false;
+      renderSearch();
+    }
+  }, { signal });
+  searchInput.addEventListener('click', () => {
+    const panel = $('pe-search-results');
+    if (isSearchActive() && (panel?.hidden || state.searchOverlayDismissed)) {
+      state.searchOverlayDismissed = false;
+      renderSearch();
+    }
+  }, { signal });
+
+  $('pe-search-clear').addEventListener('click', () => {
+    if (!state.searchQuery && state.searchCustomOnly) {
+      state.searchCustomOnly = false;
+      const customEl = $('pe-search-custom-only');
+      if (customEl) customEl.checked = false;
+    }
+    setSearchQuery('', { focus: true });
+  }, { signal });
 
   let searchHadFocus = false;
   document.querySelector('.pe-search__inside')?.addEventListener('mousedown', e => {
     searchHadFocus = document.activeElement === searchInput;
     if (!searchHadFocus) return;
     e.preventDefault();
-    window.addEventListener('mouseup', () => setTimeout(() => { searchHadFocus = false; }), { once: true });
-  });
+    window.addEventListener('mouseup', () => setTimeout(() => { searchHadFocus = false; }), { once: true, signal });
+  }, { signal });
 
-  $('pe-search-all').addEventListener('change', e => {
-    state.searchAll = e.target.checked;
-    orchestrator.renderList();
-    renderSearch();
-    if (searchHadFocus) searchInput.focus({ preventScroll: true });
-  });
+  settingsBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!settingsMenu) return;
+    const willOpen = settingsMenu.hidden;
+    settingsMenu.hidden = !willOpen;
+    settingsBtn.setAttribute('aria-expanded', String(willOpen));
+  }, { signal });
+
+  settingsMenu?.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeSettingsMenu();
+      settingsBtn?.focus();
+    }
+  }, { signal });
+
+  const flagBindings = [
+    ['pe-search-all', 'searchAll'],
+    ['pe-search-names-only', 'searchNamesOnly'],
+    ['pe-search-whole-word', 'searchWholeWord'],
+    ['pe-search-custom-only', 'searchCustomOnly']
+  ];
+  for (const [id, stateKey] of flagBindings) {
+    $(id)?.addEventListener('change', e => {
+      state[stateKey] = e.target.checked;
+      state.searchOverlayDismissed = false;
+      orchestrator.renderList();
+      renderSearch();
+      if (searchHadFocus) searchInput.focus({ preventScroll: true });
+    }, { signal });
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target?.closest?.('.pe-search-settings')) {
+      closeSettingsMenu();
+    }
+    if (!e.target?.closest?.('.pe-toolbar__search') && !e.target?.closest?.('#pe-search-results')) {
+      state.searchOverlayDismissed = true;
+      const panel = $('pe-search-results');
+      if (panel && !panel.hidden) panel.hidden = true;
+    }
+  }, { signal });
+
   const results = $('pe-search-results');
-  results.addEventListener('click', onSearchResultClick);
-  results.addEventListener('keydown', onSearchListKeydown);
-  $('pe-cata-list').addEventListener('keydown', onSearchListKeydown);
+  results.addEventListener('click', onSearchResultClick, { signal });
+  results.addEventListener('keydown', onSearchListKeydown, { signal });
+  $('pe-cata-list').addEventListener('keydown', onSearchListKeydown, { signal });
 }
 
