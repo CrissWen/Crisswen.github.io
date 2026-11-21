@@ -14,8 +14,8 @@ export function initVersionCheck({
   const noop = { checkNow: async () => false, destroy: () => {} };
   if (!doc || !win || typeof fetchImpl !== 'function') return noop;
 
-  const metaEl = doc.querySelector('meta[name="app-build-id"]');
-  const currentBuildId = (metaEl?.getAttribute('content') || '').trim();
+  const metaEl = doc.querySelector?.('meta[name="app-build-id"]');
+  const currentBuildId = (metaEl?.getAttribute?.('content') || '').trim();
   if (!currentBuildId) return noop;
 
   let lastCheckedAt = 0;
