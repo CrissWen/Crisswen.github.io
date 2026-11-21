@@ -2,13 +2,36 @@ import { esc } from '../../utils/common/escape-html.js';
 import { oneLine } from '../parser.js';
 import { cataMatches } from '../search.js';
 import { highlightHtml } from './search.js';
-import { $, CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './helpers.js';
-import { state } from '../state.js';
+import { $ } from './shared.js';
+import { CATA_FIELDS, CATA_NUMERIC, CATACLYSM_LIST_PLACEHOLDER } from './constants.js';
 
 // ----- Катаклізми: форма і список -----
 export function readCataRaw() {
   const get = key => $(CATA_FIELDS[key]).value.trim();
-  return { name: get('name'), desc: get('desc'), timer: get('timer'), stay: get('stay'), pop: get('pop') };
+  const timerEnabled = Boolean($('pe-cata-timer-toggle')?.checked);
+  return {
+    name: get('name'),
+    desc: get('desc'),
+    timerEnabled,
+    timer: timerEnabled ? get('timer') : '',
+    stay: get('stay'),
+    pop: get('pop')
+  };
+}
+
+export function setCataTimerEnabled(enabled, { focus = false } = {}) {
+  const toggle = $('pe-cata-timer-toggle');
+  const wrap = $('pe-cata-timer-wrap');
+  const input = $(CATA_FIELDS.timer);
+  const on = Boolean(enabled);
+  if (toggle) toggle.checked = on;
+  if (wrap) wrap.hidden = !on;
+  if (!on && input) {
+    input.value = '';
+    input.classList.remove('is-invalid');
+  } else if (on && focus && input) {
+    input.focus();
+  }
 }
 
 export const isCataErrorVisible = () => !$('pe-cata-error').hidden;
@@ -42,14 +65,19 @@ export function paintCataMode(item) {
   document.querySelector('[data-cata-action="delete"]').hidden = !item;
 }
 
-// Таймер лишається порожнім, щоб було видно підказку в полі; порожнє = 0 (без таймера)
+// Таймер за замовчуванням вимкнений (без таймера) і його поле приховане
 export function clearCataFields() {
   Object.values(CATA_FIELDS).forEach(id => { $(id).value = ''; });
+  setCataTimerEnabled(false);
 }
 
-// values — { name, desc, timer, stay, pop } рядками
+// values — { name, desc, timerEnabled, timer, stay, pop }
 export function fillCataFields(values) {
-  for (const key of Object.keys(CATA_FIELDS)) $(CATA_FIELDS[key]).value = values[key];
+  for (const key of Object.keys(CATA_FIELDS)) $(CATA_FIELDS[key]).value = values[key] ?? '';
+  const enabled = values.timerEnabled !== undefined
+    ? Boolean(values.timerEnabled)
+    : Boolean(values.timer && values.timer !== '0');
+  setCataTimerEnabled(enabled);
 }
 
 export const scrollCataFormIntoView = () => $('pe-cata').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -57,8 +85,18 @@ export const scrollCataListToEnd = () => $('pe-cata-list').lastElementChild?.scr
 
 // Список доданих катаклізмів — справжні рядки (кнопки .added-item-row), а не текст у textarea: підсвічування при наведенні,
 // "протискання" й виділення обраного рядка робить CSS (packs.css), без вимірювань геометрії та JS-анімацій.
-// view: { cataclysms, editIndex, newIndex, tokens }; tokens — слова пошуку, якщо список зараз фільтрується (інакше порожній масив).
-export function renderCataList({ cataclysms, editIndex, newIndex, tokens, category = 'cataclysm' }) {
+// view: { cataclysms, editIndex, newIndex, tokens, category, cardsSortDir, isDeleteMode, selectedDeleteIndices };
+// tokens — слова пошуку, якщо список зараз фільтрується (інакше порожній масив).
+export function renderCataList({
+  cataclysms,
+  editIndex,
+  newIndex,
+  tokens,
+  category = 'cataclysm',
+  cardsSortDir = 'none',
+  isDeleteMode = false,
+  selectedDeleteIndices = null
+}) {
   const list = $('pe-cata-list');
   // Перемальовка замінює кнопки, тож клавіатурний фокус треба повернути на рядок з тим самим індексом
   const focusedIndex = document.activeElement?.closest?.('[data-cata-index]')?.dataset.cataIndex;
@@ -78,9 +116,9 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   }
 
   // Візуальне сортування (не змінює вихідні дані пака)
-  if (state.cardsSortDir && state.cardsSortDir !== 'none') {
+  if (cardsSortDir && cardsSortDir !== 'none') {
     const collator = new Intl.Collator('uk', { numeric: true, sensitivity: 'base' });
-    const isDesc = state.cardsSortDir === 'desc';
+    const isDesc = cardsSortDir === 'desc';
     rows.sort((a, b) => {
       const res = collator.compare(a.c.name || '', b.c.name || '') || (a.i - b.i);
       return isDesc ? -res : res;
@@ -88,13 +126,13 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
   }
 
   list.innerHTML = rows.map(({ c, i }) => {
-    const isMarkedDelete = state.isDeleteMode && state.selectedDeleteIndices.has(i);
-    const selected = !state.isDeleteMode && i === editIndex;
-    const isNew = !state.isDeleteMode && i === newIndex;
+    const isMarkedDelete = isDeleteMode && Boolean(selectedDeleteIndices?.has(i));
+    const selected = !isDeleteMode && i === editIndex;
+    const isNew = !isDeleteMode && i === newIndex;
     const descHtml = (category !== 'cataclysm' && c.description) ? `<span style="opacity:0.7"> - ${highlightHtml(oneLine(c.description), tokens)}</span>` : '';
     
     let rowClasses = 'added-item-row';
-    if (state.isDeleteMode) {
+    if (isDeleteMode) {
       rowClasses += ' is-delete-mode';
       if (isMarkedDelete) rowClasses += ' is-marked-delete';
     } else {
@@ -102,18 +140,18 @@ export function renderCataList({ cataclysms, editIndex, newIndex, tokens, catego
       if (isNew) rowClasses += ' is-new';
     }
 
-    const checkHtml = state.isDeleteMode
+    const checkHtml = isDeleteMode
       ? `<span class="added-item-row__check" aria-hidden="true">${isMarkedDelete ? '✓' : ''}</span>`
       : '';
 
-    const hintHtml = state.isDeleteMode
+    const hintHtml = isDeleteMode
       ? (isMarkedDelete
           ? `<span class="added-item-row__hint added-item-row__hint--delete">до видалення ✕</span>`
           : `<span class="added-item-row__hint added-item-row__hint--pick">обрати</span>`)
       : `<span class="added-item-row__hint">${selected ? 'редагується' : 'редагувати'}</span>`;
 
     return `
-      <button type="button" class="${rowClasses}" data-cata-index="${i}" aria-pressed="${state.isDeleteMode ? isMarkedDelete : selected}">
+      <button type="button" class="${rowClasses}" data-cata-index="${i}" aria-pressed="${isDeleteMode ? isMarkedDelete : selected}">
         ${checkHtml}
         <span class="added-item-row__name">${highlightHtml(oneLine(c.name), tokens)}${descHtml}</span>
         ${hintHtml}

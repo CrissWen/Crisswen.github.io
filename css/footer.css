@@ -525,3 +525,60 @@ body.has-rate-video { overflow: hidden; }
   mask-size: contain;
 }
 
+/* ===== Банер про нову версію сайту (js/services/version-check.js) ===== */
+.update-banner {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 950;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  background: linear-gradient(var(--panel-2), var(--panel-2)), var(--bg);
+  border: 1px solid var(--hazard);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 13.5px;
+}
+.update-banner__text {
+  font-weight: 500;
+}
+.update-banner__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-banner__btn,
+.update-banner__dismiss {
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  font-family: var(--head);
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+.update-banner__btn {
+  background: var(--hazard);
+  border: 1px solid var(--hazard);
+  color: var(--bg);
+  font-weight: 700;
+}
+.update-banner__dismiss {
+  background: transparent;
+  border: 1px solid var(--metal-lt);
+  color: var(--text-mute);
+}
+.update-banner__btn:focus-visible,
+.update-banner__dismiss:focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: 2px;
+}
+

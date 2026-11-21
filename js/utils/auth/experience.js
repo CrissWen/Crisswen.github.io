@@ -58,8 +58,6 @@ export const getMonthStages = (type, config) => getMonthScale(config?.default_st
 
 export const hasMonthStages = (type, config) => getMonthStages(type, config).length > 0;
 
-// TODO: використати getStageNames при злитті гілок: stagesTextFromConfig (текст стандартних стадій) існує лише в feature/pack-editor, у game-fix її немає.
-// Вона має брати назви через getStageNames (stage.name || stage), інакше об'єкти { name, up_to_months } дадуть [object Object].
 // Назви стадій для випадаючих списків (працює і зі старим форматом — масив рядків, і з новим — масив об'єктів)
 export function getStageNames(list) {
   if (!Array.isArray(list)) return [];

@@ -1,4 +1,5 @@
 import { ICONS } from '../constants/icons.js';
+import { closeHeaderNav } from '../ui/header-nav.js';
 import { esc } from '../utils/auth/security.js';
 import { REPLAY_STORAGE_KEY } from '../services/replay-service.js';
 import { supabase } from '../services/supabase.js';
@@ -90,6 +91,7 @@ const ctx = {
 };
 
 function setHeaderCollapsed(collapsed) {
+  if (collapsed) closeHeaderNav();
   document.body.classList.toggle('is-header-collapsed', collapsed);
   const tab = document.getElementById('header-collapse-tab');
   if (tab) {

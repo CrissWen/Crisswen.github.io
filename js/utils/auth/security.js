@@ -29,6 +29,11 @@ export function cleanControlChars(str) {
   return String(str ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
+// Справжні DOM-атрибути обробників подій (без префікса "on"). Раніше шаблон був \bon[a-z]{3,}\s*= і хибно ловив
+// звичайні слова на кшталт "online = …" чи "onions = …". Будь-який сирий тег усе одно відхиляється перевіркою нижче.
+const EVENT_NAMES = String.raw`abort|afterprint|animation\w*|auxclick|beforeprint|beforeunload|beforeinput|blur|cancel|canplay\w*|change|click|close|contextmenu|copy|cut|dblclick|drag\w*|drop|durationchange|emptied|ended|error|focus\w*|formdata|fullscreen\w+|gotpointercapture|hashchange|input|invalid|key\w+|load\w*|lostpointercapture|message\w*|mouse\w+|offline|online|pagehide|pageshow|paste|pause|play\w*|pointer\w+|popstate|progress|ratechange|readystatechange|reset|resize|scroll\w*|search|securitypolicyviolation|seeked|seeking|select\w*|show|slotchange|stalled|storage|submit|suspend|timeupdate|toggle|touch\w+|transition\w+|unhandledrejection|unload|volumechange|waiting|wheel`;
+const EVENT_HANDLER_RE = new RegExp(String.raw`\bon(?:${EVENT_NAMES})\s*=`, 'i');
+
 /**
  * Перевірка на наявність реальних HTML/JS ін'єкцій (XSS).
  *
@@ -47,7 +52,7 @@ export function detectHtmlInjection(str) {
 
   // Небезпечні теги або обробники
   if (/<(?:script|iframe|object|embed|style|link|meta)\b/i.test(str)) return true;
-  if (/\bon[a-z]{3,}\s*=/i.test(str)) return true;
+  if (EVENT_HANDLER_RE.test(str)) return true;
   if (/javascript\s*:/i.test(str)) return true;
   if (/data\s*:\s*text\/html/i.test(str)) return true;
 

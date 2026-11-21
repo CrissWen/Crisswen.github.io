@@ -2,8 +2,9 @@ import { state } from '../state.js';
 import { setMobileCardView } from './mobile-nav.js';
 import { CATEGORY_SCHEMAS } from '../categories.js';
 import { esc } from '../../utils/common/escape-html.js';
+import { syncCustomSelect } from '../../ui/custom-select.js';
 import {
-  parseLines, oneLine, parseCards, cardToLine,
+  parseLines, oneLine, parseCards, cardToLine, canonicalCardDedupKey,
   hasExplanationField, joinNameExplanation, splitNameExplanation
 } from '../parser.js';
 import { OBJECT_STAGE_KEYS, validateStageEntries, parseStageEntry } from '../payload.js';
@@ -33,24 +34,7 @@ export function getDynamicCards() {
   return state.cardData[state.activeCategory];
 }
 
-export function syncCustomSelect(selectEl) {
-  if (!selectEl) return;
-  const wrap = selectEl.closest('.pe-select-custom');
-  if (!wrap) return;
-  const val = selectEl.value;
-  const selectedOption = selectEl.querySelector(`option[value="${val}"]`) || selectEl.options[0];
-  const label = wrap.querySelector('.pe-select-custom__label');
-  if (label && selectedOption) {
-    label.textContent = selectedOption.textContent;
-  }
-  wrap.querySelectorAll('.pe-select-custom__item').forEach(it => {
-    const isSel = it.dataset.value === val;
-    it.classList.toggle('is-selected', isSel);
-    it.setAttribute('aria-selected', String(isSel));
-    const check = it.querySelector('.pe-select-custom__check');
-    if (check) check.textContent = isSel ? '✓' : '';
-  });
-}
+export { syncCustomSelect };
 
 // ===== Кодеки полів за типом (читання / запис / скидання / порівняння) =====
 const FIELD_CODECS = {
@@ -511,7 +495,8 @@ export function applyDynChange({ scrollToEnd = false } = {}) {
   ui.showCategory({
     category: state.activeCategory,
     text: state.form.texts[state.activeCategory] || '',
-    viewMode: state.viewMode
+    viewMode: state.viewMode,
+    ageCategoriesText: state.form?.stages?.age_categories || ''
   });
   if (onDynamicChange) onDynamicChange({ scrollToEnd });
 }
@@ -519,7 +504,8 @@ export function applyDynChange({ scrollToEnd = false } = {}) {
 function validateRequiredFields(category, data) {
   const missing = [];
   if (String(data.value ?? '').trim() === '') {
-    missing.push({ el: $('pe-dyn-name'), label: 'Назва' });
+    const primaryLabel = CATEGORY_SCHEMAS[category]?.primary?.label || 'Назва';
+    missing.push({ el: $('pe-dyn-name'), label: primaryLabel });
   }
   for (const f of CATEGORY_SCHEMAS[category]?.fields || []) {
     if (f.required && String(data[f.key] ?? '').trim() === '') {
@@ -527,6 +513,11 @@ function validateRequiredFields(category, data) {
     }
   }
   return missing;
+}
+
+export function findFullDuplicateIndex(category, value, meta, cards = [], excludeIndex = -1) {
+  const targetKey = canonicalCardDedupKey(category, value, meta);
+  return cards.findIndex((c, idx) => idx !== excludeIndex && c && canonicalCardDedupKey(category, c.value, c.meta) === targetKey);
 }
 
 export function submitDyn() {
@@ -579,6 +570,14 @@ export function submitDyn() {
     }
   }
 
+  const dupIdx = findFullDuplicateIndex(category, storedValue, meta, cards, state.dynEditIndex);
+  if (dupIdx >= 0) {
+    const nameEl = $('pe-dyn-name');
+    nameEl?.classList.add('is-invalid');
+    showFormError('Така картка вже є в цій категорії', nameEl);
+    return;
+  }
+
   if (isEdit) {
     const existingId = cards[state.dynEditIndex]?.id || prevCard?.id || crypto.randomUUID();
     cards[state.dynEditIndex] = { id: existingId, value: storedValue, meta };
@@ -604,6 +603,7 @@ export function submitDyn() {
 
 export async function deleteDyn(btn) {
   if (state.dynEditIndex < 0 || state.isConfirming) return;
+  const sessionId = state.sessionId;
   const cards = getDynamicCards();
   const item = cards[state.dynEditIndex];
 
@@ -614,7 +614,7 @@ export async function deleteDyn(btn) {
   } finally {
     state.isConfirming = false;
   }
-  if (!confirmed) return;
+  if (!confirmed || state.sessionId !== sessionId) return;
 
   if (item?.id) {
     state.markCardDeleted(item.id);

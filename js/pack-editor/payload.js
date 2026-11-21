@@ -1,7 +1,7 @@
 import { ALL_PACK_CATEGORIES } from './categories.js';
 import {
   parseCards, parseLines, oneLine,
-  OBJECT_STAGE_KEYS, parseStageEntry, formatStageEntry
+  OBJECT_STAGE_KEYS, parseStageEntry, formatStageEntry, deduplicateStageLines
 } from './parser.js';
 import {
   TITLE_MAX, DESC_MAX, CARD_VALUE_MAX, CARD_META_TEXT_MAX,
@@ -203,7 +203,7 @@ export function rangesFromConfig(config, fallback) {
 export function buildPackConfig({ defaultConfig = {}, packConfig = {}, stages = {}, ranges }) {
   const stageLists = {};
   for (const key of STAGE_KEYS) {
-    const lines = parseLines(stages[key]);
+    const lines = parseLines(deduplicateStageLines(key, stages[key]));
     if (lines.length) {
       stageLists[key] = lines.map(line => parseStageEntry(key, line));
     }
@@ -287,21 +287,32 @@ export const cataclysmNamesText = cataclysms => (cataclysms || []).map(c => oneL
 
 // Значення полів форми для запису (рядками)
 export function cataFieldStrings(item) {
+  const minutes = Number(item.timer_minutes) || 0;
   return {
     name: String(item.name ?? '').trim(),
     desc: String(item.description ?? '').trim(),
-    timer: String(item.timer_minutes || 0),
+    timerEnabled: minutes > 0,
+    timer: minutes > 0 ? String(minutes) : '',
     stay: item.stay_time_months ? String(item.stay_time_months) : '',
     pop: item.population ? String(item.population) : ''
   };
 }
 
 // Чи є у формі дані, які ще не потрапили в список: новий катаклізм (isEditing=false) або незбережені правки існуючого (item).
-// raw — { name, desc, timer, stay, pop } рядками. Порожній таймер і "0" — одне й те саме (без таймера).
+// raw — { name, desc, timerEnabled, timer, stay, pop }.
 export function hasCataDraft(raw, item, isEditing) {
-  if (!isEditing) return Boolean(raw.name || raw.desc || (raw.timer && raw.timer !== '0') || raw.stay || raw.pop);
+  const timerOn = Boolean(raw.timerEnabled);
+  if (!isEditing) return Boolean(raw.name || raw.desc || timerOn || (raw.timer && raw.timer !== '0') || raw.stay || raw.pop);
   if (!item) return false;
-  return JSON.stringify({ ...raw, timer: raw.timer || '0' }) !== JSON.stringify(cataFieldStrings(item));
+  const normRaw = {
+    name: raw.name,
+    desc: raw.desc,
+    timerEnabled: raw.timerEnabled !== undefined ? timerOn : Boolean(raw.timer && raw.timer !== '0'),
+    timer: raw.timerEnabled === false ? '' : (raw.timer && raw.timer !== '0' ? raw.timer : ''),
+    stay: raw.stay,
+    pop: raw.pop
+  };
+  return JSON.stringify(normRaw) !== JSON.stringify(cataFieldStrings(item));
 }
 
 // Перевіряє поля форми: повертає { item } або { error, field }.
@@ -328,9 +339,20 @@ export function validateCataclysmInput(raw, { cataclysms = [], editIndex = -1 } 
   const duplicate = cataclysms.some((c, i) => i !== editIndex && String(c.name).trim().toLowerCase() === nameKey);
   if (duplicate) return { error: 'Катаклізм із такою назвою вже є в цьому паку', field: 'name' };
 
-  const timer = raw.timer === '' ? 0 : Number(raw.timer);
-  if (!Number.isInteger(timer) || timer < 0 || timer > timerMax) {
-    return { error: `Таймер: ціле число від 0 до ${timerMax} хв (0 — без таймера)`, field: 'timer' };
+  let timer = 0;
+  if (raw.timerEnabled === true) {
+    if (String(raw.timer ?? '').trim() === '') {
+      return { error: `Таймер: ціле число від 1 до ${timerMax} хв`, field: 'timer' };
+    }
+    timer = Number(raw.timer);
+    if (!Number.isInteger(timer) || timer < 1 || timer > timerMax) {
+      return { error: `Таймер: ціле число від 1 до ${timerMax} хв`, field: 'timer' };
+    }
+  } else if (raw.timerEnabled === undefined) {
+    timer = raw.timer === '' ? 0 : Number(raw.timer);
+    if (!Number.isInteger(timer) || timer < 0 || timer > timerMax) {
+      return { error: `Таймер: ціле число від 0 до ${timerMax} хв (0 — без таймера)`, field: 'timer' };
+    }
   }
 
   const stay = Number(raw.stay);

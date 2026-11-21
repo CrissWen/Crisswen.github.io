@@ -8,6 +8,7 @@ import { CATASTROPHE_ICONS } from './catastrophe-icons.js';
 export const ICONS = Object.freeze({
   HAZARD: CATASTROPHE_ICONS.HAZARD.path,
   FAVICON: './icons/favicon.png',
+  QUESTION: './icons/question.svg',
 
   // Іконки ігрової дошки (/icons/board)
   LOCKED_LOCK: './icons/board/locked-lock.svg',
@@ -55,6 +56,7 @@ export const ICONS = Object.freeze({
 // Іменовані експорти для зручного прямого імпорту
 export const ICON_HAZARD = ICONS.HAZARD;
 export const ICON_FAVICON = ICONS.FAVICON;
+export const ICON_QUESTION = ICONS.QUESTION;
 export const ICON_LOCKED_LOCK = ICONS.LOCKED_LOCK;
 export const ICON_UNLOCKED_LOCK = ICONS.UNLOCKED_LOCK;
 export const ICON_POPULATION = ICONS.POPULATION;
